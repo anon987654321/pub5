@@ -193,7 +193,6 @@ class TraceDmesgTest < Minitest::Test
     refute_includes painted, "48;2"
   end
 
-
   def test_conversational_terminal_write_preserves_paragraph_breaks
     io = StringIO.new
     Master::Trace::Dmesg.terminal_write(io:, preserve_blank_lines: true) do |target|

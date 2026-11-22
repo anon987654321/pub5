@@ -107,7 +107,7 @@ module Master
       REVIEW_WINDOW_DAYS = 14
 
       def check_aging(root, now: Time.now.utc)
-        aged = aged_inconclusives(root:, now: now)
+        aged = aged_inconclusives(root:, now:)
         return pass_row("aging", "no INCONCLUSIVE has outlived its #{REVIEW_WINDOW_DAYS}-day review window") if aged.empty?
 
         oldest = aged.min_by { |row| row[:dated_at] }
@@ -118,7 +118,7 @@ module Master
       end
 
       def aged_inconclusives(root:, now: Time.now.utc, window: REVIEW_WINDOW_DAYS)
-        pending = Hash.new
+        pending = {}
         # oldest first, so a verdict clears only the windows opened before it
         Receipt.recent(root:, limit: 500).reverse_each do |row|
           at = safe_time(row["generated_at"])

@@ -73,7 +73,7 @@ class TestFixPlanEvidence < Minitest::Test
       intent: "content_only",
       scope: %w[README.md sample.rb],
       preserve: [],
-      proof: ["focused_tests", "documentation_review"],
+      proof: %w[focused_tests documentation_review],
       documentation_pairs: [{
         contract_path: "sample.rb",
         document_path: "README.md",

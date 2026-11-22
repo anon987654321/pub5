@@ -31,7 +31,7 @@ class TestDeviceWakeWord < Minitest::Test
   # The consent law gates the wake word: grant both scopes through the real
   # permission store, with the exact purposes the listener checks.
   def granted_permissions(root)
-    permissions = Master::Ground::PersonalPermissions.new(root: root)
+    permissions = Master::Ground::PersonalPermissions.new(root:)
     permissions.grant(
       scope: "microphone", confirmed_by: "test",
       purpose: Master::Ground::PersonalPermissions::MICROPHONE_PURPOSE,

@@ -136,13 +136,13 @@ module Master
       # the reply, or nil when the words are none of these commands.
       def privacy_voice_action(permissions, voice_args, voice_scope)
         case [voice_args[0].to_s.downcase, voice_scope]
-        when ["grant", "notifications"]
+        when %w[grant notifications]
           privacy_grant_notifications(permissions, voice_args)
-        when ["revoke", "notifications"]
+        when %w[revoke notifications]
           privacy_revoke_notifications(permissions)
-        when ["grant", "microphone"], ["grant", "speech_recognition"]
+        when %w[grant microphone], %w[grant speech_recognition]
           privacy_grant_voice(permissions, voice_args, voice_scope)
-        when ["revoke", "microphone"], ["revoke", "speech_recognition"]
+        when %w[revoke microphone], %w[revoke speech_recognition]
           privacy_revoke_voice(permissions, voice_scope)
         end
       end

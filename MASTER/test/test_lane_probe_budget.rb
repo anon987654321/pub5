@@ -46,7 +46,7 @@ class TestLaneProbeBudget < Minitest::Test
   def test_a_run_probes_each_lane_under_its_own_budget
     seen = {}
     ask = lambda do |model|
-      seen[model] = Probe.budget_s(model: model)
+      seen[model] = Probe.budget_s(model:)
       "OK"
     end
 

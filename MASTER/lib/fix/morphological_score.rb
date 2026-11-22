@@ -67,15 +67,15 @@ module Master
         measured_weight = measured.sum { |dimension, present| present ? WEIGHTS.fetch(dimension) : 0 }
         coverage = measured_weight.to_f / WEIGHTS.values.sum
         {
-          index: index,
+          index:,
           id: probe["id"] || probe["name"] || "probe-#{index}",
           total: total.round(2),
           coverage: (coverage * 100).round(1),
           measured_dimensions: measured.select { |_dimension, present| present }.keys,
           missing_dimensions: missing,
           qualified: missing.empty? && total >= MIN_WINNER,
-          components: components,
-          probe: probe,
+          components:,
+          probe:,
         }
       end
 

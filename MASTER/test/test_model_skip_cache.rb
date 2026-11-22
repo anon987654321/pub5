@@ -76,7 +76,7 @@ class TestModelSkipCache < Minitest::Test
     cache.skip!("m1", reason: "something went wrong", category: :failure)
 
     assert_equal cache.transient_skip_ttl_ms, cache.skipped_until_ms("m1")
-    refute cache.filter(["m1", "m2"]).include?("m1")
+    refute cache.filter(%w[m1 m2]).include?("m1")
   ensure
     Master::Io::ModelSkipCache.clock = nil
   end

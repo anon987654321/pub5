@@ -36,7 +36,6 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
-
   def test_backlog_origin_is_eligible_for_the_existing_steward
     Dir.mktmpdir do |root|
       write_mission(root, origin: "backlog")

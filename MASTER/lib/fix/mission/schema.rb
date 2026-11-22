@@ -11,7 +11,7 @@ module Master
         def record_path(root:, namespace: current_namespace)
           suffix = normalize_namespace(namespace)
           relative = suffix ? "mission-#{suffix}.json" : "mission.json"
-          File.join(MasterPaths.fix_state(root: root), relative)
+          File.join(MasterPaths.fix_state(root:), relative)
         end
 
         def current(root: Master::ROOT, namespace: current_namespace)
@@ -52,7 +52,7 @@ module Master
         def lock_file_path(root:, namespace: current_namespace)
           suffix = normalize_namespace(namespace)
           relative = suffix ? "mission-#{suffix}.lock" : "mission.lock"
-          File.join(MasterPaths.fix_state(root: root), relative)
+          File.join(MasterPaths.fix_state(root:), relative)
         end
 
         # Records written before #relative answered "." for the tree root hold its
@@ -134,7 +134,7 @@ module Master
           }
         end
 
-        def migrate_v1_progress(record, now)
+        def migrate_v1_progress(record, _now)
           {
             "checkpoint" => record["checkpoint"],
             "artifacts" => Array(record["artifacts"]).map(&:to_s).uniq.last(32),

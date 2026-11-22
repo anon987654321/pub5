@@ -34,8 +34,8 @@ module Master
         paths = tree_paths(tree, files)
         evidence = evidence_for(paths)
         {
-          paths: paths,
-          evidence: evidence,
+          paths:,
+          evidence:,
           grounded_evidence: evidence.map { |entry| entry.fetch("path") }.to_set,
           available_tests: paths.select { |path| test_path?(relative(path)) }.first(40).map { |path| relative(path) }.to_set,
         }
@@ -281,7 +281,7 @@ module Master
       end
 
       def score_range(totals)
-        return nil if totals.empty?
+        return if totals.empty?
 
         median = totals.size.odd? ? totals[totals.size / 2] : (totals[totals.size / 2 - 1] + totals[totals.size / 2]) / 2.0
         { "min" => totals.first, "median" => median, "max" => totals.last }

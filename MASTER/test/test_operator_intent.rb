@@ -409,5 +409,4 @@ class OperatorIntentTest < Minitest::Test
     assert_equal inventory.ordered_apps.map(&:name), result.selected
   end
 
-
 end

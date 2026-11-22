@@ -673,7 +673,7 @@ class TestRunJournalLifecycle < Minitest::Test
     result = Master::Fix::RunJournal.allocate.send(:validate_assessment_matrix_report, report)
 
     assert_equal "matrix_clean_streak_mismatch", result.fetch("status")
-    assert_equal ["FIXTURE_LAW", "lexical_violations", "whole_file"], result.fetch("cell")
+    assert_equal %w[FIXTURE_LAW lexical_violations whole_file], result.fetch("cell")
   end
 
 end

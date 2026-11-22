@@ -367,7 +367,7 @@ window._chatOnOperationLog = (payload) => {
   row.appendChild(link);
   const service = String(payload?.service || url.hostname).slice(0, 24);
   const expires = String(payload?.expires_in || '').slice(0, 24);
-  row.appendChild(document.createTextNode(' (' + service + (expires ? '; expires in ' + expires : '') + ')'));
+  row.appendChild(document.createTextNode(` (${service}` + (expires ? `; expires in ${expires}` : '') + ')'));
   _streamEl.appendChild(row);
 };
 

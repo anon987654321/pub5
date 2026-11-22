@@ -54,17 +54,17 @@ module Polish
 
     def to_h
       {
-        id: id,
-        category: category,
-        severity: severity,
-        title: title,
-        rationale: rationale,
-        surface: surface,
-        evidence: evidence,
-        suggested_action: suggested_action,
-        trace_id: trace_id,
-        created_at: created_at,
-        status: status,
+        id:,
+        category:,
+        severity:,
+        title:,
+        rationale:,
+        surface:,
+        evidence:,
+        suggested_action:,
+        trace_id:,
+        created_at:,
+        status:,
       }
     end
 

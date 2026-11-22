@@ -213,7 +213,7 @@ module Master
                      limits: nil, killer: nil, resource_budget: nil)
         @root = root
         @mission_namespace = Mission.current_namespace
-        @costs = File.join(MasterPaths.fix_state(root: root), File.basename(COSTS))
+        @costs = File.join(MasterPaths.fix_state(root:), File.basename(COSTS))
         @max_passes = max_passes.to_i
         @max_cost = limit(env["MASTER_FIX_MAX_COST"], DEFAULT_MAX_COST)
         @max_minutes = limit(env["MASTER_FIX_MAX_MINUTES"], DEFAULT_MAX_MINUTES)

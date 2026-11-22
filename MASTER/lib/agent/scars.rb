@@ -27,7 +27,7 @@ module Master
 
           emit(
             command: "scars",
-            law: law,
+            law:,
             incidents: rows.size,
             rows: rows.map do |incident|
               {

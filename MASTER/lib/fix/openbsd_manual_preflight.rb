@@ -91,7 +91,7 @@ module Master
       module_function
 
       def normalize(value, task_scope:)
-        return nil if value.nil?
+        return if value.nil?
         raise TaskContract::Invalid, "openbsd_preflight must be a mapping" unless value.is_a?(Hash)
 
         attributes = value.to_h.transform_keys(&:to_s)
@@ -1076,7 +1076,7 @@ module Master
         path = relative.to_s.tr("\\", "/")
         mapped = etc_path_manuals(path)
         return mapped unless mapped.nil?
-        return nil if path.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/")
+        return if path.start_with?("OPENBSD/mirror/etc/", "OPENBSD/mirror/var/")
 
         []
       end

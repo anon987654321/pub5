@@ -232,7 +232,6 @@ test("FaceWorld morphs the primary face field into a topic with a bounded fallba
   assert.match(runtime, /MASTER_FACE_WORLD\?\.setSubjectFromText\?\.\(v\)/);
 });
 
-
 test("the carved-field portrait is the canonical default and keeps legacy aliases", () => {
   const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
   const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
@@ -1697,7 +1696,6 @@ test("MASTER web highlighter escapes source and classifies shell and Ruby tokens
   assert.ok(sandbox.output.includes('&lt;script&gt;'));
   assert.doesNotMatch(sandbox.output, /<script>/);
 });
-
 
 test("the /new command requests a new server transcript and emits the mask event", () => {
   const actions = readFileSync(join(publicDir, "chat_actions.js"), "utf8");

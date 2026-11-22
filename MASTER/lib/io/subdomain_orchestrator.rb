@@ -127,7 +127,7 @@ module Master
 
         uri = URI(url)
         request = Net::HTTP::Get.new(uri.request_uri, "User-Agent" => "MASTER/1 (subdomain_orchestrator)")
-        res = SsrfGuard.request(uri, request, max_bytes: 4_096, timeout: timeout)
+        res = SsrfGuard.request(uri, request, max_bytes: 4_096, timeout:)
         body = res.body.to_s.strip
         { ok: res.code.to_i < 500, status: res.code.to_i, body: }
       rescue StandardError => e

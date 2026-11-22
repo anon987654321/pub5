@@ -91,7 +91,7 @@ module Master
 
       # True when a known antigen exists for this exact signature.
       def known?(law:, boundary:, defect_class:, source_sha256: nil)
-        !match(law: law, boundary: boundary, defect_class: defect_class, source_sha256:, limit: 1).empty?
+        !match(law:, boundary:, defect_class:, source_sha256:, limit: 1).empty?
       end
 
       def recent(limit: 50)

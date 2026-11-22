@@ -57,7 +57,7 @@ class TestDashboardFleetPanel < Minitest::Test
 
   def test_a_missing_guard_script_degrades_to_a_nil_guard_not_a_crash
     Dir.mktmpdir do |root|
-      fleet = FleetPanel.read(root: root, probe: ->(_app) { true })
+      fleet = FleetPanel.read(root:, probe: ->(_app) { true })
 
       assert_empty fleet[:apps]
       assert_nil fleet[:guard]

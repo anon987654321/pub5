@@ -17,8 +17,8 @@ class TestConvergenceProof < Minitest::Test
     directory = File.join(root, ".master", "receipts")
     FileUtils.mkdir_p(directory)
     payload = {
-      schema: 1, id: id, command: "convergence.prove", state: "inconclusive",
-      generated_at: generated_at.iso8601, git: {}, inventory: {}, details: { checks: checks },
+      schema: 1, id:, command: "convergence.prove", state: "inconclusive",
+      generated_at: generated_at.iso8601, git: {}, inventory: {}, details: { checks: },
     }
     File.write(File.join(directory, "convergence-#{id}.json"), JSON.pretty_generate(payload))
   end

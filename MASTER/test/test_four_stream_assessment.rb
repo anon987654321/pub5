@@ -229,7 +229,7 @@ class TestFourStreamAssessment < Minitest::Test
     %i[engineering editorial visual experience operations].each do |dimension|
       assert_equal "PASS", report[:dimensions][dimension][:status], dimension.to_s
     end
-    assert_equal ["BRINGHURST_measure", "PARENTHETICAL_DASH"], report[:dimensions][:editorial][:law_ids]
+    assert_equal %w[BRINGHURST_measure PARENTHETICAL_DASH], report[:dimensions][:editorial][:law_ids]
     assert_equal "NOT_RUN", report[:workflows][:grouped_visual_repair][:status]
     assert_equal "PASS", report[:compliance_status]
     assert_equal "PASS", report[:overall_status]

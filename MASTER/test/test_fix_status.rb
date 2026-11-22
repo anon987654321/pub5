@@ -168,7 +168,6 @@ class TestFixStatus < Minitest::Test
     end
   end
 
-
   def test_default_status_is_compact_and_detail_keeps_full_receipts
     run = run_record("RAILS", state: "validation_failed", pid: 0).merge(
       "message" => "validation failed: rendered output differs",

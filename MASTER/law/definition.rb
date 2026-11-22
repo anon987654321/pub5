@@ -1014,7 +1014,7 @@ module Law
                     changed_stamp_fields(previous_stamp, stamp)
                   end
         reasons << {
-          path: source, reason: changed, previous_stamp: previous_stamp,
+          path: source, reason: changed, previous_stamp:,
           current_stamp: stamp, missing_law_ids: missing_ids.map(&:to_s).sort,
         }
 

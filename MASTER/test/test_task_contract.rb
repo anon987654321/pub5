@@ -717,8 +717,6 @@ class TestTaskContract < Minitest::Test
     )
   end
 
-
-
   def openbsd_preflight_fixture(scope: ["OPENBSD/**"], release: "7.8", source_path: "OPENBSD/RUNBOOK.md",
                                 source_paths: nil,
                                 interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1)])
@@ -1006,7 +1004,6 @@ class TestTaskContract < Minitest::Test
     end
   end
 
-
   def test_manual_reader_remains_available_to_refresh_an_expired_saved_receipt
     Dir.mktmpdir("openbsd-preflight-stale", File.join(Master::REPO_ROOT, "MASTER")) do |directory|
       path = File.join(directory, "expired.json")
@@ -1025,7 +1022,6 @@ class TestTaskContract < Minitest::Test
       )
     end
   end
-
 
   def test_openbsd_preflight_requires_source_reads_inside_the_declared_scope
     receipt = openbsd_preflight_fixture(source_path: "MASTER/README.md")
@@ -1053,7 +1049,6 @@ class TestTaskContract < Minitest::Test
       command: "printf '%s' value > OPENBSD/RUNBOOK.md", contract:
     )
   end
-
 
   def test_direct_operator_ssh_adapter_requires_preflight_for_the_canonical_vm23_host
     contract = CONTRACT.build(

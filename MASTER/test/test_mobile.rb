@@ -434,7 +434,6 @@ class TestMobileAmbientPermissions < Minitest::Test
   end
 end
 
-
 class TestMobileStorage < Minitest::Test
   def shared_writer_calls
     calls = []

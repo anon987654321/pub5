@@ -309,10 +309,10 @@ module Master
           end
 
           def disk_cached_findings(key)
-            return nil unless disk_cache_enabled?
+            return unless disk_cache_enabled?
 
             @disk_cache ||= load_disk_cache
-            return nil unless @disk_cache.key?(key)
+            return unless @disk_cache.key?(key)
 
             rows = @disk_cache[key]
             rows.map do |row|

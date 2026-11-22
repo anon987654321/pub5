@@ -54,9 +54,9 @@ module Master
                precedents: rows.size,
                governing: rows.count { |p| p["status"] == "governing" },
                overruled: rows.count { |p| p["status"] == "overruled" },
-               rows: rows.map { |p| { id: p["id"], status: p["status"], laws: p["laws"],
+               rows: rows.map do |p| { id: p["id"], status: p["status"], laws: p["laws"],
                                        ruling: p["ruling"].to_s.lines.first.to_s.strip[0, 100],
-                                       adopted_by: p["adopted_by"] } })
+                                       adopted_by: p["adopted_by"] } end)
           0
         end
 

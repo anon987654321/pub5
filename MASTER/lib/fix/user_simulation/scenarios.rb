@@ -92,7 +92,7 @@ module Master
       end
 
       def rails_surface_ids(relative)
-        return nil unless relative.start_with?("RAILS/")
+        return unless relative.start_with?("RAILS/")
 
         case relative
         when %r{\ARAILS/brgen/engines/dating/} then %w[dating]

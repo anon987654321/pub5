@@ -14,7 +14,7 @@ module Master
               model = Io::LaneSelection.nsfw_model_id
               return model if model && Io::LaneSelection.alive?(model)
 
-              return nil
+              return
             end
             return @config.model unless enabled?
             return preferred_local(task_type:) if local_only?

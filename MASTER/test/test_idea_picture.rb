@@ -31,7 +31,6 @@ class TestIdeaPicture < Minitest::Test
     end
   end
 
-
   def test_validate_model_passes_the_subject_to_the_studio_preflight
     with_script do |script|
       calls = []

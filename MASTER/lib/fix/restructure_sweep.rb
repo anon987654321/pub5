@@ -268,7 +268,7 @@ module Master
 
       # A sweep that stopped on its budget still ends cleanly when a final
       # read-only scan finds nothing left to restructure.
-      def terminal_state(target, run_id, terminal, kept)
+      def terminal_state(target, run_id, terminal, _kept)
         return :done if terminal == :limit_reached && candidates(target, "#{run_id}-final").empty?
 
         terminal

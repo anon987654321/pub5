@@ -59,7 +59,7 @@ module PortalFakes
     end
     def self.next_node(browser, disabled: false, stuck: false)
       attrs = disabled ? { "disabled" => "" } : {}
-      Node.new(attrs: attrs, on_click: stuck ? nil : -> { browser.advance })
+      Node.new(attrs:, on_click: stuck ? nil : -> { browser.advance })
     end
     def self.with_pages(specs)
       b = new
@@ -119,7 +119,7 @@ class TestPortalAgentCrawler < Minitest::Test
   def test_dedupes_and_stops_on_disabled_next
     b = F::Browser.with_pages([
       { rows: [F::Browser.row("A", "/a"), F::Browser.row("B", "/b")], next: :enabled },
-      { rows: [F::Browser.row("B", "/b"), F::Browser.row("C", "/c")], next: :disabled }
+      { rows: [F::Browser.row("B", "/b"), F::Browser.row("C", "/c")], next: :disabled },
     ])
     c = crawl(b)
     assert_equal "DONE", c.status
@@ -243,7 +243,7 @@ class TestPortalAgentScout < Minitest::Test
     @browser = F::Browser.new
   end
   def scout(actions, handoff: nil)
-    P::Scout.new(@browser, policy: @policy, gateway: F::Gateway.new(actions), handoff: handoff)
+    P::Scout.new(@browser, policy: @policy, gateway: F::Gateway.new(actions), handoff:)
   end
   def test_done_returns_selectors
     sel = scout([{ "do" => "done", "selectors" => F::Browser::SEL }]).call

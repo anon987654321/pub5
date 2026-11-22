@@ -137,11 +137,11 @@ module Master
       # :active (its handle is adopted) or :blocked (left untouched); anything
       # else starts a fresh record.
       def queued_reuse_state(current, goal:, scope:, resume_blocked: false)
-        return nil unless current && current["goal"].to_s == goal.to_s &&
+        return unless current && current["goal"].to_s == goal.to_s &&
                           current["scope"].to_s == relative(scope).to_s
 
         return :active if %w[running waiting].include?(current["state"].to_s)
-        return nil if resume_blocked == true && current["state"].to_s == "blocked"
+        return if resume_blocked == true && current["state"].to_s == "blocked"
 
         current["state"].to_s == "blocked" ? :blocked : nil
       end

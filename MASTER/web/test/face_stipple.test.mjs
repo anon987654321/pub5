@@ -112,7 +112,6 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.equal(JSON.stringify(samples), JSON.stringify(stipple.defaultSamples(512)), "the new geometry remains deterministic");
 });
 
-
 test("fingerprint ridges and radial signal waves stay inside the bounded one-pixel field", () => {
   assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0\s*\n\s+strength: 0\.48/);
   assert.match(tokens, /intro_wave_strength: 0\.28/);
@@ -200,7 +199,6 @@ test("MASTER randomly morphs among the four original abstract face expressions",
   assert.match(faceSource, /masterExpressionPoint\(p, uExpressionTo\)/);
   assert.match(faceSource, /uExpressionFrom:\{value:0\}/);
 });
-
 
 test("face expression cycle preserves its exact blend across reduced motion and subject suppression", () => {
   const listeners = new Map();
@@ -291,7 +289,6 @@ test("face expression cycle preserves its exact blend across reduced motion and 
   assert.equal(faceSystem.expressionCycle.to, pausedTarget);
   assert.ok(faceSystem.material.uniforms.uExpressionBlend.value > subjectPausedBlend);
 });
-
 
 test("stipple breath is luminance-only, survives idle stillness and freezes for reduced motion", () => {
   assert.match(system, /uBreathScale: \{ value: 0 \}/);

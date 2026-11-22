@@ -249,7 +249,7 @@ class SsrfGuardTest < Minitest::Test
   def test_shared_request_returns_a_bounded_body_from_the_pinned_connection
     uri = URI("https://example.com/data")
     request = Net::HTTP::Get.new(uri)
-    response = FakeOutboundResponse.new(headers: { "Content-Length" => "5" }, chunks: ["he", "llo"])
+    response = FakeOutboundResponse.new(headers: { "Content-Length" => "5" }, chunks: %w[he llo])
     http = FakeOutboundHttp.new(response)
     pins = []
 
@@ -288,7 +288,7 @@ class SsrfGuardTest < Minitest::Test
 
   def test_shared_request_stops_a_chunked_body_at_the_cap
     uri = URI("https://example.com/data")
-    response = FakeOutboundResponse.new(chunks: ["123456", "78901", "ignored"])
+    response = FakeOutboundResponse.new(chunks: %w[123456 78901 ignored])
     http = FakeOutboundHttp.new(response)
 
     Guard.stub(:pinned_address, "93.184.216.34") do

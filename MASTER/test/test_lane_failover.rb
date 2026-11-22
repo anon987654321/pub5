@@ -93,7 +93,7 @@ class TestLaneFailover < Minitest::Test
 
     up = ->(_base) { probes += 1; true }
     spawn = ->(_binary) { starts += 1 }
-    result = Health.ensure_ollama(base: "http://localhost:11434", up: up, spawn: spawn)
+    result = Health.ensure_ollama(base: "http://localhost:11434", up:, spawn:)
 
     assert_equal :off, result.state
     assert_match(/set MASTER_OLLAMA_ENABLED=1 to opt in/, result.message)
@@ -101,14 +101,14 @@ class TestLaneFailover < Minitest::Test
     assert_equal 0, starts, "the disabled lane is not started"
 
     ENV["MASTER_OLLAMA_ENABLED"] = "1"
-    result = Health.ensure_ollama(base: "http://localhost:11434", up: up, spawn: spawn)
+    result = Health.ensure_ollama(base: "http://localhost:11434", up:, spawn:)
     assert_equal :up, result.state
     assert_equal 1, probes
     assert_equal 0, starts, "a healthy bed needs no spawn"
 
     ENV["MASTER_NO_OLLAMA"] = "1"
     probes = 0
-    result = Health.ensure_ollama(base: "http://localhost:11434", up: up, spawn: spawn)
+    result = Health.ensure_ollama(base: "http://localhost:11434", up:, spawn:)
 
     assert_equal :off, result.state
     assert_match(/MASTER_NO_OLLAMA=1 refuses it/, result.message)

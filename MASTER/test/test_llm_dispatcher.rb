@@ -1176,9 +1176,9 @@ class TestLLMDispatcher < Minitest::Test
   def test_send_hosted_threads_the_image_into_openai_chat
     dispatcher, = build_dispatcher
     router = Object.new
-    router.define_singleton_method(:hosted_endpoint_for) { |_model|
+    router.define_singleton_method(:hosted_endpoint_for) do |_model|
       { base: "https://provider.example/v1", key: nil, posture: :unknown }
-    }
+    end
     dispatcher.instance_variable_set(:@model_router, router)
     dispatcher.define_singleton_method(:refuses_sensitive?) { |_endpoint, _sensitivity| false }
     dispatcher.define_singleton_method(:fit_to_window) { |_model, messages| messages }

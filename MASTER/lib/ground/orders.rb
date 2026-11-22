@@ -422,7 +422,7 @@ module Master
             next if url.empty?
 
             {
-              url: url,
+              url:,
               label: entry["label"].to_s.strip.empty? ? slug_for(url) : entry["label"].to_s.strip,
               max_bytes: Integer(entry["max_bytes"] || DEFAULT_MAX_BYTES),
             }

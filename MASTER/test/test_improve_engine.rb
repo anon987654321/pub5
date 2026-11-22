@@ -250,7 +250,6 @@ class TestImproveEngine < Minitest::Test
     assert_equal Master::Fix::Improve::Ideate::SCHEMA, data["schema"]
   end
 
-
   def test_live_ruby_architecture_report_does_not_reappear_as_ideation
     path = write("MASTER/lib/convergence/architecture.rb", "module Master; end\n")
 

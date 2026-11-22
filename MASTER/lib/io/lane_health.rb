@@ -139,7 +139,7 @@ module Master
 
       # One-token generation; answers the elapsed seconds, nil on any failure.
       def warm_probe_post(base, model, num_predict, num_ctx)
-        return nil unless local?(base)
+        return unless local?(base)
 
         uri = URI.join("#{base}/", "api/generate")
         body = { model:, prompt: "Reply with the single word OK.", stream: false,

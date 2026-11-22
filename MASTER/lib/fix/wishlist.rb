@@ -165,7 +165,7 @@ module Master
 
       # The lock must be owner-only or group-shared exactly as the directory is;
       # anything looser means someone planted a permissive file.
-      def assert_lock_policy(opened, directory_stat, group_shared, lock_mode)
+      def assert_lock_policy(opened, directory_stat, group_shared, _lock_mode)
         permissions = opened.mode & 0o777
         shared_permissions = group_shared ?
           (permissions & 0o060) == 0o060 && opened.gid == directory_stat.gid :

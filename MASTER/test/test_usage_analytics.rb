@@ -37,7 +37,7 @@ class TestUsageAnalytics < Minitest::Test
 
   def test_report_obeys_both_time_boundaries
     @analytics.record(user_id: "user-secret", feature: "feed", action: "view", platform: "web")
-    @now += 38600
+    @now += 38_600
     @analytics.record(user_id: "user-secret", feature: "search", action: "submit", platform: "web")
     result = @analytics.report(since: Time.utc(2026, 11, 12, 12), until_at: Time.utc(2026, 11, 12, 13))
     assert result.ok?

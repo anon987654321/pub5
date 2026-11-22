@@ -56,7 +56,6 @@ class ChatServiceConversationTest < ActiveSupport::TestCase
     refute @stream.writes.join.include?("theirs.rb")
   end
 
-
   test "semantic subject SSE sidecars are bounded and scoped to their conversation" do
     Fiber[:master_conversation] = @mine
     @bus.publish(
@@ -69,7 +68,7 @@ class ChatServiceConversationTest < ActiveSupport::TestCase
         sequence: ["frame", "wheel"],
         parts: [
           { key: "frame", primitive: "beam", axis: "x", center: [0, 0, 0], size: [0.4, 0.03, 0.03] },
-          { key: "wheel", primitive: "ring", center: [0.3, -0.2, 0], size: [0.2, 0.2, 0.02] }
+          { key: "wheel", primitive: "ring", center: [0.3, -0.2, 0], size: [0.2, 0.2, 0.02] },
         ]
       }
     )

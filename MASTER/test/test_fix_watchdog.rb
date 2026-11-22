@@ -277,7 +277,6 @@ class TestFixWatchdog < Minitest::Test
     assert_equal "fix0 phase=stream fixed=1 failed=1 rejected=2 lane=grok-cli:auto elapsed=61", p.machine_line(61.4)
   end
 
-
   def test_machine_heartbeat_is_not_echoed_beside_the_human_line_on_a_normal_tty
     run = budget
     run.instance_variable_set(:@pulse, pulse)

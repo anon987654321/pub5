@@ -233,7 +233,7 @@ class ControlPlaneSpec < Minitest::Test
       path = File.join(lock_dir, "process.lock")
       pid = 12_345
       File.write(path, JSON.generate(
-        pid: pid, host: Socket.gethostname, mode: "interactive", at: Time.now.utc.iso8601
+        pid:, host: Socket.gethostname, mode: "interactive", at: Time.now.utc.iso8601
       ))
       command = File.join(root, "bin", "master")
       process_row = "#{pid} 1 #{pid} S+ ttys001 #{command}\n"

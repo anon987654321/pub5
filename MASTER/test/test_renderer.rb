@@ -291,7 +291,6 @@ class TestRenderer < Minitest::Test
     assert_equal "/", Master::Face::Contract.glyph(:output)
   end
 
-
   def test_shell_prompt_is_plain_ascii_without_color_segments
     renderer = FakeRenderer.new(config: {})
     previous_user = ENV["USER"]

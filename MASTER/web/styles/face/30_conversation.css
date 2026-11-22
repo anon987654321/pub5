@@ -122,7 +122,6 @@ body.mission-control a:focus-visible {
   outline-offset: 2px;
 }
 
-
 .fps-badge {
   position: fixed;
   top: var(--inset-t);

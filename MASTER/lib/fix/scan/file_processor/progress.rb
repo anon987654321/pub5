@@ -130,7 +130,7 @@ module Master
         end
 
         def idle_row
-          return nil unless @progress_last_check
+          return unless @progress_last_check
 
           @progress_last_check.merge(
             "state" => "idle",
@@ -168,7 +168,7 @@ module Master
         # The callback a law run, and the nested detectors inside laws.yml's own
         # pass, call to say which law is in flight; the watcher samples what it
         # wrote under the same mutex.
-        def progress_callback(token, total)
+        def progress_callback(token, _total)
           lambda do |inner_pass:, inner_law:, index:, total:, path:|
             @progress_mutex.synchronize do
               active = @active_law_checks[token]

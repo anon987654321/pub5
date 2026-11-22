@@ -51,7 +51,7 @@ class ChatController < ApplicationController
     render json: {
       started: true,
       face_session: Digest::SHA256.hexdigest("master-face-mask:#{conversation}")[0, 32],
-      face_profile: entry ? entry.fetch("particle_profile", "").to_s : ""
+      face_profile: entry ? entry.fetch("particle_profile", "").to_s : "",
     }
   end
 

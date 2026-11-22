@@ -20,7 +20,6 @@ class TestFixHere < Minitest::Test
     end
   end
 
-
   def test_production_host_refuses_fix_before_disk_probe_or_child_boot
     with_worktree do |_main, worker, tools_bin|
       output, status = run_fix_here(

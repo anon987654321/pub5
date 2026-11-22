@@ -26,7 +26,7 @@ class TestSecurityMonitor < Minitest::Test
 
   def test_failed_login_threshold_is_aggregated_without_identifiers
     events = Array.new(6) { event("FAILED_LOGIN") }
-    data = @monitor.analyze(events: events).value!
+    data = @monitor.analyze(events:).value!
     assert_equal 6, data[:findings][:failed_logins][:total]
     assert_equal 1, data[:findings][:failed_logins][:suspicious_user_count]
     refute_includes data.to_s, "user-42"
@@ -41,7 +41,7 @@ class TestSecurityMonitor < Minitest::Test
       event("SESSION_CREATED", country: "US", user_agent: "D"),
       event("SESSION_CREATED", country: "GB", user_agent: "E"),
     ]
-    data = @monitor.analyze(events: events).value!
+    data = @monitor.analyze(events:).value!
     findings = data[:findings][:suspicious_sessions]
     assert_equal 1, findings[:suspicious_user_count]
     assert_equal 1, findings[:pattern_counts][:geo]
@@ -50,13 +50,13 @@ class TestSecurityMonitor < Minitest::Test
 
   def test_high_volume_api_use_is_counted
     events = Array.new(101) { event("API_CALL", endpoint: "/api/feed") }
-    data = @monitor.analyze(events: events).value!
+    data = @monitor.analyze(events:).value!
     assert_equal 1, data[:findings][:unusual_api][:high_volume_user_count]
   end
 
   def test_upper_window_boundary_is_exclusive
     events = [event("FAILED_LOGIN")]
-    data = @monitor.analyze(events: events, since: @now, until_at: @now)
+    data = @monitor.analyze(events:, since: @now, until_at: @now)
     assert data.err?
   end
   def test_numeric_string_config_is_normalized_before_analysis
@@ -70,7 +70,7 @@ class TestSecurityMonitor < Minitest::Test
       clock: -> { @now },
     )
     events = Array.new(6) { event("FAILED_LOGIN") }
-    result = monitor.analyze(events: events)
+    result = monitor.analyze(events:)
     assert result.ok?, result.message
     assert_equal 1, result.value![:findings][:failed_logins][:suspicious_user_count]
   end

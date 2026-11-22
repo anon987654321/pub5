@@ -143,7 +143,7 @@ module Master
       # provider-reported rows and estimated rows remain separate; no prompt,
       # request or response material is read or copied.
       def provider_usage(root:, run_id:)
-        path = File.join(MasterPaths.fix_state(root: root), "costs.jsonl")
+        path = File.join(MasterPaths.fix_state(root:), "costs.jsonl")
         return unavailable_usage unless File.file?(path)
 
         exact = []
@@ -163,7 +163,7 @@ module Master
         estimated_rows = estimated.map(&:first)
         {
           status: exact_rows.any? ? "REPORTED_USAGE" : (estimated_rows.any? ? "ESTIMATES_ONLY" : "NOT_CAPTURED"),
-          source: MasterPaths.fix_state(root: root) + "/costs.jsonl",
+          source: MasterPaths.fix_state(root:) + "/costs.jsonl",
           exact_receipts: exact_rows.size,
           estimated_records: estimated_rows.size,
           exact_amount: exact_rows.sum { |row| row["amount"].to_f }.round(8),
@@ -274,7 +274,7 @@ module Master
         end
         File.chmod(0o600, path)
         {
-          path: path,
+          path:,
           sha256: Digest::SHA256.hexdigest(line),
           trace_id: trace["trace_id"],
           runtime_profile: trace.dig("metadata", "runtime_profile"),

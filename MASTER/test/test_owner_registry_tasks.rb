@@ -106,7 +106,7 @@ class TestOwnerRegistryTasks < Minitest::Test
     full = map.execution_spec("rake test", tree: "MASTER", repo_root: repository)
     assert_equal "full_suite", full.fetch(:proof_type)
     assert_equal :bundle, full.fetch(:launcher)
-    assert_equal ["rake", "test"], full.fetch(:argv)
+    assert_equal %w[rake test], full.fetch(:argv)
 
     check = map.execution_spec(
       "MASTER/bin/operator check --scan-only --tree=MASTER",
@@ -139,7 +139,7 @@ class TestOwnerRegistryTasks < Minitest::Test
     refute_nil spec
     assert_equal "full_suite", spec.fetch(:proof_type)
     assert_equal :bundle, spec.fetch(:launcher)
-    assert_equal ["rake", "test"], spec.fetch(:argv)
+    assert_equal %w[rake test], spec.fetch(:argv)
     assert_equal "1", spec.fetch(:env).fetch("MASTER_TEST_JOBS")
     assert_equal "MASTER", spec.fetch(:cwd_relative)
     assert_equal Digest::SHA256.hexdigest(command), spec.fetch(:command_digest)
@@ -154,7 +154,7 @@ class TestOwnerRegistryTasks < Minitest::Test
     assert_empty map.types_for(done_when: "ruby tools/unknown-check.rb")
     refute map.valid_types?([])
     refute map.valid_types?(["made_up_proof"])
-    assert map.valid_types?(["focused_tests", "runtime_evidence"])
+    assert map.valid_types?(%w[focused_tests runtime_evidence])
   end
 
   def test_executor_queues_only_a_single_tree_mechanical_item
@@ -615,10 +615,10 @@ class TestOwnerRegistryTasks < Minitest::Test
   def test_adaptive_journey_causal_graph_uses_only_explicit_edges
     graph = Master::Fix::AdaptiveJourney.new.causal_graph([
       { id: "source", kind: "failure", status: "FAIL" },
-      { id: "repair", kind: "change", status: "PASS", caused_by: ["source", "missing", "repair"] },
+      { id: "repair", kind: "change", status: "PASS", caused_by: %w[source missing repair] },
     ])
 
-    assert_equal [["source", "repair"]], graph.fetch("edges")
+    assert_equal [%w[source repair]], graph.fetch("edges")
     assert_equal ["source"], graph.fetch("roots")
   end
 

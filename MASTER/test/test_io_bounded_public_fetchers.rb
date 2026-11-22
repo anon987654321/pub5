@@ -82,7 +82,7 @@ class BoundedPublicFetcherTransportTest < Minitest::Test
     tool = Master::Io::ArxivResearch.new(governor: Object.new)
     [
       URI("https://export.arxiv.org/api/query?search_query=all:ruby"),
-      URI("https://ar5iv.labs.arxiv.org/html/2601.12345")
+      URI("https://ar5iv.labs.arxiv.org/html/2601.12345"),
     ].each do |uri|
       capture_request(response("<feed/>")) do |calls|
         tool.send(:get_response, uri)

@@ -195,9 +195,9 @@ class MasterBootTest < Minitest::Test
         acceptance_commands = []
         capture = lambda do |*args, **|
           argv = args.reject { |argument| argument.is_a?(Hash) }
-          if argv.last(3) == ["remote", "get-url", "origin"]
+          if argv.last(3) == %w[remote get-url origin]
             ["git@github.com:owner/pub5.git\n", status]
-          elsif argv == ["bundle", "exec", "rake", "test"]
+          elsif argv == %w[bundle exec rake test]
             acceptance_commands << argv
             ["suite: 12 runs, 0 failures, 0 errors\n", status]
           else

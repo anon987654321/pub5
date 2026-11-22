@@ -612,7 +612,7 @@ module Master
             extension = File.extname(entry).downcase
             extensions[extension] += 1
             bytes += stat.size
-            files << { relative_path: relative, size: stat.size, absolute_path: entry, extension: extension }
+            files << { relative_path: relative, size: stat.size, absolute_path: entry, extension: }
           end
         end
         {

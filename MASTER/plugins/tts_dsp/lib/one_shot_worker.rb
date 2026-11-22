@@ -6,7 +6,7 @@ require_relative 'fm_modulator'
 module Master
   module TTS
     class OneShotWorker
-      def synthesize_with_dsp(text, raw_audio_path)
+      def synthesize_with_dsp(_text, raw_audio_path)
         processed_wav = "/tmp/master_voice_dsp_#{$$}.wav"
 
         begin

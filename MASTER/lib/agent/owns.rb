@@ -26,8 +26,8 @@ module Master
           normalized = normalize(path)
           emit(
             command: "owns",
-            path: path,
-            normalized: normalized,
+            path:,
+            normalized:,
             ownership: ownership_entry(normalized),
             laws: owning_laws(normalized),
             tests: owning_tests(normalized),

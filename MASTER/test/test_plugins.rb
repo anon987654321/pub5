@@ -567,7 +567,6 @@ class TestPlugins < Minitest::Test
     end
   end
 
-
   def test_soulseek_quality_triage_reports_structure_without_decoding_audio
     require "tmpdir"
     require "fileutils"

@@ -34,10 +34,10 @@ module Stigmergy
       now = Time.now.utc
       record = {
         schema: SCHEMA,
-        id: id,
+        id:,
         kind: kind.to_s,
         subject: subject.to_s,
-        payload: payload,
+        payload:,
         strength: strength.to_f.clamp(0.0, 10.0),
         source: source.to_s,
         created_at: now.iso8601,
@@ -58,7 +58,7 @@ module Stigmergy
           archive(path)
           next
         end
-        rec.merge(path: path)
+        rec.merge(path:)
       rescue JSON::ParserError
         nil
       end
@@ -66,7 +66,7 @@ module Stigmergy
 
     def reinforce(id, delta: 0.25)
       path = find_active_path(id)
-      return nil unless path
+      return unless path
       rec = JSON.parse(File.read(path), symbolize_names: true)
       rec[:strength] = (rec[:strength].to_f + delta).clamp(0.0, 10.0)
       rec[:reinforced_at] = Time.now.utc.iso8601
@@ -90,15 +90,15 @@ module Stigmergy
     def local_patch_tag(subject:, flaw:, fix_summary:, higher_order: nil, source: "agent")
       emit(
         kind: :tag,
-        subject: subject,
+        subject:,
         payload: {
-          flaw: flaw,
-          fix_summary: fix_summary,
-          higher_order: higher_order,
+          flaw:,
+          fix_summary:,
+          higher_order:,
           cascade_eligible: !higher_order.nil?,
         },
         strength: 1.2,
-        source: source
+        source:
       )
     end
 

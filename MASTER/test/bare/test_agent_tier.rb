@@ -81,7 +81,7 @@ module Master
         %w[id severity mode lifecycle languages exemptions definition_sources].each do |field|
           assert row.key?(field), "the dictionary row for NO_PUTS is missing #{field}"
         end
-        assert_equal ["agent_interface", "repl_session"], row.dig("exemptions", "kinds"),
+        assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
                      "the kind registry is where the exemption is owned, not the detector source"
       end
 
@@ -217,7 +217,7 @@ module Master
       end
 
       def test_autopoiesis_manifest_writer_emits_a_final_newline
-        kernel = Autopoiesis::Kernel.new(repo_root: repo_root)
+        kernel = Autopoiesis::Kernel.new(repo_root:)
         Dir.mktmpdir do |dir|
           output = File.join(dir, "components.json")
           kernel.instance_variable_set(:@manifest_path, output)
@@ -233,7 +233,7 @@ module Master
         Dir.mktmpdir do |dir|
           output = File.join(dir, "components.json")
           FileUtils.cp(source, output)
-          kernel = Autopoiesis::Kernel.new(repo_root: repo_root)
+          kernel = Autopoiesis::Kernel.new(repo_root:)
           kernel.instance_variable_set(:@manifest_path, output)
           before = File.binread(output)
 
@@ -250,7 +250,7 @@ module Master
         Dir.mktmpdir do |dir|
           output = File.join(dir, "components.json")
           FileUtils.cp(source, output)
-          kernel = Autopoiesis::Kernel.new(repo_root: repo_root)
+          kernel = Autopoiesis::Kernel.new(repo_root:)
           kernel.instance_variable_set(:@manifest_path, output)
 
           results = kernel.health_check_all

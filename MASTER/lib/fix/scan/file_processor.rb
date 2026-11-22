@@ -144,7 +144,7 @@ module Master
           Law.conduct(code)
         end
 
-        def law_definition_path(path)
+        def law_definition_path(_path)
           candidate_root = Master.master_root(root: @root)
           candidate = File.join(candidate_root, "law", "definition")
           return candidate if File.file?("#{candidate}.rb")

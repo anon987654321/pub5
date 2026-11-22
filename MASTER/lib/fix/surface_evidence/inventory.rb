@@ -53,7 +53,7 @@ module Master
       def inventory_directory_record(pending, path, relative_path, ignored)
         if ignored_directory?(relative_path)
           ignored << relative_path
-          return nil
+          return
         end
 
         pending << path
@@ -147,20 +147,20 @@ module Master
         []
       end
 
-      def master_test_commands(label, paths)
+      def master_test_commands(_label, paths)
         tests = paths.any? { |path| path.start_with?("MASTER/test/") || path.start_with?("MASTER/tools/test/") }
         return [] unless tests && File.file?(File.join(@root, "MASTER", "Rakefile"))
 
         [{ label: "MASTER rake test", argv: [RbConfig.ruby, "-S", "rake", "test"], chdir: File.join(@root, "MASTER") }]
       end
 
-      def openbsd_test_commands(label, paths)
+      def openbsd_test_commands(_label, paths)
         return [] unless paths.any? { |path| path.start_with?("OPENBSD/test/") } && File.file?(File.join(@root, "OPENBSD", "test", "run_all.rb"))
 
         [{ label: "OPENBSD test/run_all.rb", argv: [RbConfig.ruby, "test/run_all.rb"], chdir: File.join(@root, "OPENBSD") }]
       end
 
-      def studio_test_commands(label, paths)
+      def studio_test_commands(_label, paths)
         return [] unless paths.any? { |path| path.start_with?("STUDIO/replicate/test/") } && File.file?(File.join(@root, "STUDIO", "replicate", "Rakefile"))
 
         [{ label: "STUDIO rake test", argv: [RbConfig.ruby, "-S", "rake", "test"], chdir: File.join(@root, "STUDIO") }]

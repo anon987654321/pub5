@@ -28,7 +28,6 @@ class TestFixLoopPriorities < Minitest::Test
     end
   end
 
-
   def test_rule_dependency_cycles_are_refused_instead_of_ordered_arbitrarily
     Dir.mktmpdir do |dir|
       laws = [Law.new("A", :warning), Law.new("B", :warning)]

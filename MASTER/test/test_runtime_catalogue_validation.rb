@@ -25,7 +25,6 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_nil validated_file("models.yml")
   end
 
-
   def test_the_declared_nsfw_tier_may_be_empty
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)

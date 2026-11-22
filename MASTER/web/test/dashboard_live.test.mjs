@@ -116,8 +116,6 @@ test("an authentication failure stops both the poll and the stream", async () =>
   assert.deepEqual(page.live(), []);
 });
 
-
-
 test("bus panel groups dmesg strings by subsystem and avoids raw event chatter", async () => {
   const answer = {
     status: 200,

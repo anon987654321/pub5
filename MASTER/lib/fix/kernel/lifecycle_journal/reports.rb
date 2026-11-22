@@ -113,7 +113,7 @@ module Master
           digest
         end
 
-        def assessment_report_receipt(id, report, stored)
+        def assessment_report_receipt(_id, report, stored)
           ledger = report[:ledger] || report["ledger"]
           summary = ledger && (ledger[:summary] || ledger["summary"])
           cells = ledger && (ledger[:cells] || ledger["cells"])
@@ -259,7 +259,7 @@ module Master
 
           dimensions = %w[plan_digest identity_digest scope_digest source_digest law_digest law_source_digest authority_digest toolchain_digest exclusion_digest adapter_digest]
           missing = dimensions.select { |key| receipt[key].to_s.empty? }
-          return { "status" => "receipt_provenance_incomplete", "dimensions" => missing } unless missing.empty?
+          { "status" => "receipt_provenance_incomplete", "dimensions" => missing } unless missing.empty?
         end
 
         def assessment_report_verified_summary(report, context, artifact)

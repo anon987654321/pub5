@@ -53,7 +53,7 @@ module Master
                  ruby: RUBY_VERSION,
                  prism: prism_available?,
                  bundle: bundle_available?,
-                 memory_mb: memory_mb,
+                 memory_mb:,
                  termux: termux?,
                },
                tier: row,

@@ -154,7 +154,6 @@ class TestSkills < Minitest::Test
     end
   end
 
-
   def test_earlier_skill_boundaries_are_explicit
     skills = registry.fetch("skills")
     body = ->(name) { skills.find { |skill| skill["name"] == name }.fetch("body") }
@@ -167,7 +166,6 @@ class TestSkills < Minitest::Test
     assert_match(/candidate adapters, not assumed installed dependencies/, body.call("media-review"))
     assert_match(/Never start a physical print/, body.call("studio-3d"))
   end
-
 
   def test_new_skill_boundaries_are_explicit
     skills = registry.fetch("skills")
@@ -552,7 +550,6 @@ class TestSkills < Minitest::Test
     end
   end
 
-
   REPAIR_SKILLS = {
     "codebase-auditor" => ["audit the codebase", "map the codebase"],
     "diagnose" => ["diagnose the failure", "reproduce the bug"],
@@ -580,8 +577,6 @@ class TestSkills < Minitest::Test
     assert_match(/NOT_RUN/, registry.fetch("skills").find { |s| s["name"] == "verification-before-completion" }.fetch("body"))
     assert_match(/complete diff against its parent/, registry.fetch("skills").find { |s| s["name"] == "independent-code-review" }.fetch("body"))
   end
-
-
 
   NEW_GUARDRAIL_SKILLS = {
     "simplicity" => [
@@ -616,8 +611,6 @@ class TestSkills < Minitest::Test
     assert_match(/One blocked person must not block another/, consent)
     assert_match(/human must inspect the evidence content/, consent)
   end
-
-
 
   MASTER_WORKFLOW_SKILLS = {
     "master-authority-chain" => [
@@ -685,6 +678,5 @@ class TestSkills < Minitest::Test
     matched = shipped_skills.trigger_for("write an email asking my friend to fix the broken heater")
     refute matched.any? { |skill| MASTER_WORKFLOW_SKILLS.key?(skill[:name]) }
   end
-
 
 end

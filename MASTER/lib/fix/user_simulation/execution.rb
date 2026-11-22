@@ -41,14 +41,14 @@ module Master
       end
 
       def master_test_command(test_path)
-        return nil unless test_path.start_with?("MASTER/test/")
+        return unless test_path.start_with?("MASTER/test/")
 
         root = File.join(@root, "MASTER")
         [root, ["bundle", "exec", "ruby", "-Itest", test_path.delete_prefix("MASTER/")], :ruby]
       end
 
       def master_web_test_command(test_path)
-        return nil unless test_path.start_with?("MASTER/web/")
+        return unless test_path.start_with?("MASTER/web/")
 
         root = File.join(@root, "MASTER", "web")
         relative = test_path.delete_prefix("MASTER/web/")
@@ -58,7 +58,7 @@ module Master
       end
 
       def rails_test_command(test_path)
-        return nil unless test_path.start_with?("RAILS/test/")
+        return unless test_path.start_with?("RAILS/test/")
 
         root = File.join(@root, "RAILS")
         relative = test_path.delete_prefix("RAILS/")
@@ -70,7 +70,7 @@ module Master
 
       def rails_app_test_command(test_path)
         match = test_path.match(%r{\ARAILS/(brgen|amber|bsdports)/})
-        return nil unless match
+        return unless match
 
         root = File.join(@root, "RAILS", match[1])
         relative = test_path.delete_prefix("RAILS/#{match[1]}/")

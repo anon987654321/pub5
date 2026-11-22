@@ -259,7 +259,6 @@ class MediaIntentTest < Minitest::Test
     end
   end
 
-
   def test_lora_selfie_series_preflights_named_subjects_and_always_retains_prior_renders
     calls = []
     fake = Object.new

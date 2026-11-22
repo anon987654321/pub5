@@ -35,7 +35,7 @@ module Master
 
           emit(
             command: "export --laws",
-            kit: kit,
+            kit:,
             files: Dir.glob(File.join(kit, "**", "*")).select { |f| File.file?(f) }.size,
             universal_laws: universality[:universal].size,
             house_laws: universality[:house].size,

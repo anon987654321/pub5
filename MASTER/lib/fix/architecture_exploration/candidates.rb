@@ -33,11 +33,11 @@ module Master
       # then the near-duplicate check against everything already accepted.
       def accepted_candidate(raw, tree, expected:, grounded_evidence:, available_tests:, seen:, accepted:, rejected:)
         identified = identified_row(raw, expected, rejected, seen)
-        return nil unless identified
+        return unless identified
 
         id, row = identified
         candidate = grounded_candidate(id, row, tree, expected:, grounded_evidence:, available_tests:, rejected:)
-        return nil unless candidate
+        return unless candidate
 
         duplicate = accepted.find { |other| near_duplicate?(other, candidate) }
         rejected << "#{id}: near-duplicate of #{duplicate[:id]}" if duplicate
@@ -48,17 +48,17 @@ module Master
       def identified_row(raw, expected, rejected, seen)
         unless raw.is_a?(Hash)
           rejected << "candidate was not an object"
-          return nil
+          return
         end
         row = raw.transform_keys(&:to_s)
         id = row["id"].to_s
         unless expected[id] == row["lens"].to_s
           rejected << "#{id.empty? ? "unknown id" : id}: mismatched id/lens"
-          return nil
+          return
         end
         if seen.include?(id)
           rejected << "#{id}: duplicate id"
-          return nil
+          return
         end
         [id, row]
       end
@@ -72,7 +72,7 @@ module Master
         reasons = rejection_reasons(row, gates)
         unless reasons.empty?
           rejected << "#{id}: #{reasons.join("; ")}"
-          return nil
+          return
         end
         candidate_row(id, expected.fetch(id), row, gates)
       end

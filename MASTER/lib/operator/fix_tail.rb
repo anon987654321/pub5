@@ -62,7 +62,7 @@ module Operator
       roots.flat_map do |root|
         workspace = File.basename(File.expand_path(root)) == "MASTER" ? File.dirname(File.expand_path(root)) : File.expand_path(root)
         [
-          MasterPaths.fix_state(root: root),
+          MasterPaths.fix_state(root:),
           File.join(workspace, ".master"),
           File.join(workspace, "MASTER", ".master"),
           File.join(root, ".master"),

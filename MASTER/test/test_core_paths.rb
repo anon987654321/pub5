@@ -51,7 +51,7 @@ class TestCorePaths < Minitest::Test
       assert_equal reason,
                    Master::Core::Constitution::Paths.write_refusal("data/laws.yml", root: File.join(root, "MASTER"))
       assert_equal reason,
-                   Master::Core::Constitution::Paths.write_refusal("MASTER/data/laws.yml", root: root)
+                   Master::Core::Constitution::Paths.write_refusal("MASTER/data/laws.yml", root:)
       assert_nil Master::Core::Constitution::Paths.write_refusal("lib/fix/fix_loop.rb", root: File.join(root, "MASTER"))
       assert_nil Master::Core::Constitution::Paths.write_refusal("../RAILS/brgen/app/models/post.rb",
                                                                  root: File.join(root, "MASTER"))

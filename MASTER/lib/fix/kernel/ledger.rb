@@ -158,7 +158,7 @@ module Master
         cache_log_head(file, last ? last.fetch("seq") : 0, last ? last.fetch("hash") : GENESIS)
       end
 
-      def revalidated_log_head(file, cached)
+      def revalidated_log_head(file, _cached)
         # A different writer may have appended, but suffix-only validation
         # trusts the cached prefix without proving that its bytes survived.
         # Re-validate the complete chain before adopting the new head.

@@ -292,25 +292,25 @@ module Operator
 
     def audit_vertical_front_pages
       pages = {
-        "brgen" => ["RAILS/brgen/app/views/home/index.html.erb", ["feed-pending", "feed-updates"]],
+        "brgen" => ["RAILS/brgen/app/views/home/index.html.erb", %w[feed-pending feed-updates]],
         "amber" => ["RAILS/amber/app/views/home/index.html.erb", ["render \"looks\"", "render \"frontpage_posts\""]],
         "marketplace" => ["RAILS/brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb",
-                          ["bol-market-hero", "listing-kinds"]],
+                          %w[bol-market-hero listing-kinds]],
         "dating" => ["RAILS/brgen/engines/dating/app/views/dating/home/index.html.erb",
                      ["dating-discover-panel", "data-controller=\"swipe\""]],
         "tv" => ["RAILS/brgen/engines/radio/tv/app/views/tv/home/index.html.erb",
                  ["tv/live_streams_label", "tv/home/trending_videos"]],
         "maps" => ["RAILS/brgen/engines/maps/app/views/maps/home/index.html.erb",
-                   ["map-morph-guard", "map-point-list"]],
+                   %w[map-morph-guard map-point-list]],
         "takeaway" => ["RAILS/brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb",
                        ["shared/promotional_art", "takeaway-restaurants"]],
         "radio" => ["RAILS/brgen/engines/radio/playlist/app/views/playlist/playlists/index.html.erb",
                     ["playlist/playlists/radio_tunnel", "auto_start: false", "show_library: true"]],
         "messenger" => ["RAILS/brgen/app/views/conversations/index.html.erb",
-                        ["messenger-window", "messenger_window_title", "messenger-inbox-list"]],
+                        %w[messenger-window messenger_window_title messenger-inbox-list]],
         "bsdports" => ["RAILS/bsdports/app/views/ports/index.html.erb",
-                       ["live_search_index", "auto_discovery_link_tag"]],
-        "mrdamascy" => ["RAILS/mrdamascy/app/views/orders/index.html.erb", ["order-card", "state_chip(order)"]]
+                       %w[live_search_index auto_discovery_link_tag]],
+        "mrdamascy" => ["RAILS/mrdamascy/app/views/orders/index.html.erb", ["order-card", "state_chip(order)"]],
       }
 
       pages.each do |name, (path, markers)|
@@ -337,7 +337,7 @@ module Operator
         "radio" => [pages.fetch("radio").first, 'tag.h1 t("playlist.home_title"), class: "visually-hidden"'],
         "messenger" => [pages.fetch("messenger").first, 'tag.h1 t(@list_title_key)'],
         "bsdports" => [pages.fetch("bsdports").first, 'tag.h1 t("pages.ports")'],
-        "mrdamascy" => [pages.fetch("mrdamascy").first, '<h1 class="page-title">']
+        "mrdamascy" => [pages.fetch("mrdamascy").first, '<h1 class="page-title">'],
       }
       headings.each do |name, (path, marker)|
         expect("vertical.#{name}.primary_heading", path, read(path), marker,

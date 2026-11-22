@@ -382,7 +382,7 @@ class TestReplicateClientRetry < Minitest::Test
       target = File.join(directory, "audio.wav")
       File.binwrite(target, "previous audio")
       File.chmod(0o600, target)
-      response = StreamingResponse.new(chunks: ["be", "at"],
+      response = StreamingResponse.new(chunks: %w[be at],
                                        headers: { "content-length" => "4" })
 
       with_download_response(response) do

@@ -222,7 +222,7 @@ module Master
           return { "status" => "matrix_clean_without_evidence", "cell" => key } if status == "assessed_clean" && evidence.empty?
           return { "status" => "matrix_reason_missing", "cell" => key } if %w[not_applicable inconclusive].include?(status) && reason.empty?
           if %w[violation_found opportunity_found].include?(status) && evidence.empty? && findings.empty?
-            return { "status" => "matrix_finding_without_evidence", "cell" => key }
+            { "status" => "matrix_finding_without_evidence", "cell" => key }
           end
         end
 

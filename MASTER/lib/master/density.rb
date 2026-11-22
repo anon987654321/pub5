@@ -119,7 +119,7 @@ module Master
         message: "#{where(surface)} stacks #{z_values.size} distinct z-index values " \
                  "(#{z_values.first(8).join(', ')}) - an arbitrary stack is visual noise " \
                  "and usually hides an untold layering story",
-        evidence: { z_values: z_values },
+        evidence: { z_values: },
         autofix: :none,
       }
       findings

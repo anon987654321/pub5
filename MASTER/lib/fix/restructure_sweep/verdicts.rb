@@ -122,7 +122,7 @@ module Master
 
       # Plan-level sections are shared by every proposal; they restate the
       # transformation policy, the playbook and the automatic vetoes.
-      def proposal_sections(tree, problem)
+      def proposal_sections(tree, _problem)
         {
           transformations: @transformation_plan.prompt,
           preservation: @transformation_plan.preservation_contract.map { |key, value| "  #{key}: #{value}" }.join("\n"),

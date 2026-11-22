@@ -103,7 +103,7 @@ module Master
 
         def latest_falsify_reading
           path = File.join(master_root, "data", "falsification", "readings.jsonl")
-          return nil unless File.file?(path)
+          return unless File.file?(path)
 
           File.readlines(path).filter_map { |l| JSON.parse(l) rescue nil }.last
         end

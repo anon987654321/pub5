@@ -138,7 +138,6 @@ class AuthTierControllerTest < ActionDispatch::IntegrationTest
   end
 end
 
-
 class AuthTierStorageTest < ActionDispatch::IntegrationTest
   test "seeded web token is persisted by the shared private atomic writer" do
     Dir.mktmpdir("auth-tier") do |root|

@@ -152,11 +152,11 @@ class TurnRouterTest < Minitest::Test
       "confidence" => 0.96, "reason" => "All public app surfaces except the AI service.",
     }
     agent = Object.new
-    agent.define_singleton_method(:ask_once) { |prompt, **options|
+    agent.define_singleton_method(:ask_once) do |prompt, **options|
       raise "schema was not supplied" unless options[:format].is_a?(Hash)
       raise "inventory context missing" unless prompt.include?("Brgen")
       JSON.generate(response)
-    }
+    end
     routed = nil
     Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
       routed = command

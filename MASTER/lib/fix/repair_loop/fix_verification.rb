@@ -182,7 +182,7 @@ module Master
 
         def run_rails_test(app, test)
           out, status = RailsApp.capture(app, "bin/rails", "test", test, env: { "RAILS_ENV" => "test" })
-          return nil if status.success?
+          return if status.success?
 
           lines = out.lines.reject { |line| line.match?(SIMPLECOV_FOOTER) }
           "#{File.basename(test)}: #{lines.last(3).join.strip}"

@@ -721,7 +721,7 @@ module Master
       # Returns the refusal that ends the run, or nil when the trace is clean;
       # drift alone is retried and reported, not refused.
       def run_fix_steady_trace(scanner:, fix_loop:, deliberation:, bus:, cancellation:, trace_scope:)
-        return nil if ENV["MASTER_FIX_DEEP_TRACE"] == "0"
+        return if ENV["MASTER_FIX_DEEP_TRACE"] == "0"
 
         trace = steady_trace(
           scope: trace_scope, dependencies: { scanner:, fix_loop:, deliberation:, bus: }, cancellation:,
@@ -1110,7 +1110,7 @@ module Master
         return [:blockers, true] if BLOCKERS_FLAG.match?(token)
 
         match = TASK_INTENT_FLAG.match(token)
-        return [:task_intent, match[1]] if match
+        [:task_intent, match[1]] if match
       end
 
       def flag_overrides(raw)

@@ -148,7 +148,6 @@ class TestModelHealth < Minitest::Test
     refute_includes result, "secret"
   end
 
-
   def test_model_doctor_failure_categories_are_stable
     {
       "outbound request exceeded its deadline" => "timeout",

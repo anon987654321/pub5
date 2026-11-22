@@ -31,11 +31,11 @@ module Polish
     def run(mode: :discover_and_emit, limit: 50, surfaces: :all)
       case mode
       when :discover
-        @discovery.scan(surfaces: surfaces, limit: limit)
+        @discovery.scan(surfaces:, limit:)
       when :discover_and_emit
-        @discovery.scan_and_emit!(surfaces: surfaces, limit: limit)
+        @discovery.scan_and_emit!(surfaces:, limit:)
       when :apply_safe
-        apply_safe_batch(limit: limit, surfaces: surfaces)
+        apply_safe_batch(limit:, surfaces:)
       else
         raise ArgumentError, "unknown mode: #{mode}"
       end
@@ -52,7 +52,7 @@ module Polish
     private
 
     def apply_safe_batch(limit:, surfaces:)
-      opps = @discovery.scan(surfaces: surfaces, limit: limit)
+      opps = @discovery.scan(surfaces:, limit:)
       applied = []
       opps.each do |opp|
         next unless safe_to_auto_apply?(opp)

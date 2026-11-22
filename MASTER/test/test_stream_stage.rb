@@ -255,7 +255,6 @@ class StreamStageTest < Minitest::Test
     assert_empty read_sizes, "an oversized target is rejected after stat, without reading its contents"
   end
 
-
   def test_callers_the_graph_cannot_see_lock_the_interface_without_refusing_the_repair
     graph = graph_with(inbound: ["caller.rb"], dynamic: { "caller.rb" => "public_send" })
 
@@ -312,7 +311,6 @@ class StreamStageTest < Minitest::Test
     assert read_sizes.all? { |size| size == 64 * 1024 }, read_sizes.inspect
   end
 
-
   def test_an_oversized_related_file_with_a_stale_graph_digest_refuses_the_repair
     path = File.join(temporary_path, "large.rb")
     File.write(path, "# " + ("x" * 260_000) + "\\n")
@@ -350,7 +348,6 @@ class StreamStageTest < Minitest::Test
     end
     assert_match(/dependency is hard-linked/, error.message)
   end
-
 
   def test_a_related_file_that_changed_since_the_graph_read_it_still_refuses_the_repair
     graph = graph_with(inbound: ["caller.rb"])
