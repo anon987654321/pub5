@@ -83,7 +83,7 @@ class TestProviderConfig < Minitest::Test
       openai/gpt-5.4
       qwen/qwen3.8-flash
     ], vision_ids
-    refute_includes vision_ids, model_id, "the text-only Ollama Cloud primary must not enter the vision tier"
+    refute_includes vision_ids, model_id, "Ollama Cloud has no verified image-input grant and must not enter the vision tier"
 
     reads = Regexp.new(models.dig("vision_families", "reads_images").join("|"), Regexp::IGNORECASE)
     blind = Regexp.new(models.dig("vision_families", "blind").join("|"), Regexp::IGNORECASE)
