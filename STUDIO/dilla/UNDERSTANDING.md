@@ -36,6 +36,12 @@ taste layer: what makes good music good here.
   pins RG-69 markup defaults to engine boot values.
 - RG-69 preset names (marvin, hathaway, wonder, tender) nod to artists;
   the loops are generic genre studies, not claimed transcriptions.
+- RG-69's browser synth adapter lives in `data/dilla.json` and references
+  the existing `kit_break`, `prophet_5` and `basement` entries. Its Tone.js
+  mappings are an explicit translation, not a claim that WebAudio reproduces
+  the Ruby engine's analog-style instruments. Live play and WAV export share
+  one instrument builder; source parity still requires browser export and a
+  human audition before sound quality is accepted.
 
 ## The reference lane (canon input)
 
