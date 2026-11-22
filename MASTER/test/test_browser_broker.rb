@@ -65,6 +65,16 @@ class BrowserBrokerTest < Minitest::Test
     def type(value, *_keys) = value
   end
 
+  class FakeRequest
+    attr_reader :aborted
+
+    def url = "https://example.com/resource"
+    def method = "GET"
+    def headers = { "accept" => "text/html", "authorization" => "must-not-leak" }
+    def abort = (@aborted = true)
+    def respond(**_options) = true
+  end
+
   class FakePage
     attr_reader :commands, :network, :navigations, :evaluated
 
@@ -87,6 +97,7 @@ class BrowserBrokerTest < Minitest::Test
     def at_css(_selector) = FakeNode.new
     def css(_selector) = [FakeNode.new]
     def on(_event, &block) = (@request_callback = block)
+    def fire_request(request) = @request_callback&.call(request)
     def screenshot(format:, encoding:, full: false)
       raise "unexpected screenshot format" unless format == "png" && encoding == :base64
 
@@ -318,12 +329,37 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal ["Page.addScriptToEvaluateOnNewDocument", "Network.setCacheDisabled", "Network.setBypassServiceWorker"],
                  raw_page.commands.map(&:first)
     assert_raises(Broker::Denied) { page.on(:response) {} }
-    assert_equal "Example link", page.at_css("a").text
-    assert_equal "A", page.at_css("a").tag_name
-    assert_equal true, page.at_css("a").click
+    node = page.at_css("a")
+    focus = node.focus
+    assert_equal "Example link", node.text
+    assert_equal "A", node.tag_name
+    assert_equal true, node.click
     assert_equal ["Example link"], page.css("a").map(&:text)
-    refute_respond_to page.at_css("a"), :node
-    refute_respond_to page.at_css("a"), :native
+    refute_respond_to node, :node
+    refute_respond_to node, :native
+
+    captured_request = nil
+    page.on(:request) { |request| captured_request = request }
+    raw_page.fire_request(FakeRequest.new)
+    assert_equal "https://example.com/resource", captured_request.url
+    assert_equal "GET", captured_request.method
+    assert_equal({ "accept" => "text/html" }, captured_request.headers)
+
+    assert b.close(lease.id)
+    assert_raises(Broker::Denied) { attachment.create_page }
+    assert_raises(Broker::Denied) { page.url }
+    assert_raises(Broker::Denied) { page.title }
+    assert_raises(Broker::Denied) { page.body }
+    assert_raises(Broker::Denied) { page.at_css("a") }
+    assert_raises(Broker::Denied) { page.css("a") }
+    assert_raises(Broker::Denied) { page.snapshot }
+    assert_raises(Broker::Denied) { page.harden_network }
+    assert_raises(Broker::Denied) { page.network.intercept }
+    assert_raises(Broker::Denied) { page.network.wait_for_idle(timeout: 1) }
+    assert_raises(Broker::Denied) { node.text }
+    assert_raises(Broker::Denied) { node.click }
+    assert_raises(Broker::Denied) { focus.type("stale input") }
+    assert_raises(Broker::Denied) { captured_request.abort }
   ensure
     attachment&.quit
     b&.close(lease.id) if lease
