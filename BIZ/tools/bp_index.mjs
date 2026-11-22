@@ -115,6 +115,11 @@ function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
   if (receipt.schema !== 'biz.print.v1' || receipt.document !== name) {
     throw new Error(name + ': print receipt schema or document identity does not match');
   }
+  if (receipt.source_html !== htmlPath.slice(htmlPath.lastIndexOf('/') + 1) ||
+      receipt.pdf !== pdfPath.slice(pdfPath.lastIndexOf('/') + 1) ||
+      receipt.front_png !== name + '.png') {
+    throw new Error(name + ': print receipt filenames do not match the published pair');
+  }
   const pngPath = pdfPath.slice(0, -4) + '.png';
   if (!receipt.front_png || !existsSync(pngPath)) {
     throw new Error(name + ': print receipt cover PNG is missing');
