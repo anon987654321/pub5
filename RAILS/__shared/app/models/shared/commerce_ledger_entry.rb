@@ -40,7 +40,7 @@ module Shared
     def amount_and_currency_are_paired
       return if amount_minor.nil? == currency.nil?
 
-      errors.add(:currency, :blank)
+      errors.add(amount_minor.nil? ? :amount_minor : :currency, :blank)
     end
 
     def refuse_mutation!
