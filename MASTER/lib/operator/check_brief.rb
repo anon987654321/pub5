@@ -202,21 +202,72 @@ module Operator
     def file_evidence(root:, path:)
       return unless path
 
-      expanded_root = File.expand_path(root)
+      expanded_root = File.realpath(root)
       expanded_path = File.expand_path(path, expanded_root)
       prefix = expanded_root + File::SEPARATOR
       raise ArgumentError, "artifact path escapes repository" unless expanded_path.start_with?(prefix)
 
-      stat = File.lstat(expanded_path)
-      unless stat.file? && !stat.symlink? && stat.nlink == 1
+      parent = File.dirname(expanded_path)
+      parent_real = File.realpath(parent)
+      raise IOError, "artifact parent is reached through a symlink" unless parent_real == parent
+
+      parent_before = File.lstat(parent)
+      unless parent_before.directory? && !parent_before.symlink?
+        raise IOError, "artifact parent must be a real directory"
+      end
+
+      path_before = File.lstat(expanded_path)
+      unless path_before.file? && !path_before.symlink? && path_before.nlink == 1
         raise IOError, "artifact must be a singly-linked regular file"
       end
 
-      {
-        "path" => expanded_path.delete_prefix(prefix),
-        "byte_count" => stat.size,
-        "sha256" => Digest::SHA256.file(expanded_path).hexdigest,
-      }
+      flags = File::RDONLY
+      flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+      File.open(expanded_path, flags) do |file|
+        opened_before = file.stat
+        unless opened_before.file? && opened_before.nlink == 1 &&
+               opened_before.dev == path_before.dev && opened_before.ino == path_before.ino
+          raise IOError, "artifact identity changed while opening"
+        end
+
+        current_path = File.lstat(expanded_path)
+        current_parent = File.lstat(parent)
+        unless current_path.file? && !current_path.symlink? && current_path.nlink == 1 &&
+               current_path.dev == opened_before.dev && current_path.ino == opened_before.ino &&
+               current_parent.directory? && !current_parent.symlink? &&
+               current_parent.dev == parent_before.dev && current_parent.ino == parent_before.ino
+          raise IOError, "artifact path changed before hashing"
+        end
+
+        digest = Digest::SHA256.new
+        byte_count = 0
+        while (chunk = file.read(64 * 1024))
+          digest.update(chunk)
+          byte_count += chunk.bytesize
+        end
+
+        opened_after = file.stat
+        path_after = File.lstat(expanded_path)
+        parent_after = File.lstat(parent)
+        stable_file = opened_after.dev == opened_before.dev &&
+                      opened_after.ino == opened_before.ino &&
+                      opened_after.size == opened_before.size &&
+                      opened_after.mtime == opened_before.mtime &&
+                      opened_after.ctime == opened_before.ctime &&
+                      path_after.file? && !path_after.symlink? && path_after.nlink == 1 &&
+                      path_after.dev == opened_after.dev && path_after.ino == opened_after.ino &&
+                      path_after.size == opened_after.size
+        stable_parent = parent_after.directory? && !parent_after.symlink? &&
+                        parent_after.dev == parent_before.dev && parent_after.ino == parent_before.ino
+        raise IOError, "artifact changed while hashing" unless stable_file && stable_parent
+        raise IOError, "artifact byte count changed while hashing" unless byte_count == opened_after.size
+
+        {
+          "path" => expanded_path.delete_prefix(prefix),
+          "byte_count" => byte_count,
+          "sha256" => digest.hexdigest,
+        }
+      end
     end
 
     # Persist one immutable check receipt beneath the private runtime area.
