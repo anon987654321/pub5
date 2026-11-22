@@ -2579,3 +2579,39 @@ redaction and snapshot immutability (PASS). This is not execution of the
 repository test. MASTER/test/test_browser_broker.rb, Ruby syntax across the
 checkout, MASTER/bin/check, live Chromium attach/teardown and all six
 adapter journeys remain NOT_RUN in this environment.
+
+### Broker-validated BrowserAgent screenshots — 2026-11-22
+
+- Added the scoped broker facade's screenshot-validation call. The facade
+  delegates only to the active Core broker; outside the bound Core Fiber it
+  refuses, like session creation.
+- BrowserAgent now asks Ferrum for PNG Base64 bytes, bounds the encoded size
+  before decoding, decodes strictly, and sends the binary data through the
+  active broker's PNG-signature and 8 MiB validator before persistence.
+- Only the returned validated bytes are written. Capture directories remain
+  mode 0700; screenshot files remain mode 0600 and are created exclusively so
+  an existing path is never overwritten. A failed write removes its partial
+  file.
+- Extended the existing browser-broker and BrowserAgent test files for scoped
+  validation, exact byte preservation and private filesystem modes. No new
+  test file, vision authority or network permission was added.
+- This connects the broker's byte validator to the real BrowserAgent capture
+  path; it does not yet deliver the image to a vision model. The returned tool
+  result remains a private local capture path. Raw CDP attachment, interactive
+  per-action request grants, in-flight cancellation and live Chromium proof
+  remain open. Issue #5 stays OPEN.
+
+Commits:
+9f84174fb36391cd772791756ac843e6ce80c0a3 (scoped screenshot validation);
+7d815d9a6f1b5c801b61867899ec2b27148ea71c (BrowserAgent byte validation);
+8597e54809522fcba7b8f908c312cc013eb3fc39 (capture regression);
+35f1d72d3a58e6af239e96ccbbbc36f036d2572d (scope regression).
+
+Proof performed: GitHub read-after-write verification of the scoped broker,
+BrowserAgent and both test files; isolated Ruby 3.3.8 smoke execution of the
+Base64-to-broker-validation-to-private-file path (**PASS**). Ferrum 0.17.1
+documents that screenshot(encoding: :base64) returns the image as Base64;
+this API was used without replacing the repository's pinned dependency.
+The repository Minitest files, full Ruby syntax/test sweep, MASTER/bin/check,
+real Chromium attach/teardown and end-to-end vision delivery remain **NOT_RUN**
+in this environment.
