@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require_relative "test_helper"
 
 # The broker is the one owner of a Chromium process and its session lease, so
@@ -458,6 +459,20 @@ class BrowserBrokerTest < Minitest::Test
       refute_includes row.to_s, "ws://"
       refute_includes row.to_s, "profile"
     end
+  end
+
+  def test_lease_diagnostics_redact_the_cdp_bearer_endpoint
+    b = broker
+    lease = b.open(host: "example.com", url: "https://example.com/private")
+
+    [lease.inspect, lease.to_s, JSON.generate(lease), lease.diagnostic.inspect].each do |output|
+      refute_includes output, "ws://"
+      refute_includes output, "/devtools/browser/fake"
+      assert_includes output, lease.id
+      assert_includes output, "example.com"
+    end
+  ensure
+    b&.close(lease.id) if lease
   end
 
   def test_an_expired_session_is_reaped_and_its_process_stopped
