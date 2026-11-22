@@ -65,6 +65,28 @@ class TestRg69Defaults < Minitest::Test
   # reaches Chebyshev 30, Distortion 0.8, BitCrusher 2 bits and PitchShift ±12
   # — at wet. A bad roll produced a crushed, detuned master, which read as
   # "unusable and inaudible". The boot must now install one fixed chain.
+  def test_html_scripts_are_deferred_in_dependency_order
+    assert_match(/<script src="\.\.\/vendor\/tone\/Tone\.min\.js" defer><\/script>/, html)
+    assert_match(/<script src="rg69\.js" defer><\/script>/, html)
+  end
+
+  def test_welcome_gate_releases_the_interface_before_audio_initialization_finishes
+    welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
+    refute_nil welcome
+    assert_operator welcome.index("dismissWelcome();"), :<, welcome.index("await startPlayback(activationPromise);")
+  end
+
+  def test_transport_callback_defers_visual_work_to_one_animation_loop
+    body = js[/function scheduleLoop\(time\).*?(?=\nlet stepUiByIndex)/m] or raise "no scheduleLoop"
+    refute_includes body, "analyser.getValue()"
+    refute_includes body, "requestAnimationFrame"
+    assert_includes body, "st_.uiDirty=true"
+
+    assert_includes js, "function updateVisuals()"
+    refute_includes js, "function updateVU()"
+    refute_includes js, "function drawViz()"
+  end
+
   def test_audio_context_resume_is_invoked_directly_in_trusted_click_handlers
     welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
