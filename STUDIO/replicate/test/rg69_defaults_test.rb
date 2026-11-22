@@ -76,6 +76,13 @@ class TestRg69Defaults < Minitest::Test
     assert_operator welcome.index("dismissWelcome();"), :<, welcome.index("await startPlayback(activationPromise);")
   end
 
+  def test_panic_resets_visual_and_transport_handles_for_a_clean_restart
+    panic = js[/\$id\('panic'\)\.addEventListener\('click',\(\)=>\{(.*?)\n\}\);/m, 1]
+    refute_nil panic
+    assert_includes panic, "st_.rafId=null;"
+    assert_includes panic, "st_.transportId=null;"
+  end
+
   def test_transport_callback_defers_visual_work_to_one_animation_loop
     body = js[/function scheduleLoop\(time\).*?(?=\nlet stepUiByIndex)/m] or raise "no scheduleLoop"
     refute_includes body, "analyser.getValue()"
