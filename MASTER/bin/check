@@ -2,11 +2,14 @@
 # frozen_string_literal: true
 
 require "shellwords"
+require "open3"
+require "timeout"
+require "time"
 
 # Read-only help and log retrieval stay available even when the MASTER runtime
 # itself cannot boot. This command verifies; /fix is the canonical repair loop.
 CHECK_HELP = <<~HELP.freeze
-  usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--list] [--format human|brief]
+  usage: bin/check [--profile operator|contributor|agent|web|ci|full] [--list] [--format human|brief|json]
          bin/check --show-log [--tail=N]
 
   Profiles:
@@ -119,7 +122,7 @@ OptionParser.new do |parser|
   parser.on("--format=NAME") { |value| format = value }
   parser.on("--list", "show the selected profile commands without running them") { list = true }
 end.parse!
-unless %w[human brief].include?(format)
+unless %w[human brief json].include?(format)
   Master::Trace::Dmesg.status("check0", "unknown format #{format}, have human or brief")
   exit 64
 end
@@ -253,17 +256,80 @@ end
 # most of its allowance, which is the signal that was missing.
 timeout = Integer(ENV.fetch("MASTER_CHECK_TIMEOUT", profile == "full" ? "1200" : "900"))
 run_log = ENV.fetch("MASTER_CHECK_RUN_LOG", File.join(ROOT, ".master", "check", "latest.log"))
-runner = Operator::CheckRunner.new(prefix: "check:#{profile}", root: ROOT, timeout:, quiet: format == "brief", log_path: run_log)
+def check_git_value(root, *arguments)
+  output, status = Timeout.timeout(5) do
+    Open3.capture2e("git", "-C", root, *arguments)
+  end
+  status.success? ? output.strip : nil
+rescue Timeout::Error, SystemCallError
+  nil
+end
+
+def check_git_metadata(root)
+  checked_out_sha = check_git_value(root, "rev-parse", "--verify", "HEAD")
+  branch = check_git_value(root, "branch", "--show-current")
+  main_ref = if check_git_value(root, "rev-parse", "--verify", "refs/heads/main")
+               "refs/heads/main"
+             elsif check_git_value(root, "rev-parse", "--verify", "refs/remotes/origin/main")
+               "refs/remotes/origin/main"
+             end
+  main_sha = main_ref && check_git_value(root, "rev-parse", "--verify", main_ref)
+  worktree = check_git_value(root, "status", "--porcelain", "--untracked-files=all")
+  remote = check_git_value(root, "config", "--get", "remote.origin.url")
+  repository = remote.to_s.match(%r{(?:github\\.com[:/])([^/\\s:]+/[^/\\s]+?)(?:\\.git)?\\z})&.captures&.first
+
+  {
+    repository: repository || File.basename(root),
+    branch: branch,
+    main_sha: main_sha,
+    main_ref: main_ref,
+    checked_out_sha: checked_out_sha,
+    clean_checkout: worktree.nil? ? nil : worktree.empty?,
+    environment: "ruby #{RUBY_VERSION}",
+  }
+end
+
+def check_relative_log(root, path)
+  return unless path
+
+  expanded_root = File.expand_path(root) + File::SEPARATOR
+  expanded_path = File.expand_path(path, root)
+  return unless expanded_path.start_with?(expanded_root)
+
+  expanded_path.delete_prefix(expanded_root)
+end
+
+started_at = Time.now.utc
+started_clock = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+runner = Operator::CheckRunner.new(
+  prefix: "check:#{profile}", root: ROOT, timeout:,
+  quiet: format != "human", log_path: run_log
+)
 
 steps.each { |step| runner.run(*step) }
+finished_at = Time.now.utc
+duration_s = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_clock
 failures = runner.results.reject { |r| r.success }.map(&:name)
-body = if format == "brief"
-         Operator::CheckBrief.render(profile:, results: runner.results)
-       elsif failures.empty?
-         "clean"
-       else
-         "#{failures.size} failure(s), #{failures.join(", ")}"
-       end
-Master::Trace::Dmesg::Report.print("check0", body, parent: "master0")
-Master::Trace::Dmesg.status("check0", "combined log: #{runner.log_path}") if runner.log_path
-exit(failures.empty? ? 0 : 1)
+exit_status = failures.empty? ? 0 : 1
+
+if format == "json"
+  metadata = check_git_metadata(ROOT)
+  puts Operator::CheckBrief.render_json(
+    profile:, results: runner.results, metadata:,
+    started_at: started_at.iso8601(3), finished_at: finished_at.iso8601(3),
+    duration_s:, exit_status:,
+    command: "MASTER/bin/check --profile=#{profile} --format=json",
+    log_path: check_relative_log(ROOT, runner.log_path)
+  )
+else
+  body = if format == "brief"
+           Operator::CheckBrief.render(profile:, results: runner.results)
+         elsif failures.empty?
+           "clean"
+         else
+           "#{failures.size} failure(s), #{failures.join(", ")}"
+         end
+  Master::Trace::Dmesg::Report.print("check0", body, parent: "master0")
+  Master::Trace::Dmesg.status("check0", "combined log: #{runner.log_path}") if runner.log_path
+end
+exit(exit_status)
