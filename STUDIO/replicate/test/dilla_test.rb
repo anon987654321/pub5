@@ -908,7 +908,7 @@ class TestDillaArrangementAndOfflineExport < Minitest::Test
     assert_equal 24, plan.fetch(:bars)
     sections = plan.fetch(:arrangement)
     assert_equal %w[intro head lift outro], sections.map { |section| section.fetch("section") }
-    assert_equal %w[blue_hour blue_hour coltrane_soup rain_on_glass], sections.map { |section| section.fetch("progression") }
+    assert_equal %w[players players thelonious_eb so_far_to_go], sections.map { |section| section.fetch("progression") }
     assert_equal 8, sections.fetch(2).fetch("bars")
     assert_includes sections.fetch(2).fetch("layers"), "foley"
   end
@@ -964,7 +964,7 @@ class TestDillaStyleProfileRouting < Minitest::Test
     plan = Dilla.resolve_render_plan(Dilla::Options.new, showcase: Dilla.showcase_data)
     assert_equal 24, plan.fetch(:bars)
     assert_equal 4, plan.fetch(:arrangement).length
-    assert_equal "coltrane_soup", plan.fetch(:arrangement)[2].fetch("progression")
+    assert_equal "thelonious_eb", plan.fetch(:arrangement)[2].fetch("progression")
   end
 end
 
@@ -1073,11 +1073,11 @@ class TestRG69BrowserContract < Minitest::Test
     refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
     refute_match(/wobbLFO\.connect\s*\(\s*Tone\.Transport\.bpm\s*\)/, javascript)
     refute_match(/function applyWobble|applyWobble\(\)|Tone\.Transport\.bpm\.value=aud_\.bpm\*\(/, javascript)
-    assert_match(/if\(driftLFO\)driftLFO\.frequency\.value=\.05\+aud_\.wobble\/100\*PARAMS\.WOBB_FREQ_MAX;/, javascript)
-    assert_match(/function applyFX\(\)\{\s*if\(st_\.started\)Tone\.Transport\.bpm\.value=aud_\.bpm;/, javascript)
+    assert_match(/if\(driftLFO\)driftLFO\.frequency\.value=\.05\+aud_\.wobble\/100\*Math\.min\(rg69AudioProfile\.rig\.wobble\.rate_hz,rg69AudioProfile\.effects\.wobble_frequency_cap_hz\);/, javascript)
+    assert_match(/function applyFX\(\)\{\s*const profile=rg69AudioProfile;\s*if\(st_\.started\)Tone\.Transport\.bpm\.value=aud_\.bpm;/, javascript)
     refute_match(/Best-effort autostart|await Tone\.start\(\);\s*if\(Tone\.getContext\(\)\.rawContext\.state/, javascript)
-    assert_match(/welcome-start[\s\S]*?addEventListener\("click",async\(\)=>\{[\s\S]*?startPlayback\(\)/, javascript)
-    assert_match(/play[\s\S]*?addEventListener\("click",async\(\)=>\{[\s\S]*?startPlayback\(\)/, javascript)
+    assert_match(/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{[\s\S]*?await startPlayback\(activationPromise\);/, javascript)
+    assert_match(/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{[\s\S]*?await startPlayback\(activationPromise\);/, javascript)
     assert_match(/const bootStyleCandidates=STYLES\.filter/, javascript)
     assert_match(/let pat_=\{d:bootStyle\.d,b:bootStyle\.b,k:bootStyle\.k,p:bootStyle\.p\}/, javascript)
     assert_match(/let mix_=\{drum:80,bass:70,keys:60,pads:55,master:75\}/, javascript)
@@ -1087,7 +1087,7 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/widener\.connect\(masterDrive\)/, javascript)
     assert_match(/let stepUiByIndex=Array\.from\(\{length:16\}/, javascript)
     refute_match(/void posEl\.offsetWidth/, javascript)
-    assert_match(/cv\.width!==w/, javascript)
+    assert_match(/if\(vizCanvas\.width!==width\)vizCanvas\.width=width;/, javascript)
     assert_match(/function scheduleLoop\(time\)\{\s*st_\.idx=\(st_\.idx\+1\)%st_\.stepCount;\s*const scheduledTime=Number\.isFinite\(time\)\?time:Tone\.now\(\);[\s\S]*?triggerNotes\(st_\.idx,scheduledTime,/, javascript)
     assert_includes javascript, "document.createTextNode"
     assert_includes File.read(css_path), "prefers-reduced-motion"

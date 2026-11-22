@@ -195,7 +195,16 @@
           "community_maintained": true
         }
       ],
-      "source_status": "restored_legacy_unverified"
+      "source_status": "restored_legacy_unverified",
+      "measured_evidence": {
+        "date": "2026-11-22",
+        "mix_tempo_bpm_measured": 92.5,
+        "mix_tempo_declared": 93,
+        "agreement": "within 1 BPM; declared value kept",
+        "key_estimate_krumhansl": "F major r=0.26 (weak single-method)",
+        "key_danger_note": "Krumhansl weakly prefers F on the 30s preview window; the declared Eb family is kept per EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY and the rendered take itself keys out D#(Eb) r=0.75",
+        "render_vs_canon": "STUDIO/dilla/render_evidence/render_vs_canon.json"
+      }
     },
     {
       "id": "clair_moon",
@@ -1492,6 +1501,363 @@
     "next_sourcing_candidates": [
       "rg69 preset 'marvin' matches the published What's Going On-style I-iii-IV-iv shape; source it from a published chart or strip the artist nod",
       "rg69 'hathaway', 'wonder', 'tender' presets: generic genre studies; rename or source"
+    ]
+  },
+  "measured_canon": {
+    "date": "2026-11-22",
+    "curated_list_source": "pub index.html a3185f4 YOUTUBE_TRACKS (operator canon, 22 rows; 2 ids already dead)",
+    "analyzer": "demucs htdemucs (CLI) -> pure-node spectral/onset analysis (STUDIO/dilla/render_evidence/tools/dilla_stem_analyze.js)",
+    "method": "per stem: band energy shares (kick<130Hz, snare bp@400, hats>5kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation 55-200bpm folded to 60-180, 16-slot grid via best-phase quantization (+-45ms), swing from off-8th residuals; mix: chroma (FFT 8192 @22050, 55-2200Hz) + Krumhansl key correlation",
+    "limits": "SoundCloud transcodes decode above 0 dBFS on some rows - levels are relative evidence only; official_preview rows carry 30s windows; key estimates are single-method (Krumhansl) with weak correlations on several rows; swing assumes off-8th placement. Match classes are honest grades: official_preview, official_label, full_fan_upload, related_upload, no_match. Remixes/edits excluded.",
+    "source_status": "external_research_evidence_not_authority: measurements bound the engine (tempo window, swing range, stem balance) but never override declared harmony; see evidence_policy.",
+    "full_record": "STUDIO/dilla/render_evidence/measured_canon.json",
+    "tracks": [
+      {
+        "ytid": "9EGHwkDix78",
+        "slug": "microphone_master",
+        "artist": "J Dilla",
+        "title": "Microphone Master (Das EFX, J Dilla Remix)",
+        "match_class": "full_fan_upload",
+        "measured": {
+          "drums_bpm_raw": 61.5,
+          "bpm_mirrors_in_85_95": [
+            92.2
+          ],
+          "swing_pct": 48,
+          "on_grid_share": 0.35,
+          "off8_residual_ms": -19.8,
+          "kick_low": 0.736,
+          "snare_mid": 0.116,
+          "hat_high": 0.002,
+          "mix_bpm": null,
+          "mix_key": "C",
+          "mix_key_r": 0.46
+        }
+      },
+      {
+        "ytid": "vO2nWXCVt6o",
+        "slug": "in_space",
+        "artist": "J Dilla",
+        "title": "In Space",
+        "match_class": "full_fan_upload",
+        "measured": {
+          "drums_bpm_raw": 91.7,
+          "bpm_mirrors_in_85_95": [
+            91.7
+          ],
+          "swing_pct": 52.7,
+          "on_grid_share": 0.67,
+          "off8_residual_ms": 17.7,
+          "kick_low": 0.628,
+          "snare_mid": 0.099,
+          "hat_high": 0.021,
+          "mix_bpm": null,
+          "mix_key": "C",
+          "mix_key_r": 0.51
+        }
+      },
+      {
+        "ytid": "dbbfo9_7D8g",
+        "slug": "timeless",
+        "artist": "J Dilla",
+        "title": "Timeless",
+        "match_class": "full_fan_upload",
+        "measured": {
+          "drums_bpm_raw": 174.8,
+          "bpm_mirrors_in_85_95": [
+            87.4
+          ],
+          "swing_pct": 50.2,
+          "on_grid_share": 1,
+          "off8_residual_ms": 0.7,
+          "kick_low": 0.375,
+          "snare_mid": 0.202,
+          "hat_high": 0.021,
+          "mix_bpm": null,
+          "mix_key": "A",
+          "mix_key_r": 0.55
+        }
+      },
+      {
+        "ytid": "OSg9Fwd8QSs",
+        "slug": "motor_city_17",
+        "artist": "J Dilla",
+        "title": "Motor City 17",
+        "match_class": "full_fan_upload",
+        "measured": {
+          "drums_bpm_raw": 92.8,
+          "bpm_mirrors_in_85_95": [
+            92.8
+          ],
+          "swing_pct": 49.2,
+          "on_grid_share": 0.57,
+          "off8_residual_ms": -5.2,
+          "kick_low": 0.536,
+          "snare_mid": 0.115,
+          "hat_high": 0.005,
+          "mix_bpm": null,
+          "mix_key": "E",
+          "mix_key_r": 0.52
+        }
+      },
+      {
+        "ytid": "KsULjOCYdnY",
+        "slug": "players",
+        "artist": "Slum Village",
+        "title": "Players",
+        "match_class": "official_preview",
+        "measured": {
+          "drums_bpm_raw": 92.5,
+          "bpm_mirrors_in_85_95": [
+            92.5
+          ],
+          "swing_pct": 48.5,
+          "on_grid_share": 0.66,
+          "off8_residual_ms": -9.8,
+          "kick_low": 0.688,
+          "snare_mid": 0.083,
+          "hat_high": 0.018,
+          "mix_bpm": null,
+          "mix_key": "F",
+          "mix_key_r": 0.26
+        }
+      },
+      {
+        "ytid": "EYJxxHQ7sX0",
+        "slug": "la_la",
+        "artist": "Slum Village",
+        "title": "La La",
+        "match_class": "related_upload",
+        "measured": {
+          "drums_bpm_raw": 63.2,
+          "bpm_mirrors_in_85_95": [
+            94.8
+          ],
+          "swing_pct": 45,
+          "on_grid_share": 0.4,
+          "off8_residual_ms": -47.7,
+          "kick_low": 0.46,
+          "snare_mid": 0.2,
+          "hat_high": 0.031,
+          "mix_bpm": null,
+          "mix_key": "G",
+          "mix_key_r": 0.7
+        }
+      },
+      {
+        "ytid": "ScVz2mntmCE",
+        "slug": "eye",
+        "artist": "Madlib",
+        "title": "Eye",
+        "match_class": "no_match",
+        "note": "search returns only unrelated fan beats titled Eye; no honest match"
+      },
+      {
+        "ytid": "6oUx6wGCekM",
+        "slug": "massage_situation",
+        "artist": "Flying Lotus",
+        "title": "Massage Situation",
+        "match_class": "full_fan_upload",
+        "measured": {
+          "drums_bpm_raw": 131.7,
+          "bpm_mirrors_in_85_95": [
+            87.7
+          ],
+          "swing_pct": 51.5,
+          "on_grid_share": 0.8,
+          "off8_residual_ms": 6.9,
+          "kick_low": 0.785,
+          "snare_mid": 0.055,
+          "hat_high": 0.019,
+          "mix_bpm": null,
+          "mix_key": "B",
+          "mix_key_r": 0.47
+        }
+      },
+      {
+        "ytid": "8DgAhgmpXNA",
+        "slug": "me_yesterday_corded",
+        "artist": "Flying Lotus",
+        "title": "me Yesterday//Corded",
+        "match_class": "official_preview",
+        "measured": {
+          "drums_bpm_raw": 150.5,
+          "bpm_mirrors_in_85_95": [],
+          "swing_pct": 49.6,
+          "on_grid_share": 0.91,
+          "off8_residual_ms": -1.5,
+          "kick_low": 0.545,
+          "snare_mid": 0.099,
+          "hat_high": 0.032,
+          "mix_bpm": null,
+          "mix_key": "F",
+          "mix_key_r": 0.77
+        }
+      },
+      {
+        "ytid": "fU9YRGLPDQ8",
+        "slug": "camel",
+        "artist": "Flying Lotus",
+        "title": "Camel",
+        "match_class": "full_fan_upload",
+        "measured": {
+          "drums_bpm_raw": 84.9,
+          "bpm_mirrors_in_85_95": [],
+          "swing_pct": 52.8,
+          "on_grid_share": 0.58,
+          "off8_residual_ms": 19.8,
+          "kick_low": 0.739,
+          "snare_mid": 0.099,
+          "hat_high": 0.015,
+          "mix_bpm": null,
+          "mix_key": "B",
+          "mix_key_r": 0.67
+        }
+      },
+      {
+        "ytid": "iu4FVvR2QQs",
+        "slug": "golden_diva",
+        "artist": "Flying Lotus",
+        "title": "Golden Diva",
+        "match_class": "official_preview",
+        "measured": {
+          "drums_bpm_raw": 94.8,
+          "bpm_mirrors_in_85_95": [
+            94.8
+          ],
+          "swing_pct": 50.8,
+          "on_grid_share": 0.62,
+          "off8_residual_ms": 4.9,
+          "kick_low": 0.807,
+          "snare_mid": 0.085,
+          "hat_high": 0.005,
+          "mix_bpm": null,
+          "mix_key": "A",
+          "mix_key_r": 0.56
+        }
+      },
+      {
+        "ytid": "WC09qDzU9y4",
+        "slug": "due_time",
+        "artist": "AFTA-1",
+        "title": "Due Time",
+        "match_class": "official_preview",
+        "measured": {
+          "drums_bpm_raw": 92,
+          "bpm_mirrors_in_85_95": [
+            92
+          ],
+          "swing_pct": 50.8,
+          "on_grid_share": 0.92,
+          "off8_residual_ms": 5.1,
+          "kick_low": 0.538,
+          "snare_mid": 0.123,
+          "hat_high": 0.033,
+          "mix_bpm": null,
+          "mix_key": "G#",
+          "mix_key_r": 0.65
+        }
+      },
+      {
+        "ytid": "H3UIHZshNQ0",
+        "slug": "exhibit_a",
+        "artist": "Jay Electronica",
+        "title": "Exhibit A",
+        "match_class": "official_label",
+        "measured": {
+          "drums_bpm_raw": 86,
+          "bpm_mirrors_in_85_95": [
+            86
+          ],
+          "swing_pct": 49.6,
+          "on_grid_share": 0.75,
+          "off8_residual_ms": -2.8,
+          "kick_low": 0.767,
+          "snare_mid": 0.088,
+          "hat_high": 0.009,
+          "mix_bpm": null,
+          "mix_key": "A",
+          "mix_key_r": 0.72
+        }
+      },
+      {
+        "ytid": "oeaY2h_cKsg",
+        "slug": "rounded",
+        "artist": "Samiyam",
+        "title": "Rounded",
+        "match_class": "official_preview",
+        "measured": {
+          "drums_bpm_raw": 91.8,
+          "bpm_mirrors_in_85_95": [
+            91.8
+          ],
+          "swing_pct": 49.4,
+          "on_grid_share": 0.55,
+          "off8_residual_ms": -3.9,
+          "kick_low": 0.672,
+          "snare_mid": 0.133,
+          "hat_high": 0.009,
+          "mix_bpm": null,
+          "mix_key": "D",
+          "mix_key_r": 0.68
+        }
+      },
+      {
+        "ytid": "t6T-Q6HMbEo",
+        "slug": "get_it_together",
+        "artist": "Slum Village",
+        "title": "Get It Together",
+        "match_class": "no_match",
+        "note": "only candidate is 875s (implausible for a 4:30 track, likely a mix); excluded"
+      },
+      {
+        "ytid": "MU3nfxsz2XA",
+        "slug": "worlds_full_of_sadness",
+        "artist": "Slum Village",
+        "title": "Worlds Full of Sadness",
+        "match_class": "no_match",
+        "note": "search 403 every attempt, no candidates"
+      },
+      {
+        "ytid": "6nWdggkulHk",
+        "slug": "bts_radio_2006",
+        "artist": "Flying Lotus",
+        "title": "BTS Radio 2006",
+        "match_class": "no_match",
+        "note": "radio mix, not on SoundCloud; YouTube-only, bot-walled"
+      },
+      {
+        "ytid": "gFKArkiz8vU",
+        "slug": "sarrias_mind",
+        "artist": "A. Mochi & Takaaki Itoh",
+        "title": "Sarria's Mind",
+        "match_class": "no_match",
+        "note": "search 403 every attempt, no candidates"
+      },
+      {
+        "ytid": "bH-30pDoQdo",
+        "slug": "traffic",
+        "artist": "Chase Swayze",
+        "title": "Traffic",
+        "match_class": "no_match",
+        "note": "local artist; ships as site mp3 in the old pub site (not in git), no SoundCloud match"
+      },
+      {
+        "ytid": "1jjFk2Vp5ok",
+        "slug": "underrated",
+        "artist": "Chase Swayze",
+        "title": "Underrated",
+        "match_class": "no_match",
+        "note": "local artist; candidates all unrelated artists"
+      },
+      {
+        "ytid": "8SQZtBRdSbE",
+        "slug": "close_to_you",
+        "artist": "kemt",
+        "title": "close to you",
+        "match_class": "no_match",
+        "note": "candidates all unrelated (pinkpantheress, Dreezy); niche producer not on SoundCloud"
+      }
     ]
   }
 }

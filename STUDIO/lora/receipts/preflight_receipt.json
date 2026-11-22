@@ -1,0 +1,103 @@
+{
+  "generated_at": "2026-11-22T11:42:13Z",
+  "tree": "ad41734e",
+  "token": {
+    "present": true,
+    "value": "withheld",
+    "accepted_sources": [
+      "ENV REPLICATE_API_TOKEN",
+      "ENV REPLICATE_API_KEY",
+      "~/.config/replicate/config.json api_token",
+      "~/.config/master/env REPLICATE_API_TOKEN line"
+    ]
+  },
+  "subjects": [
+    {
+      "subject": "johann",
+      "subject_env": {
+        "present": true,
+        "mode_ok": true,
+        "keys": [
+          "SUBJECT",
+          "MODEL",
+          "REPLICATE_DESTINATION",
+          "REPLICATE_MODEL",
+          "TRIGGER",
+          "DESCRIPTOR"
+        ],
+        "trigger": "johann_lora",
+        "destination": "anon987654321/johann-flux",
+        "model_pinned": true,
+        "likeness_reviewed": false
+      },
+      "consent_generation": {
+        "subject": "johann",
+        "subject_directory": "STUDIO/lora/johann",
+        "consent_path": "STUDIO/lora/johann/consent.yml",
+        "valid": false,
+        "errors": [
+          "private consent.yml is missing"
+        ]
+      },
+      "model_pin": "Studio::Lora::Consent::Error: johann: generation blocked: private consent.yml is missing"
+    },
+    {
+      "subject": "ragnhild",
+      "subject_env": {
+        "present": true,
+        "mode_ok": true,
+        "keys": [
+          "SUBJECT",
+          "MODEL",
+          "REPLICATE_DESTINATION",
+          "REPLICATE_MODEL",
+          "TRIGGER",
+          "DESCRIPTOR"
+        ],
+        "trigger": "ragnhild",
+        "destination": "anon987654321/ragnhild-flux",
+        "model_pinned": true,
+        "likeness_reviewed": false
+      },
+      "consent_generation": {
+        "subject": "ragnhild",
+        "subject_directory": "STUDIO/lora/ragnhild",
+        "consent_path": "STUDIO/lora/ragnhild/consent.yml",
+        "valid": false,
+        "errors": [
+          "private consent.yml is missing"
+        ]
+      },
+      "model_pin": "Studio::Lora::Consent::Error: ragnhild: generation blocked: private consent.yml is missing"
+    },
+    {
+      "subject": "merethe",
+      "subject_env": {
+        "present": true,
+        "mode_ok": true,
+        "keys": [
+          "SUBJECT",
+          "MODEL",
+          "REPLICATE_DESTINATION",
+          "REPLICATE_MODEL",
+          "TRIGGER",
+          "DESCRIPTOR"
+        ],
+        "trigger": "MERETHE",
+        "destination": "anon987654321/merethe-flux",
+        "model_pinned": false,
+        "likeness_reviewed": false
+      },
+      "consent_generation": {
+        "subject": "merethe",
+        "subject_directory": "STUDIO/lora/merethe",
+        "consent_path": "STUDIO/lora/merethe/consent.yml",
+        "valid": false,
+        "errors": [
+          "private consent.yml is missing"
+        ]
+      },
+      "model_pin": "Studio::Lora::Consent::Error: merethe: generation blocked: private consent.yml is missing"
+    }
+  ]
+}

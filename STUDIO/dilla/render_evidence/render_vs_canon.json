@@ -1,0 +1,244 @@
+{
+ "assembled": "2026-11-22T10:58:29.734Z",
+ "render": {
+  "file": "/home/z/my-project/download/dilla-renders/dilla.wav",
+  "session_progression": "players (recovered), Ebm, 93 bpm, los_angeles groove, kit_dust, 24 bars",
+  "declared_swing_nominal": 54
+ },
+ "canon": {
+  "rows": 13,
+  "slugs": [
+   "microphone_master",
+   "in_space",
+   "timeless",
+   "motor_city_17",
+   "players",
+   "la_la",
+   "massage_situation",
+   "me_yesterday_corded",
+   "camel",
+   "golden_diva",
+   "due_time",
+   "exhibit_a",
+   "rounded"
+  ],
+  "method": "per stem: band energy shares (kick<130Hz, snare 150-1200Hz bp@400, hats>5kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation 55-200bpm folded to 60-180, 16-slot grid via best-phase quantization (+-45ms), swing from off-8th residuals; mix: chroma (FFT 8192 @22050, 55-2200Hz) + Krumhansl key correlation",
+  "limits": "SoundCloud transcodes decode above 0 dBFS on some rows (peak_dbfs > 0) - levels are relative evidence only; official_preview rows carry 30s windows; key estimates are single-method (Krumhansl) and cross-checks are pending; swing assumes off-8th placement"
+ },
+ "metrics": [
+  {
+   "metric": "drum swing position",
+   "unit": "%",
+   "canon": {
+    "n": 13,
+    "median": 49.6,
+    "min": 45,
+    "max": 52.8
+   },
+   "render": 50.2,
+   "within_canon": true,
+   "note": "measured off-8th placement, not the declared nominal"
+  },
+  {
+   "metric": "on-grid share (16)",
+   "unit": "share",
+   "canon": {
+    "n": 13,
+    "median": 0.66,
+    "min": 0.35,
+    "max": 1
+   },
+   "render": 0.37,
+   "within_canon": true,
+   "note": ""
+  },
+  {
+   "metric": "off-8th residual",
+   "unit": "ms",
+   "canon": {
+    "n": 13,
+    "median": -1.5,
+    "min": -47.7,
+    "max": 19.8
+   },
+   "render": 1.9,
+   "within_canon": true,
+   "note": ""
+  },
+  {
+   "metric": "kick low-band share",
+   "unit": "share",
+   "canon": {
+    "n": 13,
+    "median": 0.672,
+    "min": 0.375,
+    "max": 0.807
+   },
+   "render": 0.727,
+   "within_canon": true,
+   "note": "drums stem, <130Hz"
+  },
+  {
+   "metric": "snare mid-band share",
+   "unit": "share",
+   "canon": {
+    "n": 13,
+    "median": 0.099,
+    "min": 0.055,
+    "max": 0.202
+   },
+   "render": 0.077,
+   "within_canon": true,
+   "note": "drums stem, bp@400"
+  },
+  {
+   "metric": "hat high-band share",
+   "unit": "share",
+   "canon": {
+    "n": 13,
+    "median": 0.018,
+    "min": 0.002,
+    "max": 0.033
+   },
+   "render": 0.018,
+   "within_canon": true,
+   "note": "drums stem, >5kHz"
+  }
+ ],
+ "tempo_verdict": {
+  "render_drums_raw_bpm": 61.4,
+  "render_drums_fold_candidates": [
+   122.8,
+   92.1,
+   81.9
+  ],
+  "render_drums_in_85_95": [
+   92.1
+  ],
+  "render_mix_raw_bpm": 93,
+  "render_mix_in_85_95": [
+   93
+  ],
+  "canon_drums_raw": [
+   61.5,
+   91.7,
+   174.8,
+   92.8,
+   92.5,
+   63.2,
+   131.7,
+   150.5,
+   84.9,
+   94.8,
+   92,
+   86,
+   91.8
+  ],
+  "canon_rows_with_85_95_mirror": 11,
+  "canon_rows_total": 13,
+  "render_matches_declared_93": true,
+  "note": "autocorrelation locks differ per row (half/double/dotted mirrors); window 85-95 established in REFERENCE_ANALYSIS.md"
+ },
+ "key_verdict": {
+  "render_key_estimate": {
+   "key": "D#",
+   "mode": "major",
+   "r": 0.75
+  },
+  "canon_max_r": 0.77,
+  "canon_median_r": 0.56,
+  "declared_key_family": "Eb (Ebm progression \"players\")",
+  "render_pitch_class_matches_Eb": true,
+  "canon_estimates": [
+   {
+    "slug": "microphone_master",
+    "key": "C",
+    "mode": "major",
+    "r": 0.46
+   },
+   {
+    "slug": "in_space",
+    "key": "C",
+    "mode": "major",
+    "r": 0.51
+   },
+   {
+    "slug": "timeless",
+    "key": "A",
+    "mode": "minor",
+    "r": 0.55
+   },
+   {
+    "slug": "motor_city_17",
+    "key": "E",
+    "mode": "minor",
+    "r": 0.52
+   },
+   {
+    "slug": "players",
+    "key": "F",
+    "mode": "major",
+    "r": 0.26
+   },
+   {
+    "slug": "la_la",
+    "key": "G",
+    "mode": "major",
+    "r": 0.7
+   },
+   {
+    "slug": "massage_situation",
+    "key": "B",
+    "mode": "minor",
+    "r": 0.47
+   },
+   {
+    "slug": "me_yesterday_corded",
+    "key": "F",
+    "mode": "minor",
+    "r": 0.77
+   },
+   {
+    "slug": "camel",
+    "key": "B",
+    "mode": "minor",
+    "r": 0.67
+   },
+   {
+    "slug": "golden_diva",
+    "key": "A",
+    "mode": "minor",
+    "r": 0.56
+   },
+   {
+    "slug": "due_time",
+    "key": "G#",
+    "mode": "minor",
+    "r": 0.65
+   },
+   {
+    "slug": "exhibit_a",
+    "key": "A",
+    "mode": "minor",
+    "r": 0.72
+   },
+   {
+    "slug": "rounded",
+    "key": "D",
+    "mode": "major",
+    "r": 0.68
+   }
+  ],
+  "canon_note": "canon estimates are weak-correlation single-method (max r see table); no canon row may be treated as authority (EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY)"
+ },
+ "chroma_verdict": {
+  "render_vs_players_chroma_cosine": 0.734,
+  "note": "same analyzer, same chroma pipeline"
+ },
+ "honest_gaps": [
+  "levels are NOT compared: SoundCloud transcodes decode >0 dBFS on canon rows; levels are relative evidence only (canon limits)",
+  "centroid_hz unit is broken in the shared analyzer (values ~1e8); comparable across both sides only as a relative rank, so omitted",
+  "canon rows are 30s official previews or fan uploads, mono-transcoded; render is a 64.5s stereo mix - window difference kept",
+  "sample_flip=null: the render uses no actual Dilla sample material (sample_rights_status not_used); identity is measured-groove-and-harmony, not audio identity"
+ ]
+}

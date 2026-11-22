@@ -1,13 +1,13 @@
 {
-  "comment": "The curated showcase is a section-aware 24-bar form. Each section has its own harmonic and timbral decisions; intro and outro deliberately remove layers.",
-  "id": "blue_hour_showcase",
-  "progression": "blue_hour",
-  "title": "F-minor Dub Study (engine original)",
+  "comment": "Re-anchored 2026-11-22 on the measured canon: curated Dilla tracks sit at 85-95 BPM (or half/double mirrors) with drum swing 45.0-52.8% (median ~49.6) and a dusty kick-led stem balance; groove_profile los_angeles (kick/snare 50, hat 53) and 93 BPM encode those measurements. Progressions are recovered rows; the measured record lives in measured_canon and render_evidence/render_vs_canon.json. Intro and outro deliberately remove layers.",
+  "id": "players_showcase",
+  "progression": "players",
+  "title": "Players Study (measured canon anchor)",
   "arrangement": [
     {
       "section": "intro",
       "bars": 4,
-      "progression": "blue_hour",
+      "progression": "players",
       "drums": "dusty_laid_back",
       "layers": [
         "drums",
@@ -18,7 +18,7 @@
     {
       "section": "head",
       "bars": 8,
-      "progression": "blue_hour",
+      "progression": "players",
       "drums": "dilla_shadow_full",
       "layers": [
         "drums",
@@ -35,7 +35,7 @@
     {
       "section": "lift",
       "bars": 8,
-      "progression": "coltrane_soup",
+      "progression": "thelonious_eb",
       "drums": "flylo_knock",
       "layers": [
         "drums",
@@ -54,7 +54,7 @@
     {
       "section": "outro",
       "bars": 4,
-      "progression": "rain_on_glass",
+      "progression": "so_far_to_go",
       "layers": [
         "chords",
         "melody",
@@ -73,5 +73,5 @@
   "sonitex": "subtle",
   "sonitex_instances": 1,
   "vcs": 0.54,
-  "bpm": 86
+  "bpm": 93
 }

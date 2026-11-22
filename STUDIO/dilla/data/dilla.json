@@ -1948,14 +1948,14 @@
   },
   "production_profiles": {
     "j_dilla": {
-      "progression": "blue_hour",
+      "progression": "players",
       "drums": "dilla_shadow_full",
       "kit": "kit_dust",
       "voice": "rhodes_mark1",
       "rig": "dilla_night",
       "sonitex": "subtle",
-      "groove_profile": "dilla_shadow",
-      "bpm": 86
+      "groove_profile": "los_angeles",
+      "bpm": 93
     },
     "flying_lotus": {
       "progression": "coltrane_soup",

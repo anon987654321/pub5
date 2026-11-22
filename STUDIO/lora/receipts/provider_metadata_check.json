@@ -1,0 +1,77 @@
+{
+  "generated_at": "2026-11-22T11:42:02Z",
+  "call_class": "metadata_only",
+  "models": [
+    {
+      "subject": "johann",
+      "model": "anon987654321/johann-flux",
+      "schema_inputs": [
+        "mask",
+        "seed",
+        "image",
+        "model",
+        "width",
+        "height",
+        "prompt",
+        "go_fast",
+        "extra_lora",
+        "lora_scale",
+        "megapixels",
+        "num_outputs",
+        "aspect_ratio",
+        "output_format",
+        "guidance_scale",
+        "output_quality",
+        "prompt_strength",
+        "extra_lora_scale",
+        "replicate_weights",
+        "num_inference_steps",
+        "disable_safety_checker"
+      ],
+      "schema_ok": true,
+      "latest_version_id": "c2a1755ba6034e669e74b117050e442a16aa9e31d63093c15132f5b535ac4773",
+      "visibility": "private"
+    },
+    {
+      "subject": "ragnhild",
+      "model": "anon987654321/ragnhild-flux",
+      "schema_inputs": [
+        "mask",
+        "seed",
+        "image",
+        "model",
+        "width",
+        "height",
+        "prompt",
+        "go_fast",
+        "extra_lora",
+        "lora_scale",
+        "megapixels",
+        "num_outputs",
+        "aspect_ratio",
+        "output_format",
+        "guidance_scale",
+        "output_quality",
+        "prompt_strength",
+        "extra_lora_scale",
+        "replicate_weights",
+        "num_inference_steps",
+        "disable_safety_checker"
+      ],
+      "schema_ok": true,
+      "latest_version_id": "ae6785fecd3596590609caf07102c7fc3564d6b798c7ae09239c5774fffe6ebb",
+      "visibility": "private"
+    },
+    {
+      "subject": "merethe",
+      "model": "anon987654321/merethe-flux",
+      "schema_ok": false,
+      "error": "Studio::ReplicateClient::APIError: Replicate API 404: {\"detail\":\"Model not found.\"}",
+      "latest_version_error": "Studio::ReplicateClient::APIError: Replicate API 404: {\"detail\":\"Model not found.\"}"
+    }
+  ],
+  "token": {
+    "present": true,
+    "value": "withheld"
+  }
+}
