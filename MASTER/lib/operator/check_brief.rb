@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "securerandom"
 
 module Operator
   module CheckBrief
@@ -137,6 +138,8 @@ module Operator
 
       receipt = {
         "schema_version" => 1,
+        "receipt_id" => SecureRandom.uuid,
+        "operation_type" => "check",
         "receipt_type" => "master_check",
         "profile" => profile.to_s,
         "status" => status,
@@ -145,13 +148,13 @@ module Operator
         "duration_ms" => (duration_s.to_f * 1000).round,
         "repository" => metadata[:repository],
         "branch" => metadata[:branch],
-        "main_sha" => metadata[:main_sha],
+        "exact_main_sha" => metadata[:main_sha],
         "main_ref" => metadata[:main_ref],
-        "checked_out_sha" => metadata[:checked_out_sha],
+        "exact_checked_out_sha" => metadata[:checked_out_sha],
         "clean_checkout" => metadata[:clean_checkout],
         "environment" => metadata[:environment],
         "command" => command,
-        "exit_status" => exit_status,
+        "exit_status" => (statuses.empty? ? nil : exit_status),
         "counts" => {
           "steps" => statuses.size,
           "passed" => passed,
