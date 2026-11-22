@@ -90,7 +90,7 @@ gaps:
       public coordinate precision are implemented on the existing Places
       workstream. Upstream POI import/refresh remains open; tests are unrun.
   # --- shared commerce domain (the horizon monetization block, folded) ---
-  - { id: commerce_shared_domain, app: fleet, kind: logic, name: "one shared Commerce/Ledger/Campaign/Entitlements domain consumed by the verticals", source: horizon, status: open, note: "folds plans-as-data, payments abstraction, seller credits and the revenue dashboard; the horizon fence demands one domain, never a billing stack per engine" }
+  - { id: commerce_shared_domain, app: fleet, kind: logic, name: "one shared Commerce/Ledger/Campaign/Entitlements domain consumed by the verticals", source: horizon, status: open, workstream: commerce_ledger_first, note: "ledger-first winner: append-only credits and entitlements before any new payment path; existing Stripe plans and Brgen Vipps/Dintero order flows must be preserved during later provider unification" }
   - { id: commerce_private_seller_verification, app: fleet, kind: logic, name: "seller verification badge for a seller with no shop", source: horizon, status: open, note: "a private seller has no organisation number, so this needs its own proof" }
   - { id: commerce_local_ads, app: fleet, kind: logic, name: "self-service local advertising (CPC/CPM/fixed, geo and time targeting)", source: horizon, status: open, note: "after liquidity signals and on the shared commerce domain" }
   # --- amber ---
