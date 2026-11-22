@@ -338,6 +338,7 @@ if format == "json"
     duration_s:, exit_status:,
     command: "MASTER/bin/check --profile=#{profile} --format=json",
     log_path: check_relative_log(ROOT, runner.log_path),
+    log_artifact: Operator::CheckBrief.file_evidence(root: ROOT, path: runner.log_path),
     receipt_id:, operation_id:, receipt_path: relative_receipt_path,
     receipt_persisted: true
   ))
