@@ -292,11 +292,17 @@ module Master
 
           if mission && mission["state"] == "completed"
             unless executor.record_completion!(record: mission)
+              parked = executor.park_unverified_completion!(record: mission)
               container[:bus]&.publish(
                 "backlog_executor:blocked",
                 mission: mission["id"],
-                reason: "terminal mission lacks a current-item delivery receipt; inspect summary and pending writes",
+                reason: "terminal mission lacks a current-item delivery receipt; parked for review",
               )
+              next unless parked
+
+              container[:bus]&.publish("backlog_executor:parked", mission: mission["id"]) if parked == true
+              status = executor.enqueue_next!(model: mission["model"])
+              container[:bus]&.publish("backlog_executor:intake", status:)
               next
             end
           elsif mission && mission["state"] == "running"
