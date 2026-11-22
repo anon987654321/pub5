@@ -951,35 +951,39 @@ oDlySend.connect(oDly);
 oRev.connect(oComp);
 oDly.connect(oDlyFlt);
 oDlyFlt.connect(oComp);
-// Create isolated synths in offline context
-const oKickN=new Tone.MembraneSynth({pitchDecay:.05,octaves:6,oscillator:{type:'sine'},envelope:{attack:.001,decay:.4,sustain:0,release:.1}});
-const oKickSub=new Tone.Synth({oscillator:{type:'sine'},envelope:{attack:.001,decay:.5,sustain:0,release:.1}});
-const oKickClk=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.02,sustain:0}});
-const oKickBody=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.001,decay:.08,sustain:0}});
-const oSnareN=new Tone.NoiseSynth({noise:{type:'white'},envelope:{attack:.001,decay:.2,sustain:0}});
-const oSnareRng=new Tone.Synth({oscillator:{type:'triangle'},envelope:{attack:.001,decay:.15,sustain:0}});
-const oClapN=new Tone.NoiseSynth({noise:{type:'pink'},envelope:{attack:.001,decay:.15,sustain:0}});
-const oHatN=new Tone.MetalSynth({frequency:200,envelope:{attack:.001,decay:.1,release:.01},harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5});
-const oOpenN=new Tone.MetalSynth({frequency:200,envelope:{attack:.001,decay:.3,release:.2},harmonicity:5.1,modulationIndex:32,resonance:4000,octaves:1.5});
-const oBassN=new Tone.MonoSynth({oscillator:{type:'sawtooth'},envelope:{attack:.01,decay:.1,sustain:.5,release:.1}});
-const oBassSub=new Tone.Oscillator(40,'sine').start();
-oBassSub.volume.value=-12;
-const oKeysN=new Tone.PolySynth({maxPolyphony:8,voice:Tone.Synth,options:{oscillator:{type:'triangle'},envelope:{attack:.01,decay:.2,sustain:.3,release:.5}}});
-const oPadsN=new Tone.PolySynth({maxPolyphony:4,voice:Tone.Synth,options:{oscillator:{type:'sine'},envelope:{attack:.5,decay:.5,sustain:.8,release:2}}});
+// Live and offline use the same profile-driven instrument constructor.
+const offlineSynths=createToneInstruments();
+const oKickN=offlineSynths.kick,oKickSub=offlineSynths.kickSub,oKickClk=offlineSynths.kickClk,oKickBody=offlineSynths.kickBody;
+const oSnareN=offlineSynths.snare,oSnareRng=offlineSynths.snareRing,oClapN=offlineSynths.clap,oHatN=offlineSynths.hat,oOpenN=offlineSynths.open;
+const oBassN=offlineSynths.bass,oBassSub=offlineSynths.bassSub,oKeysN=offlineSynths.keys,oPadsN=offlineSynths.pads;
+const oKickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
+oKickClkBP.Q.value=toneProfile.kick.click_filter_q;oKickClk.connect(oKickClkBP);
+const oSnareRngBP=new Tone.Filter(toneProfile.snare.ring_filter_base_hz+kitProfile.snare.tone*toneProfile.snare.ring_filter_tone_span_hz,'bandpass');
+oSnareRngBP.Q.value=toneProfile.snare.ring_filter_q;oSnareRng.connect(oSnareRngBP);
 const oDrumSat=new Tone.Chebyshev(3);
 const oKeySat=new Tone.Chebyshev(2);
 const oKickSat=new Tone.Chebyshev(2);
 const oKickComp=new Tone.Compressor(-30,8);
-const oKeysChorus=new Tone.Chorus(2.5,.3,.3).start();
-const oPadsFlt=new Tone.Filter(800,'lowpass');
-oKickN.connect(oKickSat);oKickSub.connect(oKickSat);oKickClk.connect(oKickSat);oKickBody.connect(oKickSat);
+const oKeysChorus=new Tone.Chorus(toneProfile.keys.chorus_frequency,toneProfile.keys.chorus_delay_time,toneProfile.keys.chorus_depth).start();
+const oKeysTrem=new Tone.Tremolo({frequency:toneProfile.keys.tremolo_frequency,depth:toneProfile.keys.tremolo_depth,wet:toneProfile.keys.tremolo_wet,spread:toneProfile.keys.tremolo_spread});oKeysTrem.start();
+const oKeysDrive=new Tone.Distortion(toneProfile.keys.drive_amount);oKeysDrive.wet.value=toneProfile.keys.drive_wet;
+const oKeysTexture=new Tone.Distortion(toneProfile.keys.texture_amount);oKeysTexture.wet.value=toneProfile.keys.texture_wet;
+const oKeysLP=new Tone.Filter(toneProfile.keys.filter_base_hz+voiceProfile.brightness*toneProfile.keys.filter_brightness_span_hz,'lowpass');
+const oPadsFlt=new Tone.Filter(toneProfile.pads.filter_base_hz+voiceProfile.brightness*toneProfile.pads.filter_brightness_span_hz,'lowpass');
+const oPadsLFO=new Tone.LFO(0.12,600,1400);oPadsLFO.start();oPadsLFO.connect(oPadsFlt.frequency);
+const oPadsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
+const oPadsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);oPadsSat.wet.value=toneProfile.pads.saturation_wet;
+oKickN.connect(oKickSat);oKickSub.connect(oKickSat);oKickClkBP.connect(oKickSat);oKickBody.connect(oKickSat);
 oKickSat.connect(oKickComp);oKickComp.connect(oDrumG);
-oSnareN.connect(oDrumSat);oSnareRng.connect(oDrumSat);oClapN.connect(oDrumSat);oHatN.connect(oDrumSat);oOpenN.connect(oDrumSat);
+oSnareN.connect(oDrumSat);oSnareRngBP.connect(oDrumSat);oClapN.connect(oDrumSat);oHatN.connect(oDrumSat);oOpenN.connect(oDrumSat);
 oDrumSat.connect(oDrumG);
 oBassN.connect(oBassG);oBassSub.connect(oBassG);
-oKeysN.connect(oKeySat);oKeySat.connect(oKeysChorus);oKeysChorus.connect(oKeysG);
-oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsG);
-for(const g of [oDrumG,oBassG,oKeysG,oPadsG]){g.connect(oMaster);g.connect(oRevSend);g.connect(oDlySend);}
+oKeysN.connect(oKeySat);oKeySat.connect(oKeysChorus);oKeysChorus.connect(oKeysTrem);oKeysTrem.connect(oKeysDrive);
+oKeysDrive.connect(oKeysG);oKeysG.connect(oKeysTexture);oKeysTexture.connect(oKeysLP);
+oKeysLP.connect(oMaster);oKeysLP.connect(oRevSend);oKeysLP.connect(oDlySend);
+oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsG);oPadsG.connect(oPadsBW);oPadsBW.connect(oPadsSat);
+oPadsSat.connect(oMaster);oPadsSat.connect(oRevSend);oPadsSat.connect(oDlySend);
+for(const g of [oDrumG,oBassG]){g.connect(oMaster);g.connect(oRevSend);g.connect(oDlySend);}
 // Schedule all steps using the shared triggerNotes helper
 for(let i=0;i<bars*16;i++){
 const sixteenth=60/aud_.bpm/4;
