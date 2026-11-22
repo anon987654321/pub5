@@ -1063,3 +1063,26 @@ Proof: read-after-write verification, targeted reference scan of all 518
 migration-record lines, and GitHub file reads for the three named paths.
 Not run: documentation lint, rendered Markdown inspection, test suite,
 `agent_context.rb` or `/fix`.
+
+
+### Static contract checks — 2026-11-22
+
+- `tool_habits.yml`: all 15 named tool adapters are present in the canonical
+  `tools.yml` registry. No retired tool reference was found in this census.
+- `state.yml`: all eight declared standing-order callable names map to
+  classes in `Master::Ground::Orders::Registry`. This confirms source wiring,
+  not that any order ran or that a remote side effect succeeded.
+- Event topics: the proposed deterministic publisher/subscriber census
+  already exists as `MASTER/tools/event_bus_reach.rb`, with focused tests in
+  `MASTER/tools/test/test_event_bus_reach.rb`. Its report includes publishers,
+  Ruby subscribers, browser listeners, references, unpublished and unconsumed
+  topics, missing contract publishers, retired topics and reference-anchor
+  gaps. No duplicate census was added.
+- `incidents.yml`: one incident (I-007) still cites an operator session
+  record with “in-tree citation pending”. No independent source was found in
+  this pass, so the honest provenance remains unchanged; no citation was
+  invented.
+
+Proof: exact GitHub reads of the four registries/source files and static
+name-to-registry comparisons. No command or Ruby test was run; all runtime
+verification remains NOT_RUN.
