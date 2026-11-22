@@ -1,0 +1,278 @@
+{
+ "comment": "The operator's carefully curated YouTube reference tracks for Dilla's best work, recovered verbatim from pub/index.html at commit a3185f4 (const YOUTUBE_TRACKS). Operator directive 2026-11-22: these are the canon - download them, split them with demucs, and spectrum-analyze each layer's harmonic content and drum patterns. Machine record for the operator's narrowed pick list lives in operator_picks; measured output lands in data/reference_measurements/<slug>.json.",
+ "curation_source": {
+  "repository": "anon987654321/pub",
+  "commit": "a3185f4",
+  "commit_subject": "restore: index.html demo playlist layout (synced from pub4)",
+  "path": "index.html",
+  "const": "YOUTUBE_TRACKS",
+  "count": 22,
+  "recovered": "2026-11-22"
+ },
+ "tracks": [
+  {
+   "n": 1,
+   "artist": "J Dilla",
+   "title": "Microphone Master",
+   "youtube_id": "9EGHwkDix78",
+   "url": "https://www.youtube.com/watch?v=9EGHwkDix78"
+  },
+  {
+   "n": 2,
+   "artist": "J Dilla",
+   "title": "In Space",
+   "youtube_id": "vO2nWXCVt6o",
+   "url": "https://www.youtube.com/watch?v=vO2nWXCVt6o"
+  },
+  {
+   "n": 3,
+   "artist": "J Dilla",
+   "title": "Timeless",
+   "youtube_id": "dbbfo9_7D8g",
+   "url": "https://www.youtube.com/watch?v=dbbfo9_7D8g"
+  },
+  {
+   "n": 4,
+   "artist": "AFTA-1",
+   "title": "Due Time",
+   "youtube_id": "WC09qDzU9y4",
+   "url": "https://www.youtube.com/watch?v=WC09qDzU9y4"
+  },
+  {
+   "n": 5,
+   "artist": "Flying Lotus",
+   "title": "Massage Situation",
+   "youtube_id": "6oUx6wGCekM",
+   "url": "https://www.youtube.com/watch?v=6oUx6wGCekM"
+  },
+  {
+   "n": 6,
+   "artist": "Madlib",
+   "title": "Eye",
+   "youtube_id": "ScVz2mntmCE",
+   "url": "https://www.youtube.com/watch?v=ScVz2mntmCE"
+  },
+  {
+   "n": 7,
+   "artist": "Slum Village",
+   "title": "Players",
+   "youtube_id": "KsULjOCYdnY",
+   "url": "https://www.youtube.com/watch?v=KsULjOCYdnY"
+  },
+  {
+   "n": 8,
+   "artist": "Jay Electronica",
+   "title": "Exhibit A",
+   "youtube_id": "H3UIHZshNQ0",
+   "url": "https://www.youtube.com/watch?v=H3UIHZshNQ0"
+  },
+  {
+   "n": 9,
+   "artist": "Slum Village",
+   "title": "La La (Instrumental)",
+   "youtube_id": "EYJxxHQ7sX0",
+   "url": "https://www.youtube.com/watch?v=EYJxxHQ7sX0"
+  },
+  {
+   "n": 10,
+   "artist": "Slum Village",
+   "title": "Get It Together",
+   "youtube_id": "t6T-Q6HMbEo",
+   "url": "https://www.youtube.com/watch?v=t6T-Q6HMbEo"
+  },
+  {
+   "n": 11,
+   "artist": "Slum Village",
+   "title": "Fantastic",
+   "youtube_id": "a3ISYWWYgz8",
+   "url": "https://www.youtube.com/watch?v=a3ISYWWYgz8"
+  },
+  {
+   "n": 12,
+   "artist": "Flying Lotus",
+   "title": "me Yesterday//Corded",
+   "youtube_id": "8DgAhgmpXNA",
+   "url": "https://www.youtube.com/watch?v=8DgAhgmpXNA"
+  },
+  {
+   "n": 13,
+   "artist": "Flying Lotus",
+   "title": "Camel",
+   "youtube_id": "fU9YRGLPDQ8",
+   "url": "https://www.youtube.com/watch?v=fU9YRGLPDQ8"
+  },
+  {
+   "n": 14,
+   "artist": "Flying Lotus",
+   "title": "Golden Diva",
+   "youtube_id": "iu4FVvR2QQs",
+   "url": "https://www.youtube.com/watch?v=iu4FVvR2QQs"
+  },
+  {
+   "n": 15,
+   "artist": "Slum Village",
+   "title": "Worlds Full of Sadness",
+   "youtube_id": "MU3nfxsz2XA",
+   "url": "https://www.youtube.com/watch?v=MU3nfxsz2XA"
+  },
+  {
+   "n": 16,
+   "artist": "A. Mochi & Takaaki Itoh",
+   "title": "Sarria's Mind",
+   "youtube_id": "gFKArkiz8vU",
+   "url": "https://www.youtube.com/watch?v=gFKArkiz8vU"
+  },
+  {
+   "n": 17,
+   "artist": "Samiyam",
+   "title": "Rounded",
+   "youtube_id": "oeaY2h_cKsg",
+   "url": "https://www.youtube.com/watch?v=oeaY2h_cKsg"
+  },
+  {
+   "n": 18,
+   "artist": "Chase Swayze",
+   "title": "Traffic",
+   "youtube_id": "bH-30pDoQdo",
+   "url": "https://www.youtube.com/watch?v=bH-30pDoQdo"
+  },
+  {
+   "n": 19,
+   "artist": "Chase Swayze",
+   "title": "Underrated",
+   "youtube_id": "1jjFk2Vp5ok",
+   "url": "https://www.youtube.com/watch?v=1jjFk2Vp5ok"
+  },
+  {
+   "n": 20,
+   "artist": "Flying Lotus",
+   "title": "BTS Radio 2006",
+   "youtube_id": "6nWdggkulHk",
+   "url": "https://www.youtube.com/watch?v=6nWdggkulHk"
+  },
+  {
+   "n": 21,
+   "artist": "kemt",
+   "title": "close to you",
+   "youtube_id": "8SQZtBRdSbE",
+   "url": "https://www.youtube.com/watch?v=8SQZtBRdSbE"
+  },
+  {
+   "n": 22,
+   "artist": "J Dilla",
+   "title": "Motor City 17",
+   "youtube_id": "OSg9Fwd8QSs",
+   "url": "https://www.youtube.com/watch?v=OSg9Fwd8QSs"
+  }
+ ],
+ "probe_2026_11_22": {
+  "date": "2026-11-22",
+  "method": "yt-dlp --simulate against each id, morning session",
+  "dead": {
+   "KsULjOCYdnY": "Players - Video unavailable (dead upload)",
+   "a3ISYWWYgz8": "Fantastic - Video unavailable (dead upload)"
+  },
+  "alive_ip_gated": {
+   "9EGHwkDix78": "Microphone Master - alive; YouTube bot-checks this sandbox IP"
+  },
+  "live_verified": {
+   "W28aNa8bnRw": "Climax (Girl Shit) - live upload found via web search (not on the curation)"
+  }
+ },
+ "measurement_contract": "reference_pipeline.py: yt-dlp audio download (operator cookies via DILLA_YT_COOKIES when the sandbox IP is bot-checked) -> demucs htdemucs four-stem split -> reference_stems.py per-stem keys, chroma, spectral bands, drum grids, swing; analyzer_version stems-1; output data/reference_measurements/<slug>.json. lib/reference_analyzer.rb stays the canonical mix-only profile lane for MASTER.",
+ "operator_picks": [
+  {
+   "slug": "players",
+   "artist": "Slum Village",
+   "title": "Players",
+   "released": "Fantastic, Vol. 2 (2000), original pressing track 15",
+   "curated_youtube_id": "KsULjOCYdnY",
+   "candidate_ids": [
+    "KsULjOCYdnY"
+   ],
+   "curated_source": "pub/index.html at a3185f4, const YOUTUBE_TRACKS n=7",
+   "status": "curated_id_dead_2026_11_22_probe",
+   "identity_note": "Pinned to Fantastic, Vol. 2 via Wikipedia tracklisting; FV1-era version exists but the canonical Clair flip is FV2.",
+   "samples_documented": [
+    {
+     "publisher": "WhoSampled",
+     "source_id": "sample/2546",
+     "url": "https://www.whosampled.com/sample/2546/Slum-Village-Players-The-Singers-Unlimited-Clair/",
+     "claim": "samples The Singers Unlimited 'Clair' (1973)"
+    }
+   ]
+  },
+  {
+   "slug": "climax_girl_shit",
+   "artist": "Slum Village",
+   "title": "Climax (Girl Shit)",
+   "released": "Fantastic, Vol. 2 (2000), track 5; single 'Climax (Girl Shit) / CB4' Aug 22 2000",
+   "curated_youtube_id": null,
+   "candidate_ids": [
+    "W28aNa8bnRw"
+   ],
+   "curated_source": null,
+   "status": "live_upload_verified_2026_11_22_search",
+   "identity_note": "Not on the Radio Bergen curation; picked by name by the operator. Upload W28aNa8bnRw titled 'Slum Village - Climax (Girl Shit) (2000)' found via web search and used as the source candidate.",
+   "samples_documented": [
+    {
+     "publisher": "WhoSampled",
+     "source_id": "track page",
+     "url": "https://www.whosampled.com/Slum-Village/Climax-(Girl-Shit)/",
+     "claim": "contains samples of Steve Miller Band 'Space Intro' (1976), Steve Miller Band 'Fly Like an Eagle' (1976), Les McCann 'The Pleading' (1971)"
+    },
+    {
+     "publisher": "WhoSampled",
+     "source_id": "sample page",
+     "url": "https://www.whosampled.com/Slum-Village/Climax-(Girl-Shit)/Les-McCann-The-Pleading/",
+     "claim": "sample of Les McCann 'The Pleading'"
+    }
+   ]
+  },
+  {
+   "slug": "microphone_master_remix",
+   "artist": "Das EFX",
+   "title": "Microphone Master (Jay Dee Remix)",
+   "released": "1997 single remix; remixer credit J Dilla",
+   "curated_youtube_id": "9EGHwkDix78",
+   "candidate_ids": [
+    "9EGHwkDix78"
+   ],
+   "curated_source": "pub/index.html at a3185f4, const YOUTUBE_TRACKS n=1",
+   "status": "alive_but_ip_gated_2026_11_22_probe",
+   "identity_note": "The curation attributes it to 'J Dilla'; WhoSampled's page is 'Das EFX's Microphone Master (Remix) remix by J Dilla' (remix/81107). Radio Bergen metadata keeps the artist label 'J Dilla' for the player; the release identity is the Das EFX remix credit.",
+   "samples_documented": [
+    {
+     "publisher": "WhoSampled",
+     "source_id": "remix/81107",
+     "url": "https://www.whosampled.com/remix/81107/Das-EFX-Microphone-Master-(Remix)-Das-EFX-Microphone-Master/",
+     "claim": "remix by J Dilla; samples Clare Fischer 'You Call It Madness', Art of Noise 'Opus 4', A Tribe Called Quest 'Lyrics to Go'"
+    }
+   ]
+  },
+  {
+   "slug": "fantastic",
+   "artist": "Slum Village",
+   "title": "Untitled / Fantastic",
+   "released": "Fantastic, Vol. 2 (2000), original pressing track 10",
+   "curated_youtube_id": "a3ISYWWYgz8",
+   "candidate_ids": [
+    "a3ISYWWYgz8"
+   ],
+   "curated_source": "pub/index.html at a3185f4, const YOUTUBE_TRACKS n=11",
+   "status": "curated_id_dead_2026_11_22_probe",
+   "identity_note": "Radio Bergen lists the title as 'Fantastic'; the FV2 pressing names the track 'Untitled / Fantastic'. Fills the fourth pick slot in place of the nonexistent 'Life' (see picks_note).",
+   "samples_documented": [
+    {
+     "publisher": "WhoSampled",
+     "source_id": "sample page",
+     "url": "https://www.whosampled.com/Slum-Village/Fantastic/Herbie-Hancock-Youll-Know-When-You-Get-There/",
+     "claim": "samples Herbie Hancock 'You'll Know When You Get There' (1971); matches the fantastic_herbie_flip citation in recovered_music.json"
+    }
+   ]
+  }
+ ],
+ "operator_picks_note": "Operator named four example tracks. 'life' does not exist as a Slum Village or J Dilla track on Fan-Tas-Tic Vol. 1 or Fantastic, Vol. 2 (both tracklists checked); closest real title is 'My Life' feat. Frank N Dank (2005, post-Dilla). The fourth slot uses the operator's own curated 'Fantastic'. If 'My Life' was intended it can be added as a fifth pick.",
+ "operator_picks_date": "2026-11-22",
+ "pipeline": "yt-dlp download (operator cookies) -> demucs htdemucs four-stem split -> STUDIO/dilla/reference_stems.py per-layer spectral/harmonic measurement (operator-directed deep lane) -> data/reference_measurements/<slug>.json; lib/reference_analyzer.rb stays the canonical mix-only profile lane for MASTER"
+}
