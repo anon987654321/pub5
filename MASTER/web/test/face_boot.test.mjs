@@ -867,7 +867,10 @@ assert.match(probe, /getContext/);
   assert.match(probe, /WebGL escaped guard before tap/);
   assert.match(probe, /WebGL unavailable after tap/);
   assert.match(probe, /PROBE_REQUIRE_BROWSER/);
-  assert.match(ciProbe, /probe_webgl_guard\.mjs/);
+  assert.match(probe, /Deploy::CdpSession\.open\(timeout: TIMEOUT, webgl: true\)/);
+  assert.match(ciProbe, /PROBE_REQUIRE_BROWSER=1/);
+  assert.match(ciProbe, /ruby.*PROBE_WEBGL_GUARD/);
+  assert.match(ciProbe, /probe_webgl_guard\.rb/);
 });
 
 test("chat index wires viseme and experimental asset paths", () => {
