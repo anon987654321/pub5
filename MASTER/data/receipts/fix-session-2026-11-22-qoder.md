@@ -1777,3 +1777,53 @@ artifact, derive actual test-case counts, expose the full per-suite gate matrix,
 or unify lifecycle/acknowledgement/retry state. Those remain open; issue #6
 stays open, and issue #5 remains open pending the previously recorded browser
 security and runtime proof gaps. No Laws were weakened or disabled.
+
+
+### Reliability continuation — durable check receipt artifacts (2026-11-22)
+
+This continuation **supersedes the earlier stdout-only limitation above**.
+Each `MASTER/bin/check --format=json` invocation now writes the same JSON
+receipt to a unique, repository-local artifact at
+`.master/check/receipts/<receipt-id>.json` using the existing
+`Master::Io::AtomicWrite` contract. The file is mode `0600`, written
+atomically, and the receipt reports its relative path, output channel and
+persistence state. A filesystem write failure changes the result to
+`DELIVERY_FAILED`, emits the updated JSON to stdout, reports only the error
+class on stderr, and exits non-zero. Only expected filesystem errors are
+converted; programming and control-flow exceptions are not swallowed.
+
+The write is owned by `Operator::CheckBrief.write_json_receipt`; the CLI does
+not duplicate path construction or atomic-write logic. It accepts only the
+receipt's own UUID-derived path beneath `.master/check/receipts/`. The focused
+tests now cover persisted JSON equality, private file mode, final newline,
+invalid receipt IDs and path-substitution refusal.
+
+Additional commits:
+`2c7ad44cf900157611b4a0d8e6d08b84d74394bf` (caller-supplied receipt identity
+and delivery fields);
+`a0452e078d18775ec3bf36ad4bcdd0825fd48ede` (CLI persistence);
+`4a4fbf2b97eb401cb62479c3b803bdb3af577a8e` (narrow filesystem failure
+handling);
+`8c8a277935c334e29070f3ff05fb03bb16f8c5b1` (UUID validation/newline
+correction);
+`bc1de3b27bf6806116a711ffed4a94cee72be4eb` and
+`cde387fff4fbd69ed692895300becfbccff41713` (centralized writer and CLI
+delegation);
+`6b477dfad20150041af4e6e03238901250ff792d` (persistence/path-safety tests);
+`2271813ef0b236312e68d02912994def015d054a` (README documentation).
+
+Proof actually performed: exact GitHub read-after-write verification of
+`MASTER/lib/operator/check_brief.rb`,
+`MASTER/bin/check`, `MASTER/test/test_check_brief.rb` and
+`MASTER/README.md`; static inspection confirmed the single writer call,
+UUID-derived relative path, use of the existing atomic writer, private mode,
+narrow rescue and the two new tests. No test was executed locally.
+
+Still **NOT_RUN**: Ruby syntax, `TestCheckBrief`,
+`TestCheckRunnerStdin`, a real `bin/check --format=json` invocation,
+artifact read-back from an actual run, symlink/race integration tests,
+full MASTER profiles, and all RAILS/OPENBSD/STUDIO/BIZ, rendered/browser,
+device and production evidence. The check receipt path is durable now, but
+the larger cross-domain receipt schema, per-suite test counts, lifecycle/
+acknowledgement/retry unification and release matrix remain incomplete.
+Issue #5 and issue #6 stay open; no Law was weakened or disabled.
