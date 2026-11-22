@@ -76,15 +76,27 @@ function fundingAsk(path) {
   return Math.round(value);
 }
 const FRESHNESS_INPUTS = {
-  syre: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
-  ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
-  pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
-  govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
-  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
-  speis: ['tools/speis.html', 'tools/bp_print.mjs'],
-  future_nato_weapons: ['tools/future_nato_weapons.html', 'tools/bp_print.mjs'],
-  norwegianhedge: ['tools/norwegianhedge.html', 'tools/bp_print.mjs'],
-  fetat: ['tools/fetat_build.rb', 'tools/fetat_image.jpg', 'tools/bp_print.mjs'],
+  syre: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+  ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+  pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+  govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
+  speis: ['tools/speis.html'],
+  future_nato_weapons: ['tools/future_nato_weapons.html'],
+  norwegianhedge: ['tools/norwegianhedge.html'],
+  fetat: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
+};
+
+const PDF_FRESHNESS_INPUTS = {
+  syre: ['tools/bp_print.mjs'],
+  ragnhild: ['tools/bp_print.mjs'],
+  pubhealthcare: ['tools/bp_print.mjs'],
+  govt_bergen: ['tools/bp_print.mjs'],
+  future_healthcare_os: ['tools/bp_print.mjs'],
+  speis: ['tools/bp_print.mjs'],
+  future_nato_weapons: ['tools/bp_print.mjs'],
+  norwegianhedge: ['tools/bp_print.mjs'],
+  fetat: ['tools/bp_print.mjs'],
 };
 
 function requirePair(key) {
@@ -100,15 +112,26 @@ function requirePair(key) {
     throw new Error(key + ': published PDF is older than its HTML; rerun the print and review step');
   }
 
-  const inputs = FRESHNESS_INPUTS[key] || [];
-  const stale = inputs.filter(input => {
+  const htmlInputs = FRESHNESS_INPUTS[key] || [];
+  const staleHtml = htmlInputs.filter(input => {
     const source = `${BIZ_ROOT}/${input}`;
     if (!existsSync(source)) throw new Error(key + ': freshness source missing: ' + input);
     return statSync(source).mtimeMs > htmlTime;
   });
-  if (stale.length) {
-    throw new Error(key + ': published HTML is older than editable source(s): ' + stale.join(', ') +
+  if (staleHtml.length) {
+    throw new Error(key + ': published HTML is older than editable source(s): ' + staleHtml.join(', ') +
       '; rebuild, retemplate, check and review before publishing');
+  }
+
+  const pdfInputs = PDF_FRESHNESS_INPUTS[key] || [];
+  const stalePdf = pdfInputs.filter(input => {
+    const source = `${BIZ_ROOT}/${input}`;
+    if (!existsSync(source)) throw new Error(key + ': print source missing: ' + input);
+    return statSync(source).mtimeMs > pdfTime;
+  });
+  if (stalePdf.length) {
+    throw new Error(key + ': published PDF predates print source(s): ' + stalePdf.join(', ') +
+      '; rerun printing and review before publishing');
   }
 }
 verifyIndexInventory();
@@ -125,8 +148,9 @@ for (const [key] of GUIDES) {
   }
   const html = `${BIZ_ROOT}/${key}.html`;
   const pdf = `${BIZ_ROOT}/${key}.pdf`;
-  if (statSync(pdf).mtimeMs < statSync(html).mtimeMs) {
-    throw new Error(key + ': guidance PDF is older than its HTML; rerun print and review');
+  if (statSync(pdf).mtimeMs < statSync(html).mtimeMs ||
+      statSync(pdf).mtimeMs < statSync(`${BIZ_ROOT}/tools/bp_print.mjs`).mtimeMs) {
+    throw new Error(key + ': guidance PDF is older than its HTML or current print tool; rerun print and review');
   }
 }
 
