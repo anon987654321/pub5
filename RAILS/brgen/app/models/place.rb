@@ -2,6 +2,8 @@
 
 class Place < ApplicationRecord
   include Shared::ActivityTrackable
+  include Shared::Sluggable # /places/<name-slug>; unique per city
+  sluggable_from :name
   include Shared::GeoLocatable
   include Shared::MediaProcessable
   # Not CityTenantable: places.city_id is NOT NULL and belongs_to :city is
