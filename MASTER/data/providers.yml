@@ -91,6 +91,14 @@ replicate:
   # shapes from the schema (REPLICATE_CHAT_SHAPES).
   default_model: black-forest-labs/flux-2-pro
 
+# Ollama Cloud uses the hosted OpenAI-compatible API, never the local daemon.
+# The credential stays in OLLAMA_API_KEY and is read at runtime only.
+ollama_cloud:
+  env: [OLLAMA_API_KEY]
+  model_pattern: '\Aollama_cloud:'
+  strengths: [reasoning, coding, long_context, multimodal, agentic]
+  default_model: deepseek-v4.1-flash
+
 # Z.ai (Zhipu GLM). Reached the openai_compatible way (models.yml), not through
 # RubyLLM, which has no zhipu setter: no ruby_llm_key here on purpose, the trap
 # test_provider_key_wiring exists to catch. A bare glm- id reaches it when
