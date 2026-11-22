@@ -106,7 +106,6 @@ end
 require "optparse"
 require_relative "../lib/operator/check_runner"
 require_relative "../lib/operator/check_brief"
-require_relative "../lib/io/atomic_write"
 require_relative "../lib/operator/ruby_runner"
 require_relative "../lib/trace/dmesg"
 
