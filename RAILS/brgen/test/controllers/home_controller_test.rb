@@ -243,6 +243,31 @@ class HomeControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, verticals.scan(/aria-current="page"/).size
   end
 
+  test "an empty Following lane explains its city-popular fallback" do
+    host! "brgen.no"
+    sign_in_a_reader
+    get root_url(feed: "following")
+
+    assert_response :success
+    assert_includes response.body, I18n.t("home.following_cold_start", locale: :nb)
+  end
+
+  test "a reader who follows someone does not see the cold-start explanation" do
+    host! "brgen.no"
+    reader = sign_in_a_reader
+    followed = User.create!(
+      email_address: "following-#{SecureRandom.hex(4)}@brgen.no",
+      password: "password12345",
+      username: "following_#{SecureRandom.hex(3)}",
+      city: City.find_by(domain: "brgen.no")
+    )
+    reader.follow!(followed)
+    get root_url(feed: "following")
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("home.following_cold_start", locale: :nb)
+  end
+
   def test_guest_root_can_open_master_embed
     host! "brgen.no"
     get root_url(master: 1)
