@@ -507,3 +507,19 @@ workstreams:
     title: REDUNDANT_CORE_REQUIRE findings are reviewed and removed only through governed /fix with before/after proof
     implementation: MASTER/law/ruby.rb; MASTER/test
     proof: Exact finding inventory, /fix receipts, changed-line review, focused law fixtures and a fresh post-change scan
+  # --- shared vertical work, remeasured 2026-11-22 ---
+  - id: brgen_place_directory
+    state: partial
+    title: One city-scoped Places directory shared by Maps, Events, Marketplace and Takeaway
+    implementation: RAILS/brgen/app/services/place_directory.rb
+    proof: RAILS/brgen/engines/maps/test/controllers/places_controller_test.rb
+  - id: messenger_device_presence
+    state: partial
+    title: Suppress chat pushes only on the browser or phone that has the conversation open
+    implementation: RAILS/brgen/engines/messenger/app/models/channel_presence.rb
+    proof: RAILS/brgen/engines/messenger/test/controllers/message_push_test.rb
+  - id: master_pair_admin_surface
+    state: partial
+    title: Authenticated pairing issue, list, revoke and token-free lifecycle audit
+    implementation: MASTER/web/app/controllers/pair_controller.rb
+    proof: MASTER/web/test/controllers/pair_controller_test.rb
