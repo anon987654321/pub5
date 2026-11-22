@@ -198,6 +198,24 @@ class TestLawContract < Minitest::Test
     assert Law.definitions.key?(:PLEDGE_STAGED)
   end
 
+  def test_pinned_release_requires_loopback_and_public_canary_before_success
+    law = Law.definitions.fetch(:PRODUCTION_RELEASE_IS_PINNED)
+
+    assert law.path.match?("OPENBSD/bin/vps-deploy")
+    assert law.path.match?("OPENBSD/bin/canary")
+    assert law.path.match?("MASTER/bin/operator")
+    assert_match(/loopback service checks/, law.ask)
+    assert_match(/public canary/, law.ask)
+
+    repo = File.expand_path("../..", Master::ROOT)
+    deployer = File.read(File.join(repo, "OPENBSD", "bin", "vps-deploy"))
+    operator = File.read(File.join(repo, "MASTER", "bin", "operator"))
+    assert_includes deployer, 'wait_up "$port"'
+    assert_includes deployer, 'OPENBSD/bin/canary" --local'
+    assert_includes operator, '"--public"'
+    assert_includes operator, "code = 1 unless status.success?"
+  end
+
   def test_contract_has_stable_machine_readable_shape
     data = JSON.parse(Law::Contract.render)
 
