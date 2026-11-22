@@ -38,42 +38,42 @@ export const OUTPUT_DIR = resolve(
 // affect print output. The generated HTML/PDF/PNG are hashed in the receipt too.
 export const PUBLISHED_INPUTS = {
   syre: {
-    html: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   nordvakt: {
-    html: ['tools/nordvakt.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/nordvakt.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   norwegianfinancial: {
-    html: ['tools/norwegianfinancial.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/norwegianfinancial.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   ragnhild: {
-    html: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   pubhealthcare: {
-    html: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   govt_bergen: {
-    html: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   future_healthcare_os: {
-    html: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs'],
-    pdf: ['tools/bp_print.mjs'],
+    html: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   ragnhild_legater: {
     html: ['ragnhild/ragnhild_legater.html'],
-    pdf: ['tools/bp_print.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
   speis: { html: ['tools/speis.html'], pdf: [] },
   future_nato_weapons: { html: ['tools/future_nato_weapons.html'], pdf: [] },
   norwegianhedge: { html: ['tools/norwegianhedge.html'], pdf: [] },
   fetat: {
     html: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
-    pdf: ['tools/bp_print.mjs'],
+    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
   },
 };
