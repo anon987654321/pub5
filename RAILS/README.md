@@ -74,7 +74,6 @@ also keeps its own `bin/ci` for RuboCop, Brakeman, bundler-audit and the tests.
 The design tokens come from `MASTER/data/tokens.yml`, and the shared engine's
 `design_tokens.yml` is a file generated from it, not a second source.
 
-
 ## Authority and derived copies
 
 RAILS is not a secondary copy of MASTER. It is the authoritative product tree for its Rails applications and shared engine. MASTER governs shared constitutional policy and common tooling; RAILS owns application behaviour, product data and its deploy inventory. Within RAILS, `apps.yml` is the active app/deploy inventory, `apps.horizon.yml` records ideas that are not active work, and each app or engine owns its implementation contract.

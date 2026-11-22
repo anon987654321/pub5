@@ -163,7 +163,7 @@ class FediverseSsrfTest < Minitest::Test
   def test_request_refuses_credentials_and_fragments
     [
       URI("https://user:pass@rebind.test/actor"),
-      URI("https://rebind.test/actor#fragment")
+      URI("https://rebind.test/actor#fragment"),
     ].each do |uri|
       assert_raises(URI::InvalidURIError) { Shared::OutboundHttp.request(uri) }
     end

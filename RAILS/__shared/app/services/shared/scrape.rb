@@ -38,7 +38,7 @@ module Shared
           browser_options: {
             "host-resolver-rules" => host_resolver_rules(pins),
             "host-resolver-retry-attempts" => "0",
-            "no-proxy-server" => nil
+            "no-proxy-server" => nil,
           }
         )
         begin

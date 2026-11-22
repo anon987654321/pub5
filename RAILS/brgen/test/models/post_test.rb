@@ -36,7 +36,7 @@ class PostTest < ActiveSupport::TestCase
       top: Post.top,
       hot: Post.hot,
       following: Post.followed_by(viewer),
-      ranked: Post.ranked_for(viewer: viewer, seed: "2026-11-21")
+      ranked: Post.ranked_for(viewer: viewer, seed: "2026-11-21"),
     }
 
     relations.each do |lane, relation|

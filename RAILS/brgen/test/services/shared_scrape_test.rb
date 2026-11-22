@@ -111,7 +111,7 @@ class SharedScrapeTest < ActiveSupport::TestCase
       "https://example.com:8443/",
       "http://example.com:8080/",
       "https://user:pass@example.com/",
-      "https://example.com/page#fragment"
+      "https://example.com/page#fragment",
     ]
     invalid.each do |url|
       refute Shared::Scrape.public_http_url?(url, resolver: ->(_host) { flunk "invalid URL must not resolve" }), url

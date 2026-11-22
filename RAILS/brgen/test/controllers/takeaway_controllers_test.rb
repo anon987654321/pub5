@@ -312,7 +312,7 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
         "4" => { closed: "1" },
         "5" => { closed: "1" },
         "6" => { closed: "1" },
-        "0" => { closed: "1" }
+        "0" => { closed: "1" },
       }
     }
 

@@ -125,7 +125,7 @@ module Shared
           expires_at:,
           amount_minor: amount,
           currency: currency_code,
-          metadata: normalize_metadata(metadata)
+          metadata: normalize_metadata(metadata),
         }
 
         raise ArgumentError, "ledger entitlement is required" if attributes[:entitlement].blank?

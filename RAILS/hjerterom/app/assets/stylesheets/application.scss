@@ -37,7 +37,6 @@
     --focus-ring: 2px solid var(--app-accent);
   }
 
-
   #dark-toggle:checked ~ .theme-root {
     @include x.light-tokens;
     color-scheme: light;
@@ -58,7 +57,6 @@
 .theme-root {
   min-height: 100vh;
 }
-
 
 body.map-home-page {
   overflow: hidden;
@@ -402,7 +400,6 @@ h2 {
 [dir="rtl"] .form .field--check {
   flex-direction: row-reverse;
 }
-
 
 }
 

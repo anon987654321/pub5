@@ -22,7 +22,7 @@ class CommerceLedgerTest < ActiveSupport::TestCase
       actor_id: @actor.id,
       entitlement:,
       expires_at: (@ledger_expiry ||= 30.days.from_now.change(usec: 0)),
-      metadata: { vertical: "playlist" }
+      metadata: { vertical: "playlist" },
     }.merge(overrides)
 
     Shared::Commerce::Ledger.record!(**attributes)
