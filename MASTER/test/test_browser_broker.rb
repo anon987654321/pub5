@@ -199,6 +199,33 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal 0, b.size
   end
 
+  def test_failed_process_stop_keeps_the_lease_for_a_later_close_retry
+    engine = FakeEngine.new
+    attempts = 0
+    original_stop = engine.method(:stop)
+    engine.define_singleton_method(:stop) do |handle|
+      attempts += 1
+      raise "transient process stop failure" if attempts == 1
+
+      original_stop.call(handle)
+    end
+    b = broker(engine:)
+    lease = b.open(host: "example.com")
+
+    error = assert_raises(Broker::Denied) { b.close(lease.id) }
+
+    assert_match(/process stop failed/, error.message)
+    assert_equal 1, b.size
+    assert_equal [lease.id], b.sessions
+    assert_empty engine.stopped
+
+    assert b.close(lease.id)
+    assert_equal 2, attempts
+    assert_equal 1, engine.stopped.size
+    assert_equal 0, b.size
+    assert_empty b.sessions
+  end
+
   def test_close_all_attempts_every_session_after_a_stop_receipt_failure
     engine = FakeEngine.new
     failed_once = false
@@ -237,6 +264,35 @@ class BrowserBrokerTest < Minitest::Test
     assert_match(/failed to stop 1 expired session/, error.message)
     assert_equal 3, engine.stopped.size
     assert_equal 0, b.size
+  end
+
+  def test_expiry_retries_a_process_group_that_failed_to_stop
+    now = Time.utc(2026, 1, 1, 0, 0, 0)
+    engine = FakeEngine.new
+    attempts = 0
+    original_stop = engine.method(:stop)
+    engine.define_singleton_method(:stop) do |handle|
+      attempts += 1
+      raise "transient process stop failure" if attempts == 1
+
+      original_stop.call(handle)
+    end
+    b = broker(engine:, clock: -> { now }, ttl_seconds: 10)
+    first_lease = b.open(host: "example.com")
+
+    now += 11
+    error = assert_raises(Broker::Denied) { b.open(host: "example.com") }
+
+    assert_match(/failed to stop 1 expired session/, error.message)
+    assert_equal [first_lease.id], b.sessions
+    assert_equal 1, b.size
+
+    second_lease = b.open(host: "example.com")
+
+    assert_equal 2, attempts
+    assert_equal 1, engine.stopped.size
+    assert_equal [second_lease.id], b.sessions
+    assert_equal 1, b.size
   end
 
   def test_the_concurrent_session_cap_is_enforced
