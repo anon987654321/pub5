@@ -221,8 +221,8 @@ module Master
       end
 
       # The Core Effect is intentionally narrower than the plugin tool surface:
-      # one-shot, read-only rendering only. It is available only when the active
-      # broker and the normal operator governor are both present.
+      # one-shot rendering only. The Constitution requires operator approval because
+      # page scripts and same-host GET endpoints can mutate remote state.
       def browser_reader(container, broker:, event_bus:)
         return unless broker
 
