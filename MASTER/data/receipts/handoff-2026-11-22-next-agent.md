@@ -1620,3 +1620,93 @@ NOT_RUN:
 - No external service was installed, paid, enabled or contacted by this phase.
 - No previously unrequested horizon feature was promoted to picked or done.
 
+
+
+---
+
+## Phase 20 — Uninterrupted mission and backlog recovery
+
+Objective: a dependency, provider outage, failed task or incomplete delivery receipt
+must stop only its own objective. Independent authorised tasks continue through
+the existing single-writer mission lease and owner registry. No second task queue
+or parallel writer was introduced.
+
+### Mission recovery
+
+- Removed the lifetime five-attempt automatic continuation cutoff. Attempt count
+  is history, not a permanent lockout. Retry delays still use bounded exponential
+  backoff capped at one hour; exhausted providers re-probe at the maximum delay.
+- The existing failure taxonomy now handles both raised exceptions and returned
+  error results in TaskSteward. Transient failures wait and retry; exhausted
+  providers pause and re-probe; permanent failures terminate only that mission;
+  ambiguous outcomes require human review.
+- Timeout and common network-interruption phrases are included in the transient
+  fallback vocabulary. Exhaustion remains a separate category and is matched
+  before transient errors.
+- A blocked mission is returned with its actual durable record. The existing
+  `ensure_queued!` API permits replacement of that exact blocked objective only
+  when the caller explicitly supplies `resume_blocked: true`.
+
+### Backlog isolation and progress
+
+- The owner-registry executor parks an interrupted, failed or future-waiting
+  backlog item in the existing private `.master/backlog-executor.jsonl` receipt
+  stream. It keeps the item identity/digest, mission identity, classification,
+  retry time, scope fingerprint and operator-release requirement.
+- The executor advances to other independently eligible owner-registry tasks
+  while a parked item waits. A retry becomes eligible at its due time; a scope
+  change can invalidate an automatic park; human-review parks require the
+  explicit `Executor#resume_item!` action.
+- A completed mission without a valid executor delivery receipt is recorded as
+  `completed_unverified` and parked for review. It is never inserted into the
+  completed-receipt set and cannot be mistaken for accepted work.
+- Receipt storage refuses unsafe `.master` directories, symlinked receipt files
+  and permissive file modes. A failure to persist the park record reports
+  `delivery_failed` rather than silently advancing and losing recovery state.
+- The backlog runner claims its mission lease before validating the owner record
+  and target. An idle steward does not block a live lease owned by another process.
+  A returned run with no terminal status is not promoted to completion.
+- Adaptive journey selection falls through to independent ready candidates only
+  when every route in the strategic priority band is waiting on unsatisfied
+  dependencies. If any strategic route is ready, the existing priority policy
+  continues to own selection.
+
+### Changed owners
+
+`MASTER/lib/fix/mission.rb`, `MASTER/lib/fix/mission/state.rb`,
+`MASTER/lib/fix/mission/run_state.rb`, `MASTER/lib/fix/task_steward.rb`,
+`MASTER/lib/fix/adaptive_journey.rb`, `MASTER/lib/fix/constants.rb`,
+`MASTER/lib/ground/failure_taxonomy.rb`, `MASTER/tools/owner_registry_tasks.rb`,
+`MASTER/lib/boot/master_boot.rb`, and their focused tests under `MASTER/test/`.
+The execution policy summary is in `MASTER/README.md`.
+
+Representative commits on main:
+- `bfaaaa48583353208401ecc3cef4e20e674cd34c` — remove lifetime attempt ceiling.
+- `f7276dd57c469d1423c9e25302218e794af5d8cc` — classify task failures and notify scheduler.
+- `e061551daf7cf20665a0a4a9e1951b18e84a0802` — select independent ready work around parked dependencies.
+- `6f5144c65efa03dfbeaaf89caf7a0b3cf540ce27` — park failed backlog tasks and continue.
+- `bd35c4ccdea5487cf683601b681e06d14ea6bec8` — settle backlog failures through the shared taxonomy.
+- `50ce329e277dc47d6e6c045d458f29c654fc1cda` — classify returned errors as well as exceptions.
+- `87515da5fc143c7058b55839f631be1648e0c243` — park unverified terminal work without stalling the backlog.
+- `f53e8f64b5bdeef15e30ca135fd433219621fd83` — regression test missing delivery proof with independent work.
+- `f874271b52cc8c0550048e65bcdbf35d2671badb` — keep the unverified-completion parking API minimal.
+
+### Phase 20 evidence boundary
+
+READ_BACK:
+- GitHub read-after-write completed for all changed implementation, test and
+  documentation files; the current main HEAD at handoff is
+  `f874271b52cc8c0550048e65bcdbf35d2671badb`.
+- Focused regression tests were added for attempts beyond the former ceiling,
+  transient/exhausted/permanent/ambiguous outcomes, returned Result failures,
+  explicit blocked-mission resume, dependency fallback, ordinary backlog parking,
+  human release, and unverified completion continuing to independent work.
+
+NOT_RUN:
+- No Ruby test file, Rake suite, Law assessment, full `/fix`, backlog autorun,
+  rendered browser check or production deployment was executed in this phase.
+- Worker-count/resource adaptation was deliberately not changed: no current
+  CPU, memory, provider-latency or quota profile was collected to justify
+  changing the existing worker and semantic budgets.
+- No external credential, provider, paid call, production host or live service
+  was contacted or changed. PASS and production readiness remain unclaimed.
