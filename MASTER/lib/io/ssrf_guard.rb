@@ -192,10 +192,13 @@ module Master
         http.write_timeout = write_t
         response = nil
         body = +"".b
+        phase = :connect_tls
         Timeout.timeout(seconds) do
           http.start do |connection|
+            phase = :request_and_headers
             connection.request(outbound_request) do |incoming|
               response = incoming
+              phase = :response_body
               declared = incoming["content-length"].to_s
               if declared.match?(/\A\d+\z/) && declared.to_i > cap
                 raise ResponseTooLarge, "response body exceeds #{cap} bytes"
@@ -213,7 +216,7 @@ module Master
         response.body = body
         response
       rescue Timeout::Error
-        raise Timeout::Error, "outbound request exceeded #{timeout}s"
+        raise Timeout::Error, "outbound request exceeded #{timeout}s during #{phase || :request_setup}"
       ensure
         begin
           http.finish if http&.started?
