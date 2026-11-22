@@ -181,13 +181,15 @@ module Studio
           cache = File.join(@root, ".cache")
           secure_directory!(cache)
           path = File.join(cache, "training-spend.lock")
-          flags = File::RDWR | File::CREAT
-          flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW)
+          raise Error, "filesystem does not support safe no-follow lock opens" unless File.const_defined?(:NOFOLLOW)
+          flags = File::RDWR | File::CREAT | File::NOFOLLOW
 
           File.open(path, flags, 0o600) do |file|
             stat = File.lstat(path)
+            opened_stat = file.stat
             unless stat.file? && !stat.symlink? && stat.uid == Process.uid &&
-                   stat.nlink == 1 && (stat.mode & 0o077).zero?
+                   stat.nlink == 1 && (stat.mode & 0o077).zero? &&
+                   stat.dev == opened_stat.dev && stat.ino == opened_stat.ino
               raise Error, "training spend lock must be a private singly-linked owner file"
             end
             raise Error, "another LoRA training batch holds the spend lock" unless
