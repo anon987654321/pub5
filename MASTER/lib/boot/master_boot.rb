@@ -313,6 +313,8 @@ module Master
             # report a terminal result; park it for review rather than call it done.
             Master::Fix::Mission.new(root:, bus: container[:bus]).block!(
               reason: "backlog attempt returned without terminal delivery proof",
+              expected_id: mission["id"],
+              expected_lease_owner: mission["lease_owner"],
             )
             mission = Master::Fix::Mission.current(root:)
           elsif mission && !%w[waiting blocked failed].include?(mission["state"].to_s)
