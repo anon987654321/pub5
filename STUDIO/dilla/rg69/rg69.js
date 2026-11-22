@@ -173,6 +173,24 @@ instruments[lane].volume.value=20*Math.log10(level);
 return instruments;
 }
 
+function createRG69Panners(){
+const k=rg69AudioProfile.kit,v=rg69AudioProfile.voice;
+const pan=value=>Number.isFinite(Number(value))?Number(value):0;
+return{
+kick:new Tone.Panner(pan(k.kick.pan)),
+kickSub:new Tone.Panner(pan(k.sub.pan??k.kick.pan)),
+kickClick:new Tone.Panner(pan(k.kick.pan)),
+kickBody:new Tone.Panner(pan(k.kick.pan)),
+snare:new Tone.Panner(pan(k.snare.pan)),
+snareRing:new Tone.Panner(pan(k.snare.pan)),
+clap:new Tone.Panner(pan(k.perc.pan)),
+hat:new Tone.Panner(pan(k.hat.pan)),
+open:new Tone.Panner(pan(k.openhat.pan)),
+keys:new Tone.Panner(pan(v.pan)),
+pads:new Tone.Panner(pan(v.pan))
+};
+}
+
 const DRUM_PATTERNS={
 'eth-mulatu':tpP({k:[1,0,0,.5,0,0,.7,0,0,1,0,0,.5,0,.6,0],s:[0,0,0,0,.8,0,0,.3,0,0,0,0,.9,0,0,.3],c:[0,0,0,0,0,0,0,0,0,0,.4,0,0,0,0,0],h:[.6,.3,.5,.3,.6,.3,.5,.3,.6,.3,.5,.3,.6,.3,.5,.3],o:[0,0,0,0,0,0,0,.4,0,0,0,0,0,0,0,.3]}),
 'eth-funk':tpP({k:[1,0,0,0,.6,0,1,0,0,.5,0,0,1,0,.5,0],s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,.4],c:[0,0,.3,0,0,0,.3,0,0,0,.3,0,0,0,.3,0],h:[.7,.5,.7,.5,.7,.5,.7,.5,.7,.5,.7,.5,.7,.5,.7,.5],o:[0,0,0,0,0,0,0,.5,0,0,0,0,0,0,0,.5]}),
@@ -606,10 +624,18 @@ vinylFlt.connect(compPar);
 crackFlt.connect(compPar);
 driftLFO.connect(kickN.oscillator.detune);
 driftLFO.connect(snareRng.detune);
-[kickN,kickSub,kickClkBP,kickBody].forEach(s=>s.connect(kickSat));
+const livePanners=createRG69Panners();
+kickN.connect(livePanners.kick);livePanners.kick.connect(kickSat);
+kickSub.connect(livePanners.kickSub);livePanners.kickSub.connect(kickSat);
+kickClkBP.connect(livePanners.kickClick);livePanners.kickClick.connect(kickSat);
+kickBody.connect(livePanners.kickBody);livePanners.kickBody.connect(kickSat);
 kickSat.connect(kickComp);
 kickComp.connect(drumG);
-[snareN,snareRngBP,clapN,hatN,openN].forEach(s=>s.connect(drumSat));
+snareN.connect(livePanners.snare);livePanners.snare.connect(drumSat);
+snareRngBP.connect(livePanners.snareRing);livePanners.snareRing.connect(drumSat);
+clapN.connect(livePanners.clap);livePanners.clap.connect(drumSat);
+hatN.connect(livePanners.hat);livePanners.hat.connect(drumSat);
+openN.connect(livePanners.open);livePanners.open.connect(drumSat);
 drumSat.connect(drumG);
 bassN.connect(bassG);
 bassSub.connect(bassG);
@@ -621,13 +647,13 @@ keysDrive.connect(keysG);
 // Warm, worklet-free saturation + 5kHz bandwidth limit on keys
 const keysTexture=new Tone.Distortion(toneProfile.keys.texture_amount);keysTexture.wet.value=toneProfile.keys.texture_wet;
 const keysLP=new Tone.Filter(toneProfile.keys.filter_base_hz+voiceProfile.brightness*toneProfile.keys.filter_brightness_span_hz,'lowpass');
-keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(masterG);keysLP.connect(revSend);keysLP.connect(dlySend);
+keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(livePanners.keys);livePanners.keys.connect(masterG);livePanners.keys.connect(revSend);livePanners.keys.connect(dlySend);
 padsN.connect(padsFlt);
 padsFlt.connect(padsG);
 // old-sampler: 3.5kHz bandwidth + warmth on pads
 const padsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
 const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.value=toneProfile.pads.saturation_wet;
-padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(masterG);padsSat.connect(revSend);padsSat.connect(dlySend);
+padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(livePanners.pads);livePanners.pads.connect(masterG);livePanners.pads.connect(revSend);livePanners.pads.connect(dlySend);
 // route remaining tracks
 [drumG,bassG].forEach(g=>{g.connect(masterG);g.connect(revSend);g.connect(dlySend);});
 installDefaultFX();
@@ -981,16 +1007,24 @@ const oPadsFlt=new Tone.Filter(toneProfile.pads.filter_base_hz+voiceProfile.brig
 const oPadsLFO=new Tone.LFO(0.12,600,1400);oPadsLFO.start();oPadsLFO.connect(oPadsFlt.frequency);
 const oPadsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
 const oPadsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);oPadsSat.wet.value=toneProfile.pads.saturation_wet;
-oKickN.connect(oKickSat);oKickSub.connect(oKickSat);oKickClkBP.connect(oKickSat);oKickBody.connect(oKickSat);
+const offlinePanners=createRG69Panners();
+oKickN.connect(offlinePanners.kick);offlinePanners.kick.connect(oKickSat);
+oKickSub.connect(offlinePanners.kickSub);offlinePanners.kickSub.connect(oKickSat);
+oKickClkBP.connect(offlinePanners.kickClick);offlinePanners.kickClick.connect(oKickSat);
+oKickBody.connect(offlinePanners.kickBody);offlinePanners.kickBody.connect(oKickSat);
 oKickSat.connect(oKickComp);oKickComp.connect(oDrumG);
-oSnareN.connect(oDrumSat);oSnareRngBP.connect(oDrumSat);oClapN.connect(oDrumSat);oHatN.connect(oDrumSat);oOpenN.connect(oDrumSat);
+oSnareN.connect(offlinePanners.snare);offlinePanners.snare.connect(oDrumSat);
+oSnareRngBP.connect(offlinePanners.snareRing);offlinePanners.snareRing.connect(oDrumSat);
+oClapN.connect(offlinePanners.clap);offlinePanners.clap.connect(oDrumSat);
+oHatN.connect(offlinePanners.hat);offlinePanners.hat.connect(oDrumSat);
+oOpenN.connect(offlinePanners.open);offlinePanners.open.connect(oDrumSat);
 oDrumSat.connect(oDrumG);
 oBassN.connect(oBassG);oBassSub.connect(oBassG);
 oKeysN.connect(oKeySat);oKeySat.connect(oKeysChorus);oKeysChorus.connect(oKeysTrem);oKeysTrem.connect(oKeysDrive);
 oKeysDrive.connect(oKeysG);oKeysG.connect(oKeysTexture);oKeysTexture.connect(oKeysLP);
-oKeysLP.connect(oMaster);oKeysLP.connect(oRevSend);oKeysLP.connect(oDlySend);
+oKeysLP.connect(offlinePanners.keys);offlinePanners.keys.connect(oMaster);offlinePanners.keys.connect(oRevSend);offlinePanners.keys.connect(oDlySend);
 oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsG);oPadsG.connect(oPadsBW);oPadsBW.connect(oPadsSat);
-oPadsSat.connect(oMaster);oPadsSat.connect(oRevSend);oPadsSat.connect(oDlySend);
+oPadsSat.connect(offlinePanners.pads);offlinePanners.pads.connect(oMaster);offlinePanners.pads.connect(oRevSend);offlinePanners.pads.connect(oDlySend);
 for(const g of [oDrumG,oBassG]){g.connect(oMaster);g.connect(oRevSend);g.connect(oDlySend);}
 // Schedule all steps using the shared triggerNotes helper
 for(let i=0;i<bars*16;i++){
