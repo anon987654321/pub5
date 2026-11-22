@@ -1110,7 +1110,7 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 45
+    count: 50
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1589,6 +1589,61 @@ skills_registry:
       Measure text and non-text contrast against the applicable criteria; do not infer compliance from a token name. Check zoom, reflow, text spacing, long content, language changes, Norwegian glyphs, mobile safe areas, touch target spacing, orientation and virtual keyboard behavior. Respect reduced-motion preferences and provide alternatives to gesture, color, sound or hover-only cues.
 
       Use existing browser, rendered-layout, accessibility and mobile journey probes. Automated checks are useful but do not establish usability or conformance by themselves. Test representative journeys with keyboard and available assistive technology, retain screenshots or logs as evidence, and state any platform that could not be tested. Fix the smallest demonstrated defect while preserving the product's visual identity and established component system.
+
+  - name: codebase-auditor
+    description: Map repository structure, dependencies, callers and delivery evidence before making changes.
+    triggers:
+    - '\b(?:codebase audit|audit (?:the )?codebase|repository audit|map (?:the )?codebase|dependency graph audit|architecture inventory|inspect repository health)\b'
+    body: |-
+      Start read-only. Establish the exact repository, branch, commit, dirty state, governing laws and requested scope. Inventory entrypoints, packages, dependency manifests, runtime configuration, generated artifacts, tests, deployment surfaces and ownership boundaries. Trace important symbols to callers and downstream effects; do not infer behavior from filenames alone.
+
+      Prefer existing repository scanners, registries and graph tools. Record each command, version, scope, exit status and omitted path. Bound recursion, output, time and resource use. Treat generated files, vendored code, secrets and production data according to their ownership and access rules. Never modify files during an audit unless the operator explicitly changes the task to implementation.
+
+      Separate confirmed defects from suspicious patterns and unknowns. For each finding give path and line, evidence, affected callers, impact, confidence, recommended next check and whether it blocks a safe repair. Report coverage and blind spots. An audit is not a repair, and static analysis is not runtime proof.
+
+  - name: diagnose
+    description: Reproduce failures and isolate root causes through bounded, discriminating experiments.
+    triggers:
+    - '\b(?:diagnose|root cause|reproduce (?:the )?(?:bug|failure|error)|trace (?:the )?(?:failure|exception|regression)|debug (?:this|the|a) (?:bug|failure|issue)|flaky test|performance regression)\b'
+    body: |-
+      Begin by stating observed behavior, expected behavior, scope, revision and impact. Reproduce the failure with the smallest safe command or fixture before editing. Preserve the original output and environment facts. If it cannot be reproduced, report that honestly and gather targeted evidence rather than guessing.
+
+      Trace the smallest relevant execution path across entrypoints, callers, configuration, data and external boundaries. List competing hypotheses and choose one low-cost experiment that distinguishes them. Change one variable at a time; add temporary instrumentation only when bounded and remove it after use. For intermittent failures, record repetitions, seeds, timing, concurrency and environment differences.
+
+      Identify the root cause only when evidence discriminates it from alternatives. Then add a regression case, make the smallest correction and rerun the exact reproducer plus adjacent checks. Three unsuccessful repair attempts trigger a pause and architectural reassessment, not a fourth speculative patch. Preserve rollback options and report remaining uncertainty.
+
+  - name: regression-proof
+    description: Prove a regression test detects the original defect and passes after the minimal repair.
+    triggers:
+    - '\b(?:regression proof|prove (?:the )?regression|test catches (?:the )?bug|red.green.refactor|regression test design|verify original defect)\b'
+    body: |-
+      A regression test must fail because the reported defect is present, not because the fixture, environment or assertion is broken. First reproduce the defect and write the narrowest test that expresses the required behavior. Run it against the unchanged implementation and inspect the failure reason. If it passes, it does not yet prove the defect; if it fails for an unrelated reason, repair the test setup.
+
+      After the minimal code change, run the same test unchanged and confirm it passes. Then run relevant neighboring tests and integration checks to detect collateral effects. Include boundary cases and the invariant that must remain true. Prefer deterministic fixtures, fixed clocks/seeds and isolated external dependencies.
+
+      Preserve the before/after commands, exit codes, relevant output and exact revision. Do not weaken assertions, skip a failing test, or replace the original reproducer with a more convenient test. If the original defect cannot be reproduced, label the result INCONCLUSIVE and explain why. A green test proves only its stated behavior and coverage.
+
+  - name: verification-before-completion
+    description: Require fresh, revision-bound evidence before reporting any task as complete.
+    triggers:
+    - '\b(?:verification before completion|verify before claiming|evidence before completion|prove it works|completion evidence|verify the exact revision)\b'
+    body: |-
+      Before reporting completion, identify the exact commit and changed paths. Run the relevant commands against that revision after the final edit; earlier green output is stale. Capture command, working directory, environment assumptions, exit status, duration and concise output. Verify syntax, focused tests, relevant suites, integration behavior and the affected user journey in proportion to risk.
+
+      Distinguish PASS, FAIL, INCONCLUSIVE, BLOCKED, TIMEOUT, DELIVERY_FAILED and NOT_RUN. Missing tools, unavailable hosts, skipped suites, partial logs and untested platform paths are never PASS. Do not infer deployment from a push, runtime health from a build, or user-visible behavior from unit tests alone.
+
+      Check the final diff for scope, secrets, generated noise, accidental deletions and unintended dependencies. Confirm the remote branch head after a push. For deployment, verify host identity, deployed SHA, service health, public canaries and recovery state. State what was not verified and the next safe action. Never claim "done", "fixed", "green" or "deployed" beyond the evidence actually obtained.
+
+  - name: independent-code-review
+    description: Review a proposed change independently for correctness, security, compatibility and unintended effects.
+    triggers:
+    - '\b(?:independent code review|review (?:the )?(?:full )?diff|review proposed change|second.pass code review|diff audit|review changed files|review callers and tests)\b'
+    body: |-
+      Review the complete diff against its parent, not just the author's summary. Read the governing laws, affected source, callers, tests, configuration, migration history and relevant neighboring implementations. Trace changed behavior through entrypoints and downstream consumers. Treat comments and commit messages as claims to verify.
+
+      Look for correctness defects, broken invariants, authorization gaps, unsafe input handling, data loss, race conditions, resource leaks, compatibility breaks, migration hazards, missing regression tests, duplicated mechanisms and unnecessary dependencies. Check whether error paths, retries, rollback and partial failure remain safe. Review user-visible and operational effects as well as code style.
+
+      Report actionable findings first, ordered by severity, with exact path and line, concrete failure scenario, evidence and a minimal remedy. Separate confirmed defects from questions and preferences. If no findings are found, state the scope reviewed and the limits; do not imply exhaustive proof. Do not edit during an independent review unless explicitly asked to switch into repair.
 
   - name: amber-tenant-logo
     description: Dress a brgen tenant or any logo request in the amber mark law — locked Caprasimo glyphs, nine hairlines, plates from the generator, never redrawn.

@@ -155,7 +155,7 @@ class TestSkills < Minitest::Test
   end
 
 
-  def test_new_skill_boundaries_are_explicit
+  def test_earlier_skill_boundaries_are_explicit
     skills = registry.fetch("skills")
     body = ->(name) { skills.find { |skill| skill["name"] == name }.fetch("body") }
 
