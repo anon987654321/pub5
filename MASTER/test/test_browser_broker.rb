@@ -194,6 +194,40 @@ class BrowserBrokerTest < Minitest::Test
     assert_equal 0, b.size
   end
 
+  def test_start_and_stop_are_both_bracketed_by_durable_receipts
+    seen = []
+    b = broker(ledger: ->(event:, phase:, **row) { seen << [event, phase, row] })
+    lease = b.open(host: "example.com")
+    b.close(lease.id)
+
+    assert_equal [
+      [:browser_start, :before],
+      [:browser_start, :after],
+      [:browser_stop, :before],
+      [:browser_stop, :after]
+    ], seen.map { |event, phase, _row| [event, phase] }
+    seen.each do |_event, _phase, row|
+      assert_equal lease.id, row.fetch(:lease)
+      assert_equal "example.com", row.fetch(:host)
+    end
+  end
+
+  def test_failed_start_after_receipt_stops_the_process_before_refusing_the_lease
+    engine = FakeEngine.new
+    ledger = lambda do |event:, phase:, **|
+      raise IOError, "durable after receipt failed" if event == :browser_start && phase == :after
+    end
+    b = broker(engine:, ledger:)
+
+    error = assert_raises(IOError) { b.open(host: "example.com") }
+
+    assert_match(/durable after receipt failed/, error.message)
+    assert_equal 1, engine.started.size
+    assert_equal 1, engine.stopped.size
+    assert_equal 0, b.size
+    assert_empty b.sessions
+  end
+
   def test_receipts_carry_only_safe_identity_metadata
     seen = []
     b = broker(ledger: ->(**row) { seen << row })
