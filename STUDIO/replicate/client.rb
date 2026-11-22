@@ -926,6 +926,10 @@ module Studio
         end
       end
 
+      # Return the provider's terminal record (including failed/canceled
+      # metrics) so the caller can account for compute actually consumed.
+      # A nonterminal status after a cancel request is an error: cancellation
+      # is not assumed merely because the POST returned.
       def wait_for_training(id, timeout: 3600)
         timeout = operation_timeout!(timeout, "training timeout")
         training_id = resource_id!(id, "training id")
