@@ -1,13 +1,18 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# nsd-resign — re-sign all NSD zones whose RRSIG validity drops below RESIGN_DAYS.
-# Runs as root (called from /etc/daily.local). Requires ldns-signzone.
+# Maintain signatures for the pregenerated NSD zone inventory.
+# Run by daily.local or the single OPERATOR.sh apply transaction.
+# Usage: nsd-resign [--force] [--no-reload]
+# --force re-signs all zones after tracked zone/config changes.
+# --no-reload defers activation to the caller.
+# NSD_ZONES_DIR defaults to /var/nsd/zones/master.
 #
-# Usage: nsd-resign [--force]
-#   --force  re-sign every zone unconditionally
-#   NSD_ZONES_DIR  zones and key files (default /var/nsd/zones/master)
+# The active DNSKEY set is authoritative. A new key on disk is not adopted
+# automatically: KSK rollover needs parent-side DS work, and ZSK rollover needs
+# a deliberate pre-publication sequence.
 
+require "base64"
 require "date"
 require "open3"
 
@@ -15,6 +20,13 @@ ZONES_DIR = ENV.fetch("NSD_ZONES_DIR", "/var/nsd/zones/master")
 RESIGN_DAYS = 14
 VALIDITY_DAYS = 30
 FORCE = ARGV.include?("--force")
+NO_RELOAD = ARGV.include?("--no-reload")
+UNKNOWN_OPTIONS = ARGV - %w[--force --no-reload]
+
+unless UNKNOWN_OPTIONS.empty?
+  warn "usage: nsd-resign [--force] [--no-reload]"
+  exit 64
+end
 
 def log(msg) = $stdout.puts("nsd-resign: #{msg}")
 
@@ -27,72 +39,110 @@ rescue StandardError => e
   nil
 end
 
-# One KSK and one ZSK — the newest of each — not every key file on disk.
-#
-# ldns-signzone publishes a DNSKEY record for every key it is handed, so
-# globbing K#{zone}.+*.key meant each zone published every key ever generated
-# for it and no key could ever be retired: signing was the thing keeping them
-# alive. Measured 2026-07-31, all 58 zones published 12 DNSKEYs apiece (six
-# KSKs, six ZSKs) from 696 key files on disk, and a DNSKEY response for
-# brgen.no came to 997 bytes — close enough to the 1232-byte practical UDP
-# ceiling that a couple more rotations would have pushed every zone to TCP.
-#
-# The deeper problem is that a rollover is impossible while this is true. The
-# point of a rollover is to publish the new key, wait, then withdraw the old
-# one, and "withdraw" here had no mechanism: the old key file stays, so the old
-# key stays signed and published forever.
-#
-# Selecting by mtime rather than key tag because tags are hashes of the key
-# material and carry no ordering.
-def keys_for(zone)
-  newest = { 257 => nil, 256 => nil }
-  Dir[File.join(ZONES_DIR, "K#{zone}.+*.key")].each do |path|
-    flags = File.read(path)[/DNSKEY\s+(\d+)/, 1].to_i
-    next unless newest.key?(flags)
-    current = newest[flags]
-    newest[flags] = path if current.nil? || File.mtime(path) > File.mtime(current)
-  rescue StandardError
+def dnskey_records(path)
+  return [] unless File.file?(path)
+
+  File.readlines(path, encoding: "UTF-8").filter_map do |line|
+    match = line.match(/^\S+\s+(?:\d+\s+)?IN\s+DNSKEY\s+(\d+)\s+(\d+)\s+(\d+)\s+([A-Za-z0-9+\/=]+)\s*(?:;.*)?$/)
+    next unless match
+
+    flags, protocol, algorithm, encoded = match.captures
+    rdata = [Integer(flags, 10), Integer(protocol, 10), Integer(algorithm, 10)].pack("nCC")
+    rdata += Base64.decode64(encoded)
+    accumulator = rdata.bytes.each_with_index.sum { |byte, index| index.even? ? byte << 8 : byte }
+    accumulator += (accumulator >> 16) & 0xFFFF
+    { flags: Integer(flags, 10), tag: accumulator & 0xFFFF }
+  end
+rescue SystemCallError, EncodingError, ArgumentError
+  []
+end
+
+def key_files_for(zone)
+  Dir[File.join(ZONES_DIR, "K#{zone}.+*.key")].sort.filter_map do |path|
+    next if File.symlink?(path) || !File.file?(path)
+
+    record = dnskey_records(path).first
+    next unless record && [256, 257].include?(record[:flags])
+
+    { path:, flags: record[:flags], tag: record[:tag], mtime: File.mtime(path) }
+  rescue SystemCallError
     next
   end
-  newest.values.compact.map { |path| path.sub(/\.key$/, "") }
+end
+
+# Preserve DNSKEYs already published by this zone. A new key file is not
+# automatically adopted. On first signing, exactly one KSK and one ZSK are
+# accepted; ambiguity is a deployment failure, not a guess by mtime.
+def keys_for(zone, signed_zone)
+  candidates = key_files_for(zone)
+  active = dnskey_records(signed_zone)
+  selected = []
+
+  [257, 256].each do |flags|
+    published = active.select { |record| record[:flags] == flags }.map { |record| record[:tag] }.uniq
+    if published.empty?
+      matching = candidates.select { |entry| entry[:flags] == flags }
+      return [] unless matching.one?
+      selected << matching.first
+      next
+    end
+
+    published.each do |tag|
+      matching = candidates.select { |entry| entry[:flags] == flags && entry[:tag] == tag }
+      return [] if matching.empty?
+      selected << matching.max_by { |entry| entry[:mtime] }
+    end
+  end
+
+  selected.map { |entry| entry[:path].delete_suffix(".key") }
 end
 
 def sign(zone, zone_file, keys, expiry)
   exp = expiry.strftime("%Y%m%d000000")
-  out, err, st = Open3.capture3(
-    "ldns-signzone", "-e", exp, zone_file, *keys,
-    chdir: ZONES_DIR
-  )
-  unless st.success?
-    log "FAIL #{zone}: #{err.strip}"
+  _out, err, status = Open3.capture3("ldns-signzone", "-e", exp, zone_file, *keys, chdir: ZONES_DIR)
+  unless status.success?
+    log "FAIL #{zone}: #{err.to_s.strip}"
+    return false
+  end
+
+  signed = "#{zone_file}.signed"
+  unless File.file?(signed) && !File.symlink?(signed) && File.size?(signed)
+    log "FAIL #{zone}: signer returned success without a regular non-empty signed zone"
     return false
   end
   log "signed #{zone} -> expires #{expiry}"
   true
 rescue SystemCallError => e
-  # A missing ldns-signzone is a failed zone, counted below, not a backtrace that
-  # skips the reload of zones already signed.
   log "FAIL #{zone}: ldns-signzone #{e.class}: #{e.message}"
   false
 end
 
 return unless $PROGRAM_NAME == __FILE__
 
+zones = Dir[File.join(ZONES_DIR, "*.zone")].sort
+if zones.empty?
+  log "FAIL no zones under #{ZONES_DIR}"
+  exit 1
+end
+
 changed = []
 failed = []
 keyed = 0
 
-Dir[File.join(ZONES_DIR, "*.zone")].sort.each do |zone_file|
+zones.each do |zone_file|
   zone = File.basename(zone_file, ".zone")
   signed = "#{zone_file}.signed"
-  keys = keys_for(zone)
-  next if keys.empty?
+  keys = keys_for(zone, signed)
+  if keys.empty?
+    log "FAIL #{zone}: missing, ambiguous or unpublished active KSK/ZSK key material"
+    failed << zone
+    next
+  end
 
   keyed += 1
-
   needs_sign = FORCE
   unless needs_sign
-    exp = expiry_date(signed) if File.exist?(signed)
+    exp = expiry_date(signed) if File.file?(signed)
     needs_sign = exp.nil? || (exp - Date.today) < RESIGN_DAYS
     next unless needs_sign
     log "#{zone} expires #{exp || "unknown"} - resigning"
@@ -102,25 +152,40 @@ Dir[File.join(ZONES_DIR, "*.zone")].sort.each do |zone_file|
     failed << zone
     next
   end
-
   changed << zone
 end
 
-if changed.any?
-  changed.each { |z| system("nsd-control", "reload", z) }
-  system("nsd-control", "notify")
-  log "reloaded #{changed.size} zone(s): #{changed.join(", ")}"
-end
-
-# "Nothing to do" is only true of zones that were looked at. No zone files, no
-# keys, or a failed signing is a broken signer, and daily.local mails the
-# exit status, so each of them fails rather than reading as healthy.
 if keyed.zero?
-  log "FAIL no signable zones: no *.zone with keys under #{ZONES_DIR}"
+  log "FAIL no signable zones: no complete KSK/ZSK pairs under #{ZONES_DIR}"
   exit 1
 end
 if failed.any?
   log "FAIL #{failed.size} zone(s) not signed: #{failed.join(", ")}"
   exit 1
+end
+
+if changed.any?
+  if NO_RELOAD
+    log "signed #{changed.size} zone(s); activation deferred to the caller"
+  else
+    reload_failed = []
+    changed.each do |zone|
+      _out, err, status = Open3.capture3("nsd-control", "reload", zone)
+      unless status.success?
+        log "FAIL reload #{zone}: #{err.to_s.strip}"
+        reload_failed << zone
+      end
+    end
+    unless reload_failed.empty?
+      log "FAIL #{reload_failed.size} zone reload(s): #{reload_failed.join(", ")}"
+      exit 1
+    end
+    _out, err, status = Open3.capture3("nsd-control", "notify")
+    unless status.success?
+      log "FAIL notify: #{err.to_s.strip}"
+      exit 1
+    end
+    log "reloaded #{changed.size} zone(s): #{changed.join(", ")}"
+  end
 end
 log "all #{keyed} zones valid - nothing to do" if changed.empty?

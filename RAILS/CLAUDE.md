@@ -1,9 +1,0 @@
-# RAILS — tree contract
-
-This tree's contract lives in the RAILS section of
-`MASTER/data/law/TREE_CONTRACTS.md`. MASTER governs pub5: `MASTER/data/soul.yml` owns global
-identity, source authority and protected paths; `MASTER/data/laws.yml` owns
-individual Law records. The executable Law Ruby in `MASTER/law/` and `MASTER/checks/` implements and verifies those requirements.
-
-`RAILS/README.md` is the long-form reference and `RAILS/apps.yml` is feature
-truth.

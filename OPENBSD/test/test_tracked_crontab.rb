@@ -151,6 +151,13 @@ class ScheduledJobsTest < Minitest::Test
     Open3.capture2e({ "NSD_ZONES_DIR" => @tmp }, RbConfig.ruby, File.join(BIN, "nsd-resign"), *args)
   end
 
+  def write_zone_keys(zone = "brgen.no", ksk: "AAAA", zsk: "AAAB")
+    write("K#{zone}.+013+04242.key", "#{zone}. IN DNSKEY 257 3 13 #{ksk}\\n")
+    write("K#{zone}.+013+05242.key", "#{zone}. IN DNSKEY 256 3 13 #{zsk}\\n")
+    write("K#{zone}.+013+04242.private", "Private-key-format: v1.3\\n")
+    write("K#{zone}.+013+05242.private", "Private-key-format: v1.3\\n")
+  end
+
   def test_nsd_resign_reads_the_earliest_signature_expiry
     load File.join(BIN, "nsd-resign")
     signed = write("brgen.no.zone.signed", rrsig("20261201000000") + rrsig("20261015120000"))
@@ -161,7 +168,7 @@ class ScheduledJobsTest < Minitest::Test
   # Garbage has no expiry, and no expiry means re-sign, never "still valid".
   def test_nsd_resign_treats_an_unparseable_signed_zone_as_due
     write("brgen.no.zone", "$ORIGIN brgen.no.\n")
-    write("Kbrgen.no.+013+04242.key", "brgen.no. IN DNSKEY 257 3 13 AAAA\n")
+    write_zone_keys
     write("brgen.no.zone.signed", "\x00\xFF not a zone")
     out, status = resign
 
@@ -172,7 +179,7 @@ class ScheduledJobsTest < Minitest::Test
 
   def test_nsd_resign_leaves_a_fresh_zone_alone
     write("brgen.no.zone", "$ORIGIN brgen.no.\n")
-    write("Kbrgen.no.+013+04242.key", "brgen.no. IN DNSKEY 257 3 13 AAAA\n")
+    write_zone_keys
     write("brgen.no.zone.signed", rrsig((Date.today + 25).strftime("%Y%m%d000000")))
     out, status = resign
 
@@ -180,12 +187,31 @@ class ScheduledJobsTest < Minitest::Test
     assert_includes out, "all 1 zones valid - nothing to do"
   end
 
-  def test_nsd_resign_with_no_keyed_zones_fails
-    write("brgen.no.zone", "$ORIGIN brgen.no.\n")
+  def test_nsd_resign_fails_when_any_zone_lacks_a_complete_key_pair
+    write("brgen.no.zone", "$ORIGIN brgen.no.\\n")
+    write_zone_keys
+    write("other.example.zone", "$ORIGIN other.example.\\n")
     out, status = resign
 
     refute status.success?
-    assert_includes out, "FAIL no signable zones"
+    assert_includes out, "other.example: missing, ambiguous or unpublished active KSK/ZSK key material"
+    assert_includes out, "FAIL 1 zone(s) not signed: other.example"
+  end
+
+  def test_active_signed_ksk_is_preserved_when_a_new_key_file_appears
+    write("brgen.no.zone", "$ORIGIN brgen.no.\\n")
+    write_zone_keys
+    write("Kbrgen.no.+013+06242.key", "brgen.no. IN DNSKEY 257 3 13 AAEA\\n")
+    write("Kbrgen.no.+013+06242.private", "Private-key-format: v1.3\\n")
+    active = File.read(File.join(@tmp, "Kbrgen.no.+013+04242.key"))
+    zsk = File.read(File.join(@tmp, "Kbrgen.no.+013+05242.key"))
+    signed = write("brgen.no.zone.signed", active + zsk + rrsig((Date.today + 25).strftime("%Y%m%d000000")))
+
+    load File.join(BIN, "nsd-resign")
+    selected = keys_for("brgen.no", signed)
+
+    assert_includes selected, File.join(@tmp, "Kbrgen.no.+013+04242")
+    refute_includes selected, File.join(@tmp, "Kbrgen.no.+013+06242")
   end
 
   # ---- renew-certs.sh -------------------------------------------------------

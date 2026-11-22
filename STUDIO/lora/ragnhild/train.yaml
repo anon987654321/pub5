@@ -1,9 +1,0 @@
----
-schema: 1
-subject: ragnhild
-trigger_word: ragnhild
-dataset:
-  path: dataset
-  caption_ext: txt
-destination_env: REPLICATE_DESTINATION
-model_directory: ragnhild

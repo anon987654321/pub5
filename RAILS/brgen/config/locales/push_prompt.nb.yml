@@ -1,4 +1,0 @@
-nb:
-  push:
-    context_prompt: "Vil du få beskjed når noen svarer deg?"
-    not_now: "Ikke nå"

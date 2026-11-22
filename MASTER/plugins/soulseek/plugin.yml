@@ -1,6 +1,0 @@
----
-id: soulseek
-version: 1.0.0
-description: Search an operator-owned slskd network and audit, catalogue and compare a local music collection; one rights-cleared file may be queued per confirmed action.
-entrypoint: soulseek.rb
-observe_actions: [status, results, downloads]

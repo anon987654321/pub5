@@ -1,3 +1,0 @@
-<%# Comment#after_commit refreshes the post detail stream with each reader's own thread controls. %>
-<%# This response resets the submitting reader's form; the refresh supplies the new thread. %>
-<%= turbo_stream.replace "comment_form", partial: "comments/form", locals: { comment: Comment.new, commentable: @post } %>
