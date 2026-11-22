@@ -17,7 +17,7 @@ if File.file?(new_operator_path)
   failures << "OPERATOR.sh must restrict installs to tracked mirror files" unless
     new_operator.include?('ls-files -z -- OPENBSD/mirror') && new_operator.include?('safe.directory=')
   failures << "OPERATOR.sh must map mirror paths directly to /" unless
-    new_operator.include?('target=/$1') && new_operator.include?('MIRROR=') 
+    new_operator.include?('target=/$1') && new_operator.include?('MIRROR=')
   failures << "OPERATOR.sh must validate PF, relayd and httpd natively" unless
     new_operator.include?('pfctl -nf "$MIRROR/etc/pf.conf"') &&
     new_operator.include?('relayd -n -f "$MIRROR/etc/relayd.conf"') &&
