@@ -195,6 +195,23 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   end
 
+  def test_private_backlog_receipts_allow_only_the_assigned_group_handoff
+    executor = Backlog::Executor.allocate
+    original_owned = File.method(:owned?)
+    Dir.mktmpdir("backlog-private-dir") do |directory|
+      File.chmod(0o770, directory)
+      File.define_singleton_method(:owned?) { |*| false }
+      stat = File.lstat(directory)
+
+      assert executor.send(:private_receipt_directory?, directory, stat)
+
+      File.chmod(0o777, directory)
+      refute executor.send(:private_receipt_directory?, directory, File.lstat(directory))
+    end
+  ensure
+    File.define_singleton_method(:owned?, original_owned) if original_owned
+  end
+
   def test_parked_backlog_task_does_not_block_independent_ready_work
     parked = {
       id: "parked-task", text: "Repair the provider-dependent MASTER path.",
