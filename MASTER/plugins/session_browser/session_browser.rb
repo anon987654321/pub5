@@ -347,7 +347,7 @@ module Master
         profile = File.join(directory, "profile")
         secure_directory(profile)
         lease = owner.open(host: host.to_s.downcase, url:, profile:, persistent: true, headless:)
-        browser = Ferrum::Browser.new(**driver_options(lease))
+        browser = owner.attach(lease.id, timeout: Master::Io::WebBrowse::TIMEOUT)
         page = browser.create_page
         transport.secure_page(page, allowed_host: host)
         yield page
@@ -360,13 +360,6 @@ module Master
       end
 
       def broker = service(:browser_broker)
-
-      def driver_options(lease)
-        raise PolicyError, "session_browser: Core-owned browser lease is required" unless lease
-
-        { ws_url: lease.cdp_url, timeout: Master::Io::WebBrowse::TIMEOUT,
-          process_timeout: Master::Io::WebBrowse::TIMEOUT }
-      end
 
       def navigate(page, uri)
         transport.reset_page_budget(page)
@@ -382,11 +375,7 @@ module Master
         nil
       end
 
-      def snapshot_for(page)
-        JSON.parse(page.evaluate(Master::Io::WebBrowse::SCRIPT))
-      rescue JSON::ParserError => e
-        raise Error, "session_browser: page snapshot was not valid JSON: #{e.message}"
-      end
+      def snapshot_for(page) = page.snapshot
 
       def extract_text(snapshot, links:)
         result = transport.deliver_snapshot(snapshot.fetch("url", ""), snapshot, links:)
