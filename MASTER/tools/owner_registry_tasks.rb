@@ -566,7 +566,7 @@ module Backlog
                    value = record["next_wake_at"].to_s
                    value unless value.empty?
                  end
-      append_executor_receipt(
+      return false unless append_executor_receipt(
         "record_type" => "parked_task",
         "item_id" => source_item.fetch(:id).to_s,
         "item_digest" => plan.fetch("item_digest").to_s,
@@ -729,7 +729,12 @@ module Backlog
     end
 
     def parked_task_rows
-      path = File.join(@root, RECEIPT_PATH)
+      directory = File.join(@root, ".master")
+      directory_stat = File.lstat(directory)
+      return [] unless directory_stat.directory? && !directory_stat.symlink? &&
+                        (directory_stat.mode & 0o077).zero?
+
+      path = File.join(directory, "backlog-executor.jsonl")
       return [] unless File.exist?(path)
 
       stat = File.lstat(path)
@@ -780,10 +785,14 @@ module Backlog
     def append_executor_receipt(row)
       directory = File.join(@root, ".master")
       FileUtils.mkdir_p(directory, mode: 0o700)
-      path = File.join(@root, RECEIPT_PATH)
+      directory_stat = File.lstat(directory)
+      return false unless directory_stat.directory? && !directory_stat.symlink? &&
+                          (directory_stat.mode & 0o077).zero?
+
+      path = File.join(directory, "backlog-executor.jsonl")
       if File.exist?(path) || File.symlink?(path)
         stat = File.lstat(path)
-        raise "unsafe executor receipt path" unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
+        return false unless stat.file? && !stat.symlink? && (stat.mode & 0o077).zero?
       end
 
       flags = File::WRONLY | File::CREAT | File::APPEND
@@ -791,7 +800,7 @@ module Backlog
       File.open(path, flags, 0o600) do |file|
         file.flock(File::LOCK_EX)
         stat = file.stat
-        raise "unsafe executor receipt file" unless stat.file? && (stat.mode & 0o077).zero?
+        return false unless stat.file? && (stat.mode & 0o077).zero?
 
         file.puts(JSON.generate(row))
         file.flush
