@@ -414,8 +414,9 @@ applyFX();
 highlightActiveChip();
 }
 
-async function initAudio(){
-await Tone.start();
+async function initAudio(activationPromise){
+// Tone.start() must be invoked synchronously by the trusted click handler.
+await (activationPromise||Tone.start());
 Tone.getContext().rawContext.addEventListener('statechange',()=>{
   if(Tone.getContext().rawContext.state==='suspended'){
     st_.playing=false;clearTimeout(st_.timer);st('suspended — tap to resume');log('⚠ audio suspended by browser','w');
@@ -1262,11 +1263,11 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 // One gesture is enough: boot the engine if it is not running yet, then start
 // the transport. The welcome gate and the play button both land here, so the
 // first click plays music instead of only arming the engine.
-async function startPlayback(){
+async function startPlayback(activationPromise){
 if(!st_.started){
 if(!st_.booting){
 st_.booting=(async()=>{
-await initAudio();
+await initAudio(activationPromise);
 applyFX();
 st_.started=true;
 claimOwner();
@@ -1279,7 +1280,7 @@ st_.booting=null;
 }else{
 // Called again inside a user gesture (the welcome gate after a blocked
 // autoplay): Tone.start() resumes the suspended context here.
-await Tone.start();
+await (activationPromise||Tone.start());
 }
 st_.playing=true;
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVU);
@@ -1295,7 +1296,8 @@ log('playback started','k');
 
 $id('welcome-start').addEventListener('click',async()=>{
 try{
-await startPlayback();
+const activationPromise=Tone.start();
+await startPlayback(activationPromise);
 dismissWelcome();
 log('engine started via welcome gate','k');
 }catch(error){
@@ -1306,7 +1308,7 @@ log(`audio startup failed: ${error.message}`,'e');
 });
 $id('play').addEventListener('click',async()=>{
 if(!st_.playing){
-try{await startPlayback();}catch(error){st_.playing=false;st('audio startup failed');log(`audio startup failed: ${error.message}`,'e');}
+try{const activationPromise=Tone.start();await startPlayback(activationPromise);}catch(error){st_.playing=false;st('audio startup failed');log(`audio startup failed: ${error.message}`,'e');}
 }else{
 Tone.Transport.pause();
 st_.playing=false;
