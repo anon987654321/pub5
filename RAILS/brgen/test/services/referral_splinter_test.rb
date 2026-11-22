@@ -17,6 +17,15 @@ class ReferralSplinterTest < ActiveSupport::TestCase
     credit = Shared::ReferralCredit.find_by!(user: @referrer, vertical: "playlist")
     assert_equal "playlist_pro", credit.entitlement
     assert_in_delta 30.days.from_now.to_i, credit.expires_at.to_i, 5
+    ledger = Shared::CommerceLedgerEntry.find_by!(idempotency_key: "referral-credit:#{credit.id}")
+    assert_equal "credit_granted", ledger.entry_type
+    assert_equal @referrer.id, ledger.user_id
+    assert_equal @invitee.id, ledger.actor_id
+    assert_equal "Shared::ReferralCredit", ledger.source_type
+    assert_equal credit.id, ledger.source_id
+    assert_equal "playlist_pro", ledger.entitlement
+    assert_equal "playlist", ledger.metadata.fetch("vertical")
+    assert_equal credit.expires_at, ledger.expires_at
     assert @referrer.reload.entitled?(:playlist_pro)
   end
 
