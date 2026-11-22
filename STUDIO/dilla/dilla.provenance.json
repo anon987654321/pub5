@@ -35,5 +35,15 @@
     "lufs": -9.5,
     "bytes": 8335152,
     "sha256": "3f8d5e13c7b9ab072d6dc25d8e0b5f9c584bf2deccf1c3719b25911f12a851b9"
+  },
+  "source": {
+    "progression_id": "blue_hour",
+    "progression_tier": "engine",
+    "sample_rights_status": "not_used"
+  },
+  "human_acceptance": {
+    "listening": "not_reviewed",
+    "reviewer": null,
+    "reviewed_at": null
   }
 }
