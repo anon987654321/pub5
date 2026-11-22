@@ -45,16 +45,22 @@ Law.define(:FROZEN_STRING_LITERAL) do
   X
 end
 
-# Ruby 4.0 promoted Set and Pathname into core classes: the requires that once
-# loaded them from the stdlib are dead lines now. Deleting one is a no-op at
-# runtime and a negative line at review, which is the shape of fix this tree
-# hands the automatic pass first.
+# Ruby 3.2 made Set a built-in class, so requiring it is redundant across
+# pub5's declared Ruby >= 3.2 support range. Pathname is different: Ruby 4.0
+# moved its base class into core, but #find, #rmtree and .mktmpdir still live
+# in pathname.rb. Keep that require; do not infer safety from the constant.
 Law.define(:REDUNDANT_CORE_REQUIRE) do
-  source "Set and Pathname are Ruby core classes; no version-specific pin is required"
-  detect { |line| line.match?(/\A\s*require\s+["'](?:set|pathname)["']\s*(?:#[^\n]*)?\z/) }
-  fix "Delete the redundant require: Set and Pathname are provided by Ruby itself."
+  source "Ruby 3.2 built-in Set - only require 'set' is redundant"
+  detect { |line| line.match?(/\A\s*require\s+["']set["']\s*(?:#[^\n]*)?\z/) }
+  fix "Delete require \"set\": Set is built in since Ruby 3.2. Retain require \"pathname\"."
   bad  "require \"set\""
-  good "points = Set.new"
+  good <<~'X'
+    require "pathname"
+    Pathname.mktmpdir do |dir|
+      Pathname.new(dir).find { |path| path }
+      Pathname.new(dir).rmtree
+    end
+  X
 end
 
 # Struct.new builds a mutable bag with member-wise == by side effect; Data.define

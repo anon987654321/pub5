@@ -2062,7 +2062,12 @@ laws:
     status: fixture
     file: "-"
     bad: require "set"
-    good: points = Set.new
+    good: |
+      require "pathname"
+      Pathname.mktmpdir do |dir|
+        Pathname.new(dir).find { |path| path }
+        Pathname.new(dir).rmtree
+      end
   STRUCT_NEW_TO_DATA:
     status: docs
   GUARD_CLAUSE:

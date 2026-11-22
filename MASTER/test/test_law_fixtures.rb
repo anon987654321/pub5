@@ -22,6 +22,16 @@ class TestLawFixtures < Minitest::Test
     assert_equal "pub5", LawFixtures::REPOSITORY_NAME
   end
 
+  def test_redundant_core_require_keeps_pathname_library
+    law = Master::Review::Scan::LawTree.find(:REDUNDANT_CORE_REQUIRE)
+
+    assert_equal 1, findings_for(law, law.bad).size
+    assert_empty findings_for(law, law.good)
+    assert_includes law.good, "Pathname.mktmpdir"
+    assert_includes law.good, ".find"
+    assert_includes law.good, ".rmtree"
+  end
+
   def self.fixtured
     @fixtured ||= Master::Review::Scan::LawTree.definitions.select do |law|
       # A retired Law keeps its fixtures but is not scanned, so it has nothing to prove here.
