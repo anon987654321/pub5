@@ -342,7 +342,7 @@ task "test:all_trees" do
         if executable
           failures << "#{file}: shell syntax"
         else
-          warn "test:all_trees: #{file}: #{shell.first} unavailable; syntax not measured"
+          inconclusive << "#{file}: #{shell.first} unavailable; syntax not measured"
         end
       end
     end
@@ -356,8 +356,11 @@ task "test:all_trees" do
   end
 
   inventory.each do |tree, counts|
-    next if counts[:ruby].zero? || counts[:tests].positive?
-    warn "test:all_trees: #{tree}: #{counts[:ruby]} Ruby source file(s), no discovered *_test.rb/test_*.rb"
+    source_files = counts.values_at(:ruby, :shell, :javascript).sum
+    discovered_tests = counts.values_at(:tests, :javascript_tests).sum
+    next if source_files.zero? || discovered_tests.positive?
+
+    inconclusive << "#{tree}: #{source_files} source file(s), no discovered Ruby or JavaScript test files"
   end
 
   abort "test:all_trees: #{failures.size} failure(s)\n#{failures.join("\n")}" unless failures.empty?
