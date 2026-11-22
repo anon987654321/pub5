@@ -5,10 +5,11 @@
 // (96 dpi = 4/3 x 72 pt), Johann, 2026-11-07: "include a png of every
 // front page ... in BIZ"; the folder law carries it beside the pair.
 // Usage: BIZ_CHROME_BIN=/path/to/chrome node BIZ/tools/bp_print.mjs
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, renameSync, statSync } from 'node:fs';
+import { existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 import { OUTPUT_DIR as OUT, BIZ_ROOT } from './paths.mjs';
 
 const ORDER = ['syre', 'ragnhild', 'ragnhild_legater', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os', 'fetat'];
@@ -47,6 +48,10 @@ function occupied(path) {
   }
 }
 
+function sha256(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
 const CHROME = CHROME_CANDIDATES.find(available);
 const AUDIT_PARENT = process.env.BIZ_AUDIT_DIR ? resolve(process.env.BIZ_AUDIT_DIR) : tmpdir();
 mkdirSync(AUDIT_PARENT, { recursive: true });
@@ -72,10 +77,13 @@ for (const name of ORDER) {
   const src = `file://${source}`;
   const pdf = `${outputDir}/${name}.pdf`;
   const frontPng = `${outputDir}/${name}.png`;
+  const printReceipt = `${outputDir}/${name}.print.json`;
+  const receiptTemp = `${outputDir}/.${name}.print.json.tmp`;
   const numberedPngs = readdirSync(outputDir).filter(file =>
     file.startsWith(`${name}-`) && /^[A-Za-z0-9_-]+-[0-9]+[.]png$/.test(file)
   );
-  if (occupied(pdf) || occupied(frontPng) || numberedPngs.length) {
+  if (occupied(pdf) || occupied(frontPng) || occupied(printReceipt) ||
+      occupied(receiptTemp) || numberedPngs.length) {
     throw new Error(`${name}: output exists; choose a fresh empty BIZ_OUT_DIR rather than replacing an earlier PDF/PNG`);
   }
 
@@ -125,6 +133,37 @@ for (const name of ORDER) {
   );
   if (!raster) throw new Error(`${name}: pdftoppm produced no front-page png`);
   renameSync(`${outputDir}/${raster}`, frontPng);
+
+  const printRecord = {
+    schema: 'biz.print.v1',
+    generated_at: new Date().toISOString(),
+    document: name,
+    source_html: basename(source),
+    source_html_sha256: sha256(source),
+    pdf: basename(pdf),
+    pdf_sha256: sha256(pdf),
+    front_png: basename(frontPng),
+    front_png_sha256: sha256(frontPng),
+    pdf_bytes: statSync(pdf).size,
+    front_png_bytes: statSync(frontPng).size,
+    page_count: pages,
+    page_size_points: size,
+    full_page_raster_count: pageRasters.length,
+    full_page_raster_bytes: pageRasters.reduce((sum, row) => sum + statSync(join(AUDIT_DIR, row.file)).size, 0),
+    human_review: {
+      visual: 'NOT_REVIEWED',
+      accessibility: 'NOT_REVIEWED'
+    }
+  };
+  writeFileSync(receiptTemp, JSON.stringify(printRecord, null, 2) + String.fromCharCode(10),
+                { flag: 'wx', mode: 0o644 });
+  try {
+    // Hard-link publication is atomic and refuses to replace an existing receipt.
+    linkSync(receiptTemp, printReceipt);
+  } finally {
+    if (occupied(receiptTemp)) unlinkSync(receiptTemp);
+  }
+  console.log(`${name}: print receipt ${basename(printReceipt)}; visual/accessibility review NOT_REVIEWED`);
   console.log(`${name}: front page png ${name}.png; all ${pages} pages rasterized at 144 dpi in ${AUDIT_DIR} for visual inspection`);
 }
 console.log(`done; full-page visual audit renders: ${AUDIT_DIR}`);
