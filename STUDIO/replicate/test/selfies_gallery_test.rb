@@ -194,6 +194,26 @@ class TestSelfiesGallery < Minitest::Test
     assert_empty build.fetch("items"), "a symlinked render must not enter the manifest"
   end
 
+  def test_manifest_is_written_owner_only
+    touch("ragnhild_selfie_01.jpg")
+    build
+
+    assert_equal 0o600, File.stat(@out).mode & 0o777
+  end
+
+  def test_manifest_writer_refuses_symlinks_without_touching_the_target
+    touch("ragnhild_selfie_01.jpg")
+    target = File.join(@dir, "keep.js")
+    File.write(target, "do not replace")
+    File.symlink(target, @out)
+
+    error = assert_raises(ArgumentError) { build }
+
+    assert_match(/manifest destination is a symlink/, error.message)
+    assert_equal "do not replace", File.read(target)
+    assert File.symlink?(@out)
+  end
+
   def test_the_manifest_is_loadable_javascript_naming_the_global
     touch("ragnhild_selfie_01.jpg")
     build
