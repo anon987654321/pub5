@@ -300,8 +300,11 @@ module Master
               next
             end
           elsif mission && mission["state"] == "running"
-            # A returned attempt without terminal proof is parked for review;
-            # it must not retain the single-writer slot indefinitely.
+            # Another process may own this live lease. Never mutate its mission.
+            next if mission["lease_owner"].to_s != Fix::Mission.instance_id
+
+            # A runner that returned while still holding its own lease failed to
+            # report a terminal result; park it for review rather than call it done.
             Master::Fix::Mission.new(root:, bus: container[:bus]).block!(
               reason: "backlog attempt returned without terminal delivery proof",
             )
@@ -311,7 +314,7 @@ module Master
           end
 
           parked = mission && executor.park_current!(record: mission, result:)
-          container[:bus]&.publish("backlog_executor:parked", mission: mission && mission["id"]) if parked
+          container[:bus]&.publish("backlog_executor:parked", mission: mission && mission["id"]) if parked == true
           status = executor.enqueue_next!(model: mission && mission["model"])
           container[:bus]&.publish("backlog_executor:intake", status:)
         },
