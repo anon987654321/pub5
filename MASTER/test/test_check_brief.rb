@@ -37,13 +37,18 @@ class TestCheckBrief < Minitest::Test
       environment: "ruby 3.4.0"
     }
 
+    log_artifact = {
+      "path" => ".master/check/latest.log",
+      "byte_count" => 17,
+      "sha256" => "a" * 64,
+    }
     json = Operator::CheckBrief.render_json(
       profile: "focused", results: [result], metadata:,
       started_at: "2026-11-22T12:00:00.000Z",
       finished_at: "2026-11-22T12:00:01.300Z",
       duration_s: 1.3, exit_status: 0,
       command: "MASTER/bin/check --profile=focused --format=json",
-      log_path: ".master/check/latest.log"
+      log_path: ".master/check/latest.log", log_artifact:
     )
     receipt = JSON.parse(json)
 
@@ -66,6 +71,7 @@ class TestCheckBrief < Minitest::Test
     assert_equal "stdout", receipt.fetch("receipt_output")
     refute_includes json, "do-not-publish-this-output"
     assert_equal false, receipt.dig("evidence", "raw_output_included")
+    assert_equal log_artifact, receipt.dig("evidence", "combined_log_artifact")
   end
 
   def test_render_json_preserves_timeout_failure_and_not_run_states
