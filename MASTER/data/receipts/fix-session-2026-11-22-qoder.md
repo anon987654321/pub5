@@ -2549,3 +2549,33 @@ Verification: GitHub read-after-write source inspection only. All tests named
 above, Ruby syntax checks, `MASTER/bin/check`, Chromium attach/teardown,
 network adversarial probes, cancellation and screenshot/vision integration
 remain **NOT_RUN** in this environment. Issue #5 remains open.
+
+### Browser lease diagnostic redaction — 2026-11-22
+
+- BrowserBroker::Lease now exposes a bounded diagnostic projection. inspect,
+  to_s and JSON serialization use that projection rather than the lease's
+  cdp_url. The CDP WebSocket endpoint is a live bearer capability; routine
+  logging and error context must not serialize it.
+- The diagnostic copies and freezes its string values, so callers cannot mutate
+  the lease's host or identity through the projection.
+- Extended the existing MASTER/test/test_browser_broker.rb regression to
+  check inspect, to_s, JSON serialization, endpoint redaction and snapshot
+  immutability. No new test file or new policy authority was introduced.
+- This is diagnostic-leak hardening only. The trusted adapters still read
+  lease.cdp_url to attach Ferrum; the endpoint has not been replaced with
+  the required narrow session interface. Interactive action-scoped network
+  grants, screenshot-to-vision delivery, in-flight cancellation, Core process
+  supervision and real Chromium proof remain open. Issue #5 stays OPEN.
+
+Commits:
+582d7ab613f6da44e89e087ce2d36029d20e32bd (redacted lease diagnostics);
+c16e2b3f3a54bd6e52d957c4c6421891bc906ba1 (diagnostic regression);
+2f28410dc7c1b93f1e8fa51b8e53762cf1a31c12 (immutable projection);
+360361510fa322520ab9e0c12ab9171853b7bd5c (immutability regression).
+
+Proof performed: GitHub read-after-write verification of the broker and test
+blobs; isolated Ruby 3.3.8 smoke execution for inspect, to_s, JSON endpoint
+redaction and snapshot immutability (PASS). This is not execution of the
+repository test. MASTER/test/test_browser_broker.rb, Ruby syntax across the
+checkout, MASTER/bin/check, live Chromium attach/teardown and all six
+adapter journeys remain NOT_RUN in this environment.
