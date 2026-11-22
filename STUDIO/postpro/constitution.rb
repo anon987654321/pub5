@@ -100,7 +100,10 @@ module Postpro
     # when a timestamped sibling is the intended collision policy.
     def verify_unused_output!(output_path)
       output = File.expand_path(output_path)
-      verify_unused_output!(output)
+      existing = existing_output(output)
+      if existing
+        raise ArgumentError, "constitutional output already exists: #{File.basename(existing)}"
+      end
 
       true
     end
@@ -167,10 +170,7 @@ module Postpro
       unless File.basename(output).start_with?("postpro_")
         raise ArgumentError, "constitutional output must use postpro_ prefix"
       end
-      existing = existing_output(output)
-      if existing
-        raise ArgumentError, "constitutional output already exists: #{File.basename(existing)}"
-      end
+      verify_unused_output!(output)
 
       announce_output_dir!(File.dirname(output))
       true
