@@ -3006,7 +3006,9 @@ module Dilla
         "drums" => session["drums"], "groove_profile" => session["groove_profile"]
       },
       "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share"),
-      "files" => file_records.transform_values { |record| record.slice("path", "bytes", "sha256") },
+      "files" => file_records.transform_values do |record|
+        record.is_a?(Hash) ? record.slice("path", "bytes", "sha256") : {}
+      end,
       "file_properties" => file_properties,
       "checks" => checks,
       "manual_audition" => {
