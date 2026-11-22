@@ -158,6 +158,10 @@ module Dilla
     when "industrial-techno"
       opts.mode = :industrial_techno
       args.shift
+    when "audit"
+      opts.mode = :audit
+      args.shift
+      opts.source = args.shift or abort "audit: provide the rendered WAV path"
     when "output-path"
       opts.mode = :output_path
       args.shift
@@ -248,6 +252,7 @@ module Dilla
         ruby dilla.rb industrial-techno --out PATH [--bpm X] [--bars N]
         ruby dilla.rb output-path dilla-render-directory [ISO8601]
         ruby dilla.rb output-path reference-root
+      ruby dilla.rb audit PATH.wav              verify sidecars, WAV structure and checksums
         ruby dilla.rb demo-each                  catalogue, one mp3 per track
       sample flip:
         SAMPLE_LOOP=rights-cleared.wav [--sample-vol 0.42] [--sample-weight 0.6] [--sample-slices 8]
@@ -268,6 +273,7 @@ module Dilla
     case opts.mode
     when :help then puts help_text
     when :output_path then output_path(opts)
+    when :audit then puts JSON.pretty_generate(audit_render(opts.source, overwrite: opts.overwrite))
     when :list then print_list
     when :reference then reference(opts)
     when :industrial_techno then render_industrial_techno(opts)
@@ -2697,8 +2703,7 @@ module Dilla
       MidiWriter.write(midi_path, events, bpm: plan[:bpm])
     end
     quality = write_quality(out_base, mix, lufs, stem_shares, duration, plan)
-    session = write_session(out_base, plan, performer, events, sample_report)
-    provenance = write_provenance(out_base, opts, plan, performer, wav_path, session, quality)
+    session = write_session(out_base, plan, performer, events, sample_report, seed: rng.seed)
     mp3_path = nil
     if opts.mp3 || opts.out.to_s.end_with?(".mp3") || opts.out.nil?
       mp3_path = "#{out_base}.mp3"
@@ -2706,6 +2711,10 @@ module Dilla
       mp3_path = nil unless ok
     end
     render_video(opts, wav_path, overwrite: opts.overwrite) if opts.video
+    provenance = write_provenance(
+      out_base, opts, plan, performer, wav_path, session, quality,
+      seed: rng.seed, midi_path:, mp3_path:
+    )
 
     seconds = Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0
     log = format("dilla %s: %s - %s / %s, %.1f BPM, %d bars, seed %s, performer %s, %.1fs render, LUFS %.1f",
@@ -2877,6 +2886,231 @@ module Dilla
 
   # ------------------------------------------------------------- sidecars
 
+  # Inspect a delivery without pretending software can listen to it. Structural
+  # checks are machine-verifiable; the overall state remains INCONCLUSIVE until
+  # a person has auditioned the render against the checklist.
+  def audit_render(path, overwrite: false)
+    wav_path = File.expand_path(path.to_s)
+    raise ArgumentError, "audit expects a .wav file" unless wav_path.match?(/\.wav\z/i)
+    raise ArgumentError, "rendered WAV not found: #{wav_path}" unless File.file?(wav_path)
+
+    base = wav_path.sub(/\.wav\z/i, "")
+    report_path = "#{base}.audit.json"
+    refuse_existing_outputs!([ report_path ], overwrite:)
+    checks = []
+    check = lambda do |name, ok, detail|
+      checks << { "name" => name, "state" => (ok ? "PASS" : "FAIL"), "detail" => detail }
+    end
+
+    sidecars = {}
+    %w[quality session provenance].each do |name|
+      file = "#{base}.#{name}.json"
+      begin
+        sidecars[name] = JSON.parse(File.read(file))
+        check.call("#{name}_sidecar", true, "#{File.basename(file)} parsed")
+      rescue Errno::ENOENT
+        check.call("#{name}_sidecar", false, "#{File.basename(file)} is missing")
+      rescue JSON::ParserError => error
+        check.call("#{name}_sidecar", false, "#{File.basename(file)} is invalid JSON: #{error.message}")
+      end
+    end
+
+    wav = begin
+      audit_wav_file(wav_path)
+    rescue StandardError => error
+      check.call("wav_structure", false, "#{error.class}: #{error.message}")
+      nil
+    end
+    if wav
+      check.call(
+        "wav_structure", true,
+        "RIFF/WAVE PCM #{wav.fetch("channels")}ch #{wav.fetch("sample_rate")}Hz " \
+          "#{wav.fetch("bits_per_sample")}-bit; #{wav.fetch("duration_s")}s"
+      )
+      delivery_format = wav.values_at("format", "channels", "sample_rate", "bits_per_sample")
+      check.call(
+        "wav_delivery_format", delivery_format == [1, 2, SAMPLE_RATE, 16],
+        "expected stereo 44.1 kHz 16-bit PCM"
+      )
+    end
+
+    provenance = sidecars["provenance"]
+    render_record = provenance.is_a?(Hash) ? provenance["render"] : nil
+    if wav && render_record.is_a?(Hash)
+      digest = Digest::SHA256.file(wav_path).hexdigest
+      check.call(
+        "wav_sha256", digest == render_record["sha256"],
+        "actual #{digest}; recorded #{render_record["sha256"]}"
+      )
+      check.call(
+        "wav_bytes", File.size(wav_path) == render_record["bytes"].to_i,
+        "actual #{File.size(wav_path)}; recorded #{render_record["bytes"]}"
+      )
+      recorded_path = render_record["wav"].to_s
+      check.call(
+        "wav_path", File.expand_path(recorded_path) == wav_path,
+        "recorded #{recorded_path}; inspected #{wav_path}"
+      )
+    else
+      check.call("provenance_render_record", false, "provenance render record is unavailable")
+    end
+
+    file_records = provenance.is_a?(Hash) && provenance["files"].is_a?(Hash) ? provenance["files"] : {}
+    file_properties = {}
+    file_records.each do |kind, record|
+      file_path = record.is_a?(Hash) ? record["path"].to_s : ""
+      exists = !file_path.empty? && File.file?(file_path)
+      check.call("#{kind}_file", exists, (exists ? file_path : "#{kind} path is missing"))
+      next unless exists
+
+      check.call(
+        "#{kind}_bytes", File.size(file_path) == record["bytes"].to_i,
+        "actual #{File.size(file_path)}; recorded #{record["bytes"]}"
+      )
+      digest = Digest::SHA256.file(file_path).hexdigest
+      check.call("#{kind}_sha256", digest == record["sha256"], "actual #{digest}; recorded #{record["sha256"]}")
+      if kind == "midi"
+        begin
+          midi = audit_midi_file(file_path)
+          file_properties[kind] = midi
+          check.call(
+            "midi_structure", true,
+            "SMF format #{midi.fetch("format")}; #{midi.fetch("tracks")} track(s); #{midi.fetch("ppqn")} PPQN"
+          )
+        rescue StandardError => error
+          check.call("midi_structure", false, "#{error.class}: #{error.message}")
+        end
+      elsif kind == "mp3"
+        begin
+          header = File.binread(file_path, 3)
+          format = header.start_with?("ID3") ? "ID3" : "MPEG frame sync"
+          file_properties[kind] = { "header" => format }
+          check.call("mp3_frame", true, "MP3 frame sync or ID3 header found")
+        rescue StandardError => error
+          check.call("mp3_frame", false, "#{error.class}: #{error.message}")
+        end
+      end
+    end
+    session = sidecars["session"]
+    quality = sidecars["quality"]
+    if session.is_a?(Hash) && provenance.is_a?(Hash)
+      check.call("seed", session["seed"].is_a?(Integer) && session["seed"] == provenance["seed"],
+                 "session seed #{session["seed"].inspect}; provenance seed #{provenance["seed"].inspect}")
+      check.call("arrangement", session["progression"].is_a?(Hash) && session["bars"].to_i.positive?,
+                 "progression #{session.dig("progression", "id").inspect}; bars #{session["bars"].inspect}")
+    else
+      check.call("session_provenance", false, "session or provenance data is unavailable")
+    end
+    if quality.is_a?(Hash)
+      metrics = %w[duration_s peak_dbfs rms_dbfs crest_db lufs_estimate]
+      complete = metrics.all? { |key| quality[key].is_a?(Numeric) && quality[key].finite? }
+      measured = metrics.select { |key| quality[key].is_a?(Numeric) }.join(", ")
+      check.call("quality_metrics", complete, "measured #{measured}")
+      if wav && quality["duration_s"].is_a?(Numeric)
+        check.call("quality_duration", (quality["duration_s"] - wav["duration_s"]).abs <= 0.02,
+                   "WAV #{wav["duration_s"]}s; quality report #{quality["duration_s"]}s")
+      end
+    else
+      check.call("quality_metrics", false, "quality sidecar is unavailable")
+    end
+
+    technical_state = checks.all? { |row| row["state"] == "PASS" } ? "PASS" : "FAIL"
+    report = {
+      "schema_version" => 1,
+      "created_at" => Time.now.utc.iso8601,
+      "technical_state" => technical_state,
+      # A machine check cannot certify the sound. Keep delivery inconclusive
+      # until a human records the audition in the session workflow.
+      "state" => (technical_state == "PASS" ? "INCONCLUSIVE" : "FAIL"),
+      "audio" => wav && {
+        "path" => wav_path, "sha256" => Digest::SHA256.file(wav_path).hexdigest,
+        "bytes" => File.size(wav_path), "sample_rate" => wav["sample_rate"],
+        "channels" => wav["channels"], "bits_per_sample" => wav["bits_per_sample"],
+        "duration_s" => wav["duration_s"]
+      },
+      "session" => session && {
+        "seed" => session["seed"], "progression" => session.dig("progression", "id"),
+        "bpm" => session.dig("progression", "bpm"), "bars" => session["bars"],
+        "arrangement" => session["arrangement"], "performer" => session.dig("performer", "id"),
+        "drums" => session["drums"], "groove_profile" => session["groove_profile"]
+      },
+      "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share"),
+      "files" => file_records.transform_values do |record|
+        record.is_a?(Hash) ? record.slice("path", "bytes", "sha256") : {}
+      end,
+      "file_properties" => file_properties,
+      "checks" => checks,
+      "manual_audition" => {
+        "status" => "NOT_PERFORMED",
+        "note" => "Technical checks do not establish that the render sounds good.",
+        "checklist" => [
+          "Groove and microtiming feel intentional across the full arrangement",
+          "Harmony, bass and melody work together; no unwanted clashes",
+          "Kick, sub and bass translate without masking or uncontrolled peaks",
+          "Transitions, fills and section changes feel deliberate rather than abrupt",
+          "No clicks, clipping, dropouts, harsh artefacts or unintended silence",
+          "Stereo image and tonal balance remain acceptable at normal and low playback levels"
+        ]
+      }
+    }
+    Dilla.atomic_write(report_path, JSON.pretty_generate(report))
+    report.merge("report_path" => report_path)
+  end
+
+  def audit_midi_file(path)
+    data = File.binread(path)
+    raise "MIDI header is missing" unless data.byteslice(0, 4) == "MThd"
+    header_length = data.byteslice(4, 4).unpack1("N")
+    raise "MIDI header length is not six bytes" unless header_length == 6
+    format, tracks, ppqn = data.byteslice(8, 6).unpack("nnn")
+    valid_format = [0, 1].include?(format) && tracks.positive? && ppqn.positive?
+    raise "unsupported MIDI format or empty track list" unless valid_format
+    cursor = 14
+    tracks.times do
+      raise "MIDI track chunk is missing" unless data.byteslice(cursor, 4) == "MTrk"
+      length = data.byteslice(cursor + 4, 4).unpack1("N")
+      cursor += 8 + length
+      raise "MIDI track chunk is truncated" if cursor > data.bytesize
+    end
+    raise "unexpected bytes after MIDI tracks" unless cursor == data.bytesize
+
+    { "format" => format, "tracks" => tracks, "ppqn" => ppqn }
+  end
+
+  def audit_mp3_file(path)
+    header = File.binread(path, 3)
+    id3 = header.start_with?("ID3")
+    frame_sync = header.bytesize >= 2 && header.getbyte(0) == 0xff && (header.getbyte(1) & 0xe0) == 0xe0
+    raise "MP3 header/frame sync is missing" unless id3 || frame_sync
+
+    true
+  end
+
+  def audit_wav_file(path)
+    header = File.binread(path, 44)
+    raise "WAV header is shorter than 44 bytes" unless header.bytesize == 44
+    raise "missing RIFF/WAVE signature" unless header.byteslice(0, 4) == "RIFF" && header.byteslice(8, 4) == "WAVE"
+    expected_chunks = header.byteslice(12, 4) == "fmt " && header.byteslice(36, 4) == "data"
+    raise "unexpected fmt/data chunk layout" unless expected_chunks
+    format = header.byteslice(20, 2).unpack1("v")
+    channels = header.byteslice(22, 2).unpack1("v")
+    sample_rate = header.byteslice(24, 4).unpack1("V")
+    byte_rate = header.byteslice(28, 4).unpack1("V")
+    block_align = header.byteslice(32, 2).unpack1("v")
+    bits = header.byteslice(34, 2).unpack1("v")
+    data_bytes = header.byteslice(40, 4).unpack1("V")
+    raise "WAV is not PCM" unless format == 1
+    raise "invalid WAV byte rate or block alignment" unless byte_rate.positive? && block_align.positive?
+    expected_size = File.size(path) == 44 + data_bytes && (data_bytes % block_align).zero?
+    raise "WAV data chunk is truncated or has trailing bytes" unless expected_size
+
+    {
+      "format" => format, "channels" => channels, "sample_rate" => sample_rate,
+      "byte_rate" => byte_rate, "block_align" => block_align, "bits_per_sample" => bits,
+      "data_bytes" => data_bytes, "duration_s" => (data_bytes.to_f / byte_rate).round(3)
+    }
+  end
+
   def write_quality(base, mix, lufs, stem_shares, duration, plan)
     peak = 0.0
     sum = 0.0
@@ -2905,9 +3139,9 @@ module Dilla
     data
   end
 
-  def write_session(base, plan, performer, events, sample_report)
+  def write_session(base, plan, performer, events, sample_report, seed: nil)
     data = {
-      "engine" => "dilla #{VERSION}",
+      "engine" => "dilla #{VERSION}", "seed" => seed,
       "progression" => plan[:progression].slice("id", "title", "key", "bpm", "loop_bars", "chords"),
       "arrangement" => plan[:arrangement],
       "drums" => plan[:drums], "groove_profile" => plan[:profile], "groove_scale" => plan[:groove_scale],
@@ -2920,16 +3154,26 @@ module Dilla
     data
   end
 
-  def write_provenance(base, opts, plan, performer, wav_path, session, quality)
+  def artifact_record(path)
+    return unless path && File.file?(path)
+
+    expanded = File.expand_path(path)
+    { "path" => expanded, "bytes" => File.size(expanded), "sha256" => Digest::SHA256.file(expanded).hexdigest }
+  end
+
+  def write_provenance(
+    base, opts, plan, performer, wav_path, session, quality, seed: nil, midi_path: nil, mp3_path: nil
+  )
     data = {
       "engine" => "dilla", "version" => VERSION,
       "created_at" => Time.now.utc.iso8601,
       "ruby" => RUBY_VERSION,
-      "seed" => session && opts.seed ? opts.seed : (opts.seed || "random"),
+      "seed" => seed || opts.seed || "random",
       "performer" => performer["id"],
       "flags" => {
         "out" => opts.out, "progression" => opts.progression, "drums" => opts.drums,
-        "midi" => opts.midi, "midi_out" => opts.midi_out, "foley" => opts.foley,
+        "midi" => opts.midi, "midi_out" => opts.midi_out, "mp3" => opts.mp3,
+        "video" => opts.video, "foley" => opts.foley,
         "profile" => opts.profile, "groove" => opts.groove, "bpm" => opts.bpm, "bars" => opts.bars,
         "kit" => opts.kit, "voice" => opts.voice, "rig" => opts.rig, "sonitex" => opts.sonitex,
         "sonitex_instances" => opts.sonitex_instances, "vcs" => opts.vcs,
@@ -2942,7 +3186,11 @@ module Dilla
       "render" => {
         "wav" => wav_path, "duration_s" => quality["duration_s"], "lufs" => quality["lufs_estimate"],
         "bytes" => File.size(wav_path), "sha256" => Digest::SHA256.file(wav_path).hexdigest
-      }
+      },
+      "files" => {
+        "midi" => artifact_record(midi_path),
+        "mp3" => artifact_record(mp3_path)
+      }.compact
     }
     Dilla.atomic_write("#{base}.provenance.json", JSON.pretty_generate(data))
     data
