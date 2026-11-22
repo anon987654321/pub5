@@ -11,12 +11,13 @@
       "Ab13",
       "Dbmaj9#11",
       "C7b9"
-    ]
+    ],
+    "source": "engine"
   },
   "arrangement": null,
   "drums": "dilla_shadow_full",
   "groove_profile": "dilla_shadow",
-  "groove_scale": 1.0,
+  "groove_scale": 1,
   "kit": "kit_dust",
   "voice": "rhodes_mark1",
   "rig": "dilla_night",
