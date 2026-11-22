@@ -1650,8 +1650,9 @@ or parallel writer was introduced.
 ### Backlog isolation and progress
 
 - The owner-registry executor parks an interrupted, failed or future-waiting
-  backlog item in the existing private `.master/backlog-executor.jsonl` receipt
-  stream. It keeps the item identity/digest, mission identity, classification,
+  backlog item in the same private state store as mission records
+  (`MasterPaths.fix_state`; local `.master/backlog-executor.jsonl` when no
+  remote identity is available). It keeps the item identity/digest, mission identity, classification,
   retry time, scope fingerprint and operator-release requirement.
 - The executor advances to other independently eligible owner-registry tasks
   while a parked item waits. A retry becomes eligible at its due time; a scope
