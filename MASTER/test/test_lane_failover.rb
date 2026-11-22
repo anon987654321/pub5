@@ -430,4 +430,84 @@ class TestLaneFailover < Minitest::Test
   ensure
     skip_cache&.clear!
   end
+
+  def test_failover_preserves_full_task_context_across_multiple_provider_hops
+    skip_cache = Master::Io::ModelSkipCache
+    skip_cache.clear!
+    context = [
+      { role: "system", content: "Keep the established system context." },
+      { role: "user", content: "What did we establish earlier?" },
+      { role: "assistant", content: "The earlier finding and its evidence." },
+    ]
+    expected_context = context.map do |message|
+      message.each_with_object({}) do |(key, value), copy|
+        copy[key] = value.is_a?(String) ? value.dup : value
+      end
+    end
+    expected_messages = expected_context + [
+      { role: "user", content: "Continue the existing task with its prior findings." },
+    ]
+    image = Object.new
+    temperature = 0.25
+    calls = []
+
+    door = Object.new
+    door.define_singleton_method(:send_with_cache) do |model, passed_messages, **options|
+      system = options[:system]
+      stream = options.fetch(:stream, false)
+      image = options[:image]
+      temperature = options[:temperature]
+      observed_messages = passed_messages.map do |message|
+        message.each_with_object({}) do |(key, value), copy|
+          copy[key] = value.is_a?(String) ? value.dup : value
+        end
+      end
+      calls << {
+        model:, messages: observed_messages, system:, stream:, image:, temperature:
+      }
+      if %w[primary:model openrouter/flaky].include?(model)
+        # Simulate adapters that append partial output and rewrite their input.
+        passed_messages.last[:content] << " provider-specific mutation"
+        passed_messages << { role: "assistant", content: "partial provider output" }
+        Master::Result.err("upstream unavailable", category: :provider_error)
+      else
+        Master::Result.ok("answer from #{model}")
+      end
+    end
+
+    agent = Master::Review::Agent.allocate
+    agent.instance_variable_set(:@dispatcher, door)
+    agent.instance_variable_set(:@bus, nil)
+    agent.define_singleton_method(:routed_models) { ["primary:model"] }
+    agent.define_singleton_method(:apply_reasoning_mode) { |prompt| prompt }
+    agent.define_singleton_method(:single_call_fallback_models) do
+      %w[openrouter/flaky grok-cli:live]
+    end
+    agent.define_singleton_method(:record_single_call_substitution) do |_from, _to, result, **|
+      result
+    end
+    agent.define_singleton_method(:record_causal_model_turn) { |**| }
+
+    answer = Master::Io::LaneState.stub(:usable?, true) do
+      agent.ask(
+        "Continue the existing task with its prior findings.",
+        context:,
+        image:,
+        temperature:,
+      )
+    end
+
+    assert_equal "answer from grok-cli:live", answer
+    assert_equal %w[primary:model openrouter/flaky grok-cli:live], calls.map { |call| call.fetch(:model) }
+    calls.each do |call|
+      assert_equal expected_messages, call.fetch(:messages), "every hop receives the original conversation"
+      assert_nil call.fetch(:system)
+      assert_equal false, call.fetch(:stream)
+      assert_same image, call.fetch(:image)
+      assert_equal temperature, call.fetch(:temperature)
+    end
+    assert_equal expected_context, context, "the caller's conversation remains unchanged"
+  ensure
+    skip_cache&.clear!
+  end
 end

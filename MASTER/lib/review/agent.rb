@@ -73,7 +73,7 @@ module Master
           "master.llm.ask",
           { model: selected_model, operation: operation || "unspecified" },
         ) do
-          response = @dispatcher.send_with_cache(selected_model, messages, stream: false, image:, temperature:)
+          response = @dispatcher.send_with_cache(selected_model, copy_message_context(messages), stream: false, image:, temperature:)
           retry_on_broke_lane(response, selected_model, messages, image:, temperature:, promote: true)
         end
         record_capability_outcome(operation:, selected_model:, result:)
@@ -96,7 +96,10 @@ module Master
           "master.llm.ask_once",
           { model: chosen, operation: operation || "unspecified", failover: },
         ) do
-          response = @dispatcher.send_with_cache(chosen, messages, system: sys, stream: false, image:, temperature:, format:)
+          response = @dispatcher.send_with_cache(
+            chosen, copy_message_context(messages), system: copy_message_context(sys),
+            stream: false, image:, temperature:, format:
+          )
           failover ? retry_on_broke_lane(response, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) : response
         end
         record_capability_outcome(operation:, selected_model: chosen, result:)
@@ -189,6 +192,27 @@ module Master
         end.first
       end
 
+      # Message payloads are JSON-shaped containers; duplicate those containers
+      # and their strings while leaving opaque binary/provider objects untouched.
+      def copy_message_context(value)
+        copy_message_value(value)
+      end
+
+      def copy_message_value(value)
+        case value
+        when Hash
+          value.each_with_object({}) do |(key, nested), copy|
+            copy[copy_message_value(key)] = copy_message_value(nested)
+          end
+        when Array
+          value.map { |nested| copy_message_value(nested) }
+        when String
+          value.dup
+        else
+          value
+        end
+      end
+
       def hop_broke_lane_fallbacks(chosen, first_err, messages, system:, image:, temperature:, promote:)
         last = first_err
         attempted = [chosen]
@@ -198,7 +222,12 @@ module Master
 
           attempted << fallback
           @bus&.publish("llm:ask_failover", from: chosen, to: fallback, category: last.category)
-          hopped = @dispatcher.send_with_cache(fallback, messages, system:, stream: false, image:, temperature:)
+          # Each provider receives its own message tree. A failed adapter must
+          # not contaminate the context supplied to the next fallback.
+          hopped = @dispatcher.send_with_cache(
+            fallback, copy_message_context(messages), system: copy_message_context(system),
+            stream: false, image:, temperature:
+          )
           if hopped.is_a?(Master::Result::Ok)
             Thread.current[:master_llm_answer_model] = hopped.model || fallback
             return record_single_call_substitution(chosen, fallback, hopped, promote:)

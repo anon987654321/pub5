@@ -2473,12 +2473,35 @@ Law.define(:ROBUSTNESS_immune_pattern) do
 end
 
 Law.define(:ROBUSTNESS_homeostasis) do
-  source "laws.yml ROBUSTNESS_homeostasis - return to a healthy state after disturbance"
-  ask "After interruption, budget collapse, orphaned missions or checkpoint loss, does the system return to a healthy state, recovering durable mission state or surfacing the unrecovered remainder?"
-  practice "Treat recovery as a first-class path; restore what is durable and name honestly what is not."
-  fix "Recover the durable mission state, or surface the unrecovered remainder as an explicit failure of proof."
-  bad "An interrupted run leaves orphaned missions and lost checkpoints with no recovery and no report."
-  good "After interruption the system restores durable state and reports any remainder it could not recover."
+  source "laws.yml ROBUSTNESS_homeostasis - recover tasks and context after disturbance"
+  ask <<~'ASK'.strip
+    After interruption, budget collapse, orphaned missions, checkpoint loss or
+    provider failure, does the system return to a healthy state? A failed
+    provider must not discard the active task, conversation context or declared
+    capability requirements. Failover must use another healthy, authorised and
+    compatible provider within bounded retry and resource budgets. If no
+    eligible provider answers, is resumable state preserved and the unrecovered
+    remainder reported explicitly?
+  ASK
+  practice <<~'PRACTICE'.strip
+    Keep the task and its evidence intact while recovering. Move only to a
+    healthy, authorised and compatible provider; preserve resumable state when
+    none answers.
+  PRACTICE
+  fix <<~'FIX'.strip
+    Recover durable mission state and the original task context. Route around
+    failed providers only within declared capability and resource budgets.
+    Otherwise surface the exact unrecovered remainder as a failure of proof.
+  FIX
+  bad <<~'X'
+    A provider fails, the fallback restarts from a truncated prompt or weaker
+    unsupported capability, and the interrupted task is lost without a report.
+  X
+  good <<~'X'
+    The failed lane is parked; the next healthy compatible lane receives the
+    original context. Exhaustion returns a typed failure while preserving
+    resumable mission state.
+  X
 end
 
 Law.define(:ROBUSTNESS_morphological_exploration) do

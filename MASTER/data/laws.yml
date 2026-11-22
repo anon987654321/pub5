@@ -311,9 +311,12 @@ ROBUSTNESS_homeostasis:
   parent: ROBUSTNESS
   statement: >
     The system returns to a healthy state after interruption, budget
-    collapse, orphaned missions or checkpoint loss. Failure to recover
-    durable mission state or to surface the unrecovered remainder is a
-    robustness failure.
+    collapse, orphaned missions, checkpoint loss or provider failure.
+    A failed provider must not discard the active task, conversation context
+    or declared capability requirements. The system routes only to another
+    healthy, authorised and compatible provider within bounded retry and
+    resource budgets. When no eligible provider answers, it preserves
+    resumable mission state and reports the unrecovered remainder explicitly.
   resolution: review
 
 ROBUSTNESS_morphological_exploration:
