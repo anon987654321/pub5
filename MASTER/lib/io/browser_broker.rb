@@ -55,6 +55,44 @@ module Master
         def persistent? = persistent
       end
 
+      # Adapters are built at application boot, but a real broker is admitted
+      # per Core operation. This fibre-local reference lets those existing
+      # adapters share that one scoped broker without retaining a boot-wide
+      # :fix capability or borrowing another conversation's lease.
+      class Scope
+        STORAGE_KEY = :master_core_browser_broker
+
+        def with(broker)
+          previous = Fiber[STORAGE_KEY]
+          Fiber[STORAGE_KEY] = broker
+          yield
+        ensure
+          Fiber[STORAGE_KEY] = previous
+        end
+
+        def available?
+          current = Fiber[STORAGE_KEY]
+          current&.available? == true
+        end
+
+        def open(**attributes) = current!.open(**attributes)
+
+        def close(id)
+          current = Fiber[STORAGE_KEY]
+          current ? current.close(id) : false
+        end
+
+        def close_all = current!.close_all
+        def sessions = Fiber[STORAGE_KEY]&.sessions || []
+        def size = Fiber[STORAGE_KEY]&.size || 0
+
+        private
+
+        def current!
+          Fiber[STORAGE_KEY] || raise(Denied, "browser: no Core-scoped broker is active")
+        end
+      end
+
       # Spawns a headless Chromium whose CDP endpoint the broker owns, and tears
       # its process group down. Ferrum never spawns a process; it attaches to
       # `cdp_url`. The flags are explicit and safe: no `--no-sandbox`, no
