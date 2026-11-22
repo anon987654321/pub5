@@ -20,7 +20,15 @@ if(!window.Tone){
 }
 
 const INSTANCE_KEY="rg69_inst",INSTANCE_TTL=8e3,selfId=`${Date.now()}-${Math.random().toString(16).slice(2)}`;
-const bc=("BroadcastChannel"in window)?new BroadcastChannel("rg69"):null;
+let bc=null;
+try{
+if("BroadcastChannel"in window)bc=new BroadcastChannel("rg69");
+}catch(error){
+console.warn("RG-69 cross-tab coordination unavailable:",error);
+}
+function readStorage(key){try{return window.localStorage.getItem(key)}catch(error){return null}}
+function writeStorage(key,value){try{window.localStorage.setItem(key,value);return true}catch(error){return false}}
+function removeStorage(key){try{window.localStorage.removeItem(key);return true}catch(error){return false}}
 const $id=s=>document.getElementById(s),DP=s=>$id(s).parentElement;
 const vizCanvas=$id("viz");
 let vizContext=null;
@@ -342,10 +350,10 @@ const finalBlend={id:"final",gap:8,pp:8,bh:60,sh:52,ac:35};
 const tpCache=new Map();
 const tpMemo=(k,v)=>{const key=`${k}-${JSON.stringify(v)}`;if(!tpCache.has(key))tpCache.set(key,tp(v));return tpCache.get(key)};
 
-function readOwner(){try{return JSON.parse(localStorage.getItem(INSTANCE_KEY)||"null")}catch(e){log("owner-read: "+e.message,"w");return null}}
-function claimOwner(){const o=readOwner();if(o?.id&&o.id!==selfId&&(Date.now()-o.ts)<INSTANCE_TTL){bc?.postMessage({t:"stop",to:o.id})}localStorage.setItem(INSTANCE_KEY,JSON.stringify({id:selfId,ts:Date.now()}))}
-function keepOwner(){localStorage.setItem(INSTANCE_KEY,JSON.stringify({id:selfId,ts:Date.now()}))}
-function releaseOwner(){const o=readOwner();if(o?.id===selfId)localStorage.removeItem(INSTANCE_KEY)}
+function readOwner(){try{return JSON.parse(readStorage(INSTANCE_KEY)||"null")}catch(e){log("owner-read: "+e.message,"w");return null}}
+function claimOwner(){const o=readOwner();if(o?.id&&o.id!==selfId&&(Date.now()-o.ts)<INSTANCE_TTL){try{bc?.postMessage({t:"stop",to:o.id})}catch(error){console.warn("RG-69 cross-tab message unavailable:",error)}}writeStorage(INSTANCE_KEY,JSON.stringify({id:selfId,ts:Date.now()}))}
+function keepOwner(){writeStorage(INSTANCE_KEY,JSON.stringify({id:selfId,ts:Date.now()}))}
+function releaseOwner(){const o=readOwner();if(o?.id===selfId)removeStorage(INSTANCE_KEY)}
 
 function applyLayout(cfg,nm){
 document.querySelector("main").style.gap=`${cfg.gap}px`;
@@ -1231,7 +1239,7 @@ function toggleTheme(){
 st_.theme=st_.theme==='dark'?'light':'dark';
 document.documentElement.setAttribute('data-theme',st_.theme);
 refreshVizColors();
-localStorage.setItem('rg69_theme',st_.theme);
+writeStorage('rg69_theme',st_.theme);
 log(`theme: ${st_.theme}`);
 }
 
@@ -1458,7 +1466,7 @@ log("remote stop","e");
 });
 }
 
-const savedTheme=localStorage.getItem('rg69_theme')||'dark';
+const savedTheme=readStorage('rg69_theme')||'dark';
 st_.theme=savedTheme;
 document.documentElement.setAttribute('data-theme',st_.theme);
 refreshVizColors();
