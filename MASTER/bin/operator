@@ -326,7 +326,7 @@ def launch_local_deploy_collector(session:, log_path:, app:, sha:)
     session, log_path, app, sha,
     in: File::NULL, out: File::NULL, err: File::NULL, pgroup: true
   )
-  Process.detach(pid)
+  [pid, Process.detach(pid)]
 end
 
 command = ARGV.shift
@@ -1219,14 +1219,13 @@ when "vps"
       launch_output, launched = ssh_capture(Shellwords.join(["zsh", "-fc", remote_script]), attempts: 1)
       log.append("remote launch (#{launched ? 'started' : 'failed'}):\n#{launch_output}\n")
       die("vps", "remote deploy launch failed; local log: #{log.path}", 1) unless launched
-      pid = launch_local_deploy_collector(session:, log_path: log.path, app:, sha:)
+      pid, waiter = launch_local_deploy_collector(session:, log_path: log.path, app:, sha:)
       log.append("local collector pid: #{pid}\n")
       if detach
         puts "vps-deploy: detached; local transcript: #{log.path}"
         puts "vps-deploy: paste link will be added when capture and canaries finish"
         exit 0
       end
-      waiter = Process.detach(pid)
       puts "vps-deploy: capturing to #{log.path}"
       exit tail_local_deploy_log(log.path, waiter)
     else
