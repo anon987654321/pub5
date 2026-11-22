@@ -70,7 +70,10 @@ module Master
           @browser = browser
         end
 
-        def create_page = Page.new(broker: @broker, lease_id: @lease_id, page: @browser.create_page)
+        def create_page
+          @broker.assert_active!(@lease_id)
+          Page.new(broker: @broker, lease_id: @lease_id, page: @browser.create_page)
+        end
 
         def quit(wait: true)
           if quit_wait_supported?
@@ -159,13 +162,26 @@ module Master
           @broker = broker
           @lease_id = lease_id
           @page = page
-          @network = Network.new(page.network)
+          @network = Network.new(page.network, broker:, lease_id:)
         end
 
-        def url = @page.url.to_s
+        def url
+          authorize!
+          @page.url.to_s
+        end
+
         def current_url = url
-        def title = @page.title.to_s
-        def body = @page.body.to_s
+
+        def title
+          authorize!
+          @page.title.to_s
+        end
+
+        def body
+          authorize!
+          @page.body.to_s
+        end
+
         def go_to(value)
           @broker.navigate(@lease_id, value)
           @page.go_to(value.to_s)
@@ -173,22 +189,31 @@ module Master
         end
 
         def at_css(selector)
+          authorize!
           node = @page.at_css(selector.to_s)
-          node && Node.new(node)
+          node && Node.new(node, broker: @broker, lease_id: @lease_id)
         end
 
-        def css(selector) = @page.css(selector.to_s).map { |node| Node.new(node) }
+        def css(selector)
+          authorize!
+          @page.css(selector.to_s).map { |node| Node.new(node, broker: @broker, lease_id: @lease_id) }
+        end
+
         def network = @network
 
         def on(event, &callback)
+          authorize!
           raise Denied, "browser: only request interception events are exposed" unless event.to_sym == :request
           raise ArgumentError, "browser: request callback required" unless callback
 
-          @page.on(:request) { |request| callback.call(Request.new(request)) }
+          @page.on(:request) do |request|
+            callback.call(Request.new(request, broker: @broker, lease_id: @lease_id))
+          end
           true
         end
 
         def harden_network
+          authorize!
           @page.command("Page.addScriptToEvaluateOnNewDocument", source: NETWORK_SANDBOX_SCRIPT)
           @page.command("Network.setCacheDisabled", cacheDisabled: true)
           @page.command("Network.setBypassServiceWorker", bypass: true)
@@ -196,6 +221,7 @@ module Master
         end
 
         def snapshot
+          authorize!
           source = @page.evaluate(SNAPSHOT_SCRIPT).to_s
           raise Denied, "browser: DOM snapshot exceeds the observation budget" if source.bytesize > BrowserBroker::MAX_OBSERVATION_BYTES * 16
 
@@ -203,6 +229,7 @@ module Master
         end
 
         def screenshot(path: nil, full: false, format: "png", encoding: :binary)
+          authorize!
           raise Denied, "browser: only PNG screenshots are allowed" unless format.to_s == "png"
           raise Denied, "browser: screenshot encoding must be binary or base64" unless %i[binary base64].include?(encoding)
 
@@ -223,6 +250,8 @@ module Master
 
         private
 
+        def authorize! = @broker.assert_active!(@lease_id)
+
         def persist_screenshot(path, bytes)
           target = File.expand_path(path.to_s)
           raise Denied, "browser: screenshot destination already exists" if File.exist?(target) || File.symlink?(target)
@@ -240,55 +269,102 @@ module Master
       end
 
       class Node
-        def initialize(node)
+        def initialize(node, broker:, lease_id:)
           @node = node
+          @broker = broker
+          @lease_id = lease_id
         end
 
-        def text = @node.text.to_s
-        def tag_name = @node.tag_name.to_s
-        def attribute(name) = @node.attribute(name.to_s)&.to_s
-        def property(name) = @node.property(name.to_s)&.to_s
-        def visible? = @node.visible? == true
+        def text
+          authorize!
+          @node.text.to_s
+        end
+
+        def tag_name
+          authorize!
+          @node.tag_name.to_s
+        end
+
+        def attribute(name)
+          authorize!
+          @node.attribute(name.to_s)&.to_s
+        end
+
+        def property(name)
+          authorize!
+          @node.property(name.to_s)&.to_s
+        end
+
+        def visible?
+          authorize!
+          @node.visible? == true
+        end
+
         def click
+          authorize!
           @node.click
           true
         end
-        def focus = Focus.new(@node.focus)
+
+        def focus
+          authorize!
+          Focus.new(@node.focus, broker: @broker, lease_id: @lease_id)
+        end
+
+        private
+
+        def authorize! = @broker.assert_active!(@lease_id)
       end
 
       class Focus
-        def initialize(focus)
+        def initialize(focus, broker:, lease_id:)
           @focus = focus
+          @broker = broker
+          @lease_id = lease_id
         end
 
         def set(value)
+          authorize!
           @focus.set(value.to_s)
           true
         end
 
         def type(value, key = nil)
+          authorize!
           raise Denied, "browser: unsupported keyboard key" unless key.nil? || key.to_s == "Enter"
 
           key ? @focus.type(value.to_s, :Enter) : @focus.type(value.to_s)
           true
         end
+
+        private
+
+        def authorize! = @broker.assert_active!(@lease_id)
       end
 
       class Network
-        def initialize(network)
+        def initialize(network, broker:, lease_id:)
           @network = network
+          @broker = broker
+          @lease_id = lease_id
         end
 
         def intercept
+          authorize!
           @network.intercept
           true
         end
 
         def wait_for_idle(timeout:)
+          authorize!
           seconds = Float(timeout).clamp(0.0, 30.0)
           @network.wait_for_idle(timeout: seconds)
           true
         end
+
+        private
+
+        def authorize! = @broker.assert_active!(@lease_id)
       end
 
       class Request
@@ -299,13 +375,24 @@ module Master
         ].freeze
         MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 
-        def initialize(request)
+        def initialize(request, broker:, lease_id:)
           @request = request
+          @broker = broker
+          @lease_id = lease_id
         end
 
-        def url = @request.url.to_s
-        def method = @request.method.to_s
+        def url
+          authorize!
+          @request.url.to_s
+        end
+
+        def method
+          authorize!
+          @request.method.to_s
+        end
+
         def headers
+          authorize!
           source = @request.headers || {}
           SAFE_HEADERS.each_with_object({}) do |name, result|
             pair = source.find { |key, _value| key.to_s.downcase == name }
@@ -314,11 +401,13 @@ module Master
         end
 
         def abort
+          authorize!
           @request.abort
           true
         end
 
         def respond(responseCode:, responseHeaders: {}, body: "")
+          authorize!
           code = Integer(responseCode)
           raise Denied, "browser: invalid intercepted response code" unless code.between?(100, 599)
           raise Denied, "browser: invalid intercepted response headers" unless responseHeaders.is_a?(Hash) && responseHeaders.size <= 40
@@ -328,6 +417,10 @@ module Master
           @request.respond(responseCode: code, responseHeaders:, body: payload)
           true
         end
+
+        private
+
+        def authorize! = @broker.assert_active!(@lease_id)
       end
 
       # What the engine returns from #start; only the broker stores it and only
@@ -586,6 +679,17 @@ module Master
 
       def available? = @capabilities.allow?(:browser)
 
+      # Existing facade objects are revocable capabilities, not durable handles.
+      # Recheck the broker lease before every operation so a saved Page, Node,
+      # Focus, Network or Request cannot outlive the session that admitted it.
+      def assert_active!(id)
+        require_capability!
+        lease!(id)
+        raise Denied, "browser: session is no longer active" unless refresh!(id)
+
+        true
+      end
+
       def sessions = @mutex.synchronize { @handles.keys.sort }
       def size = @mutex.synchronize { @handles.size }
 
@@ -672,7 +776,8 @@ module Master
         raise Denied, "browser: session is bound to #{lease.host}; refused #{host}" unless host == lease.host
 
         check_destination!(uri.to_s)
-        refresh!(id)
+        raise Denied, "browser: session is no longer active" unless refresh!(id)
+
         lease
       end
 
@@ -680,7 +785,8 @@ module Master
       def observe(id, snapshot)
         require_capability!
         lease!(id)
-        refresh!(id)
+        raise Denied, "browser: session is no longer active" unless refresh!(id)
+
         text = snapshot.to_s.byteslice(0, MAX_OBSERVATION_BYTES)
         { lease_id: id, untrusted: true, note: UNTRUSTED_NOTE, body: text }
       end
@@ -707,7 +813,14 @@ module Master
 
         require "ferrum"
         browser = Ferrum::Browser.new(**options)
-        refresh!(id)
+        unless refresh!(id)
+          begin
+            browser.quit
+          rescue StandardError
+            nil
+          end
+          raise Denied, "browser: session closed while attaching"
+        end
         Attachment.new(broker: self, lease_id: id.to_s, browser:)
       rescue LoadError
         raise Denied, "browser: Ferrum is not installed"
@@ -718,7 +831,8 @@ module Master
       def screenshot(id, bytes)
         require_capability!
         lease!(id)
-        refresh!(id)
+        raise Denied, "browser: session is no longer active" unless refresh!(id)
+
         data = bytes.to_s.b
         raise Denied, "browser: screenshot is not PNG" unless data.start_with?(PNG_MAGIC)
         raise Denied, "browser: screenshot exceeds #{MAX_SCREENSHOT_BYTES} bytes" if data.bytesize > MAX_SCREENSHOT_BYTES
@@ -787,10 +901,12 @@ module Master
 
       def refresh!(id)
         @mutex.synchronize do
-          lease = @leases[id]
-          next unless lease
+          key = id.to_s
+          lease = @leases[key]
+          next false unless lease
 
-          @leases[id] = lease.with(expires_at: @clock.call + @ttl_seconds)
+          @leases[key] = lease.with(expires_at: @clock.call + @ttl_seconds)
+          true
         end
       end
 
