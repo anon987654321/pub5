@@ -175,7 +175,7 @@ def validate_pending_deploy_records!(records)
         (value.is_a?(String) && value.match?(/\A[0-9a-f]{7,40}\z/i))
     end
     raise "invalid deploy-run log path" unless record["run_log"].is_a?(String) &&
-      record["run_log"].match?(/\A\/[A-Za-z0-9_.\/-]{1,2048}\z/)
+      record["run_log"].match?(/\A(?:\/[A-Za-z0-9_.\/-]{1,2048}|local:\/\/deploys\/[A-Za-z0-9_.-]{1,240}\.log)\z/)
   end
   records
 end
