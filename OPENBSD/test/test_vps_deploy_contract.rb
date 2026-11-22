@@ -965,6 +965,7 @@ class VpsDeployContractTest < Minitest::Test
     master = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")
     tasks = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
+    runtime = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"), encoding: "UTF-8")
     refute_includes SOURCE, "rails_assets_precompile_as_app"
     refute_includes SOURCE, "ensure_smart_turn_assets"
     refute_includes master, "bundle install"

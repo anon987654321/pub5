@@ -147,7 +147,7 @@ class VpsDeployFlowTest < Minitest::Test
       assert_includes out, "preflight ran on #{'0' * 40} but this run would deploy #{tip}"
       out, status = run_pin(box, VPS_DEPLOY_PREFLIGHT_SHA: tip)
       assert_equal 0, status, out
-      assert_includes out, "preflight passed on the operator's machine"
+      assert_includes out, "workstation preflight passed"
       refute_includes out, "preflight on #{tip} (syntax"
     end
   end
@@ -188,7 +188,8 @@ class VpsDeployFlowTest < Minitest::Test
   def test_later_steps_check_the_pin_and_never_pull
     refute_match(/git -C "\$repo" pull/, SOURCE)
     assert_match(/rev-parse HEAD\) == "\$VPS_DEPLOY_SHA"/, SOURCE)
-    assert_includes MASTER_SH, '[ "$(git rev-parse HEAD)" = "$VPS_DEPLOY_SHA" ]'
+    assert_includes MASTER_SH, '[ "$head" = "$VPS_DEPLOY_SHA" ]'
+    assert_includes SOURCE, "unset VPS_DEPLOY_ADMITTED_SHA"
     assert_operator SOURCE.index("deploy_refuse()"), :<, SOURCE.index(ORDER_BLOCK), "the pin comes before any deploy"
   end
 
