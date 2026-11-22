@@ -25,9 +25,11 @@ software pilots. It does not assume owned ships, satellites, weapons, NATO
 procurement or partner agreements. Norwegian Financial reframes the former
 quant concept as a partner-first financial-software and future-bank strategy.
 Quantitative fund management remains separate from banking and customer
-deposits. NEOLIMB is an exploratory regenerative-medicine research concept;
-its full-limb regeneration ambition is long-term research, not a clinical
-product or a promised outcome.
+deposits. NEOLIMB is an exploratory translational-research concept for reconstructive
+medicine. It is distinct from pub.healthcare and Fremtidens helse-OS: it builds
+neither hospital infrastructure nor a general health-IT operating system.
+Full-limb regeneration remains long-term research, not a clinical product or
+a promised outcome.
 
 The funding summary reads only the explicit `Innovasjon Norge` row in each
 financing table. It does not treat total project capital, political fundraising
