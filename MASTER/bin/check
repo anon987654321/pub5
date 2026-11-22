@@ -276,7 +276,8 @@ def check_git_metadata(root)
   main_sha = main_ref && check_git_value(root, "rev-parse", "--verify", main_ref)
   worktree = check_git_value(root, "status", "--porcelain", "--untracked-files=all")
   remote = check_git_value(root, "config", "--get", "remote.origin.url")
-  repository = remote.to_s.sub(%r{\A(?:git@github\.com:|https://github\.com/)}, "").sub(/\.git\z/, "")
+  repository_candidate = remote.to_s.sub(%r{\A(?:git@github\.com:|https://github\.com/)}, "").sub(/\.git\z/, "")
+  repository = repository_candidate if repository_candidate.match?(/\A[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\z/)
 
   {
     repository: repository || File.basename(root),
