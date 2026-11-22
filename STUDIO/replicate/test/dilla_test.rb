@@ -504,6 +504,8 @@ class TestDillaRender < Minitest::Test
       %w[.quality.json .session.json .provenance.json].each do |suffix|
         assert File.file?("#{base}#{suffix}"), "missing sidecar #{suffix}"
       end
+      session = JSON.parse(File.read("#{base}.session.json"))
+      assert_equal "engine", session.dig("progression", "source")
       quality = JSON.parse(File.read("#{base}.quality.json"))
       assert_operator quality.fetch("lufs_estimate"), :<, -7.0, "boom-bap masters must not sit at streaming loudness"
       assert_operator quality.fetch("lufs_estimate"), :>, -16.0
