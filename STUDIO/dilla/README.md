@@ -71,12 +71,12 @@ arranged: voicings, pattern, fills, sample plan) and `.provenance.json`
 (seed, performer, every flag, invocation mode/style, renderer and
 `analog_core.rb` digests, every `data/*.json` digest, and the supplied
 sample loop's path/size/SHA-256 when it is available). A missing or symlinked sample source is recorded as
-unavailable, not treated as a reproducible input. These fingerprints make
-future replay checks possible; they do not yet provide a replay command or
-guarantee that external tools, Ruby version or an absent source file can be
-reconstructed. A render reproduces from its seed only when its complete inputs
-are still available; without one the seed and performer rotate per run —
-deleting a take loses it for good, so keep what you like.
+unavailable, not treated as a reproducible input. The guarded replay command below now checks the exact Ruby engine/version/platform,
+renderer/data source set, original WAV and content hashes of the session and
+quality sidecars before it attempts a WAV-only rerender. It still refuses
+sample-loop takes until the decoder version and rights attestation can be
+proved. A seed alone never reconstructs a take whose other inputs or renderer
+have changed.
 
 These profiles and controls describe compositional techniques, timing and
 production choices; they do not promise imitation of a named artist or exact
