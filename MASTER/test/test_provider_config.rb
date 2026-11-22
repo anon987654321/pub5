@@ -80,6 +80,7 @@ class TestProviderConfig < Minitest::Test
     blind = Regexp.new(models.dig("vision_families", "blind").join("|"), Regexp::IGNORECASE)
     assert reads.match?(model_id)
     refute blind.match?(model_id)
-    assert_includes models.fetch("tool_capable_prefixes"), model_id
+    refute_includes models.fetch("tool_capable_prefixes"), model_id,
+                    "the hosted sender must use the governed ReAct fallback until native tool payloads are supported"
   end
 end
