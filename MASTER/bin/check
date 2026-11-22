@@ -18,7 +18,7 @@ CHECK_HELP = <<~HELP.freeze
     agent        agent/Law tooling and registry checks
     web          browser-facing tests and static web contracts
     ci           canonical CI floor; MASTER_CI_* may widen it
-    full         CI plus all probes and the full audit
+    full         CI, every owned tree's native tests/parsers, probes and audit
 
   Options:
     --list             show the exact steps for the selected profile; run nothing
@@ -96,7 +96,7 @@ end
 #   agent        law/agent changes: selftest + data singularity
 #   web          the face: static web UI (+ live web when MASTER_WEB_LIVE=1)
 #   ci           the canonical local CI floor; MASTER_CI_FULL/WEB/BROWSER widen it
-#   full         operator-grade check: ci + bin/probe all + rake audit
+#   full         operator-grade check: ci + test:all_trees + bin/probe all + rake audit
 #
 # `bin/operator check` runs this as one stage of the repo-wide chain, alongside the
 # scanner, the RAILS checks, the ratchets and the sprawl census.
@@ -232,8 +232,9 @@ PROFILES = {
   "web"         => [law_syntax, rake["test:web_ui"], web_node_step, rake["test:web"], web_live_step],
   "ci"          => ci_steps,
   # End-to-end completion sweep: cover every owned tree as well as the MASTER
-  # release profile. Exit 3 from test:all_trees means runtime evidence was
-  # unavailable (for example Node is missing), not that the tests passed.
+  # release profile. It runs each tree's native tests, language checks and parsers.
+  # Exit 3 means runtime evidence was unavailable (for example Node is missing),
+  # not that the tests passed; CheckBrief preserves that as INCONCLUSIVE.
   "full"        => [*full_ci, rake["test:all_trees"], run_bin["probe", "all"], rake["audit"]],
 }.freeze
 
