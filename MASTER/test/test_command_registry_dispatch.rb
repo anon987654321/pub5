@@ -1018,9 +1018,9 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_match(/conflicting --mode/, Registry.extract_fix_mode("--mode=audit --mode=all RAILS").last)
   end
 
-  def test_plain_fix_writes_by_default_but_explicit_reads_do_not
-    assert Registry.writes_requested?(apply: nil, only: nil), "the canonical /fix default is write-enabled"
-    assert Registry.writes_requested?(apply: true, only: nil)
+  def test_plain_fix_is_read_only_and_explicit_apply_authorizes_writes
+    refute Registry.writes_requested?(apply: nil, only: nil), "bare /fix is a read-only preview"
+    assert Registry.writes_requested?(apply: true, only: nil), "--apply is the explicit write authorization"
     refute Registry.writes_requested?(apply: false, only: nil), "--dry-run and --read-only must not write"
     assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--read-only")
     assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--dry-run")
@@ -1028,9 +1028,10 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--read-only --apply")
     assert_equal [false, nil, true, nil, ""], Registry.parse_pass_flags("--apply --read-only")
     refute Registry.writes_requested?(apply: nil, only: "critique,map"), "read-only stages must not write"
-    assert Registry.writes_requested?(apply: true, only: "style,fix"), "an explicit fix stage can write"
+    assert Registry.writes_requested?(apply: true, only: "style,fix"), "an explicitly authorized fix stage can write"
 
     assert_includes Registry.help_text("fix"), "--read-only"
+    assert_includes Registry.help_text("fix"), "--apply"
 
     refute Master::CLI::Pipeline::Pass.allocate.send(:default_apply?),
            "internal Pass callers remain fail-closed unless the dispatcher explicitly grants writes"
