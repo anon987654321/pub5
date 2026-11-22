@@ -110,7 +110,7 @@ function requirePrintReceipt(name, receiptPath, htmlPath, pdfPath) {
   }
   const declared = PUBLISHED_INPUTS[name];
   if (!declared) throw new Error(name + ': source-input manifest is missing');
-  const expectedInputs = [...declared.html, ...declared.pdf].sort();
+  const expectedInputs = [...new Set([...declared.html, ...declared.pdf])].sort();
   const recordedInputs = receipt.source_inputs_sha256;
   if (!recordedInputs || typeof recordedInputs !== 'object' || Array.isArray(recordedInputs) ||
       JSON.stringify(Object.keys(recordedInputs).sort()) !== JSON.stringify(expectedInputs)) {
