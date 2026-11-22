@@ -65,6 +65,13 @@ module Master
       # profile that holds sign-in state, which teardown must not delete.
       Handle = Data.define(:pid, :pgroup, :cdp_url, :profile_dir, :host, :persistent) do
         def persistent? = persistent
+
+        # Process identity and profile paths stay broker-private alongside CDP.
+        def diagnostic = { host: host.to_s.dup.freeze, persistent: persistent? }.freeze
+
+        def inspect = "#<#{self.class} #{diagnostic.map { |key, value| "#{key}=#{value.inspect}" }.join(" ")}>"
+        def to_s = inspect
+        def to_json(*arguments) = diagnostic.to_json(*arguments)
       end
 
       # Adapters are built at application boot, but a real broker is admitted
