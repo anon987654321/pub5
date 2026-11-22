@@ -39,9 +39,10 @@ taste layer: what makes good music good here.
 - RG-69's browser synth adapter lives in `data/dilla.json` and references
   the existing `kit_break`, `prophet_5` and `basement` entries. Its Tone.js
   mappings are an explicit translation, not a claim that WebAudio reproduces
-  the Ruby engine's analog-style instruments. Live play and WAV export share
-  one instrument builder; source parity still requires browser export and a
-  human audition before sound quality is accepted.
+  the Ruby engine's analog-style instruments. Kit levels/pans, voice pan, room
+  sends and vinyl/crackle controls are mapped in both paths. Live play and WAV
+  export share one instrument builder; source parity still requires a browser
+  export and human audition before sound quality is accepted.
 
 ## The reference lane (canon input)
 
