@@ -59,4 +59,10 @@ class TestPostproCliContract < Minitest::Test
     assert_includes cli, "verify_unused_output!(comparison_path)"
     assert_includes cli, "verify_unused_output!(output)"
   end
+
+  def test_explicit_lut_export_refuses_to_replace_an_existing_file
+    vocab = source("postpro/lib/vocab_check.rb")
+
+    assert_includes vocab, "verify_unused_output!(out)"
+  end
 end
