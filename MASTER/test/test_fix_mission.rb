@@ -318,6 +318,46 @@ def test_a_worker_that_lost_its_lease_cannot_defer_or_block
   end
 end
 
+# Scheduler recovery from a read snapshot is fenced if the lease changes
+# before the recovery write acquires the mission lock.
+def test_scheduler_recovery_writes_require_the_observed_mission_lease
+  Dir.mktmpdir do |root|
+    mission = Master::Fix::Mission.new(root:).start!(
+      goal: "recover the current task", scope: root, origin: "fold", auto_continue: true,
+    )
+    expected_id = mission.id
+    expected_owner = mission.record.fetch("lease_owner")
+    lease_to_another_worker(root)
+    supervisor = Master::Fix::Mission.new(root:)
+
+    assert_raises(Master::Fix::Mission::Fenced) do
+      supervisor.defer!(
+        reason: "transient: provider overload",
+        expected_id:, expected_lease_owner: expected_owner,
+      )
+    end
+    assert_raises(Master::Fix::Mission::Fenced) do
+      supervisor.block!(
+        reason: "human review required",
+        expected_id:, expected_lease_owner: expected_owner,
+      )
+    end
+    assert_raises(Master::Fix::Mission::Fenced) do
+      supervisor.fail!(
+        "permanent: permission denied",
+        expected_id:, expected_lease_owner: expected_owner,
+      )
+    end
+
+    saved = Master::Fix::Mission.current(root:)
+    assert_equal expected_id, saved["id"]
+    assert_equal "running", saved["state"]
+    assert_equal "other-host:4242:cafebabecafebabe", saved["lease_owner"]
+    assert_equal 0, saved.fetch("retry_count")
+    assert_nil saved["wake_reason"]
+  end
+end
+
 # Writes reload the current record; a replaced mission's handle used to adopt the new id.
 def test_a_replaced_mission_cannot_finish_its_successor
   Dir.mktmpdir do |root|
