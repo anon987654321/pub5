@@ -206,6 +206,23 @@ class TestRatchets < Minitest::Test
                  "an unreadable ratchet is evidence that measurement failed, not a pass"
   end
 
+  def test_inconclusive_and_not_run_measurements_never_clear_a_ratchet
+    %w[INCONCLUSIVE NOT_RUN].each do |outcome|
+      row = Operator::Ratchets::Row.new(
+        name: "fixture",
+        current: nil,
+        ceiling: 8,
+        direction: :down,
+        source: "fixture",
+        note: "#{outcome}: measurement unavailable",
+      )
+
+      refute row.readable?, outcome
+      refute row.ok?, outcome
+      assert_equal "unreadable", row.state, outcome
+    end
+  end
+
   def test_command_and_name_ratchets_are_in_the_register
     names = rows.map(&:name)
 
