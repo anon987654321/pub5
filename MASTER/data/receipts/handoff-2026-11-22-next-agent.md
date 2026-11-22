@@ -1722,6 +1722,7 @@ Additional commits on main:
   real parked-scope fingerprint.
 - `0d26c4c6e49262a96b24200d758dc5c8df00d84d` — pin the operator backlog status/resume command surface.
 - `e7df083a927478215a645d5e296f7b36069363eb` — test that adaptive scheduling stops when no route has satisfied dependencies.
+- `df5457dda334b3378003e643d3cac6d64fc5b943` — remove a duplicate read-only status test after retaining the stronger parked-count/redaction regression.
 - `8634ad75975972640718726559c73ed7d41da0bc` — concurrent browser lease
   shutdown revocation change; unrelated to backlog recovery, included in
   the verified branch tip.
@@ -1753,7 +1754,7 @@ Lease-fencing commits on main:
 READ_BACK:
 - GitHub read-after-write completed for all changed implementation, test,
   operator and documentation files. The latest verified implementation HEAD
-  before this receipt amendment was `e7df083a927478215a645d5e296f7b36069363eb`.
+  before this receipt amendment was `df5457dda334b3378003e643d3cac6d64fc5b943`.
 - Permanent terminal failures overwrite any stale transient wake reason, so
   parked-item receipts retain the final failure classification.
 - Receipt-directory checks follow the private-state contract: the owner uses
