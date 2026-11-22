@@ -233,7 +233,11 @@ module Master
       { heartbeat:, triggers:, propose_tree:, watcher: }
     end
 
-    # MASTER_AUTOFIX=1 enables in-process convergence; off by default to avoid autocommits racing deploys.
+    # MASTER_AUTOFIX=1 remains a per-invocation repair policy. It does not
+    # start a whole-tree background mutator: ambient startup has no exact,
+    # allowlisted task contract. Unattended repository work enters only through
+    # Backlog::Executor and its TaskSteward, which revalidates the owner registry,
+    # exact scope paths, bounded acceptance command, lease and terminal receipt.
     def build_fix_loop(root:, infra:, agent:, scanner:, axioms:, laws:, learnings:, bus:, git:)
       kernel = Fix::Kernel.new(root:, actor: "fix", bus:)
       fix_loop = kernel.build_fix_loop(
@@ -243,21 +247,14 @@ module Master
         law_resolver: infra[:law_resolver], homeostat: infra[:homeostat],
         reference_graph: infra[:reference_graph]
       )
-      start_fix_loop_background(fix_loop, root:, bus:) if ENV["MASTER_AUTOFIX"] == "1"
-      fix_loop
-    end
-
-    # Pre-flight: refuse to start background self-mutation if MASTER's own
-    # lib/ tree is already dirty by its own laws -- autofix compounding on
-    # top of an existing violation is exactly the runaway-loop shape the
-    # oscillation/cycle/plateau detectors exist to catch after the fact.
-    def start_fix_loop_background(fix_loop, root:, bus:)
-      report = Fix::SelfCheck.new(root:).check!(bus:)
-      unless report.clean?
-        bus&.publish("fix_loop:background_refused", reason: "selfcheck dirty", total: report.total)
-        return
+      if ENV["MASTER_AUTOFIX"] == "1"
+        bus&.publish(
+          "fix_loop:background_refused",
+          reason: "unscoped background mutation is disabled; use the owner-registry task executor",
+          executor: "MASTER_BACKLOG_AUTORUN",
+        )
       end
-      fix_loop.start_background!(root)
+      fix_loop
     end
 
     # A dead background thread must remain visible.
