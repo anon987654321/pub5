@@ -230,7 +230,7 @@ module Master
       end
 
       def backoff_seconds(retries)
-        [RETRY_BASE_SECONDS * (2**[retries - 1, 5].min), RETRY_MAX_SECONDS].min
+        [RETRY_BASE_SECONDS * (2**[retries - 1, 6].min), RETRY_MAX_SECONDS].min
       end
 
       def assign_payload(key, value)
