@@ -419,7 +419,7 @@ class TestDillaHistoricalMaterial < Minitest::Test
 
   def test_archived_corpus_chord_timing_is_explicit_and_loop_complete
     policy = Dilla.recovered.fetch("evidence_policy")
-    assert_equal 1, policy.fetch("version")
+    assert_equal 2, policy.fetch("version") # Policy version 2 added published_form and source_refs
     assert_match(/does not certify/, policy.dig("source_status", "restored_legacy_unverified"))
     assert_match(/not a recovered transcription/, policy.fetch("melody_policy"))
 
@@ -638,7 +638,7 @@ class TestDillaRender < Minitest::Test
   def test_render_writes_quality_session_and_provenance_sidecars
     Dir.mktmpdir do |dir|
       base = File.join(dir, "take")
-      _out, err, status = Open3.capture3(RbConfig.ruby, dilla, "--progression", "1", "--bars", "1",
+      _out, err, status = Open3.capture3(RbConfig.ruby, dilla, "--progression", "blue_hour", "--bars", "1",
                                          "--seed", "7", "--out", base, chdir: File.dirname(dilla))
       assert status.success?, err
       %w[.quality.json .session.json .provenance.json].each do |suffix|

@@ -166,6 +166,9 @@ const KEYS_PATS={
 'basic':[['C4','E4','G4'],0,0,0,['F3','A3','C4'],0,0,0,['G3','B3','D4'],0,0,0,['C4','E4','G4'],0,0,0],
 'dustykeys1':[['C4','Eb4','G4'],0,['Bb3','D4','F4'],0,['Ab3','C4','Eb4'],0,0,0],
 // Soul/Gospel progressions
+// Preset names nod to artists; the loops are generic genre studies, not claimed
+// transcriptions. Sourced artist material lives in data/recovered_music.json
+// under the 2026-11-22 ORIGINAL AUTHENTICS directive.
 'soulwalk':[['C4','E4','G4','B4'],0,0,0,['A3','C4','E4','G4'],0,0,0,['D4','F4','A4','C5'],0,0,0,['G3','B3','D4','F4'],0,0,0],
 'hathaway':[['C4','E4','G4','B4'],0,0,0,['B3','D4','F4','A4'],0,0,0,['A3','C4','E4','G4'],0,0,0,['G3','B3','D4','F4'],0,0,0],
 'marvin':[['C4','E4','G4'],0,0,0,['E3','G3','B3'],0,0,0,['F3','A3','C4'],0,0,0,['F3','Ab3','C4'],0,0,0],

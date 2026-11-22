@@ -1,9 +1,10 @@
 {
-  "comment": "Recovered Dilla/artist material is kept distinct from the engine's own progressions. Artist rows below restore the historical pub4 ARTIST_VERIFIED_PROGRESSIONS table with source notes and aliases deduplicated; engine_modules are studies, not track transcriptions. Melody motifs are only the measured/legacy pitch material actually retained by that source, not complete note-for-note song melodies. Published chart references (including Flying Lotus Never Catch Me) have their own source tier and are not mislabeled as the narrower artist_verified corpus.",
+  "comment": "Recovered Dilla/artist material is kept distinct from the engine's own progressions. Artist rows below restore the historical pub4 ARTIST_VERIFIED_PROGRESSIONS table with source notes and aliases deduplicated; engine_modules are studies, not track transcriptions. Melody motifs are only the measured/legacy pitch material actually retained by that source, not complete note-for-note song melodies. Published chart references (including Flying Lotus Never Catch Me) have their own source tier and are not mislabeled as the narrower artist_verified corpus. The 2026-11-22 ORIGINAL AUTHENTICS audit (see authentics_audit) gave every render-facing row structured citations, fixed two misattributions and aligned the Accordion row to its published chart.",
   "evidence_policy": {
-    "version": 1,
+    "version": 2,
     "source_status": {
-      "restored_legacy_unverified": "Restored from the earlier pub4 table. This describes repository provenance only; it does not certify the musical transcription independently."
+      "restored_legacy_unverified": "Restored from the earlier pub4 table. This describes repository provenance only; it does not certify the musical transcription independently.",
+      "community_chart_reference": "Aligned to a community-maintained published chart (Hooktheory TheoryTab). Chord spellings follow the cited chart; timing stays an engine even-slot model."
     },
     "timing_status": {
       "published_form": "A cited source explicitly describes the section or chord durations represented by chord_bars.",
@@ -20,7 +21,22 @@
       "https://www.ethanhein.com/wp/2022/patrice-rushens-memory-songs/",
       "https://scholarworks.sfasu.edu/etds/197/",
       "The Guardian, J Dilla: the Mozart of hip-hop (2011)",
-      "21st Century Funk: A Microtiming Analysis of the Beats of J Dilla (academia.edu 29812748)"
+      "21st Century Funk: A Microtiming Analysis of the Beats of J Dilla (academia.edu 29812748)",
+      "https://genius.com/Slum-village-intro-fantastic-vol-2-sample",
+      "https://soul-sides.com/2011/06/who-flipped-it-better-gap-mangiones-diana-in-the-autumn-wind.html",
+      "https://www.hooktheory.com/theorytab/view/j-dilla/time---the-donut-of-the-heart",
+      "https://www.hooktheory.com/theorytab/view/madvillain/accordion",
+      "https://www.whosampled.com/Common/Thelonius",
+      "https://www.whosampled.com/Madvillain/Accordion",
+      "https://www.whosampled.com/Slum-Village/Look-of-Love-(Remix)",
+      "https://www.whosampled.com/Slum-Village/Players",
+      "https://www.whosampled.com/sample/110086/Slum-Village-Fantastic-Herbie-Hancock-You'll-Know-When-You-Get-There/",
+      "https://www.whosampled.com/sample/117132/Slum-Village-Look-of-Love-(Remix)-Minnie-Riperton-Inside-My-Love/",
+      "https://www.whosampled.com/sample/1580/Slum-Village-Fall-in-Love-Gap-Mangione-Diana-in-the-Autumn-Wind/",
+      "https://www.whosampled.com/sample/19743/Slum-Village-5-Elementz-5-Ela-(Remix)-Patrice-Rushen-Remind-Me/",
+      "https://www.whosampled.com/sample/2546/Slum-Village-Players-The-Singers-Unlimited-Clair/",
+      "https://www.whosampled.com/sample/2772/J-Dilla-Common-D'Angelo-So-Far-to-Go-The-Isley-Brothers-Don't-Say-Goodnight-(It's-Time-for-Love)-(Parts-1-&-2)/",
+      "https://www.whosampled.com/sample/300/Slum-Village-Kanye-West-John-Legend-Selfish-Aretha-Franklin-Call-Me/"
     ],
     "note": "Recovered 2026-11 from the surviving production_dna tables after the STUDIO/dilla tree was found untracked. Chord symbols keep the transcribers' spellings.",
     "historical_corpus_restoration": {
@@ -50,14 +66,37 @@
         "i7",
         "i"
       ],
-      "sample": "Gap Mangione — Diana in the Autumn Wind",
+      "sample": "Gap Mangione — Diana in the Autumn Wind (1968)",
       "feel": {
         "bass": "dub",
         "melody": "sweet_soul",
         "swing": 54,
         "grit": 0.7
       },
-      "bars_per_chord": 1
+      "bars_per_chord": 1,
+      "source_refs": [
+        {
+          "source_id": "whosampled_fall_in_love_diana_in_the_autumn_wind",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/1580/Slum-Village-Fall-in-Love-Gap-Mangione-Diana-in-the-Autumn-Wind/",
+          "claims": [
+            "Fall in Love samples Gap Mangione's Diana in the Autumn Wind"
+          ],
+          "community_maintained": true
+        },
+        {
+          "source_id": "soulsides_diana_in_the_autumn_wind",
+          "kind": "sample_identification",
+          "publisher": "Soul-Sides",
+          "url": "https://soul-sides.com/2011/06/who-flipped-it-better-gap-mangiones-diana-in-the-autumn-wind.html",
+          "claims": [
+            "Diana in the Autumn Wind is Gap Mangione's 1968 cut",
+            "Slum Village's Fall In Love is one of its documented flips"
+          ]
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "get_dis_money",
@@ -87,7 +126,23 @@
         "melody": "dorian_moan",
         "swing": 56,
         "grit": 0.8
-      }
+      },
+      "source_refs": [
+        {
+          "source_id": "ethan_hein_2022_get_dis_money",
+          "kind": "educational_transcription",
+          "publisher": "Ethan Hein",
+          "url": "https://www.ethanhein.com/wp/2022/get-dis-money/",
+          "claims": [
+            "Herbie Hancock sample identification",
+            "six-chord progression transcription",
+            "seven-bar sampled loop",
+            "qualitative microtiming and arrangement analysis"
+          ],
+          "published": "2022-03-16"
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "players",
@@ -107,13 +162,40 @@
         "ii7",
         "v7"
       ],
-      "sample": "The Singers Unlimited, Clair (1974)",
+      "sample": "The Singers Unlimited — Clair (Gilbert O'Sullivan cover); Sugarhill Gang — Rapper's Delight",
       "feel": {
         "bass": "walk",
         "melody": "horn_stabs",
         "swing": 54,
         "grit": 0.6
-      }
+      },
+      "note": "WhoSampled documents the Clair sample as vocals/lyrics, so the chord bed below is the recovered read of the Dilla track's own harmony, not the sampled record's chords.",
+      "source_refs": [
+        {
+          "source_id": "whosampled_players_clair",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/2546/Slum-Village-Players-The-Singers-Unlimited-Clair/",
+          "claims": [
+            "Players samples The Singers Unlimited's Clair at 0:07 and throughout",
+            "The Singers Unlimited's Clair is a cover of Gilbert O'Sullivan's Clair",
+            "the sampled material is vocals/lyrics"
+          ],
+          "community_maintained": true
+        },
+        {
+          "source_id": "whosampled_players_track_page",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/Slum-Village/Players",
+          "claims": [
+            "Players contains samples of Clair by The Singers Unlimited and Rapper's Delight by Sugarhill Gang",
+            "Players was produced by J Dilla"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "clair_moon",
@@ -139,7 +221,22 @@
         "melody": "sweet_soul",
         "swing": 53,
         "grit": 0.5
-      }
+      },
+      "note": "Engine adaptation study kept for compatibility under the 2026-11-22 ORIGINAL AUTHENTICS directive. The Space Intro sample claim is documented on Common feat. Slum Village's Thelonius, not on a Tomita-sourced track; the Tomita Clair de Lune claim remains unverified.",
+      "source_refs": [
+        {
+          "source_id": "whosampled_common_thelonius",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/Common/Thelonius",
+          "claims": [
+            "Thelonius contains samples of Vulcan Mind Probe by George Duke, Space Intro by Steve Miller Band and Michelle by The Singers Unlimited",
+            "Thelonius is Common featuring Slum Village"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "time_donut",
@@ -181,7 +278,22 @@
         67,
         65
       ],
-      "melody_status": "historical measured sample/chop contour; not a complete note-for-note lead transcription"
+      "melody_status": "historical measured sample/chop contour; not a complete note-for-note lead transcription",
+      "source_refs": [
+        {
+          "source_id": "hooktheory_time_donut",
+          "kind": "community_theorytab",
+          "publisher": "Hooktheory TheoryTab",
+          "url": "https://www.hooktheory.com/theorytab/view/j-dilla/time---the-donut-of-the-heart",
+          "claims": [
+            "A-flat major key",
+            "4/4 meter",
+            "reported tempo of 95 BPM"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "selfish_g",
@@ -201,17 +313,31 @@
         "ii7",
         "V7"
       ],
-      "sample": "Slum Village, Selfish",
+      "sample": "Aretha Franklin — Call Me (1970), via Slum Village feat. Kanye West and John Legend — Selfish",
       "feel": {
         "bass": "walk",
         "melody": "sweet_soul",
         "swing": 54,
         "grit": 0.55
-      }
+      },
+      "note": "Underlying sample identified via WhoSampled. The page lists a second sample whose title was not captured in this audit. The chord bed remains the legacy recovered read.",
+      "source_refs": [
+        {
+          "source_id": "whosampled_selfish_call_me",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/300/Slum-Village-Kanye-West-John-Legend-Selfish-Aretha-Franklin-Call-Me/",
+          "claims": [
+            "Selfish samples Aretha Franklin's Call Me"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "two_way_d",
-      "title": "5 Ela dual-tonal (recovered)",
+      "title": "5 Ela (Remix) dual-tonal (recovered)",
       "key": "Dm/A",
       "bpm": 92,
       "loop_bars": 3,
@@ -225,13 +351,26 @@
         "ii7",
         "#vii7"
       ],
-      "sample": "The Gap Band, Yearning for Your Love; Patrice Rushen, Remind Me",
+      "sample": "Patrice Rushen — Remind Me (1982), documented for Slum Village feat. 5 Elementz — 5 Ela (Remix); The Gap Band — Yearning for Your Love (legacy claim, unverified in this audit)",
       "feel": {
         "bass": "dub",
         "melody": "dorian_moan",
         "swing": 56,
         "grit": 0.8
-      }
+      },
+      "source_refs": [
+        {
+          "source_id": "whosampled_5ela_remix_remind_me",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/19743/Slum-Village-5-Elementz-5-Ela-(Remix)-Patrice-Rushen-Remind-Me/",
+          "claims": [
+            "5 Ela (Remix) samples Patrice Rushen's Remind Me"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "so_far_to_go",
@@ -251,17 +390,30 @@
         "V7",
         "vi7"
       ],
-      "sample": "The Isley Brothers, Don't Say Goodnight (1980)",
+      "sample": "The Isley Brothers — Don't Say Goodnight (It's Time for Love) (Parts 1 & 2); Junie Morrison — Tight Rope (second sample listed on WhoSampled)",
       "feel": {
         "bass": "dub",
         "melody": "sweet_soul",
         "swing": 55,
         "grit": 0.65
-      }
+      },
+      "source_refs": [
+        {
+          "source_id": "whosampled_so_far_to_go_dont_say_goodnight",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/2772/J-Dilla-Common-D'Angelo-So-Far-to-Go-The-Isley-Brothers-Don't-Say-Goodnight-(It's-Time-for-Love)-(Parts-1-&-2)/",
+          "claims": [
+            "So Far to Go samples The Isley Brothers' Don't Say Goodnight (It's Time for Love) (Parts 1 & 2)"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "look_of_love",
-      "title": "Look of Love (recovered voicing)",
+      "title": "Look of Love (Remix) (recovered voicing)",
       "key": "G",
       "bpm": 89,
       "loop_bars": 4,
@@ -277,69 +429,96 @@
         "IVmaj7",
         "vi7"
       ],
-      "sample": "Minnie Riperton, Inside My Love (1975), repitched",
+      "sample": "Minnie Riperton — Inside My Love (1975), repitched; Trina Broussard — Inside My Love (cover)",
       "feel": {
         "bass": "dub",
         "melody": "dorian_moan",
         "swing": 54.5,
         "grit": 0.7
-      }
+      },
+      "note": "WhoSampled documents the Inside My Love sample on the Remix; the un-remixed album cut keeps this row's legacy read.",
+      "source_refs": [
+        {
+          "source_id": "whosampled_look_of_love_remix_inside_my_love",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/117132/Slum-Village-Look-of-Love-(Remix)-Minnie-Riperton-Inside-My-Love/",
+          "claims": [
+            "Look of Love (Remix) samples Minnie Riperton's Inside My Love"
+          ],
+          "community_maintained": true
+        },
+        {
+          "source_id": "whosampled_look_of_love_remix_track_page",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/Slum-Village/Look-of-Love-(Remix)",
+          "claims": [
+            "Look of Love (Remix) also samples Trina Broussard's Inside My Love",
+            "Look of Love (Remix) was produced by J Dilla"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     },
     {
       "id": "accordion_dm",
-      "title": "Accordion skeleton (recovered)",
+      "title": "Accordion (published chart read)",
       "key": "Dm",
-      "bpm": 96,
-      "loop_bars": 4,
+      "bpm": 98,
+      "loop_bars": 1,
       "chords": [
+        "Gm11",
+        "C7/E",
         "Dm9",
-        "Gm9",
-        "Am7",
-        "Dm11"
+        "Cmaj"
       ],
       "roman": [
-        "i",
-        "iv",
-        "v",
-        "i"
+        "iv11",
+        "VII65",
+        "i(add9)",
+        "VII(no3)"
       ],
-      "sample": "Madlib, Accordion (Madvillainy)",
+      "sample": "Madvillain — Accordion (Madvillainy); underlying: Daedelus — Experience; Sonic Foundry — HipHop Beat 43",
       "feel": {
         "bass": "dub",
         "melody": "music_box",
         "swing": 52.5,
         "grit": 0.85
-      }
-    },
-    {
-      "id": "untitled_a",
-      "title": "Untitled / Herbie flip (recovered)",
-      "key": "A",
-      "bpm": 90,
-      "loop_bars": 4,
-      "chords": [
-        "Amaj9",
-        "Dm11",
-        "E7#9",
-        "D9"
-      ],
-      "roman": [
-        "I",
-        "iv",
-        "V7",
-        "IV7"
-      ],
-      "sample": "Herbie Hancock, You'll Know When You Get There (1971)",
-      "feel": {
-        "bass": "walk",
-        "melody": "horn_stabs",
-        "swing": 54,
-        "grit": 0.7
-      }
+      },
+      "bars_per_chord": 0.25,
+      "source_status": "community_chart_reference",
+      "note": "Aligned 2026-11-22 to the published Hooktheory chart: iv11 - VII65 - i(add9) - i7 - VII(no3) inside one bar. The engine reads four even slots, treats i(add9)/i7 as one Dm9, and spells the closing C as a plain triad because the sequencer has no open-fifth quality (engine_grid_assumption).",
+      "source_refs": [
+        {
+          "source_id": "hooktheory_madvillain_accordion",
+          "kind": "community_theorytab",
+          "publisher": "Hooktheory TheoryTab",
+          "url": "https://www.hooktheory.com/theorytab/view/madvillain/accordion",
+          "claims": [
+            "D minor key",
+            "98 BPM",
+            "Instrumental bar reads iv11 - VII65 - i(add9) - i7 - VII(no3)",
+            "chord spellings Gm11, C7/E, Dm(add9), Dm7, C5(no3)"
+          ],
+          "community_maintained": true
+        },
+        {
+          "source_id": "whosampled_madvillain_accordion",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/Madvillain/Accordion",
+          "claims": [
+            "Accordion contains samples of Experience by Daedelus and HipHop Beat 43 by Sonic Foundry"
+          ],
+          "community_maintained": true
+        }
+      ]
     },
     {
       "id": "thelonious_eb",
-      "title": "Thelonious two-chord (recovered)",
+      "title": "Thelonius (Common feat. Slum Village) two-chord (recovered)",
       "key": "Ebm",
       "bpm": 92,
       "loop_bars": 4,
@@ -360,7 +539,74 @@
         "melody": "dorian_moan",
         "swing": 56,
         "grit": 0.8
-      }
+      },
+      "sample": "Common feat. Slum Village — Thelonius (2000); underlying: George Duke — Vulcan Mind Probe; Steve Miller Band — Space Intro; The Singers Unlimited — Michelle",
+      "note": "Sample identification added 2026-11-22; the row previously carried no source. The chord bed remains the legacy recovered read.",
+      "source_refs": [
+        {
+          "source_id": "whosampled_common_thelonius",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/Common/Thelonius",
+          "claims": [
+            "Thelonius contains samples of Vulcan Mind Probe by George Duke, Space Intro by Steve Miller Band and Michelle by The Singers Unlimited",
+            "Thelonius is Common featuring Slum Village"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
+    },
+    {
+      "id": "fantastic_herbie_flip",
+      "title": "Fantastic / Intro — Herbie flip (recovered)",
+      "key": "A",
+      "bpm": 90,
+      "loop_bars": 4,
+      "chords": [
+        "Amaj9",
+        "Dm11",
+        "E7#9",
+        "D9"
+      ],
+      "roman": [
+        "I",
+        "iv",
+        "V7",
+        "IV7"
+      ],
+      "sample": "Herbie Hancock — You'll Know When You Get There (Mwandishi, 1971), documented for Slum Village — Fantastic and Intro (Fantastic, Vol. 2)",
+      "feel": {
+        "bass": "walk",
+        "melody": "horn_stabs",
+        "swing": 54,
+        "grit": 0.7
+      },
+      "bars_per_chord": 1,
+      "note": "Renamed 2026-11-22: the earlier 'Untitled' attribution had no documented source pair; WhoSampled and Genius place the Herbie sample on Fantastic and the Fantastic, Vol. 2 Intro. The chord bed remains the legacy recovered read.",
+      "source_refs": [
+        {
+          "source_id": "whosampled_fantastic_youll_know_when_you_get_there",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/110086/Slum-Village-Fantastic-Herbie-Hancock-You'll-Know-When-You-Get-There/",
+          "claims": [
+            "Fantastic samples Herbie Hancock's You'll Know When You Get There"
+          ],
+          "community_maintained": true
+        },
+        {
+          "source_id": "genius_intro_fantastic_vol_2_samples",
+          "kind": "sample_identification",
+          "publisher": "Genius",
+          "url": "https://genius.com/Slum-village-intro-fantastic-vol-2-sample",
+          "claims": [
+            "Intro (Fantastic, Vol. 2) samples Herbie Hancock's You'll Know When You Get There (1971)"
+          ],
+          "community_maintained": true
+        }
+      ],
+      "source_status": "restored_legacy_unverified"
     }
   ],
   "artist_verified_progressions": [
@@ -444,7 +690,7 @@
       "title": "Fall in Love",
       "artist": "Slum Village",
       "producer": "J Dilla",
-      "sample": "Gap Mangione — Diana in the Autumn Wind",
+      "sample": "Gap Mangione — Diana in the Autumn Wind (1968)",
       "key": "Ebm",
       "bpm": 88,
       "loop_bars": 4,
@@ -475,7 +721,29 @@
       ],
       "chord_timing_status": "engine_grid_assumption",
       "chord_timing_note": "Equal chord slots are a rendering model. Individual source onset times have not been independently digitized.",
-      "melody_status": "not_transcribed"
+      "melody_status": "not_transcribed",
+      "source_refs": [
+        {
+          "source_id": "whosampled_fall_in_love_diana_in_the_autumn_wind",
+          "kind": "sample_identification",
+          "publisher": "WhoSampled",
+          "url": "https://www.whosampled.com/sample/1580/Slum-Village-Fall-in-Love-Gap-Mangione-Diana-in-the-Autumn-Wind/",
+          "claims": [
+            "Fall in Love samples Gap Mangione's Diana in the Autumn Wind"
+          ],
+          "community_maintained": true
+        },
+        {
+          "source_id": "soulsides_diana_in_the_autumn_wind",
+          "kind": "sample_identification",
+          "publisher": "Soul-Sides",
+          "url": "https://soul-sides.com/2011/06/who-flipped-it-better-gap-mangiones-diana-in-the-autumn-wind.html",
+          "claims": [
+            "Diana in the Autumn Wind is Gap Mangione's 1968 cut",
+            "Slum Village's Fall In Love is one of its documented flips"
+          ]
+        }
+      ]
     },
     {
       "id": "get_dis_money",
@@ -1190,5 +1458,40 @@
       "note": "Preserved as a published-chart reference, not folded into the narrower artist_verified table.",
       "bars": 8
     }
-  ]
+  ],
+  "authentics_audit": {
+    "date": "2026-11-22",
+    "directive": "Original authentics only: no invented chord progressions. Loops come from tried-and-tested artist material - the favourite artists and the artists they sampled - cited row by row.",
+    "method": "Every render-facing progression row's sample claim was checked against published sample identifications (WhoSampled), community charts (Hooktheory TheoryTab), educational transcriptions (Ethan Hein) and sample notes (Genius, Soul-Sides). Claims are recorded per row in source_refs with the exact statement each source supports.",
+    "verified": [
+      "fall_in_love <- Gap Mangione, Diana in the Autumn Wind (1968)",
+      "get_dis_money <- Herbie Hancock, Come Running To Me (Sunlight)",
+      "players <- The Singers Unlimited, Clair (vocals/lyrics) + Sugarhill Gang, Rapper's Delight",
+      "selfish_g <- Aretha Franklin, Call Me (1970)",
+      "two_way_d <- Patrice Rushen, Remind Me (1982) on 5 Ela (Remix)",
+      "so_far_to_go <- The Isley Brothers, Don't Say Goodnight (It's Time for Love) (Parts 1 & 2) + Junie Morrison, Tight Rope",
+      "look_of_love (Remix) <- Minnie Riperton, Inside My Love (1975) + Trina Broussard cover",
+      "accordion (chart) <- Madvillain, Accordion <- Daedelus, Experience + Sonic Foundry loop; D minor chart aligned to Hooktheory",
+      "fantastic_herbie_flip <- Herbie Hancock, You'll Know When You Get There (1971) on Fantastic / Fantastic, Vol. 2 Intro",
+      "thelonious_eb <- Common feat. Slum Village, Thelonius <- George Duke Vulcan Mind Probe + Steve Miller Band Space Intro + Singers Unlimited Michelle",
+      "time_donut <- Jackson 5, All I Do Is Think of You + Sweet Charles, Yes It's You (Hooktheory chart for the loop)"
+    ],
+    "fixed": [
+      "untitled_a renamed fantastic_herbie_flip: the Herbie sample is documented on Fantastic / Intro, not on a track called Untitled",
+      "look_of_love retitled to the Remix, where the Riperton sample is documented",
+      "accordion_dm chords replaced with the published chart read (Gm11 - C7/E - Dm9 - Cmaj)",
+      "so_far_to_go sample title completed and second source added",
+      "players, selfish_g, thelonious_eb, two_way_d sample identifications added or upgraded to the underlying records"
+    ],
+    "still_unverified": [
+      "clair_moon's Tomita Clair de Lune claim (engine adaptation kept as a study)",
+      "two_way_d's Gap Band Yearning for Your Love claim",
+      "selfish_g's second listed sample (title not captured)",
+      "chord beds of players, selfish_g, two_way_d, so_far_to_go, look_of_love, fantastic_herbie_flip, thelonious_eb remain legacy recovered reads (restored_legacy_unverified)"
+    ],
+    "next_sourcing_candidates": [
+      "rg69 preset 'marvin' matches the published What's Going On-style I-iii-IV-iv shape; source it from a published chart or strip the artist nod",
+      "rg69 'hathaway', 'wonder', 'tender' presets: generic genre studies; rename or source"
+    ]
+  }
 }
