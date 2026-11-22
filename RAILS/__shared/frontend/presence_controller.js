@@ -2,9 +2,10 @@ import { Controller } from "@hotwired/stimulus"
 
 // Heartbeat so the room knows who still has it open.
 //
-// The count itself arrives over the conversation's Turbo stream, so this only
-// ever posts -- it never reads a response. Beat interval must stay comfortably
-// under ChannelPresence::TTL (45s) or readers flicker out between beats.
+// Push-capable browsers lease their own endpoint. A web push is suppressed only
+// for the browser that has this conversation open; the reader's phone and other
+// browsers can still notify. Readers without a push subscription retain the
+// ordinary user-level presence heartbeat.
 const BEAT_MS = 20_000
 
 export default class extends Controller {
@@ -13,16 +14,19 @@ export default class extends Controller {
   connect() {
     if (!this.urlValue) return
 
-    this.#beat()
-    this.timer = setInterval(() => this.#beat(), BEAT_MS)
+    this.stopped = false
+    this.paused = document.hidden
+    this.ready = false
+    this.left = true
+    this.endpoint = null
 
-    // Stop beating while the tab is hidden: a backgrounded tab is not somebody
-    // sitting in the room, and browsers throttle timers there anyway, which
-    // would make the count lie in both directions.
     this.onVisibility = () => {
-      if (document.hidden) { this.#stopTimer() } else if (!this.timer) {
-        this.#beat()
-        this.timer = setInterval(() => this.#beat(), BEAT_MS)
+      if (document.hidden) {
+        this.paused = true
+        this.#leave()
+      } else {
+        this.paused = false
+        this.#start()
       }
     }
     document.addEventListener("visibilitychange", this.onVisibility)
@@ -30,17 +34,46 @@ export default class extends Controller {
     // Leave promptly rather than waiting out the TTL. keepalive lets the request
     // outlive the page; pagehide fires on mobile background/close where unload
     // does not.
-    this.onLeave = () => this.#leave()
+    this.onLeave = () => {
+      this.paused = true
+      this.#leave()
+    }
     window.addEventListener("pagehide", this.onLeave)
     document.addEventListener("turbo:before-visit", this.onLeave)
+
+    this.#resolveEndpoint().then(endpoint => {
+      if (this.stopped) return
+      this.endpoint = endpoint
+      this.ready = true
+      this.#start()
+    })
   }
 
   disconnect() {
+    this.stopped = true
+    this.paused = true
     this.#stopTimer()
     document.removeEventListener("visibilitychange", this.onVisibility)
     window.removeEventListener("pagehide", this.onLeave)
     document.removeEventListener("turbo:before-visit", this.onLeave)
     this.#leave()
+  }
+
+  #resolveEndpoint() {
+    if (!("serviceWorker" in navigator)) return Promise.resolve(null)
+
+    return navigator.serviceWorker.ready
+      .then(registration => registration.pushManager?.getSubscription())
+      .then(subscription => subscription?.endpoint || null)
+      .catch(() => null)
+  }
+
+  #start() {
+    if (this.stopped || this.paused || !this.ready || document.hidden || this.timer) return
+
+    this.left = false
+    this.#beat()
+    this.timer = setInterval(() => this.#beat(), BEAT_MS)
   }
 
   #stopTimer() {
@@ -52,23 +85,46 @@ export default class extends Controller {
     return document.querySelector('meta[name="csrf-token"]')?.content || ""
   }
 
-  #beat() {
-    fetch(this.urlValue, {
-      method: "POST",
-      headers: { "X-CSRF-Token": this.#token() },
+  #payload() {
+    return this.endpoint ? { device_type: "web", endpoint: this.endpoint } : null
+  }
+
+  #send(method, payload = null) {
+    const headers = { "X-CSRF-Token": this.#token() }
+    const options = {
+      method,
+      headers,
       credentials: "same-origin",
       keepalive: true
-    }).catch(() => {})
+    }
+
+    if (payload) {
+      headers["Content-Type"] = "application/json"
+      options.body = JSON.stringify(payload)
+    }
+
+    return fetch(this.urlValue, options).catch(() => null)
+  }
+
+  #beat() {
+    if (this.stopped || this.paused || this.left || document.hidden) return
+
+    const payload = this.#payload()
+    this.#send("POST", payload).then(response => {
+      // A subscription may have expired or been removed since the page loaded.
+      // Fall back to ordinary presence rather than making the room look closed.
+      if (response?.status === 422 && payload && !this.stopped && !this.paused && !this.left) {
+        this.endpoint = null
+        this.#send("POST")
+      }
+    })
   }
 
   #leave() {
-    if (!this.urlValue || this.left) return
+    this.#stopTimer()
+    if (!this.urlValue || this.left || !this.ready) return
+
     this.left = true
-    fetch(this.urlValue, {
-      method: "DELETE",
-      headers: { "X-CSRF-Token": this.#token() },
-      credentials: "same-origin",
-      keepalive: true
-    }).catch(() => {})
+    this.#send("DELETE", this.#payload())
   }
 }
