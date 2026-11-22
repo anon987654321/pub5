@@ -1,6 +1,6 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/zsh
 # Bootstrap the canonical Ubuntu-or-Debian installer from Termux's private home.
-set -eu
+set -euo pipefail
 
 fail() { printf 'master-install0: %s\n' "$*" >&2; exit 1; }
 command -v pkg >/dev/null 2>&1 || fail "run this inside Termux, not Android's shell."
