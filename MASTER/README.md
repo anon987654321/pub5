@@ -225,6 +225,10 @@ requirement. `bin/check --help` explains the supplemental profiles,
 `bin/check --profile=agent --format=json` emits a machine-readable receipt
 with exact local/main revisions, checkout cleanliness, per-step timings,
 exit states and the combined-log reference (without raw command output).
+Each JSON run also writes a private, atomic artifact under
+`.master/check/receipts/<receipt-id>.json`; the path and persistence state
+are included in the emitted receipt. A failed artifact write is
+`DELIVERY_FAILED` and returns a non-zero exit.
 `bin/check --show-log --tail=120` retrieves the latest diagnostic log without
 booting MASTER. While a repair is active, `bin/operator fix status` and
 `bin/operator fix tail` expose its progress and transcript.
