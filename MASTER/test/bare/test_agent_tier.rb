@@ -94,7 +94,7 @@ module Master
 
           LawIndex.write_index!
 
-          assert File.binread(output).end_with?("\\n"),
+          assert File.binread(output).end_with?("\n"),
                  "generated JSON must end with the repository-required newline"
         ensure
           LawIndex.instance_variable_set(:@index_path, previous_path)
