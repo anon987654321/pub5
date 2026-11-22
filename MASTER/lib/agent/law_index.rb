@@ -99,7 +99,7 @@ module Master
           inputs = law_index_inputs
           rows = law_index_rows(inputs)
           payload = law_index_payload(rows)
-          File.write(index_path, JSON.pretty_generate(payload))
+          File.write(index_path, "#{JSON.pretty_generate(payload)}\\n")
           @index = payload
         end
 
