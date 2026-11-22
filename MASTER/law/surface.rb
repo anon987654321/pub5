@@ -25,7 +25,7 @@ module Master
         def thresholds
           Master::Design::Thresholds
         end
-        
+
         # The design scale's rules over tokens.yml#scale, shared with ScaleLint and
         # AstFixer#snap_to_design_scale. Read once per process.
         def design_scale
@@ -186,7 +186,7 @@ module Master
           good "@media (min-width: 1280px) { .card { padding: 24px; min-height: 44px; } }\n.rule { margin: 1px 0; }\n"
           check do |src, path|
             next [] unless ::Master::Review::Scan::Laws.ui_path?(path)
-        
+
             scale = ::Master::Review::Scan::Laws.design_scale
             rules = ::Master::Design::Scale
             raw = src.lines
@@ -194,25 +194,25 @@ module Master
             without_block_comments(src).each_line.with_index(1) do |line, num|
               next if line.strip.start_with?("//")
               next if line.include?(rules::OPT_OUT) || (num > 1 && raw[num - 2].to_s.include?(rules::OPT_OUT))
-        
+
               line.scan(rules::DECLARATION) do
                 prop = Regexp.last_match[:prop]
                 next unless rules::SPACE_PROPS.include?(prop)
-        
+
                 scale.off_scale_lengths(Regexp.last_match[:value]).each do |step|
                   px = rules.to_px(*step.match(rules::LENGTH).captures)
                   findings << finding(line: num, message: "#{step} #{prop} off the spacing scale - " \
                                                           "use #{scale.nearest(px).to_i}px (tokens.yml scale.space_px)")
                 end
               end
-        
+
               # Token *definitions* (e.g. --space-7: 1.75rem), not just call sites — a
               # usage-only scan is structurally blind to a bad value baked into the
               # token itself. Reported, never snapped: a token's value is the operator's.
               line.scan(/--[\w-]*(?:space|gap)[\w-]*\s*:\s*(-?[\d.]+)(px|rem)\b/i) do |value, unit|
                 px = rules.to_px(value, unit.downcase)
                 next if px.zero? || scale.space_px.include?(px.abs.round(3))
-        
+
                 findings << finding(line: num, message: "#{px.to_i}px spacing token off the scale - " \
                                                         "use #{scale.nearest(px).to_i}px (tokens.yml scale.space_px)")
               end
@@ -230,7 +230,7 @@ module Master
           good ".prose { line-height: 1.5; }\n.h1 { line-height: 1.25; }\n"
           check do |src, path|
             next [] unless ::Master::Review::Scan::Laws.ui_path?(path)
-        
+
             scale = ::Master::Review::Scan::Laws.design_scale
             rules = ::Master::Design::Scale
             steps = scale.line_heights.map { |step| step == step.to_i ? step.to_i : step }.join("/")
@@ -239,10 +239,10 @@ module Master
             without_block_comments(src).each_line.with_index(1) do |line, num|
               next if line.strip.start_with?("//")
               next if line.include?(rules::OPT_OUT) || (num > 1 && raw[num - 2].to_s.include?(rules::OPT_OUT))
-        
+
               line.scan(rules::DECLARATION) do
                 next unless Regexp.last_match[:prop] == "line-height"
-        
+
                 value = Regexp.last_match[:value].strip
                 case scale.line_height_kind(value)
                 when :absolute
