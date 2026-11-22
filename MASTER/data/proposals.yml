@@ -453,3 +453,19 @@ proposals:
       would be dead evidence, not a valid exemption. Leave the vendor bytes
       and exemption registry unchanged.
     refuted_by: MASTER/checks/support/axe.rb; MASTER/test/test_axe.rb; MASTER/checks/data/craft_ledger.yml; MASTER/checks/lib/source/exemption_freshness.rb
+
+  - id: move-terminal-font-guidance-into-mobile-runtime-config
+    tree: MASTER
+    state: refuted
+    claim: "move PuTTY and Termux font instructions from the terminal guide into data/mobile.yml"
+    reason: >
+      data/mobile.yml is executable profile configuration: Master::Mobile::Profile
+      reads its env and package settings, and the file states that every key has
+      a reader in lib/mobile/. PuTTY is a desktop SSH client, not a mobile
+      profile setting. No separate mobile documentation owner exists in the
+      current tree; MASTER/README.md is the existing user-facing home for the
+      terminal and accessibility guidance. Putting prose into runtime YAML
+      would violate the configuration contract, while creating a new Markdown
+      guide would violate the no-new-Markdown rule. Keep the guidance in the
+      existing README until a genuine documentation owner is introduced.
+    refuted_by: MASTER/README.md; MASTER/data/mobile.yml; MASTER/lib/mobile/profile.rb
