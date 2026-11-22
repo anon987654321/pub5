@@ -33,8 +33,11 @@ module Deploy
 
     RUN_JS = <<~'JS'
       axe.run(document, { resultTypes: ["violations"] }).then((r) => JSON.stringify({
-        violations: r.violations.map((v) => ({ id: v.id, impact: v.impact, nodes: v.nodes.length,
-                                               target: (v.nodes[0] && v.nodes[0].target.join(" ")) || "" })),
+        violations: r.violations.map((v) => ({
+          id: v.id,
+          impact: v.impact,
+          nodes: v.nodes.map((node) => node.target.join(" "))
+        })),
         incomplete: r.incomplete.length
       }))
     JS
@@ -43,7 +46,7 @@ module Deploy
 
     def source = (@source ||= File.read(SOURCE))
 
-    # { "violations" => [{ "id", "impact", "nodes", "target" }], "incomplete" => n } for the page.
+    # { "violations" => [{ "id", "impact", "nodes" => [all node selectors] }], "incomplete" => n }.
     def run(cdp)
       cdp.evaluate(source) unless cdp.evaluate("typeof window.axe === 'object'")
       JSON.parse(cdp.evaluate(RUN_JS, await_promise: true).to_s)
@@ -53,8 +56,9 @@ module Deploy
 
     def findings(label, report)
       Array(report["violations"]).map do |row|
-        "accessibility_axe: #{label} #{row["id"]} x#{row["nodes"]} (#{row["impact"]}) - #{row["target"]} " \
-          "law=#{law(row["id"])}"
+        nodes = Array(row["nodes"])
+        detail = nodes.empty? ? "no node target" : "nodes=[#{nodes.join(" | ")}]"
+        "accessibility_axe: #{label} #{row["id"]} (#{row["impact"]}) #{detail} law=#{law(row["id"])}"
       end
     end
   end
