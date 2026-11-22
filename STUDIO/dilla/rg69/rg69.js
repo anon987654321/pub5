@@ -270,7 +270,6 @@ return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass
 const bootStylePool=bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
 let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0}};
-let wobPhase=0;
 let aud_={bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
@@ -523,9 +522,6 @@ crackFlt.Q.value=5;
 crackleNoise.connect(crackFlt);
 vinylFlt.connect(compPar);
 crackFlt.connect(compPar);
-// Reset the scheduler-driven tape wobble; never connect an LFO directly to
-// Tone.Transport.bpm in the pinned Tone.js 14.8.49 build.
-wobPhase=0;
 driftLFO.connect(kickN.oscillator.detune);
 driftLFO.connect(snareRng.detune);
 [kickN,kickSub,kickClkBP,kickBody].forEach(s=>s.connect(kickSat));
@@ -575,7 +571,7 @@ if(widener)widener.width.value=aud_.width/100;
 if(vinylNoise)vinylNoise.volume.value=-60+aud_.vinyl/100*20;
 if(crackleNoise)crackleNoise.volume.value=-65+aud_.crackle/100*20;
 if(masterDrive)masterDrive.wet.value=(100-aud_.drive)/400;
-if(driftLFO)driftLFO.frequency.value=.05+aud_.drift*.15;
+if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX;
 }
 
 // Shared helper function for triggering notes - eliminates duplication between scheduleLoop and exportWAV
@@ -634,19 +630,9 @@ synths.pads.triggerAttackRelease(pad,'2n',baseTime+seq_.p[stepIdx].t/1000,seq_.p
 }
 }
 
-// Tape wobble is stepped in musical time; aud_.bpm remains the user's base tempo.
-function applyWobble(){
-if(!st_.playing)return;
-const depth=aud_.wobble/100*PARAMS.WOBB_DEPTH_MAX;
-const rate=(0.05+aud_.wobble/100*PARAMS.WOBB_FREQ_MAX)/4;
-wobPhase=(wobPhase+rate)%1;
-Tone.Transport.bpm.value=aud_.bpm*(1+Math.sin(wobPhase*2*Math.PI)*depth);
-}
-
 function scheduleLoop(time){
 st_.idx=(st_.idx+1)%st_.stepCount;
 const scheduledTime=Number.isFinite(time)?time:Tone.now();
-applyWobble();
 // beat pulse on every quarter note
 if(st_.idx%4===0){const posEl=$id('pos-display');posEl.classList.remove('beat-active');requestAnimationFrame(()=>posEl.classList.add('beat-active'));}
 // update bar/beat display
