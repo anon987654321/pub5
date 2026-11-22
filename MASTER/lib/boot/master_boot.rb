@@ -140,7 +140,7 @@ module Master
       paths.each do |relative|
         handle.hold_lease!
         result = Fix::Mission.with_namespace("fix") do
-          command.call({ args: "#{relative} --intent=functional_change" })
+          command.call({ args: "#{relative} --mode=repair --apply --intent=functional_change" })
         end
         if result.respond_to?(:ok?) && !result.ok?
           category = result.respond_to?(:category) ? result.category : :validation
