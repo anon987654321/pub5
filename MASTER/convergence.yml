@@ -299,10 +299,10 @@ workstreams:
         - MASTER/test/test_dashboard_fleet_panel.rb
       done_when: "ruby MASTER/test/test_dashboard_fleet_panel.rb"
   - id: master_quota_facts
-    state: partial
+    state: landed
     title: model_quota and cache_efficiency stop being computed and dropped - the status strip renders them
-    implementation: MASTER/web/app/views/dashboard
-    proof: dashboard status strip on a Ruby host
+    implementation: MASTER/web/app/controllers/dashboard_controller.rb; MASTER/web/app/views/dashboard/index.html.erb; MASTER/web/public/dashboard_live.js
+    proof: MASTER/test/test_dashboard_fleet_panel.rb::test_payload_carries_the_fleet_and_the_quota_facts and ::test_the_view_and_the_poller_render_the_two_panels (added; Ruby test NOT_RUN)
   - id: dilla_grammar_voicings
     state: landed
     title: >-
