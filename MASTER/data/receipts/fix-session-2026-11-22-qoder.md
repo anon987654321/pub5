@@ -1112,3 +1112,403 @@ files. NOT_RUN: Ruby syntax, `TestSunsetMeasurements`, full MASTER suite,
 `sunset report` runtime output and JSON/YAML parser execution. The code/data
 change is delivered; runtime correctness remains INCONCLUSIVE until those
 checks run.
+
+
+## S. Completion program in pseudocode (addendum, proposal-grade)
+
+Operator request: pseudocode to finish brgen and every vertical properly and
+professionally, so non-technical people use it and love it. Proposal for intake,
+not a build order, not implemented code. Extends existing owners (existing-first),
+names the gaps.yml rows and apps.yml planned features it closes, ends every flow
+in proof the constitution accepts. Ruby-flavoured pseudocode; real implementation
+is Ruby, Hotwire, SQLite, importmaps, ERB, Stimulus, Turbo on the house stack.
+Rendered values, copy voice, money and live hosts stay operator-gated. Re-measure
+before acting; satisfied gaps are not rebuilt.
+
+### S0. Fences this program obeys
+
+    one Commerce domain, never a billing stack per engine      (commerce_shared_domain)
+    maps Places is the POI substrate every vertical queries    (maps_poi_substrate)
+    liquidity before ads; organic discovery quality-weighted   (marketplace_liquidity fence)
+    payment never buys a trust or moderation outcome           (dating/marketplace fences)
+    no dark patterns, no manufactured urgency, no hidden cost  (persuasion_honesty)
+    AdSense gated until a certified consent platform exists    (brgen_art_ad_banner note)
+    deterministic feed ranking, SQL union, no neural ranker    (brgen_feed_ranking_deterministic)
+    nb default, en available; chrome via I18n t()              (ui_polish.chrome_i18n)
+    one primary action per first screen, thumb reach, 44/48px  (layout_rules, REACH)
+    stillness by default; reduced-motion equivalent always     (motion_grammar)
+    flat UI, space not lines, one button family                (pixel_perfection, ui_polish)
+    NOT_RUN / INCONCLUSIVE never PASS                          (TRUTHFUL_STATUS)
+
+### S1. The love contract (loved, made testable)
+
+    module LoveContract
+      # Every public surface satisfies these before it ships.
+      # Each predicate maps to an existing check or an operator seam.
+      def self.accepts?(surface)
+        one_job(surface)                  # one focal point + one primary action
+          .and plain_language(surface)    # nb copy, plain, no jargon
+          .and guest_first(surface)       # value before signup; signup is a step not a wall
+          .and fast_first_paint(surface)  # first_screen + web_vitals on a low-end phone
+          .and thumb_reachable(surface)   # primary action bottom-centre; REACH_touch_target_min
+          .and honest_empty(surface)      # empty state teaches + offers the next action
+          .and visible_trust(surface)     # who is this, verified how, why safe
+          .and safe_by_default(surface)   # privacy closed by default; consent plain; report one tap
+          .and calm_notifications(surface)# attention budget; suppress while open; quiet hours
+          .and offline_tolerant(surface)  # PWA shell + cached read + honest offline notice
+          .and accessible(surface)        # keyboard_flow + accessibility_axe + reduced motion
+          .and recoverable(surface)       # every error says what happened and the next step
+          .and honest_money(surface)      # total incl mva + delivery up front; sponsored labelled
+      end
+    end
+    # prove: rendered screenshots 390/768/1280 under RAILS/*.png, keyboard walk, axe,
+    #        journey_invariant, then the named live seam. Operator gates the value.
+
+### S2. Shared spine (finish once, every vertical stands on it)
+
+    # S2a. ONE Commerce domain (closes commerce_shared_domain; consumed by all)
+    module Commerce
+      Ledger       # append-only: charge, refund, credit, payout, fee; idempotent
+      Provider     # abstraction over Vipps + Dintero; never a second billing stack
+      Campaign     # coupons, bundles, referral credit; rules as data not code per engine
+      Entitlement  # playlist_pro, dating_pro, takeaway_pro, boosts; member-visible benefits
+      Credit       # seller/referral credit; expires honestly, shown plainly
+      Payout       # seller/creator payout schedule; status the user can read
+      Receipt      # one honest receipt: line items, mva, delivery, total, provider ref
+
+      def self.checkout(order, provider:, return_to:)
+        total  = order.total_incl_mva_and_delivery        # honest_money, no end surprise
+        intent = Provider.create_intent(order, total, return_to: exact_allowlist(return_to))
+        Ledger.record(:charge_pending, order, intent)     # idempotency key = order.id
+        redirect intent.approval_url                      # hosted; no card data here
+      end
+
+      def self.webhook(event)                             # S2S behind Shared::OutboundHttp (pinned)
+        return unless Provider.verify_signature(event)
+        return if Ledger.seen?(event.id)                  # redelivery-safe (lock!+reload lesson)
+        Ledger.record(event.kind, event.order, event)
+        Entitlement.grant_for(event.order)                # benefits usable, not just recorded
+        EventEmitter.emit("commerce.settled", event.order)
+      end
+    end
+    # prove: payments_in_provider_staging seam, redelivery regression on SQLite + FOR UPDATE,
+    #        receipt rendered comparison, honest_money predicate.
+
+    # S2b. Places substrate (closes maps_poi_substrate; maps becomes a service)
+    module Places
+      def self.near(lat:, lng:, radius_km:, kind: nil)
+        POI.within(radius_km, lat, lng).filter(kind).rank_by(distance, trust)
+      end
+      def self.claim_or_suggest(user, place)
+        place.persist_or_queue_review; TrustScore.signal(:place_claim, place)
+      end
+    end
+    # marketplace, takeaway, dating nearby, events, ads all read Places.
+    # prove: >=2 verticals consume Places in a journey; maplibre vendor seam closed by operator.
+
+    # S2c. City seed + cold-start feed (closes brgen_city_population_seeds, cold_start_feed)
+    module CityFeed
+      def self.for(user, city)
+        return following_union_city_popular(user, city) if user.follows.empty?   # cold start
+        deterministic_rank(
+          scope:   city.posts.visible_to(user),
+          signals: [recency, local_relevance, trust, engagement],                # SQL union
+          diversity: cap_per_author_and_tag,
+          explain: "why_am_i_seeing_this" link on each card)
+      end
+      def self.seed(city)                          # CitySeed covers 43 registry cities; add reader
+        CitySeed.read(city).each { |row| upsert_public_domain_row(row) }
+        # seed real local public sources, attributed; never fabricate people or posts
+      end
+    end
+    # prove: cold-start journey renders a non-empty local attributed feed for a new guest
+    #        in each registry city; first_screen + content_honesty.
+
+    # S2d. Trust & safety spine (closes commerce_private_seller_verification)
+    module Trust
+      def self.badge(subject)
+        return :verified_org     if subject.organisation_number_verified?
+        return :verified_private if subject.id_verified? && subject.phone_verified?  # no org needed
+        return :new_member       # honest, not a stigma; shows what would verify them
+      end
+      def self.report_path(surface)
+        ModerationWorkflow.open(surface, reporter: current_user)   # one tap, plain, no retaliation
+      end
+    end
+    # payment never buys a badge; moderation never sells. prove: badge unit + rendered panel.
+
+    # S2e. Notification spine (closes messenger_notify_suppression; calm by default)
+    module Attention
+      def self.notify(user, event)
+        return if user.quiet_hours?(now)                # default 22:00-08:00, editable
+        return if event.conversation_open_for?(user)    # suppress while reading (the gap)
+        return if over_budget?(user, event.kind)        # daily attention budget per kind
+        deliver_later_as_digest(user, event)            # batch non-urgent; one calm summary
+      end
+    end
+    # prove: suppression regression, digest rendering, messenger_journey_in_a_browser seam.
+
+    # S2f. Onboarding spine (guest -> member, plain, Vipps-first)
+    module Onboarding
+      def self.first_run(visitor)
+        show_value_first(visitor.city)                  # guest sees city feed/market, no wall
+        offer_one_step_signup(method: :vipps)           # Vipps login mock exists; oauth seam
+        ask_only: [display_name, city]                  # minimal; rest optional later
+        explain_plain_nb("Vi bruker Vipps for å logge inn. Ingen passord å huske.")
+        consent_plainly(privacy, terms)                 # plain summary + link; sharing default closed
+      end
+    end
+    # prove: guest-first journey, oauth_callbacks_live seam, accessibility, plain-language review.
+
+### S3. brgen core (the city network)
+
+    # Closes brgen_recurring_events, creator_monetization, art_ad_banner (gated);
+    # activitypub_inbound stays blocked. Uses CityFeed, Places, Commerce, Trust.
+    module Brgen
+      def self.home(city, user)
+        one_primary_action(user.new? ? "Bli med i byen" : "Del noe med byen")
+        render CityFeed.for(user, city)
+        render upcoming_events(city, via: Places)
+        render sponsored_slot ONLY IF consent_platform_certified? && approved_copy && image_rights
+        # else no ad slot at all; the fence is real
+      end
+      def self.recurring_event(series)
+        series.each_occurrence { |occ| Event.upsert(occ, places: Places.near(...)) }
+        offer_calendar_add_and_reminder(consent: true)  # opt-in, calm
+      end
+      def self.creator_support(creator, amount)
+        Commerce.checkout(CreatorTip.new(creator, amount), provider: :vipps)
+        Entitlement.grant(creator, :creator_fund)
+        show_plain("Støtten går til skaperen. Kvittering i innboksen.")
+      end
+    end
+    # ActivityPub inbound stays blocked until remote media proxying + moderation + blocklist.
+    # prove: home first_screen, events journey, sponsored gate unit, creator tip staging seam.
+
+### S4. Marketplace (markedsplass) — liquidity first, then money
+
+    # Closes liquidity, coupons, contact_relay (blocked), paid_boosts, seller_analytics, ai_recs.
+    # Satisfied (do not rebuild): duplicates.
+    module Marketplace
+      def self.first_screen(city, user)
+        if listings_near(city).empty?
+          honest_empty("Ingen annonser i nærheten ennå.",
+                       action: "Legg ut den første", seed: suggested_local_categories)
+          show Liquidity.unmet_demand(city)             # "Folk søker etter: sykkel, sofa..."
+        else
+          render quality_weighted(listings_near(city))  # organic rank, never pay-to-rank
+        end
+        one_primary_action("Selg noe")
+      end
+      def self.list(item)                               # non-technical seller, 60 seconds
+        guide_photo_first(item)                         # camera/upload, blurhash placeholder
+        suggest_price_from_similar(item)                # honest range, not a promise
+        auto_fill_category_and_place(via: Places)
+        plain_safety_tip("Møt et trygt sted. Bruk melding i appen.")
+        publish(item) { Listing#duplicate_of runs }     # satisfied gap, keep it
+      end
+      def self.buy(listing, buyer)
+        show_total_incl_mva_and_delivery_up_front
+        Commerce.checkout(order, provider: :dintero)    # split checkout via shared domain
+        Entitlement.grant(seller, :sold_credit)
+        offer_contact_relay ONLY IF inbound_mail_ready? # blocked; else in-app message only
+      end
+      def self.boost(listing, seller)
+        label_clearly("Sponset")                        # never disguised as organic
+        rank_organic_stays_quality_weighted             # payment never buys trust
+        Commerce.checkout(Boost.new(listing), provider: :vipps)
+      end
+      def self.seller_dashboard(seller)
+        plain_counts(views, contacts, sold)             # no vanity metrics, no dark patterns
+        Liquidity.suggest_restock(seller)
+      end
+      def self.recommendations(user)
+        deterministic_similar(user.recent_views, category, city)   # SQL, no neural on 1GB
+        explain("Fordi du så på ...")
+      end
+    end
+    # prove: empty->seeded journey, 60s listing on a phone, checkout staging seam,
+    #        sponsored label rendered; contact_relay stays blocked until mail routing exists.
+
+### S5. Takeaway — the ordering flow a hungry person trusts
+
+    # Satisfied (keep): delivery_area, cart_expiry. Closes takeaway_pro_surface.
+    module Takeaway
+      def self.first_screen(city, user)
+        restaurants = Places.near(user, kind: :restaurant).open_now
+        if restaurants.empty?
+          honest_empty("Ingen restauranter leverer hit ennå.", action: "Be om din favoritt")
+        else
+          render restaurants.sort_by(delivery_time, trust)   # honest ETA
+        end
+        one_primary_action("Bestill mat")
+      end
+      def self.cart(order)
+        show_honest_countdown(order.expires_at)         # real CART_TTL, not fake urgency
+        show_total_incl_mva_and_delivery
+        plain("Bestillingen holdes i {n} minutter.")
+      end
+      def self.checkout(order, user)
+        confirm_address_within_delivery(order)          # satisfied within_delivery guard
+        Commerce.checkout(order, provider: :vipps)
+        track_order_plainly(order)                      # Mottatt -> Tilberedes -> Underveis -> Levert
+        notify_calmly(order.status_changes)
+      end
+      def self.pro(restaurant)
+        Commerce::Campaign.coupons_and_loyalty(restaurant)   # shared domain, not a new stack
+        promote(restaurant, label: "Sponset")
+      end
+    end
+    # prove: hungry-user journey end to end, cart expiry honesty, checkout staging seam,
+    #        live tracking journey, pro coupon rendered comparison.
+
+### S6. Dating — safety and liquidity are the product
+
+    # Satisfied (keep): two_sided_ranked_for. Closes dating_premium_boost.
+    module Dating
+      def self.first_screen(user)
+        return onboarding_safety_first(user) unless user.profile.consent_complete?
+        candidates = Profile.oriented_for(user)         # mutual, both ways (satisfied)
+        if candidates.empty?
+          honest_empty("Ingen i nærheten ennå.", action: "Utvid søket", seed: invite_local)
+        else
+          render candidates.rank_by(mutual_fit, trust, distance)
+        end
+        one_primary_action("Se profiler")
+      end
+      def self.safety_defaults(profile)
+        private_by_default(profile)                     # area only, never exact location
+        plain("Du bestemmer hvem som ser deg. Del aldri adresse.")
+        block_and_report_one_tap(profile)
+        verify_optional(profile)                        # Trust.badge; never required to browse
+      end
+      def self.premium(user)
+        benefits = Entitlement.usable(:dating_pro)      # member-visible, real benefits
+        show_plain(benefits, price_incl_mva)            # no dark pattern, no fake scarcity
+        Commerce.checkout(Subscription.new(user), provider: :vipps)
+        # premium never buys moderation, trust, or another person's consent
+      end
+    end
+    # prove: safety-default journey, mutual-match journey, premium benefits rendered + staging,
+    #        human review of safety copy; liquidity stays an honest market fact.
+
+### S7. Messenger — calm, private, calls when infra exists
+
+    # Closes notify_suppression (spine S2e), business_crm. Blocked: webrtc_calls.
+    module Messenger
+      def self.conversation(user, convo)
+        render messages, read_receipts_optional
+        Attention.suppress_while_open(user, convo)      # the gap, closed in spine
+        one_primary_action("Svar")
+      end
+      def self.call(convo, participants)                # blocked
+        return honest_unavailable("Taler støttes ikke ennå.") unless STUN_TURN_ready?
+        WebRTC.connect(convo, stun: host_stun, turn: host_turn)
+        show_call_state_plainly("Ringer... Tilkoblet")
+      end
+      def self.business_inbox(shop)
+        Commerce::Campaign.inbox_for(shop)              # one domain; orders + messages joined
+        plain_labels(new_order, question, refund)
+      end
+    end
+    # prove: suppression regression, conversation journey seam, business inbox journey;
+    #        calls INCONCLUSIVE until STUN/TURN host infra proven (operator seam).
+
+### S8. Maps — from a surface to the substrate
+
+    # Closes maps_poi_substrate. Surface done; make it a service every vertical reads.
+    module Maps
+      def self.service; Places; end                     # S2b is the public API
+      def self.consumer_journeys
+        marketplace.listings_near -> Places.near(kind: :for_sale)
+        takeaway.restaurants      -> Places.near(kind: :restaurant)
+        dating.nearby             -> Places.near(kind: :person_area)   # area, never exact
+        brgen.events              -> Places.near(kind: :venue)
+        commerce.local_ads        -> Places.geo_target                 # after liquidity
+      end
+      def self.tiles
+        return operator_decision_pending unless maplibre_vendor_licensed?
+        render MapLibre.with_licensed_tiles
+      end
+    end
+    # prove: >=2 verticals consume Places in a rendered journey; licensing seam closed;
+    #        person area never exact coordinate.
+
+### S9. Radio / Playlist — local curation, creator ownership
+
+    # Closes playlist_creator_donations, referral_reward_consumption. Licensing is the wall.
+    module Playlist
+      def self.first_screen(city, user)
+        render local_curated_sets(city)
+        one_primary_action("Lag en spilleliste")
+        show_rights_honestly(track)                     # only licensed/owned audio streams
+      end
+      def self.support(creator, user)
+        Commerce.checkout(Tip.new(creator), provider: :vipps)
+        Entitlement.grant(user, :ad_free) if tier_bought?
+        plain("Støtten går til kuratoren. Lytt reklamefritt.")
+      end
+      def self.referral_benefit(user)
+        Entitlement.usable(:playlist_pro).each { |b| show_plain(b) }   # define + wire the gate
+      end
+    end
+    # prove: donation staging seam, ad-free entitlement gate regression, rights honesty check,
+    #        radio_tunnel_rendered_review + radio_whyp_tracks_imported seams.
+
+### S10. TV — VOD now, live when the media tier exists
+
+    # Closes tv_live_stream_infra (blocked). Tv::Broadcast state machine already models it.
+    module Tv
+      def self.first_screen(city, user)
+        render local_vod_and_creators(city)
+        one_primary_action("Se lokalt")
+        render live_now(label: "Direkte") if Broadcast.live_any?(city) && media_tier_ready?
+      end
+      def self.go_live(creator)                         # blocked
+        return honest_unavailable unless MediaServer.ready?   # MediaMTX/SRS/nginx-rtmp + delivery
+        Broadcast.transition(creator, :live)
+        deliver_via_cdn_tier(creator.stream)
+        calm_notify_followers(creator)
+      end
+    end
+    # prove: VOD journey; live INCONCLUSIVE until media server + delivery tier proven on host.
+    #        Never ship a fake "Direkte" badge.
+
+### S11. Proof and rollout harness (how properly is enforced)
+
+    module Delivery
+      def self.slice(intent, scope, preservation, proof)
+        contract = TaskContract.new(intent:, scope:, preservation:, proof:, new_paths: justified_only)
+        validate(contract)                              # Master::Fix::TaskContract
+        implement_under_existing_owner                  # existing-first; no parallel system
+        prove_local(contract.proof)                     # focused tests + changed-line law assessment
+        prove_rendered(scope)                           # screenshots 390/768/1280, keyboard, axe,
+                                                        # journey_invariant, reflow, occlusion
+        record_status(RUN | NOT_RUN | INCONCLUSIVE)     # never a false PASS
+        commit_path_scoped_and_push                     # bin/operator land; Co-authored-by trailer
+        route_intake(gaps.yml | apps.yml | ideations)   # the registry owns the work, not this file
+      end
+      SEQUENCE_BY_USER_VALUE = [
+        "S2 spine: Commerce + Places + CityFeed + Trust + Attention + Onboarding",
+        "S4 marketplace liquidity + 60s listing + checkout",
+        "S5 takeaway checkout + tracking + pro",
+        "S6 dating safety + premium",
+        "S7 messenger suppression + business inbox",
+        "S8 maps substrate consumed by >=2 verticals",
+        "S9 radio donations + entitlements",
+        "S10 tv live (host-gated)",
+        "S3 brgen events + creator support + gated sponsored"
+      ]
+      # Each step closes named gaps and seams; blocked steps stay blocked with the exact
+      # host/credential/consent remainder named. Love is the acceptance predicate, proof is
+      # the gate, the operator owns the rendered value and the money.
+    end
+
+### S12. Routing note
+
+Proposal-grade pseudocode for intake. No backlog authority, no new tracked source.
+The next agent re-measures each named gap, keeps satisfied rows satisfied, builds
+the one Commerce domain and the Places substrate first (the fences demand it), then
+closes verticals in the user-value sequence, each slice proven locally and rendered,
+each live claim INCONCLUSIVE until its operator seam closes. Non-technical love is
+not a layer added at the end; it is the acceptance predicate every slice must pass.
