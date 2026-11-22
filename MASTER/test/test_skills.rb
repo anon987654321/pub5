@@ -112,6 +112,37 @@ class TestSkills < Minitest::Test
   # data/ holds no markdown but SOUL, CANON, IDENTITY and principles/, and
   # RUNTIME_DOCS_YAML refuses the rest at error severity, so a skill written as
   # data/skills/*.md or data/skills/*/SKILL.md is not a skill.
+  # These methods are first-class registry routes, not copied third-party skills.
+  SPECIALIST_SKILLS = {
+    "security" => ["run a security audit on RAILS"],
+    "affiliate" => ["design an affiliate program"],
+    "monetization" => ["evaluate our monetization strategy"],
+    "studio-production" => ["write a chord progression for a hip-hop beat"],
+    "cinema" => ["plan a music video"],
+    "mobile-web" => ["review the mobile web UX"],
+    "pwa" => ["audit service worker offline support"],
+    "typography" => ["review font rendering and typography"],
+    "conversation" => ["improve conversation flow"],
+    "social" => ["plan a social media calendar"],
+    "music-theory" => ["write a melody with smooth voice leading"],
+    "open-resources" => ["find free open-source music tools"],
+  }.freeze
+
+  def test_specialist_skills_route_from_plain_requests
+    SPECIALIST_SKILLS.each do |name, requests|
+      requests.each do |request|
+        assert_includes shipped_skills.trigger_for(request).map { |skill| skill[:name] }, name, request
+      end
+    end
+  end
+
+  def test_specialist_skill_bodies_fit_the_injection_limit
+    SPECIALIST_SKILLS.each_key do |name|
+      body = registry.fetch("skills").find { |skill| skill["name"] == name }.fetch("body")
+      assert_operator body.length, :<=, 4_000, "#{name} is cut by the injection"
+    end
+  end
+
   def test_discover_ignores_skill_markdown_under_data
     Dir.mktmpdir do |root|
       skills_dir = File.join(root, "data", "skills")

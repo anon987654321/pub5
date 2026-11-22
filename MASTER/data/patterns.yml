@@ -1110,7 +1110,7 @@ operator_playbook:
 skills_registry:
   meta:
     source: runtime authority - edit this file directly; do not add data/skills/*.md
-    count: 27
+    count: 34
   skills:
   - name: algorithmic-art
     description: Make generative art from one seeded algorithm, reproducible and tunable.
@@ -1183,7 +1183,7 @@ skills_registry:
     body: |-
       The frontend skill treats the browser render as evidence. Use GeometryProbe, mobile journeys, composition probes, web-platform probes, and the visual ghost/difference stack before proposing source changes. Trace every actionable observation to a stable selector or visible text anchor and the applicable visual law.
 
-      Prefer deletion, alignment, typography, spacing, and existing primitives over new decorative machinery. Preserve semantics, accessibility, performance, and low-end fallbacks. When the evidence changes, feed the smallest correction back through /fix and verify the rendered result again.
+      Prefer deletion, alignment, typography, spacing, and existing primitives over new decorative machinery. Preserve semantics, accessibility, performance, and low-end fallbacks. Route touch-first browser work to mobile-web, install/offline/service-worker behavior to pwa, and font rendering or hierarchy to typography. When evidence changes, feed the smallest correction back through /fix and verify the rendered result again.
 
   - name: model
     description: Switch or inspect the active model for the current session.
@@ -1350,6 +1350,90 @@ skills_registry:
       Orchestrate existing STUDIO owners: Dilla for original music and audio analysis, LoRA for consent-validated subject identity, Replicate for model predictions, and Postpro for motion and finishing. Keep Replicate's CLI path and API boundary intact. Use provider/model-specific capabilities only when confirmed by the current catalogue; record cost and credit limits before batches. Keep source takes and intermediate renders, write outputs beside them, and never overwrite a selected take.
 
       Render from a fixed timeline, frame rate, dimensions and declared color/audio settings. Review contact sheets and representative frames, then inspect temporal continuity, identity drift, camera motion, transitions, sync, clipping, captions and final runtime. A successful render or frame-level metric is not proof that a film works: require a full human watch and listen. Record rights, provenance, seeds, model versions, costs and unresolved defects in the handoff. Do not claim a future cinema orchestrator exists until its code and tests do.
+  - name: mobile-web
+    description: Audit and improve touch-first, responsive browser experiences using pub5's Rails and native web stack.
+    triggers:
+    - '\b(?:mobile web|mobile.first web|mobile UX|mobile browser|touch targets?|touch interaction|safe area|virtual keyboard|small.screen layout|iOS Safari|Android Chrome|mobile journey)\b'
+    body: |-
+      The mobile-web skill owns the browser experience on phones and tablets. pub5's supported product path is its existing Rails applications and browser-native HTML, CSS and JavaScript. Do not introduce Expo, React Native, NativeWind, React-based rewrites or a second frontend stack. Do not treat a phone as a shrunken desktop.
+
+      Inspect the actual app dialect, shared components, route contracts and rendered mobile evidence first. Cover narrow widths, landscape, text zoom, safe-area insets, virtual keyboards, sticky and fixed controls, dynamic viewport height, orientation changes, long localized copy, slow networks, low memory and reduced motion. Avoid hover-only behavior; every gesture must have a discoverable, accessible alternative. Keep primary actions reachable without obscuring content.
+
+      Check target size, spacing, focus, semantics, contrast and screen-reader names. Prefer comfortable targets around 44 CSS pixels where layout allows, while checking the applicable WCAG minimum and exceptions rather than treating a heuristic as a conformance rule. Inputs must remain usable when mobile keyboards open; prevent iOS focus zoom through appropriate input sizing without disabling user zoom.
+
+      Use MASTER's mobile layout snapshots, MobileJourneyProbe, route evidence and existing rendered checks. Verify real content lengths, navigation, forms, search, filters, dialogs, scrolling and back/forward behavior at representative phone and tablet sizes. Emulation is useful but does not replace real-device checks for platform-specific behavior. Fix the smallest proven defect without flattening a product's established identity.
+  - name: pwa
+    description: Build and verify installable, offline-capable browser applications with safe service-worker and cache lifecycles.
+    triggers:
+    - '\b(?:pwa|progressive web app|web app manifest|service.worker|offline.first|offline support|offline caching|background sync|install prompt|push notification permission|pwa installability)\b'
+    body: |-
+      The pwa skill owns installability, offline behavior, manifests, service workers, caching, queued writes, push and update lifecycle for browser applications. Inspect the existing app-specific manifest/controller/worker and the shared PWA runtime before changing anything. pub5 already has shared PWA serving, an offline mutation queue, Workbox worker policies, per-app manifests and workers, installability checks and lifecycle tests: extend those owners; do not create a parallel PWA framework.
+
+      Validate manifest identity, start_url and scope, display mode, theme/background values, required icon files and declared purposes, HTTPS deployment, worker registration and scope. Check the actual rendered manifest and every referenced asset, not only template source. Installability is necessary, not proof of useful offline behavior.
+
+      Assign a deliberate strategy by request class. Versioned static assets and app-shell resources may be precached or cache-first; public navigations and public read data may use bounded network-first or stale-while-revalidate policies. Set entry and age limits, version names and deploy cleanup. Never cache authenticated pages, private account or message data, checkout/payment responses, credentials, CSRF secrets or other personal data. Keep cache namespaces isolated by app and revision, and test activation cleanup and rollback.
+
+      Queue only explicitly replayable, same-origin, idempotent mutations. Exclude sign-in/out, payments, checkout, deletion, settings, credentials and private actions. Bound queue size and retention; preserve ordering and deduplicate with server-recognized idempotency keys. Refresh anti-CSRF material safely at replay, surface rejected writes to the person, and never silently discard a meaningful action. Ask for notification permission only after a clear user gesture and explain the benefit first; support unsubscribe and stale-subscription cleanup.
+
+      Test offline cold start, navigation fallback, stale asset cleanup, deploy upgrades, session changes on shared devices, queue replay/rejection, private-route exclusion, push permission denial and recovery. Use existing MASTER/RAILS PWA contract and service-worker tests. Never claim offline safety from a manifest or a single successful fetch.
+  - name: typography
+    description: Audit and refine font systems, type hierarchy, web-font loading and readable text across products.
+    triggers:
+    - '\b(?:typography|type scale|type hierarchy|font|fonts|font pairing|font loading|web fonts?|variable font|opentype|line measure|letter.spacing|font licensing|glyph coverage)\b'
+    body: |-
+      The typography skill evaluates rendered type, not font names in isolation. Read the canonical design tokens, product visual identity, existing font declarations, font files and licenses before recommending a change. Preserve each product's approved type roles; a skill or external reference never overrides the house or product-specific typography contract. Never introduce a new typeface or paid font merely because it is fashionable.
+
+      Check role hierarchy (display, heading, body, UI, mono), scale, weight, line-height, measure, paragraph rhythm, letter spacing, punctuation, numerals, tables, labels, buttons, form controls and truncation. Evaluate the actual rendered result at desktop and mobile widths, text zoom and long translated strings. A 60–75 character body measure and unitless line-height are useful starting heuristics, not universal acceptance thresholds. Use robust wrapping rather than clipping meaningful text.
+
+      Verify that only the necessary font files and weights load, declared font formats match the assets, fallback stacks preserve metrics, and font-display behavior does not create a disruptive flash or layout shift. Check variable-font axes and OpenType features only when the actual font supports them. Audit glyph coverage for Norwegian characters, diacritics, punctuation and every supported script. Confirm that font licensing permits the intended web, app and redistribution use.
+
+      Measure contrast and readability under the applicable accessibility requirements. Distinguish a true legibility defect from personal taste. Make changes in the project's existing styling system and token authority; do not add Tailwind, Bootstrap or a parallel type system. Compare before/after renders and preserve existing brand identity.
+  - name: conversation
+    description: Design clear, context-aware human conversations and conversational product interactions.
+    triggers:
+    - '\b(?:conversation design|conversation flow|conversational UX|conversational interface|dialogue design|dialogue system|turn.taking|chat experience|voice interaction design|conversation repair|chatbot behavior)\b'
+    body: |-
+      The conversation skill designs dialogue as a sequence of understandable states, not a pile of canned replies. Establish the person's goal, relationship to the product, channel, urgency and expected next action. Use context already provided; do not repeat questions or force an intake when a sensible default permits progress.
+
+      Make turn-taking legible: acknowledge only what matters, answer the actual question, expose uncertainty, ask one focused question when blocked and offer a clear next step. Preserve relevant context across turns without treating guesses as facts. Handle interruption, correction, topic changes, partial completion, retries, handoff and recovery as first-class states. Avoid circular clarification, repeated summaries and empty progress messages.
+
+      Make agency explicit around consequential actions: distinguish drafting from sending, preview from publishing, and analysis from mutation. Obtain approval before external representation, publication, billing or irreversible changes. Provide a usable way to pause, correct, undo or reach a person. Make system identity and limitations clear; never impersonate a human or fabricate memory, emotion, authority or completed actions.
+
+      Respect privacy and data minimization. Retain only context needed for the declared purpose, avoid sensitive inference, do not expose private conversation content to other users, and give people meaningful control over notifications and history. Evaluate representative conversations for task completion, factuality, repair success, accessibility, latency and unnecessary turns—not engagement time alone.
+  - name: social
+    description: Plan channel-native social content and healthy communities using verified evidence and explicit publication approval.
+    triggers:
+    - '\b(?:social media|social content|social strategy|social listening|community marketing|community management|micro.communities|creator partnerships?|influencer campaigns?|user.generated content|social calendar|social distribution)\b'
+    body: |-
+      The social skill builds distribution through useful participation and trusted relationships, not posting volume. Establish the audience, relationship state, channel's job, useful thesis, desired behavior, evidence, offer, voice, capacity and moderation needs. Read existing product and brand context before asking for information already recorded.
+
+      Verify current platform formats, limits, link behavior, disclosure rules and permitted APIs before designing a channel plan. Create a small set of repeatable content pillars grounded in product facts, original work or genuine customer evidence. Produce channel-native assets with source notes, media/caption guidance, alt text, disclosure and a clear call to action when appropriate. Repurpose the underlying idea, not identical copy pasted everywhere.
+
+      Treat listening, replies and community participation as relationships. Define moderation principles, escalation paths, safety boundaries, response expectations and a policy for criticism. Distinguish audience growth, reach, meaningful participation, qualified leads and revenue. Do not treat likes or impressions as business outcomes by default.
+
+      Never fabricate testimonials, customer experience, endorsements, controversy, scarcity or social proof. No engagement bait, mass replies, unsolicited scraping of private groups or undisclosed automation. Obtain explicit approval before posting, scheduling, replying on behalf of a person, contacting creators or committing sponsorship spend. Preserve rights and consent for user-generated media and creator likenesses.
+  - name: music-theory
+    description: Develop melody, harmony, rhythm, voice-leading and arrangement with explainable musical reasoning.
+    triggers:
+    - '\b(?:music theory|melody writing|write a melody|chord voicing|chord progression|reharmonization|voice.leading|counterpoint|scale selection|ear training|harmonic analysis|rhythmic analysis|hip.hop pocket|swing feel)\b'
+    body: |-
+      The music-theory skill is a compositional assistant, not a substitute for listening. Establish tonal center or deliberate ambiguity, meter, tempo, groove, register, harmonic rhythm and intended emotional movement. Separate chord symbol, voicing, bass note, melody note and rhythmic placement; they solve different musical problems.
+
+      For harmony, explain function and voice-leading. Prefer smooth inner-voice movement, deliberate guide-tone resolution, controlled register and useful inversions over stacked chord labels. Use extensions and substitutions only when they support the melody, bass or intended color. Check that voicings are playable and that bass movement does not muddy the harmony.
+
+      For melody, begin with a small motif. Make contour, rhythm, repetition, silence, phrase length, range and resolution intentional. Use chord tones as structural anchors and non-chord tones as directed tension. Create variation through timing, omission, register or one changed note before adding busy runs. For hip-hop, evaluate pocket, swing, microtiming, kick/snare relationship, sample placement and repetition; do not flatten feel into a quantized grid unless requested.
+
+      Use STUDIO/dilla/data/music_theory.json as the current theory vocabulary and the Dilla renderer's existing parser/voicer. Verify its supported qualities, scales, named voicings and aliases before proposing syntax. Keep imported references rights-cleared and analytical; do not reproduce protected melodies or transcribe a full copyrighted recording. Render, inspect MIDI or notation where available, and listen. A theory check or generated MIDI is not proof that a hook is memorable.
+  - name: open-resources
+    description: Find and assess free, open-source and open-licensed tools, models, datasets and creative assets.
+    triggers:
+    - '\b(?:free tools?|free software|free models?|open.source (?:tools?|models?|software)|open.licensed assets?|no.cost tools?|free tier|free alternative|open datasets?|royalty.free)\b'
+    body: |-
+      The open-resources skill finds the least costly resource that genuinely fits the job. Distinguish open-source software, open model weights, open data, public-domain works, permissively licensed assets, gratis services and time-limited trials; they are not interchangeable. Verify the source repository, maintainer, recent activity, release, platform support, licence and actual terms before recommending adoption.
+
+      For hosted services, inspect free-tier quotas, rate limits, credit expiry, commercial-use terms, data retention, training use, geographic restrictions, payment requirements and what happens when the quota is exhausted. A free account is not a promise of free production. For models and datasets, check provenance, use restrictions, redistribution terms, attribution and known evaluation limits. For music, samples, fonts, footage, images and LoRA training data, verify the exact asset-level rights rather than assuming the platform licence covers every file.
+
+      Compare at least two viable alternatives where practical by capability, total operating cost, privacy, reliability, portability, lock-in and maintenance burden. Prefer local and standard-library paths when they meet the need; use paid services only when their advantage is evidenced and credits are available. Do not automate account creation, bypass quotas, scrape gated content or retrieve credentials. Record the source, date checked, licence/terms link, limits and unresolved legal or technical uncertainty before an asset enters a production workflow.
   - name: amber-tenant-logo
     description: Dress a brgen tenant or any logo request in the amber mark law — locked Caprasimo glyphs, nine hairlines, plates from the generator, never redrawn.
     triggers:
