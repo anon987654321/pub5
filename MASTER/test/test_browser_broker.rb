@@ -471,6 +471,7 @@ class BrowserBrokerTest < Minitest::Test
       assert_includes output, lease.id
       assert_includes output, "example.com"
     end
+    assert_raises(FrozenError) { lease.diagnostic.fetch(:host).replace("other.example") }
   ensure
     b&.close(lease.id) if lease
   end
