@@ -120,6 +120,9 @@ class BrowserBrokerTest < Minitest::Test
     lease_id = nil
     scope.with(active) do
       assert scope.available?
+      other_fiber_availability = nil
+      Fiber.new { other_fiber_availability = scope.available? }.resume
+      refute other_fiber_availability, "another fibre must not inherit this operation's browser authority"
       lease = scope.open(host: "example.com")
       lease_id = lease.id
       assert_equal 1, scope.size
