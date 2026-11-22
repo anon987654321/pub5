@@ -1106,8 +1106,7 @@ admit_host_load() {
       || deploy_refuse "five-minute load $load_five is not below 2.0"
     swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null) \
       || deploy_refuse "cannot read swap status"
-    swap_blocks=$("$RUBY" -e 'match = ARGV.fetch(0).match(/([0-9]+)\\s+available/i); abort "missing available count" unless match; print match[1]' "$swap_output" 2>/dev/null) \\
-      || deploy_refuse "cannot parse free swap; admission is fail-closed"
+    swap_blocks=$("$RUBY" -e 'match = ARGV.fetch(0).match(/([0-9]+)\s+available/i); abort "missing available count" unless match; print match[1]' "$swap_output" 2>/dev/null) \
       || deploy_refuse "cannot parse free swap; admission is fail-closed"
     free_swap=$(( swap_blocks * 512 / 1048576 ))
     (( free_swap >= 400 )) || deploy_refuse "only $free_swap MB swap is free; admission floor is 400 MB"

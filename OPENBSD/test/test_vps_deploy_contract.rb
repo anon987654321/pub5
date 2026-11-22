@@ -324,16 +324,18 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes deploy, '"bundle-check"'
   end
 
-  def test_rails_production_bundle_uses_the_fixed_app_task
+  def test_production_deploys_only_verify_the_preinstalled_bundle
     core = File.read(File.join(ROOT, "RAILS", "_bundle.sh"), encoding: "UTF-8")
     deploy = File.read(File.join(ROOT, "RAILS", "_deploy.sh"), encoding: "UTF-8")
+    runtime = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"), encoding: "UTF-8")
+    tasks = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
 
     assert_equal 1, core.scan("bundle_install_as_app() {").length
-    assert_includes core, 'run_rails_as_app "$app_name" "$app_dir" "bundle-install"'
-    assert_includes File.read(File.join(ROOT, "RAILS", "_runtime_check.sh")), "/usr/local/libexec/rails-task.ksh"
-    refute_includes deploy, "pub5-admin"
-    refute_includes deploy, 'doas chown -R "$app_name:$app_name" "${APP_DIR}/.bundle"'
-    refute_includes deploy, 'doas tee "${APP_DIR}/.bundle/config"'
+    refute_includes deploy, "bundle_install_as_app"
+    assert_includes deploy, '"bundle-check"'
+    assert_includes runtime, '"bundle-check"'
+    refute_includes tasks, "bundle-install)"
+    refute_includes tasks, "ci-bundle-install)"
   end
 
   def test_relayd_adapter_is_read_only_and_fails_closed
@@ -930,25 +932,6 @@ class VpsDeployContractTest < Minitest::Test
 
   def disk_block
     SOURCE[/^set_stage preflight-disk$.*?^done$/m]
-  end
-
-  def swap_block
-    SOURCE[/^  set_stage preflight-swap$.*?^  fi$/m]
-  end
-
-  # vm23's own `swapctl -s` line, with the available count swapped in.
-  def swap_run(dir, available_blocks:)
-    swapctl = File.join(dir, "swapctl")
-    line = "total: 2588672 512-blocks allocated, 2143016 used, #{available_blocks} available"
-    File.write(swapctl, "#!/bin/sh\necho '#{line}'\n")
-    File.chmod(0o755, swapctl)
-    # The gate silences admin_service's own output, so the stub records calls in a file.
-    calls = File.join(dir, "calls")
-    stub = "set_stage() { :; }; admin_service() { print \"admin_service $*\" >> #{calls}; }"
-    script = "app=brgen; jobs_service=brgen_jobs; jobs_was_up=1; VPS_DEPLOY_SWAPCTL=#{swapctl}\n" \
-             "#{stub}\n#{swap_block}\nprint passed\n"
-    out = IO.popen(["zsh", "-c", script, { err: %i[child out] }], &:read)
-    [out + (File.exist?(calls) ? File.read(calls) : ""), $?.exitstatus]
   end
 
   def test_deploy_admission_requires_two_low_load_and_swap_samples_without_cpu_pressure
