@@ -41,6 +41,80 @@ class BrowserBrokerTest < Minitest::Test
     end
   end
 
+  class FakeNetwork
+    attr_reader :intercepted, :idle_timeouts
+
+    def initialize
+      @intercepted = false
+      @idle_timeouts = []
+    end
+
+    def intercept = (@intercepted = true)
+    def wait_for_idle(timeout:) = (@idle_timeouts << timeout)
+  end
+
+  class FakeNode
+    def text = "Example link"
+    def tag_name = "A"
+    def attribute(name) = (name == "href" ? "https://example.com/next" : nil)
+    def property(name) = name == "innerHTML" ? "Example link" : nil
+    def visible? = true
+    def click = :clicked
+    def focus = self
+    def set(value) = value
+    def type(value, *_keys) = value
+  end
+
+  class FakePage
+    attr_reader :commands, :network, :navigations, :evaluated
+
+    def initialize
+      @commands = []
+      @network = FakeNetwork.new
+      @navigations = []
+      @evaluated = []
+    end
+
+    def url = "https://example.com/"
+    def title = "Example"
+    def body = "Example page"
+    def command(name, **args) = (@commands << [name, args])
+    def evaluate(script)
+      @evaluated << script
+      JSON.generate("url" => url, "title" => title, "text" => body, "links" => [])
+    end
+    def go_to(value) = (@navigations << value)
+    def at_css(_selector) = FakeNode.new
+    def css(_selector) = [FakeNode.new]
+    def on(_event, &block) = (@request_callback = block)
+    def screenshot(format:, encoding:, full: false)
+      raise "unexpected screenshot format" unless format == "png" && encoding == :base64
+
+      Base64.strict_encode64(Broker::PNG_MAGIC + "fake-png".b)
+    end
+  end
+
+  class FakeFerrumBrowser
+    attr_reader :created_pages, :quit_calls
+
+    def initialize(page)
+      @page = page
+      @created_pages = 0
+      @quit_calls = []
+    end
+
+    def create_page
+      @created_pages += 1
+      @page
+    end
+
+    def quit(wait: true)
+      @quit_calls << wait
+      true
+    end
+  end
+
+
   def broker(capabilities: Caps.for(:fix), engine: FakeEngine.new, ledger: nil, **opts)
     Broker.new(capabilities:, engine:, ledger:, **opts)
   end
@@ -197,6 +271,54 @@ class BrowserBrokerTest < Minitest::Test
     assert_match(/capability refused/, error.message)
     assert_empty engine.started, "a refused context must not start a browser"
     refute refused.available?
+  end
+
+
+  def test_adapters_receive_only_the_broker_attachment_and_page_facades
+    require "ferrum"
+    engine = FakeEngine.new
+    b = broker(engine:, destination_check: ->(_url) { true })
+    lease = b.open(host: "example.com", url: "https://example.com/")
+    raw_page = FakePage.new
+    raw_browser = FakeFerrumBrowser.new(raw_page)
+    factory = Object.new
+    received_options = nil
+    factory.define_singleton_method(:new) do |**options|
+      received_options = options
+      raw_browser
+    end
+
+    original = Ferrum::Browser
+    Ferrum.send(:remove_const, :Browser)
+    Ferrum.const_set(:Browser, factory)
+    attachment = b.attach(lease.id, timeout: 12, window_size: [1280, 800])
+    page = attachment.create_page
+
+    assert_instance_of Broker::Attachment, attachment
+    assert_equal 1, raw_browser.created_pages
+    assert_equal 12.0, received_options.fetch(:timeout)
+    assert_equal [1280, 800], received_options.fetch(:window_size)
+    refute_respond_to attachment, :process
+    refute_respond_to attachment, :ws_url
+    refute_respond_to page, :command
+    refute_respond_to page, :evaluate
+    refute_respond_to page, :network_object
+    assert_equal "https://example.com/", page.url
+    assert_equal "Example", page.snapshot.fetch("title")
+    assert_equal [Broker::Page::NETWORK_SANDBOX_SCRIPT, true], [raw_page.commands.first.last.fetch(:source), raw_page.network.intercepted]
+    assert_equal ["Page.addScriptToEvaluateOnNewDocument", "Network.setCacheDisabled", "Network.setBypassServiceWorker"],
+                 (page.harden_network; raw_page.commands.map(&:first))
+    assert_raises(Broker::Denied) { page.on(:response) {} }
+    assert_equal "Example link", page.at_css("a").text
+    assert_equal "A", page.at_css("a").tag_name
+    assert_equal [raw_page], page.css("a").map { |node| node.instance_variable_get(:@node) }
+  ensure
+    attachment&.quit
+    b&.close(lease.id) if lease
+    if defined?(original) && original
+      Ferrum.send(:remove_const, :Browser) if Ferrum.const_defined?(:Browser, false)
+      Ferrum.const_set(:Browser, original)
+    end
   end
 
   def test_a_lease_carries_no_pid_and_cannot_be_stopped_by_an_unprivileged_caller
