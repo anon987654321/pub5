@@ -33,6 +33,18 @@ class MapsEngineWiringContractTest < Minitest::Test
                     "an unmounted engine routes nothing, and every path helper below still resolves"
   end
 
+  def test_marketplace_and_takeaway_select_from_the_same_city_places_directory
+    directory = host_read("app/services/place_directory.rb")
+    stores = host_read("engines/marketplace/app/controllers/marketplace/stores_controller.rb")
+    restaurants = host_read("engines/marketplace/engines/takeaway/app/controllers/takeaway/restaurants_controller.rb")
+    maps = read("app/controllers/maps/base_controller.rb")
+
+    assert_includes directory, "Place.where(city_id: city.id).not_rejected"
+    assert_includes maps, "PlaceDirectory.for_city(Current.city_record)"
+    assert_includes stores, "PlaceDirectory.for_city(city)"
+    assert_includes restaurants, "PlaceDirectory.for_city(city)"
+  end
+
   def test_places_browse_paginates_and_serves_html
     controller = read("app/controllers/maps/places_controller.rb")
     # The browse block answers both page formats: finish_live_search responds
