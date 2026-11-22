@@ -237,7 +237,20 @@ module Master
         bound = canonical_host(host)
         raise Denied, "browser: a session needs a bound host" if bound.empty?
 
-        check_destination!(url) if url
+        if url
+          initial_uri = begin
+            URI(url.to_s)
+          rescue URI::InvalidURIError
+            raise Denied, "browser: invalid initial URL"
+          end
+          unless initial_uri.is_a?(URI::HTTP) && !initial_uri.host.to_s.empty? && initial_uri.userinfo.nil?
+            raise Denied, "browser: initial URL must be public http(s) without embedded credentials"
+          end
+          initial_host = canonical_host(initial_uri.host)
+          raise Denied, "browser: bound host #{bound} does not match initial URL host #{initial_host}" unless initial_host == bound
+
+          check_destination!(initial_uri.to_s)
+        end
 
         @mutex.synchronize do
           reap_expired!
@@ -277,14 +290,18 @@ module Master
       def navigate(id, url)
         require_capability!
         lease = lease!(id)
-        host = begin
-          canonical_host(URI(url.to_s).host)
+        uri = begin
+          URI(url.to_s)
         rescue URI::InvalidURIError
           raise Denied, "browser: invalid URL"
         end
+        unless uri.is_a?(URI::HTTP) && !uri.host.to_s.empty? && uri.userinfo.nil?
+          raise Denied, "browser: navigation URL must be public http(s) without embedded credentials"
+        end
+        host = canonical_host(uri.host)
         raise Denied, "browser: session is bound to #{lease.host}; refused #{host}" unless host == lease.host
 
-        check_destination!(url)
+        check_destination!(uri.to_s)
         refresh!(id)
         lease
       end
@@ -436,7 +453,8 @@ module Master
       # guard the http verb uses. Returns nil to allow, a reason string to refuse.
       def default_destination_refusal(url)
         uri = URI(url.to_s)
-        return "only public http(s) URLs are allowed" unless uri.is_a?(URI::HTTP)
+        return "only public http(s) URLs without embedded credentials are allowed" unless
+          uri.is_a?(URI::HTTP) && !uri.host.to_s.empty? && uri.userinfo.nil?
 
         SsrfGuard.pinned_address(uri) ? nil : "refused internal/reserved address"
       rescue StandardError => e
