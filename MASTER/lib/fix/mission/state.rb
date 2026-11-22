@@ -103,7 +103,7 @@ module Master
         delay = 0
         retries = 0
         with_lock do
-          load_current_unlocked!
+          load_writable_unlocked!
           return self unless @record
 
           retries = @record.fetch("retry_count", 0).to_i + 1
@@ -124,7 +124,7 @@ module Master
 
       def block!(reason:)
         with_lock do
-          load_current_unlocked!
+          load_writable_unlocked!
           return self unless @record
 
           @record["state"] = "blocked"
