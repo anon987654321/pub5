@@ -29,15 +29,18 @@ module Operator
       @publisher = publisher || Master::Ground::PastePublisher.new(root: File.expand_path("../../..", __dir__))
       @previous_snapshot = []
       ensure_directory!
-      @path = path ? validated_existing_path(path) : create_path(clock.call)
-      append([
-        "pub5 deployment transcript",
-        "app: #{@app}",
-        "sha: #{@sha}",
-        "started_utc: #{clock.call.iso8601}",
-        "log: #{@path}",
-        "",
-      ].join("\n"))
+      resumed = !path.nil?
+      @path = resumed ? validated_existing_path(path) : create_path(clock.call)
+      unless resumed
+        append([
+          "pub5 deployment transcript",
+          "app: #{@app}",
+          "sha: #{@sha}",
+          "started_utc: #{clock.call.iso8601}",
+          "log: #{@path}",
+          "",
+        ].join("\n"))
+      end
     end
 
     def append(text)

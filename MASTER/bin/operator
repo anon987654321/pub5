@@ -5,7 +5,10 @@ require_relative "../lib/boot/entrypoint"
 Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
 
 require "optparse"
+require "rbconfig"
+require "open3"
 require_relative "../lib/io/exec"
+require_relative "../lib/operator/deploy_log"
 require "shellwords"
 
 # Two levels: this lives in MASTER/bin/, and every sibling tree is reached
@@ -203,6 +206,127 @@ def ssh_capture(remote_cmd, attempts: Integer(ENV.fetch("PUB5_SSH_RETRIES", "3")
     delay = [delay * 2, 30].min
   end
   [last_err.to_s, false]
+end
+
+
+# vps-deploy keeps its output in the remote tmux pane only. This workstation
+# collector streams that in-memory scrollback into a private local file, so an
+# SSH interruption does not force a production transcript onto vm23's disk.
+def remote_deploy_capture_command(session)
+  target = "#{session}:0.0"
+  "if tmux has-session -t #{Shellwords.escape(session)} 2>/dev/null; then " \
+    "tmux capture-pane -p -J -S - -t #{Shellwords.escape(target)}; " \
+    "else print __PUB5_DEPLOY_NO_SESSION__; fi"
+end
+
+def append_post_deploy_checks(log, remote_status)
+  code = remote_status
+  if code.zero?
+    state, ok = ssh_capture(remote_ruby("OPENBSD/bin/vps-state"), attempts: 2)
+    log.append("\npost-deploy vps-state (#{ok ? 'captured' : 'unavailable'}):\n#{state}\n")
+    begin
+      output, status = Master::Io::Exec.capture2e(
+        RUBY, File.join(OPENBSD_OPS, "bin", "canary"), "--public",
+        timeout: 600, raise_on_timeout: true
+      )
+      log.append("\npost-deploy public canary (#{status.success? ? 'PASS' : 'FAIL'}):\n#{output}\n")
+      code = 1 unless status.success?
+    rescue StandardError => error
+      log.append("\npost-deploy public canary (ERROR): #{error.class}: #{error.message}\n")
+      code = 1
+    end
+  end
+  code
+end
+
+def collect_remote_deploy(session:, app:, sha:, log:)
+  exit_code = nil
+  consecutive_transport_failures = 0
+  loop do
+    output, ok = ssh_capture(remote_deploy_capture_command(session), attempts: 1)
+    unless ok
+      consecutive_transport_failures += 1
+      if (consecutive_transport_failures % 6).zero?
+        log.append("transport: SSH capture still unavailable after #{consecutive_transport_failures} attempts; retrying\n")
+      end
+      sleep 5
+      next
+    end
+    consecutive_transport_failures = 0
+    if output.include?("__PUB5_DEPLOY_NO_SESSION__")
+      log.append("capture: remote tmux session disappeared before an exit status was observed\n")
+      exit_code = 1
+      break
+    end
+
+    chunk = log.append_snapshot(output)
+    $stdout.write(chunk) unless chunk.empty?
+    $stdout.flush unless chunk.empty?
+    match = output.match(/PUB5_DEPLOY_EXIT=(\d{1,3})/)
+    next unless match
+
+    exit_code = Integer(match[1], 10)
+    sleep 1
+    final_output, final_ok = ssh_capture(remote_deploy_capture_command(session), attempts: 1)
+    if final_ok && !final_output.include?("__PUB5_DEPLOY_NO_SESSION__")
+      final_chunk = log.append_snapshot(final_output)
+      $stdout.write(final_chunk) unless final_chunk.empty?
+      $stdout.flush unless final_chunk.empty?
+    end
+    break
+  end
+
+  ssh_capture(Shellwords.join(["tmux", "kill-session", "-t", session]), attempts: 1)
+  exit_code = append_post_deploy_checks(log, exit_code)
+  log.finish(status: exit_code.zero? ? "success" : "failure", exit_code:)
+  exit_code
+rescue StandardError => error
+  log.append("collector: #{error.class}: #{error.message}\n") rescue nil
+  log.finish(status: "failure", exit_code: 1) rescue nil
+  1
+end
+
+def tail_local_deploy_log(log_path, waiter)
+  offset = 0
+  status = nil
+  loop do
+    File.open(log_path, "rb") do |file|
+      file.seek(offset)
+      chunk = file.read.to_s
+      unless chunk.empty?
+        $stdout.write(chunk)
+        $stdout.flush
+        offset += chunk.bytesize
+      end
+    end
+    status = Operator::DeployLog.read_status(log_path)
+    break unless status.nil?
+
+    unless waiter.alive?
+      sleep 0.2
+      status = Operator::DeployLog.read_status(log_path)
+      break unless status.nil?
+      File.open(log_path, "ab") { |file| file.write("collector: worker exited without a terminal status receipt\n"); file.fsync }
+      return 1
+    end
+    sleep 1
+  end
+  File.open(log_path, "rb") do |file|
+    file.seek(offset)
+    chunk = file.read.to_s
+    $stdout.write(chunk)
+    $stdout.flush
+  end
+  status || 1
+end
+
+def launch_local_deploy_collector(session:, log_path:, app:, sha:)
+  pid = Process.spawn(
+    RbConfig.ruby, File.expand_path(__FILE__), "vps", "deploy-capture",
+    session, log_path, app, sha,
+    in: File::NULL, out: File::NULL, err: File::NULL, pgroup: true
+  )
+  Process.detach(pid)
 end
 
 command = ARGV.shift
@@ -1039,6 +1163,12 @@ when "vps"
     else
       exec(File.join(OPENBSD_OPS, "bin", "vps-state"), *ARGV)
     end
+  when "deploy-capture"
+    session, path, app, sha = ARGV
+    die("vps", "invalid internal deploy collector arguments", 64) unless
+      session == "pub5-deploy" && path && app && sha
+    log = Operator::DeployLog.new(app:, sha:, path:)
+    exit collect_remote_deploy(session:, app:, sha:, log:)
   when "deploy"
     app = ARGV.shift
     remote = !ARGV.delete("--remote").nil?
@@ -1048,92 +1178,57 @@ when "vps"
     die("vps", "--follow and --detach require --remote", 64) if (follow || detach) && !remote
     die("vps", "use only one of --follow or --detach", 64) if follow && detach
     if remote
-      # Prove the commit boots here, then send the box that exact SHA; the box
-      # refuses a different one. See Operator::DeployPreflight.
-      #
-      # Default remote path is hands-off: tmux so disconnects cannot kill the
-      # deploy, wait until the session ends, then print the log tail and exit
-      # with the deploy's status. --follow attaches interactively; --detach
-      # starts and returns immediately. Local and public canaries are mandatory.
       require "operator/canary"
-      ok, command = Operator::DeployPreflight.remote_command(root: ROOT, app: Shellwords.escape(app))
-      die("vps", "deploy refused, #{command}", 1) unless ok
-      # vps-deploy always runs local canaries; the waiter always runs the public
-      # canary after the tmux session succeeds. There is no silent skip switch.
+      ok, remote_command = Operator::DeployPreflight.remote_command(root: ROOT, app: Shellwords.escape(app))
+      die("vps", "deploy refused, #{remote_command}", 1) unless ok
+      sha = remote_command[/\bVPS_DEPLOY_SHA=([0-9a-f]{40})\b/, 1]
+      die("vps", "preflight did not return a pinned SHA", 1) unless sha
+      log = Operator::DeployLog.new(app:, sha:)
+      log.append("preflight: PASS on #{sha}\n")
       session = "pub5-deploy"
-      # Marker files the waiter uses so SSH drops do not lose the exit status.
-      marker = "$HOME/.pub5-deploy-last"
-      inner = Shellwords.escape(
-        "#{command}; ec=$?; print \"vps-deploy: finished exit=$ec\"; "         "print -r -- \"$ec $(date -u +%Y-%m-%dT%H:%M:%SZ)\" > #{marker}; "         "sleep 2; exit $ec"
-      )
-      mode = follow ? "follow" : (detach ? "detach" : "wait")
+      log_ref = "local://deploys/#{File.basename(log.path)}"
+      inner = [
+        "set +e",
+        "export VPS_DEPLOY_LOG=/dev/null",
+        "export VPS_DEPLOY_RUN_LOG=/dev/null",
+        "export VPS_DEPLOY_LOGGING=1",
+        "export VPS_DEPLOY_LOG_REF=#{Shellwords.escape(log_ref)}",
+        remote_command,
+        "ec=$?",
+        "print -r -- \"PUB5_DEPLOY_EXIT=$ec\"",
+        "sleep 86400",
+      ].join("; ")
+      tmux_command = "zsh -lc #{Shellwords.escape(inner)}"
       remote_script = <<~ZSH
         set -euo pipefail
         cd /home/dev/pub5
-        session=#{session}
-        marker=#{marker}
+        session=#{Shellwords.escape(session)}
         if ! command -v tmux >/dev/null 2>&1; then
-          print -u2 "vps-deploy: BLOCKED - tmux is required for an unattended deployment; nothing was started"
+          print -u2 "vps-deploy: BLOCKED - tmux is required; nothing was started"
           exit 69
         fi
         if tmux has-session -t "$session" 2>/dev/null; then
-          print -u2 "vps-deploy: session $session already running"
-          print -u2 "  attach: tmux attach -t $session"
-          print -u2 "  log:    ~/vps-deploy.log"
+          print -u2 "vps-deploy: session $session already exists; inspect or resume it before starting another deploy"
           exit 75
         fi
-        rm -f -- "$marker"
-        tmux new-session -d -s "$session" "zsh -lc #{inner}"
-        print "vps-deploy: started in tmux session $session (mode=#{mode})"
-        print "  attach:  tmux attach -t $session"
-        print "  log:     ~/vps-deploy.log"
-        case #{mode} in
-        follow)
-          exec tmux attach -t "$session"
-          ;;
-        detach)
-          sleep 2
-          [[ -f $HOME/vps-deploy.log ]] && { print "--- log ---"; tail -n 12 "$HOME/vps-deploy.log" || true; }
-          print "vps-deploy: detached; re-check with: tmux attach -t $session"
-          exit 0
-          ;;
-        wait)
-          # Poll until the session ends. Print new log lines as they appear so
-          # the operator sees progress without attaching.
-          log=$HOME/vps-deploy.log
-          : >>"$log"
-          exec 3<"$log"
-          # Seek to end so we only show new lines from this deploy.
-          while IFS= read -r -u 3; do :; done
-          while tmux has-session -t "$session" 2>/dev/null; do
-            while IFS= read -r -u 3 line; do print -r -- "$line"; done
-            sleep 3
-          done
-          while IFS= read -r -u 3 line; do print -r -- "$line"; done
-          exec 3<&-
-          if [[ -r $marker ]]; then
-            read -r ec _ < "$marker" || ec=1
-          else
-            print -u2 "vps-deploy: session ended with no exit marker; inspect ~/vps-deploy.log"
-            ec=1
-          fi
-          print "vps-deploy: finished exit=$ec"
-          # Hands-off closeout: state + public canary when the deploy itself succeeded.
-          if (( ec == 0 )); then
-            . OPENBSD/lib/ruby_select.sh
-            print "vps-deploy: post-check state"
-            "$RUBY" OPENBSD/bin/vps-state 2>/dev/null || true
-            print "vps-deploy: post-check public canary"
-            if ! "$RUBY" OPENBSD/bin/canary --public; then
-              print -u2 "vps-deploy: FAIL - public canary did not pass; investigate before another release"
-              ec=1
-            fi
-          fi
-          exit "$ec"
-          ;;
-        esac
+        tmux new-session -d -x 200 -y 50 -s "$session" #{Shellwords.escape(tmux_command)}
+        tmux set-option -w -t "$session:0" history-limit 100000
+        print "vps-deploy: started in tmux session $session"
+        print "vps-deploy: output will be collected locally"
       ZSH
-      ssh_run(Shellwords.join(["zsh", "-fc", remote_script]))
+      launch_output, launched = ssh_capture(Shellwords.join(["zsh", "-fc", remote_script]), attempts: 1)
+      log.append("remote launch (#{launched ? 'started' : 'failed'}):\n#{launch_output}\n")
+      die("vps", "remote deploy launch failed; local log: #{log.path}", 1) unless launched
+      pid = launch_local_deploy_collector(session:, log_path: log.path, app:, sha:)
+      log.append("local collector pid: #{pid}\n")
+      if detach
+        puts "vps-deploy: detached; local transcript: #{log.path}"
+        puts "vps-deploy: paste link will be added when capture and canaries finish"
+        exit 0
+      end
+      waiter = Process.detach(pid)
+      puts "vps-deploy: capturing to #{log.path}"
+      exit tail_local_deploy_log(log.path, waiter)
     else
       exec(File.join(OPENBSD_OPS, "bin", "vps-deploy"), app, *ARGV)
     end
