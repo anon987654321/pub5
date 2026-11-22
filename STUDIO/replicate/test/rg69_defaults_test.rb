@@ -278,6 +278,61 @@ class TestRg69Defaults < Minitest::Test
     end
   end
 
+  def test_rg69_tonejs_adapter_reuses_declared_dilla_kit_voice_and_rig
+    profile = dilla_data.fetch("tonejs_profiles").fetch("rg69")
+    source = profile.fetch("source")
+
+    assert_equal "kit_break", source.fetch("kit")
+    assert_equal "prophet_5", source.fetch("voice")
+    assert_equal "basement", source.fetch("rig")
+    assert dilla_data.fetch("kits").key?(source.fetch("kit"))
+    assert dilla_data.fetch("voices").key?(source.fetch("voice"))
+    assert dilla_data.fetch("rigs").key?(source.fetch("rig"))
+    %w[kick snare clap hat openhat bass keys pads].each do |lane|
+      assert profile.fetch("tone").key?(lane), "Tone.js adapter is missing #{lane}"
+    end
+    assert_includes js, 'fetch("../data/dilla.json"'
+    assert_includes js, "function resolveRG69AudioProfile(data)"
+    assert_includes js, "RG69_AUDIO_FALLBACK"
+  end
+
+  def test_live_and_offline_use_the_same_profile_driven_instrument_builder
+    builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no shared Tone.js instrument builder"
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
+
+    assert_includes builder, "new Tone.PolySynth(Tone.FMSynth"
+    assert_includes builder, "new Tone.PolySynth(Tone.Synth"
+    assert_includes init, "const instruments=createToneInstruments();"
+    assert_includes export, "const offlineSynths=createToneInstruments();"
+    assert_equal 3, js.scan(/createToneInstruments\(\)/).size,
+                 "one builder definition and one call in each rendering path"
+    refute_match(/new Tone\.PolySynth\(\{\s*maxPolyphony:(?:8|4)/, export,
+                 "WAV export must not construct its old, different keys/pads voices"
+  end
+
+  def test_rg69_kit_tuning_and_voice_fx_are_shared_by_live_and_wav_paths
+    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
+    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
+
+    %w[pitch.kick pitch.kickSub pitch.kickBody pitch.snareRing pitch.hat pitch.open].each do |pitch|
+      assert_includes trigger, pitch
+    end
+    assert_includes init, "kitProfile.kick.tone"
+    assert_includes init, "kitProfile.snare.tone"
+    assert_includes export, "kitProfile.kick.tone"
+    assert_includes export, "kitProfile.snare.tone"
+    assert_includes init, "keysN.connect(keySat)"
+    assert_includes export, "oKeysN.connect(oKeySat)"
+    assert_includes init, "padsN.connect(padsFlt)"
+    assert_includes export, "oPadsN.connect(oPadsFlt)"
+    assert_includes export, "oPadsLFO.connect(oPadsFlt.frequency)"
+    assert_includes apply, "profile.rig.delay.feedback"
+    assert_includes apply, "profile.rig.reverb.size"
+    assert_includes apply, "profile.rig.delay.lowpass"
+  end
   private
 
   def boot_aud
