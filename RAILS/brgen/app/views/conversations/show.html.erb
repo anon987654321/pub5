@@ -2,7 +2,11 @@
     so a click in the rail swaps this pane and leaves the rail alone; arriving at
     this URL directly still renders the whole window, because the rail is loaded
     for show as well as index. %>
-<section class="messenger-window" aria-label="<%= t("messages.title") %>">
+<section
+  class="messenger-window"
+  aria-label="<%= t("messages.title") %>"
+  data-conversation-presence-url="<%= conversation_presence_path(@conversation) %>"
+>
   <%= render "conversations/rooms_rail" %>
   <%# message-reply: a Reply on any line in the log fills the composer below
       without reloading the pane; the link's ?reply_to= is the no-JS path. %>

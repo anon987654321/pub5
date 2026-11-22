@@ -98,6 +98,14 @@ class PortTest < ActiveSupport::TestCase
 
   # --- scopes -------------------------------------------------------------
 
+  test "availability scope hides historical package rows without deleting them" do
+    current = port("current")
+    historical = port("historical", pkgpath: "packages/historical", available: false)
+
+    assert_equal [ current ], Port.available.where(id: [ current.id, historical.id ]).to_a
+    assert Port.exists?(historical.id), "historical records remain addressable"
+  end
+
   test "by_category and by_maintainer narrow to what they name" do
     other = Category.create!(platform: @platform, name: "devel", slug: "devel")
     keeper = Maintainer.create!(name: "Ingo")

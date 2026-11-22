@@ -68,6 +68,46 @@ document families are:
   methodology, sensitivity and limitations. Never silently mix actuals,
   estimates and forecasts.
 
+## Evidence register for legal and funding work
+
+Every legal instrument and material funding proposal must carry an evidence register in its existing
+working source. The register is part of the deliverable's provenance, not a bibliography of
+convenient links. Keep one record per material claim or operative legal proposition, and one source
+record for each authority relied on.
+
+Each record must include: stable evidence ID; exact claim or clause supported; affected document and
+section; source title and issuing authority; jurisdiction; canonical source URI or document
+identifier; source version; publication date and effective-from/effective-to dates where applicable;
+precise section, paragraph, table or page locator; retrieval date; last verification date;
+verification method and result; limitations and contrary evidence; reviewer and review role; review
+status; and next-review date for time-sensitive material.
+
+Use explicit review states: `NOT_CHECKED`, `VERIFIED`, `PARTIAL`, `CONTRADICTED`, `SUPERSEDED` or
+`OUT_OF_SCOPE`. A URL alone is a research lead, not evidence that a source supports a claim.
+`VERIFIED` requires inspection of the cited primary passage and confirmation that its jurisdiction,
+version and effective date apply to the relevant document and transaction date. Record an unverified
+source as `NOT_CHECKED`; never quietly promote it from a search snippet, summary or model-generated
+citation.
+
+Keep verification history append-only. When an authority changes, retain the prior record and add a
+new check with its new version, publication/effective dates and retrieval date. Funding records must
+also capture the call's opening and closing dates, applicant eligibility, eligible cost rules, award
+conditions and the date those requirements were checked. Where no authoritative source or effective
+date can be established, mark the affected claim `PARTIAL` or `NOT_CHECKED` and keep the document
+release gate closed.
+
+A qualified legal review is a separate approval record: reviewer identity and competence,
+jurisdiction, exact document version, review date, unresolved conditions and approval/rejection. A
+checked legal source is not proof that the complete instrument is valid, enforceable or suitable for
+signature. Automated checks remain a preparation aid; the existing lawyer-review requirement is
+unchanged.
+
+`BIZ/fetat/research.md` §2.4 is the existing claim-level example of this discipline. Reuse and
+extend that record where appropriate; do not create a competing source ledger or imply that its
+limited verification pass covers every BIZ document. The current build/check chain does not certify
+legal instruments. No legal-document family may be marked published until its own evidence,
+jurisdiction, consistency and qualified-human-review gates are implemented and passed.
+
 **Layout is profile-specific.** Bob2's 156 x 234 mm hefte format is the
 established design for the existing business-plan series only. Do not skin a
 contract, board resolution or financial report with Bob2 merely because it is

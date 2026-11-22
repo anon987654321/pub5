@@ -8,11 +8,13 @@ require "minitest/mock"
 # phone. These pin the APNs half beside the web half, with the same filters.
 class MessagePushTest < ActionDispatch::IntegrationTest
   setup do
+    Rails.cache.clear
     Brgen::CitySeed.sync! if City.table_exists?
     ActsAsTenant.current_tenant = City.find_by!(domain: "brgen.no")
     @sender = create_user("push_sender")
     @reader = create_user("push_reader")
     @muted = create_user("push_muted")
+    @vapid_before = Rails.application.config.x.vapid
 
     @group = Conversation.create_group!(creator: @sender, name: "Middag", users: [ @reader, @muted ])
     ConversationParticipant.find_by!(conversation: @group, user: @muted).update!(muted_at: Time.current)
@@ -20,7 +22,10 @@ class MessagePushTest < ActionDispatch::IntegrationTest
     post session_path, params: { email_address: @sender.email_address, password: "password123" }
   end
 
-  teardown { ActsAsTenant.current_tenant = nil }
+  teardown do
+    Rails.application.config.x.vapid = @vapid_before
+    ActsAsTenant.current_tenant = nil
+  end
 
   def create_user(name)
     User.strict_loading(false).create!(
@@ -68,4 +73,212 @@ class MessagePushTest < ActionDispatch::IntegrationTest
     assert_equal [ [ [ @reader.id ], { title: "Ola", body: "Hei", path: "/conversations/1",
                                        thread: "brgen-conversation-1" } ] ], delivered
   end
+  test "a visible web device suppresses only its own endpoint for this conversation" do
+    Rails.application.config.x.vapid = { subject: "mailto:a@b.c", public_key: "x", private_key: "y" }
+    active = PushSubscription.create!(user: @reader, endpoint: "https://push.example/active", p256dh: "p", auth: "a")
+    away = PushSubscription.create!(user: @reader, endpoint: "https://push.example/away", p256dh: "p", auth: "a")
+    ChannelPresence.touch_push_device!(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: active.id
+    )
+    sent = []
+
+    Webpush.stub(:payload_send, ->(**kw) { sent << kw[:endpoint] }) do
+      Shared::WebPushJob.perform_now(
+        @reader.id,
+        title: "Ola",
+        body: "Hei",
+        url: "/conversations",
+        conversation_id: @group.id
+      )
+    end
+
+    assert_equal [ away.endpoint ], sent
+    assert ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: active.id
+    )
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id + 1,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: active.id
+    )
+  end
+
+  test "leaving a web device releases only that device's push lease" do
+    active = PushSubscription.create!(user: @reader, endpoint: "https://push.example/active", p256dh: "p", auth: "a")
+    other = PushSubscription.create!(user: @reader, endpoint: "https://push.example/other", p256dh: "p", auth: "a")
+    ChannelPresence.touch_push_device!(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: active.id
+    )
+    ChannelPresence.touch_push_device!(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: other.id
+    )
+
+    ChannelPresence.leave_push_device!(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: active.id
+    )
+
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: active.id
+    )
+    assert ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: other.id
+    )
+  end
+
+  test "a visible native device suppresses only its own APNs token" do
+    active = NativePushToken.create!(user: @reader, token: "ab" * 32)
+    away = NativePushToken.create!(user: @reader, token: "cd" * 32)
+    ChannelPresence.touch_push_device!(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "native",
+      device_id: active.id
+    )
+    delivered = nil
+
+    Apns.stub(:configured?, true) do
+      Apns.stub(:deliver, ->(tokens, _message) { delivered = tokens.map(&:id) }) do
+        NativePushJob.perform_now(
+          user_id: @reader.id,
+          conversation_id: @group.id,
+          title: "Ola",
+          body: "Hei",
+          path: "/conversations/1",
+          thread: "brgen-conversation-#{@group.id}"
+        )
+      end
+    end
+
+    assert_equal [ away.id ], delivered
+  end
+
+  test "an unowned push device cannot claim presence in a conversation" do
+    subscription = PushSubscription.create!(
+      user: @reader,
+      endpoint: "https://push.example/reader",
+      p256dh: "p",
+      auth: "a"
+    )
+    post conversation_presence_path(@group), params: { device_type: "web", endpoint: subscription.endpoint }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @sender.id,
+      device_type: "web",
+      device_id: subscription.id
+    )
+  end
+
+  test "the active account device can create and remove its scoped presence lease" do
+    subscription = PushSubscription.create!(
+      user: @sender,
+      endpoint: "https://push.example/sender",
+      p256dh: "p",
+      auth: "a"
+    )
+    payload = { device_type: "web", endpoint: subscription.endpoint }
+
+    post conversation_presence_path(@group), params: payload, as: :json
+    assert_response :no_content
+    assert ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @sender.id,
+      device_type: "web",
+      device_id: subscription.id
+    )
+
+    delete conversation_presence_path(@group), params: payload, as: :json
+    assert_response :no_content
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @sender.id,
+      device_type: "web",
+      device_id: subscription.id
+    )
+  end
+  test "a device presence lease expires without requiring an explicit unload event" do
+    subscription = PushSubscription.create!(
+      user: @reader, endpoint: "https://push.example/ttl",
+      p256dh: "p", auth: "a"
+    )
+    ChannelPresence.touch_push_device!(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: subscription.id
+    )
+
+    assert ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: subscription.id
+    )
+    travel 46.seconds
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @reader.id,
+      device_type: "web",
+      device_id: subscription.id
+    )
+  end
+  test "the active native device can create and remove its scoped presence lease" do
+    token = NativePushToken.create!(user: @sender, token: "ef" * 32)
+    payload = { device_type: "native", token: token.token }
+
+    post conversation_presence_path(@group), params: payload, as: :json
+    assert_response :no_content
+    assert ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @sender.id,
+      device_type: "native",
+      device_id: token.id
+    )
+
+    delete conversation_presence_path(@group), params: payload, as: :json
+    assert_response :no_content
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @sender.id,
+      device_type: "native",
+      device_id: token.id
+    )
+  end
+
+  test "a different account cannot lease another account's native token" do
+    token = NativePushToken.create!(user: @reader, token: "12" * 32)
+    post conversation_presence_path(@group), params: { device_type: "native", token: token.token }, as: :json
+
+    assert_response :unprocessable_entity
+    assert_not ChannelPresence.push_device_active?(
+      conversation_id: @group.id,
+      user_id: @sender.id,
+      device_type: "native",
+      device_id: token.id
+    )
+  end
+
 end

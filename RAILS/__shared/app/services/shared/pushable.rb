@@ -4,13 +4,15 @@ module Shared
   module Pushable
     # Enqueue, do not send. A slow push service must not make the user's own
     # request slow, so the round trips happen in Shared::WebPushJob.
-    def push_to(user, title:, body: "", url: "/")
+    def push_to(user, title:, body: "", url: "/", conversation_id: nil)
       return unless Shared::Vapid.configured?
       return unless user.respond_to?(:push_subscriptions)
       return if user.respond_to?(:deleted_at) && user.deleted_at.present?
       return if user.respond_to?(:deletion_scheduled_at) && user.deletion_scheduled_at.present?
 
-      Shared::WebPushJob.perform_later(user.id, title:, body:, url:)
+      arguments = { title:, body:, url: }
+      arguments[:conversation_id] = conversation_id if conversation_id
+      Shared::WebPushJob.perform_later(user.id, **arguments)
     end
 
     # The actual delivery, called by the job. Named so it is obvious at a call
@@ -20,7 +22,7 @@ module Shared
     # config.x.vapid is Shared::Vapid.webpush_options, set once at boot by the
     # shared initializer; reading the config rather than ENV is what lets a test
     # configure push without touching the process environment.
-    def deliver_now(user, title:, body: "", url: "/", tag: nil)
+    def deliver_now(user, title:, body: "", url: "/", tag: nil, conversation_id: nil)
       vapid = Rails.application.config.x.vapid
       return if vapid.blank?
       return unless user.respond_to?(:push_subscriptions)
@@ -31,6 +33,11 @@ module Shared
       payload = JSON.generate({ title:, body:, url:, tag: }.compact)
 
       user.push_subscriptions.each do |sub|
+        next if conversation_id && defined?(ChannelPresence) &&
+                ChannelPresence.push_device_active?(
+                  conversation_id:, user_id: user.id, device_type: "web", device_id: sub.id
+                )
+
         Webpush.payload_send(
           message:  payload,
           endpoint: sub.endpoint,

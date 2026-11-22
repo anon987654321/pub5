@@ -45,7 +45,17 @@ gaps:
   - { id: brgen_art_ad_banner, app: brgen, kind: ux, name: "minimal art-directed sponsored banner", source: root_backlog, status: open, note: "requires approved sponsored copy, image rights and destination; AdSense remains gated until a certified consent platform is in place" }
   # --- messenger ---
   - { id: messenger_webrtc_calls, app: messenger, kind: logic, name: "messenger voice and video calls (WebRTC)", source: horizon, status: blocked, note: "needs STUN/TURN infra on the host" }
-  - { id: messenger_notify_suppression, app: messenger, kind: ux, name: "notification suppressed while its conversation is open", source: horizon, status: open }
+  - id: messenger_notify_suppression
+    app: messenger
+    kind: ux
+    name: "notification suppressed while its conversation is open"
+    source: horizon
+    status: picked
+    workstream: messenger_device_presence
+    note: >-
+      Per-device, per-conversation 45s presence leases suppress only the active
+      web endpoint or APNs token. Hidden tabs leave immediately; stale leases
+      expire. Ownership checks and device-isolation tests are added but unrun.
   - { id: messenger_business_crm, app: messenger, kind: logic, name: "business inbox and CRM on messenger", source: horizon, status: open, note: "consumes commerce_shared_domain" }
   # --- marketplace ---
   - { id: marketplace_ai_recs, app: marketplace, kind: logic, name: "AI recommendations", source: apps_yml, status: open }
@@ -68,7 +78,17 @@ gaps:
   # --- tv ---
   - { id: tv_live_stream_infra, app: tv, kind: logic, name: "live stream infrastructure", source: apps_yml, status: blocked, note: "needs a media server (MediaMTX / SRS / nginx-rtmp) plus a delivery tier on the host; Tv::Broadcast already models the state machine" }
   # --- maps ---
-  - { id: maps_poi_substrate, app: maps, kind: logic, name: "places as the POI substrate every vertical can query", source: pass_1, status: open, note: "the pass found the maps surface done but unconsumed as a service; the synergy axis kept electing it" }
+  - id: maps_poi_substrate
+    app: maps
+    kind: logic
+    name: "places as the POI substrate every vertical can query"
+    source: pass_1
+    status: picked
+    workstream: brgen_place_directory
+    note: >-
+      Shared city-scoped directory, source identity, verification metadata and
+      public coordinate precision are implemented on the existing Places
+      workstream. Upstream POI import/refresh remains open; tests are unrun.
   # --- shared commerce domain (the horizon monetization block, folded) ---
   - { id: commerce_shared_domain, app: fleet, kind: logic, name: "one shared Commerce/Ledger/Campaign/Entitlements domain consumed by the verticals", source: horizon, status: open, note: "folds plans-as-data, payments abstraction, seller credits and the revenue dashboard; the horizon fence demands one domain, never a billing stack per engine" }
   - { id: commerce_private_seller_verification, app: fleet, kind: logic, name: "seller verification badge for a seller with no shop", source: horizon, status: open, note: "a private seller has no organisation number, so this needs its own proof" }
@@ -93,7 +113,16 @@ gaps:
   # --- master web (the operator's window; found by the surface audit, not by apps.yml) ---
   - { id: master_fleet_health, app: master, kind: logic, name: "dashboard sees only its own container - the three sibling apps sharing the 1GB box are invisible", source: master_audit, status: picked, workstream: master_fleet_panel, note: "resource_guard.sh sheds bsdports then amber; restart storms spike load; the console renders none of it" }
   - { id: master_dead_payload_facts, app: master, kind: knowledge, name: "model_quota and cache_efficiency computed into every dashboard/live poll, rendered by no panel", source: master_audit, status: picked, workstream: master_quota_facts }
-  - { id: master_pair_admin_surface, app: master, kind: ux, name: "pairing issue/list/destroy are curl-only; no authenticated web surface administers pairing codes", source: master_audit, status: open, note: "redeem itself is covered by the chat command router; this row is the operator's admin side" }
+  - id: master_pair_admin_surface
+    app: master
+    kind: ux
+    name: "pairing issue/list/destroy are curl-only; no authenticated web surface administers pairing codes"
+    source: master_audit
+    status: picked
+    workstream: master_pair_admin_surface
+    note: >-
+      Authenticated issue/list/revoke page with a 0600 token-free lifecycle
+      audit is integrated on the current integration branch. Tests are unrun.
   # --- master web face + voice (operator follow-up of 2026-10-27, same chat) ---
   - { id: master_face_soothing, app: master, kind: ux, name: "the face has no stillness of its own - flash-class canvas filters, hard chrome, zero breath; operator asks for visually appealing and soothing", source: operator_chat, status: picked, workstream: master_face_breath, note: "constraints carry: magic_hex budget is full so soothing must come from motion, brightness and air, never new colours" }
   - { id: master_voice_dsp_lanes, app: master, kind: logic, name: "the browser voice cannot build the declared character presets - aeval, acrusher and the asetrate/atempo idiom are server-only, so an enabled preset makes terminal and face two voices under one name again", source: operator_chat, status: picked, workstream: master_voice_browser_dsp, note: "the split is documented in face_speech_runtime.js lines 855-858; the 2026-09-16 refactor exists to prevent exactly this" }

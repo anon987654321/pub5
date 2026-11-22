@@ -86,7 +86,8 @@ module Maps
       scope = places_in_current_city.includes(:neighborhood)
                    .where.not(latitude: nil).where.not(longitude: nil)
       within_bbox(scope).limit(500).filter_map do |place|
-        point(place.latitude, place.longitude,
+        latitude, longitude = place.public_coordinates
+        point(latitude, longitude,
               type: "place", title: place.name,
               subtitle: [ place_kind_label(place.kind), place.neighborhood&.name ].compact_blank.join(", "),
               url: place_path(place))

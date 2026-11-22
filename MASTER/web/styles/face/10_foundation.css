@@ -98,7 +98,7 @@ body[data-focus-mode="1"] #pause-speech-button {
 
 /* Here as well as in chat_upload.css, which loads late and can miss: the
    tap floor (LAYOUT_RULES.touch) must not wait on a deferred stylesheet. */
-#photo-button {
+#new-conversation-button, #photo-button {
   min-width: var(--tap-min);
   min-height: var(--tap-min);
   display: inline-flex;
@@ -111,6 +111,7 @@ body[data-focus-mode="1"] #pause-speech-button {
   font: inherit;
   cursor: pointer;
 }
+#new-conversation-button:focus-visible,
 #photo-button:focus-visible,
 #pause-speech-button:focus-visible,
 #prompt-input:focus-visible,

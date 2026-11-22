@@ -131,6 +131,12 @@ en:
     empty_unimported: "The catalogue is empty because the OpenBSD index has not been imported on this server yet. This is not a failed search."
     last_import: "Last import: %{status}, %{count} ports, %{when}"
     package_index_only: "This refresh used the binary package index, which lists names and versions only. Descriptions and dependency data may be missing or carried forward from an earlier full ports-tree import."
+    unavailable_count: >-
+      %{count} historical package records are absent from the latest complete
+      package index; they remain available by direct link.
+    package_unavailable: >-
+      Absent from the latest complete package-index refresh. Last observed in the
+      index: %{seen}. The historical record is retained.
     never_imported: "No import has been run."
     header_page_label: "OpenBSD ports header"
     list_label: "OpenBSD ports list"

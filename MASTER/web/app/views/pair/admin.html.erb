@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="<%= I18n.locale %>">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <%= csrf_meta_tags %>
+  <title><%= t("pair_admin.title") %></title>
+  <style nonce="<%= content_security_policy_nonce %>">
+    :root {
+      color-scheme: dark;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      background: #080808;
+      color: #eee;
+    }
+    body { margin: 0; padding: 2rem 1rem; }
+    main { width: min(100%, 52rem); margin: 0 auto; }
+    h1, h2 { font-size: 1rem; font-weight: 600; }
+    p, small { line-height: 1.55; }
+    .muted { color: #aaa; }
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 1rem;
+      align-items: start;
+      border-top: 1px solid #333;
+      padding: 1rem 0;
+    }
+    label { display: block; margin: .75rem 0 .35rem; }
+    input {
+      box-sizing: border-box;
+      max-width: 100%;
+      padding: .65rem;
+      color: inherit;
+      background: #111;
+      border: 1px solid #555;
+      font: inherit;
+    }
+    button {
+      padding: .55rem .8rem;
+      color: inherit;
+      background: #171717;
+      border: 1px solid #777;
+      font: inherit;
+      cursor: pointer;
+    }
+    code { overflow-wrap: anywhere; }
+    .notice { border-left: 2px solid #999; padding: .5rem .8rem; margin: 1rem 0; }
+    .danger { border-color: #b66; }
+    @media (max-width: 34rem) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="<%= root_path %>"><%= t("pair_admin.back_to_master") %></a></p>
+    <h1><%= t("pair_admin.title") %></h1>
+    <p class="muted"><%= t("pair_admin.lede") %></p>
+    <p><%= t("pair_admin.access_policy") %></p>
+
+    <% if flash[:notice].present? %>
+      <p class="notice" role="status"><%= flash[:notice] %></p>
+    <% end %>
+    <% if flash[:pair_code].present? %>
+      <section class="notice" aria-labelledby="pair-code-heading">
+        <h2 id="pair-code-heading"><%= t("pair_admin.one_time_code") %></h2>
+        <p><code><%= flash[:pair_code] %></code></p>
+        <p><%= t("pair_admin.code_expires", seconds: flash[:pair_code_expires_in].to_i) %></p>
+        <p class="muted"><%= t("pair_admin.code_warning") %></p>
+      </section>
+    <% end %>
+
+    <section aria-labelledby="issue-heading">
+      <h2 id="issue-heading"><%= t("pair_admin.issue_heading") %></h2>
+      <%= form_with url: "/pair/admin/issue", method: :post do |form| %>
+        <%= form.label :label, t("pair_admin.device_label") %>
+        <%= form.text_field :label, maxlength: 80, autocomplete: "off" %>
+        <p><%= form.submit t("pair_admin.issue_button") %></p>
+      <% end %>
+    </section>
+
+    <section aria-labelledby="active-heading">
+      <h2 id="active-heading"><%= t("pair_admin.active_heading", count: @pairings.size) %></h2>
+      <% if @pairings.empty? %>
+        <p class="muted"><%= t("pair_admin.none") %></p>
+      <% else %>
+        <% @pairings.each do |pairing| %>
+          <article class="row">
+            <div>
+              <strong><%= pairing[:label].presence || t("pair_admin.unnamed") %></strong>
+              <p><%= t("pair_admin.subject") %>: <code><%= pairing[:subject] %></code></p>
+              <p><%= t("pair_admin.scope") %>: <code><%= t("pair_admin.messaging_scope") %></code></p>
+              <small class="muted"><%= t("pair_admin.paired_at") %>:
+                <%= Time.zone.at(pairing[:paired_at].to_i).strftime("%Y-%m-%d %H:%M %Z") %>
+              </small>
+            </div>
+            <%= button_to t("pair_admin.revoke"), "/pair/admin/#{ERB::Util.url_encode(pairing[:subject])}",
+                          method: :delete, form: { data: { turbo_confirm: t("pair_admin.confirm_revoke") } } %>
+          </article>
+        <% end %>
+      <% end %>
+    </section>
+    <section aria-labelledby="audit-heading">
+      <h2 id="audit-heading"><%= t("pair_admin.audit_heading") %></h2>
+      <% if @audit.empty? %>
+        <p class="muted"><%= t("pair_admin.audit_empty") %></p>
+      <% else %>
+        <% @audit.each do |entry| %>
+          <article class="row">
+            <div>
+              <strong><%= t("pair_admin.audit_events.#{entry[:event]}") %></strong>
+              <% if entry[:label].present? %><p><%= t("pair_admin.device_label") %>: <%= entry[:label] %></p><% end %>
+              <% if entry[:subject].present? %>
+                <p><%= t("pair_admin.subject") %>: <code><%= entry[:subject] %></code></p>
+              <% end %>
+              <% if entry[:code_expires_at].present? %>
+                <small class="muted">
+                  <%= t("pair_admin.code_expires_at") %>:
+                  <%= Time.zone.at(entry[:code_expires_at].to_i).strftime("%Y-%m-%d %H:%M %Z") %>
+                </small>
+              <% end %>
+              <small class="muted">
+                <%= t("pair_admin.audit_actor") %>: <%= entry[:actor] %> ·
+                <%= Time.zone.at(entry[:at].to_i).strftime("%Y-%m-%d %H:%M %Z") %>
+              </small>
+            </div>
+          </article>
+        <% end %>
+      <% end %>
+    </section>
+
+    <p class="muted"><%= t("pair_admin.no_token_expiry") %></p>
+  </main>
+</body>
+</html>

@@ -25,7 +25,7 @@
       post one before the venue is settled. Picking a Place fills the rest in. %>
   <p>
     <%= f.label :place_id, t("events.form.place") %>
-    <%= f.collection_select :place_id, Place.in_current_city.order(:name), :id, :name,
+    <%= f.collection_select :place_id, PlaceDirectory.for_city(Current.city_record).order(:name), :id, :name,
           { include_blank: t("events.form.no_place") } %>
   </p>
 

@@ -250,10 +250,16 @@ class MessagesController < ApplicationController
     payload = { title: Current.user.display_name, body: push_body_for(message), path: conversation_path(@conversation) }
     native = Apns.configured?
     push_recipients.each do |recipient|
-      Shared::Pushable.push_to(recipient, title: payload[:title], body: payload[:body], url: payload[:path])
+      Shared::Pushable.push_to(
+        recipient, title: payload[:title], body: payload[:body],
+        url: payload[:path], conversation_id: @conversation.id
+      )
       next unless native
 
-      NativePushJob.perform_later(user_id: recipient.id, thread: "brgen-conversation-#{@conversation.id}", **payload)
+      NativePushJob.perform_later(
+        user_id: recipient.id, conversation_id: @conversation.id,
+        thread: "brgen-conversation-#{@conversation.id}", **payload
+      )
     end
   end
 

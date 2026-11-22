@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 # Who has this room open right now.
 #
 # Conversation#recent_active_count answers a different question -- distinct
@@ -27,6 +29,7 @@
 class ChannelPresence
   TTL = 45 # seconds; must exceed the client's beat interval with room to spare
   BEAT = 20
+  PUSH_DEVICE_TYPES = %w[web native].freeze
 
   class << self
     def touch!(conversation:, user:)
@@ -51,6 +54,40 @@ class ChannelPresence
       broadcast(conversation)
     end
 
+    # Device-scoped push leases ensure an active browser does not silence a
+    # phone (or a second browser). Only opaque row ids are cached; raw push
+    # endpoints and APNs tokens never become cache keys or presence data.
+    def touch_push_device!(conversation_id:, user_id:, device_type:, device_id:)
+      return false unless valid_push_device?(device_type, device_id)
+
+      Rails.cache.write(
+        push_device_key(conversation_id, user_id, device_type, device_id),
+        Time.current.to_i + TTL,
+        expires_in: TTL.seconds
+      )
+    rescue StandardError => e
+      Rails.logger.warn("channel_presence push-device touch failed: #{e.class}: #{e.message}")
+      false
+    end
+
+    def leave_push_device!(conversation_id:, user_id:, device_type:, device_id:)
+      return false unless valid_push_device?(device_type, device_id)
+
+      Rails.cache.delete(push_device_key(conversation_id, user_id, device_type, device_id))
+    rescue StandardError => e
+      Rails.logger.warn("channel_presence push-device leave failed: #{e.class}: #{e.message}")
+      false
+    end
+
+    def push_device_active?(conversation_id:, user_id:, device_type:, device_id:)
+      return false unless valid_push_device?(device_type, device_id)
+
+      expires_at = Rails.cache.read(push_device_key(conversation_id, user_id, device_type, device_id)).to_s.to_i
+      expires_at > Time.current.to_i
+    rescue StandardError => e
+      Rails.logger.warn("channel_presence push-device read failed: #{e.class}: #{e.message}")
+      false
+    end
     def count_for(conversation) = ids_for(conversation).size
 
     def ids_for(conversation)
@@ -62,6 +99,15 @@ class ChannelPresence
     private
 
     def key(conversation) = "brgen:presence:conversation:#{conversation.id}"
+
+    def valid_push_device?(device_type, device_id)
+      PUSH_DEVICE_TYPES.include?(device_type.to_s) && device_id.to_s.match?(/\A[1-9]\d{0,18}\z/)
+    end
+
+    def push_device_key(conversation_id, user_id, device_type, device_id)
+      identity = [conversation_id, user_id, device_type, device_id].join(":")
+      "brgen:presence:push-device:#{Digest::SHA256.hexdigest(identity)}"
+    end
 
     def read(conversation)
       value = Rails.cache.read(key(conversation))

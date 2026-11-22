@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_10_21_144000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_22_090000) do
   create_table "categories", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -115,10 +115,12 @@ ActiveRecord::Schema[8.2].define(version: 2026_10_21_144000) do
     t.text "description"
     t.string "homepage"
     t.date "last_updated"
+    t.datetime "package_index_seen_at"
     t.string "maintainer"
     t.integer "maintainer_id"
     t.string "name", null: false
     t.boolean "permit_file_distfiles", default: false
+    t.boolean "available", default: true, null: false
     t.string "pkgpath"
     t.integer "platform_id", null: false
     t.datetime "updated_at", null: false
@@ -128,6 +130,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_10_21_144000) do
     t.index ["name"], name: "index_ports_on_name"
     t.index ["platform_id", "pkgpath"], name: "index_ports_on_platform_id_and_pkgpath", unique: true
     t.index ["platform_id"], name: "index_ports_on_platform_id"
+    t.index ["platform_id", "available"], name: "index_ports_on_platform_id_and_available"
   end
 
   create_table "security_advisories", force: :cascade do |t|

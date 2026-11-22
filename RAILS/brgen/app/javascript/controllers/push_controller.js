@@ -35,6 +35,7 @@ export default class extends Controller {
     }
     document.addEventListener("turbo:submit-start", this.onSubmitStart)
     this.#wirePrompt()
+    this.#wireConversationPresence()
 
     // The iOS shell is a WKWebView with no Push API; it registers for APNs through
     // its pub5Push bridge instead, and only when the server can send through APNs.
@@ -56,6 +57,13 @@ export default class extends Controller {
     window.removeEventListener(YIELD_EVENT, this.onYield)
     document.removeEventListener("click", this.onPromptClick)
     if (this.onNativeToken) window.removeEventListener("pub5:native-push-token", this.onNativeToken)
+    this.#stopPresenceTimer()
+    this.#leaveConversationPresence()
+    document.removeEventListener("turbo:load", this.onPresenceNavigate)
+    document.removeEventListener("turbo:frame-load", this.onPresenceNavigate)
+    document.removeEventListener("turbo:before-visit", this.onPresenceLeave)
+    document.removeEventListener("visibilitychange", this.onPresenceVisibility)
+    window.removeEventListener("pagehide", this.onPresenceLeave)
   }
 
   clearBadge() {
@@ -84,14 +92,16 @@ export default class extends Controller {
 
   async #saveNative({ token, environment } = {}) {
     if (!token) return
+    this.nativeToken = token.toLowerCase()
     await fetch(this.nativeUrlValue, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content
       },
-      body: JSON.stringify({ token, environment })
+      body: JSON.stringify({ token: this.nativeToken, environment })
     })
+    this.#refreshConversationPresence()
   }
 
   // A POST whose form creates something answerable. A PATCH or a DELETE rides
@@ -150,6 +160,7 @@ export default class extends Controller {
   }
 
   async #save(sub) {
+    this.webEndpoint = sub.endpoint
     await fetch(this.subscribeUrlValue, {
       method: "POST",
       headers: {
@@ -158,6 +169,77 @@ export default class extends Controller {
       },
       body: JSON.stringify(sub.toJSON())
     })
+    this.#refreshConversationPresence()
+  }
+
+  // Notification suppression follows one live device, not the account. The
+  // endpoint/token is sent only to an ownership-checked endpoint; the server
+  // stores a short-lived lease under a digest of its own row id.
+  #wireConversationPresence() {
+    this.onPresenceNavigate = () => this.#refreshConversationPresence()
+    this.onPresenceLeave = () => this.#leaveConversationPresence()
+    this.onPresenceVisibility = () => {
+      if (document.hidden) this.#leaveConversationPresence()
+      else this.#refreshConversationPresence()
+    }
+    document.addEventListener("turbo:load", this.onPresenceNavigate)
+    document.addEventListener("turbo:frame-load", this.onPresenceNavigate)
+    document.addEventListener("turbo:before-visit", this.onPresenceLeave)
+    document.addEventListener("visibilitychange", this.onPresenceVisibility)
+    window.addEventListener("pagehide", this.onPresenceLeave)
+    this.#refreshConversationPresence()
+  }
+
+  #presenceDevice() {
+    if (this.nativeValue && window.webkit?.messageHandlers?.pub5Push) {
+      return this.nativeToken ? { device_type: "native", token: this.nativeToken } : null
+    }
+    return this.webEndpoint ? { device_type: "web", endpoint: this.webEndpoint } : null
+  }
+
+  #refreshConversationPresence() {
+    const url = document.querySelector("[data-conversation-presence-url]")?.dataset.conversationPresenceUrl || ""
+    const device = this.#presenceDevice()
+    const next = url && device ? { url, device } : null
+    if (this.presenceLease && (!next || this.presenceLease.url !== next.url ||
+        JSON.stringify(this.presenceLease.device) !== JSON.stringify(next.device))) {
+      this.#leaveConversationPresence()
+    }
+    this.presenceLease = next
+    if (!next || document.hidden) {
+      this.#stopPresenceTimer()
+      return
+    }
+    this.presenceLeft = false
+    this.#sendConversationPresence("POST")
+    if (!this.presenceTimer) this.presenceTimer = setInterval(() => this.#sendConversationPresence("POST"), 20_000)
+  }
+
+  #sendConversationPresence(method) {
+    const lease = this.presenceLease
+    if (!lease) return
+    fetch(lease.url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content
+      },
+      credentials: "same-origin",
+      keepalive: true,
+      body: JSON.stringify(lease.device)
+    }).catch(() => {})
+  }
+
+  #leaveConversationPresence() {
+    this.#stopPresenceTimer()
+    if (!this.presenceLease || this.presenceLeft) return
+    this.presenceLeft = true
+    this.#sendConversationPresence("DELETE")
+  }
+
+  #stopPresenceTimer() {
+    if (this.presenceTimer) clearInterval(this.presenceTimer)
+    this.presenceTimer = null
   }
 
   #b64ToUint8(b64) {

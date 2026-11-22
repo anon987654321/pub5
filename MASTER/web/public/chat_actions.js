@@ -114,6 +114,37 @@ function closeChatStream() {
   window._chatEvtSrc = null;
 }
 
+async function startNewConversation() {
+  closeChatStream();
+  window.MASTERVoice?.skip?.();
+
+  try {
+    const response = await fetch("/chat/new", {
+      method: "POST",
+      headers: { Accept: "application/json", "X-CSRF-Token": csrfToken() }
+    });
+    const payload = await response.json().catch(() => null);
+    const faceSession = String(payload?.face_session || "");
+    if (!response.ok || !/^[a-f0-9]{32}$/.test(faceSession)) {
+      throw new Error(`new conversation failed (${response.status})`);
+    }
+
+    // The server has already rotated the HttpOnly conversation cookie. The
+    // browser event advances the existing particle-mask profile exactly once;
+    // reload then renders the matching server-selected profile and an empty log.
+    window.dispatchEvent(new CustomEvent("master:conversation-created", {
+      detail: { conversationId: faceSession }
+    }));
+    window.location.reload();
+    return true;
+  } catch (error) {
+    window.MASTER_LOG?.warn?.("chat:new_conversation", error);
+    const status = document.getElementById("ui-status");
+    if (status) status.textContent = "new conversation failed — try again";
+    return false;
+  }
+}
+
 function dispatchSseBlock(block, handlers) {
   if (!block.trim() || block.trimStart().startsWith(":")) return;
   let event = "message";
@@ -428,6 +459,7 @@ async function drainFallbackSendQueue() {
 function sendMessage(text) {
   const message = String(text ?? chatInput()?.value ?? "").trim();
   if (!message) return Promise.resolve(false);
+  if (message.toLowerCase() === "/new") return startNewConversation();
   if (fallbackSendQueue.length >= FALLBACK_SEND_QUEUE_LIMIT) {
     updateFallbackSendQueueUi(`queue full ${FALLBACK_SEND_QUEUE_LIMIT}; message not sent`);
     return false;
@@ -456,6 +488,10 @@ document.getElementById("turn-control")?.addEventListener("click", () => {
   updateFallbackSendQueueUi();
 });
 
+document.getElementById("new-conversation-button")?.addEventListener("click", () => {
+  void startNewConversation();
+});
+
 window.MASTERChat = {
   isBangCommand,
   collectFeltState,
@@ -465,7 +501,8 @@ window.MASTERChat = {
   openChatStream,
   startChatStream,
   sendMessage,
-  closeChatStream
+  closeChatStream,
+  newConversation: startNewConversation
 };
 
 window.addEventListener("online", () => { drainOfflineQueue().catch((err) => { window.MASTER_LOG?.warn?.("chat:offline_drain", err); }); });
@@ -513,6 +550,13 @@ if (!window.sendMessage) window.sendMessage = sendMessage;
   if (!form || !input) return;
   const faceOwnsSend = () => typeof window.MASTER_FACE?.sendMessage === "function";
   form.addEventListener("submit", (event) => {
+    if (input.value.trim().toLowerCase() === "/new") {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      input.value = "";
+      void startNewConversation();
+      return;
+    }
     if (faceOwnsSend()) return;
     event.preventDefault();
     const text = input.value.trim();

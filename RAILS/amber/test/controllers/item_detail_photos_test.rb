@@ -1,12 +1,27 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "base64"
 
 # Every photo of a garment carried the same alt and its lightbox link no name
 # of its own; the colour swatch and the palette chips set their colour in a
 # style attribute, which a CSP without 'unsafe-inline' refuses; and a palette
 # chip had no colour name for a screen reader, only a hover title naming the item.
 class ItemDetailPhotosTest < ActionDispatch::IntegrationTest
+
+  GPS_JPEG = Base64.strict_decode64([
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/4QCIRXhpZgAATU0AKgAAAAgAAYglAAQAAAABAAAAGgAAAAAABAABAAIAAAACTgAAAAAC",
+    "AAUAAAADAAAAUAADAAIAAAACRQAAAAAEAAUAAAADAAAAaAAAAAAAAAA8AAAAAQAAAAAAAAABAAAAAAAAAAEAAAAFAAAAAQAA",
+    "AAAAAAABAAAAAAAAAAH/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0",
+    "Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy",
+    "MjIyMjIyMjIyMjL/wAARCAAMAAwDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgED",
+    "AwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RF",
+    "RkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJ",
+    "ytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgEC",
+    "BAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNE",
+    "RUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbH",
+    "yMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDlqKKK9A5D/9k="
+  ].join)
   setup do
     email = "photos-#{SecureRandom.hex(4)}@example.test"
     @user = User.strict_loading(false).create!(email_address: email, password: "password")
@@ -18,6 +33,13 @@ class ItemDetailPhotosTest < ActionDispatch::IntegrationTest
     count.times do |index|
       @item.photos.attach(io: StringIO.new("photo-#{index}"), filename: "coat-#{index}.jpg", content_type: "image/jpeg")
     end
+  end
+
+  test "every display derivative keeps only the ICC colour profile" do
+    Item::PHOTO_VARIANTS.each_value do |transformations|
+      assert_equal 8, transformations.dig(:saver, :keep)
+    end
+    assert_same Item::PHOTO_VARIANTS, Outfit::IMAGE_VARIANTS
   end
 
   test "several photos are numbered in their alt text and their lightbox links" do
@@ -66,5 +88,20 @@ class ItemDetailPhotosTest < ActionDispatch::IntegrationTest
       assert_select "#{nav} > details form[action=?]", path
     end
     assert_select "#{nav} > details a[href=?]", review_declutter_path(@item)
+  end
+  test "GPS EXIF survives only in the private original, never the display derivative" do
+    @item.photos.attach(io: StringIO.new(GPS_JPEG), filename: "gps-coat.jpg", content_type: "image/jpeg")
+    original = @item.photos.last
+    assert_equal GPS_JPEG, original.download
+
+    original_image = Vips::Image.new_from_buffer(original.download, "")
+    assert original_image.get_fields.any? { |field| field.include?("GPSLatitude") },
+           "the fixture must contain an embedded GPS latitude tag"
+
+    derivative = original.variant(:thumb).processed
+    display_image = Vips::Image.new_from_buffer(derivative.download, "")
+    refute display_image.get_fields.any? { |field| field.start_with?("exif-") },
+           "public display derivatives must not expose EXIF metadata"
+    assert_equal GPS_JPEG, original.download, "variant generation must not rewrite the private original"
   end
 end
