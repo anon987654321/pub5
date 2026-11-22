@@ -54,6 +54,7 @@ class TestCoreReversibility < Minitest::Test
       E.exec(%w[ruby -v]),
       E.git(:diff),
       E.http("https://example.com"),
+      E.browser("https://example.com"),
       E.ask("continue?"),
       E.note(:idea, "inspect first"),
       E.critique,
@@ -65,14 +66,14 @@ class TestCoreReversibility < Minitest::Test
     assert_equal(
       {
         read: :read, write: :write, probe: :probe, exec: :execute, git: :read, http: :network,
-        ask: :stdio, note: :stdio, critique: :stdio, done: :stdio
+        browser: :browser, ask: :stdio, note: :stdio, critique: :stdio, done: :stdio
       },
       by_verb.transform_values(&:capability),
     )
     assert_equal(
       {
         read: :non_mutating, write: :reversible, probe: :non_mutating, exec: :policy_gated, git: :non_mutating,
-        http: :policy_gated, ask: :non_mutating, note: :session_state,
+        http: :policy_gated, browser: :policy_gated, ask: :non_mutating, note: :session_state,
         critique: :non_mutating, done: :non_mutating
       },
       by_verb.transform_values { |effect| effect.reversibility.kind },
@@ -136,6 +137,7 @@ class TestCoreReversibility < Minitest::Test
     assert_equal :scoped_checkpoint_restore, E.write("a.rb", "A = 1").reversibility.compensation
     assert_equal :policy_gated, E.exec(%w[ruby -v]).reversibility.kind
     assert_equal :policy_gated, E.http("https://example.com").reversibility.kind
+    assert_equal :policy_gated, E.browser("https://example.com").reversibility.kind
     assert_equal :approval_required, E.git(:stage, paths: ["a.rb"]).reversibility.kind
     assert_equal :policy_gated, E.git(:commit, paths: ["a.rb"]).reversibility.kind
     refute_predicate E.git(:commit, paths: ["a.rb"]).reversibility, :approval_required?
