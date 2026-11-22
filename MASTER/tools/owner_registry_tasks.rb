@@ -806,6 +806,7 @@ module Backlog
     def parked_task_rows
       receipt_read_paths.flat_map do |path|
         receipt_rows(path).filter_map do |row|
+          next unless row.is_a?(Hash)
           next unless %w[parked_task resume_task].include?(row["record_type"].to_s)
           next unless row["item_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
 
