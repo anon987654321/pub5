@@ -99,6 +99,35 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_expired_automatic_mission_at_attempt_limit_is_blocked_without_reentry
+    Dir.mktmpdir do |root|
+      mission = write_mission(root, origin: "fold")
+      mission.send(:with_lock) do
+        record = mission.instance_variable_get(:@record)
+        record["state"] = "running"
+        record["attempt_count"] = Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS
+        record["lease_owner"] = nil
+        record["lease_until"] = nil
+        mission.send(:persist!)
+      end
+
+      calls = []
+      steward = Master::Fix::TaskSteward.new(
+        root:, bus: nil,
+        runner: ->(**) { calls << true; :continued },
+      )
+      result = steward.tick!
+
+      assert result.err?
+      assert_empty calls
+      record = Master::Fix::Mission.current(root:)
+      assert_equal "blocked", record.fetch("state")
+      assert_equal false, record.fetch("auto_continue")
+      assert_nil record.fetch("next_wake_at")
+      assert_match(/operator must review and resume/, record.fetch("wake_reason"))
+    end
+  end
+
   def test_active_lease_failure_does_not_defer_another_process
     Dir.mktmpdir do |root|
       write_mission(root)
