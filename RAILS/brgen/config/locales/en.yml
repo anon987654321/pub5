@@ -114,6 +114,7 @@ en:
     show_new_posts: Show new
     follow_sign_in: Sign in
     follow_hint_html: "%{sign_in} to see posts from people you follow."
+    following_cold_start: "You aren't following anyone yet. Showing popular posts from your city instead."
     local_posts: Local posts
     local_activity: Local activity
     local_marketplace: New in the marketplace
