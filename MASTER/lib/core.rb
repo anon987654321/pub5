@@ -101,7 +101,7 @@ module Master::Core
     def self.write(path, content) = new(verb: :write, args: { path:, content: })
     def self.probe(argv, timeout: 20) = new(verb: :probe, args: { argv:, timeout: })
     def self.http(url) = new(verb: :http, args: { url: })
-    # One-shot JavaScript-rendered, read-only page visit through the guarded browser transport.
+    # One-shot JavaScript-rendered visit. Page scripts and same-host GET requests can mutate remote state.
     def self.browser(url, wait: 1.0, links: true) = new(verb: :browser, args: { url:, wait:, links: })
     # evidence: remains accepted for old callers; it is deliberately not retained.
     def self.exec(argv, timeout: 60, evidence: nil, env: {}, compensation: nil)
@@ -198,8 +198,8 @@ module Master::Core
         Reversibility.new(kind: :policy_gated, scope: args[:url],
                           reason: "network policy owns authorization; the remote effect has no generic inverse")
       when :browser
-        Reversibility.new(kind: :policy_gated, scope: args[:url],
-                          reason: "the guarded browser policy owns a read-only remote visit; the remote effect has no generic inverse")
+        Reversibility.new(kind: :approval_required, scope: args[:url],
+                          reason: "page scripts execute and same-host GET endpoints may mutate remote state; no generic inverse exists")
       when :git
         case args[:operation].to_s.to_sym
         when :diff
