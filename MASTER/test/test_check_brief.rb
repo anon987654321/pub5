@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "minitest/autorun"
+require "tmpdir"
 require_relative "../lib/operator/check_brief"
 require_relative "../lib/operator/check_runner"
 
@@ -131,6 +132,48 @@ class TestCheckBrief < Minitest::Test
     ))
     assert_equal "INCONCLUSIVE", dirty.fetch("status")
     assert_equal false, dirty.fetch("repository_evidence_complete")
+  end
+
+  def test_write_json_receipt_persists_atomically_with_private_permissions
+    Dir.mktmpdir("check-receipt") do |root|
+      receipt_id = SecureRandom.uuid
+      relative = ".master/check/receipts/#{receipt_id}.json"
+      receipt = {
+        "schema_version" => 1,
+        "receipt_id" => receipt_id,
+        "receipt_path" => relative,
+        "receipt_output" => "stdout+file",
+        "status" => "PASS",
+      }
+
+      path = Operator::CheckBrief.write_json_receipt(root:, receipt:)
+
+      assert_equal File.join(root, relative), path
+      assert File.file?(path)
+      assert_equal receipt, JSON.parse(File.read(path))
+      assert_equal 0o600, File.stat(path).mode & 0o777
+      assert File.binread(path).end_with?("\n")
+    end
+  end
+
+  def test_write_json_receipt_rejects_invalid_identity_and_path_substitution
+    Dir.mktmpdir("check-receipt") do |root|
+      valid_id = SecureRandom.uuid
+      valid_path = ".master/check/receipts/#{valid_id}.json"
+
+      invalid_id = { "receipt_id" => "../escape", "receipt_path" => valid_path }
+      assert_raises(ArgumentError) do
+        Operator::CheckBrief.write_json_receipt(root:, receipt: invalid_id)
+      end
+
+      mismatched_path = { "receipt_id" => valid_id, "receipt_path" => "../escape.json" }
+      assert_raises(ArgumentError) do
+        Operator::CheckBrief.write_json_receipt(root:, receipt: mismatched_path)
+      end
+
+      refute File.exist?(File.join(root, "escape.json"))
+      refute File.exist?(File.join(root, ".master", "check", "receipts", "#{valid_id}.json"))
+    end
   end
 
   def test_render_failure
