@@ -62,7 +62,7 @@ class EngineMigrationConventionTest < Minitest::Test
       refute_nil table, "#{app}/db/schema.rb is missing commerce_ledger_entries"
       %w[actor_id amount_minor currency expires_at entry_type entitlement
          idempotency_key metadata source_id source_type user_id].each do |column|
-        assert_match(/t\\.(?:bigint|integer|string|datetime|json) "#{column}"/, table,
+        assert_match(/t\.(?:bigint|integer|string|datetime|json) "#{column}"/, table,
                      "#{app} ledger schema is missing #{column}")
       end
       assert_match(/idempotency_key.*unique: true/, table,
