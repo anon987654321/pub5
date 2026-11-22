@@ -2744,3 +2744,15 @@ Browser facade revocation addendum — 2026-11-22:
   not serialize an operation already in flight against a simultaneous close.
   Chromium process ownership still uses Process.spawn inside the broker and
   Core process-supervisor integration remains open. Issue #5 remains OPEN.
+
+Browser shutdown-window addendum — 2026-11-22:
+- Tightened lease refresh so a lease marked as closing is already revoked,
+  before process teardown or the stop receipt completes. This closes the
+  window where an adapter could continue refreshing a lease while shutdown
+  was in progress.
+- Added a deterministic concurrency regression that blocks the engine's
+  stop method, attempts to reuse the lease while it is closing, and confirms
+  the capability is refused while the broker retains ownership of the process.
+- Commits: 8634ad75975972640718726559c73ed7d41da0bc (closing-state revocation);
+  e085d7b3d7746514be1e678eef056e568b22498e (shutdown-window regression).
+- Runtime execution remains NOT_RUN; source read-back is the only evidence.
