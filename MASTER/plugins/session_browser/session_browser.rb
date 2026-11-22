@@ -352,8 +352,11 @@ module Master
         transport.secure_page(page, allowed_host: host)
         yield page
       ensure
-        browser&.quit
-        owner&.close(lease.id) if lease
+        begin
+          browser&.quit
+        ensure
+          owner&.close(lease.id) if lease
+        end
       end
 
       def broker = service(:browser_broker)
