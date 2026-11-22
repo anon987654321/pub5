@@ -336,6 +336,10 @@ class BrowserBrokerTest < Minitest::Test
     refute_respond_to lease, :pid
     refute_respond_to lease, :profile_dir
     assert_equal "example.com", lease.host
+    assert lease.id.frozen?
+    assert lease.host.frozen?
+    assert_raises(FrozenError) { lease.id.replace("other-lease") }
+    assert_raises(FrozenError) { lease.host.replace("other.example") }
     refute_respond_to lease, :cdp_url
     refute_includes lease.inspect, "ws://"
     refute_includes JSON.generate(lease), "ws://"
