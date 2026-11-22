@@ -9,8 +9,7 @@ class CategoriesController < ApplicationController
     scope = Category.order(:name)
     scope = apply_live_search(scope, columns: %w[name description], vertical: "categories") if live_search_query.present?
     @pagy, @categories = pagy(scope)
-    # One grouped COUNT for the page; includes(:ports) loaded every port row
-    # of every category on it to print a number.
+    # One grouped COUNT for the page; historical package rows are not current catalogue entries.
     @port_counts = Port.available.where(category_id: @categories.map(&:id)).group(:category_id).count
     finish_live_search(partial: "categories/live_search_results")
   end
