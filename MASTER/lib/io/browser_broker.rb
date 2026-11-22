@@ -246,10 +246,25 @@ module Master
           id = SecureRandom.hex(8)
           lease = nil
           handle = nil
-          receipt(:browser_start, id:, host: bound, phase: :before) do
-            handle = @engine.start(host: bound, lease_id: id, profile:, persistent:, headless:)
-            lease = Lease.new(id:, host: bound, cdp_url: handle.cdp_url,
-                              expires_at: @clock.call + bounded_ttl(ttl_seconds))
+          begin
+            receipt(:browser_start, id:, host: bound, phase: :before) do
+              handle = @engine.start(host: bound, lease_id: id, profile:, persistent:, headless:)
+              lease = Lease.new(id:, host: bound, cdp_url: handle.cdp_url,
+                                expires_at: @clock.call + bounded_ttl(ttl_seconds))
+            end
+          rescue StandardError => error
+            # A failed durable after-receipt must not strand the process that
+            # was just started. The lease is not published until both records
+            # have been persisted.
+            if handle
+              begin
+                @engine.stop(handle)
+                @ledger&.call(event: :browser_start, phase: :cleanup, lease: id, host: bound)
+              rescue StandardError => cleanup_error
+                raise Denied, "browser: start receipt failed (#{error.class}); process cleanup failed (#{cleanup_error.class})"
+              end
+            end
+            raise
           end
           @handles[id] = handle
           @leases[id] = lease
@@ -374,7 +389,13 @@ module Master
       # without orphaning a process merely because the ledger is unavailable.
       def stop_handle(id, handle)
         stop_error = nil
-        receipt_error = nil
+        receipt_errors = []
+
+        begin
+          @ledger&.call(event: :browser_stop, phase: :before, lease: id, host: handle.host)
+        rescue StandardError => e
+          receipt_errors << e
+        end
 
         begin
           @engine.stop(handle)
@@ -385,12 +406,12 @@ module Master
         begin
           @ledger&.call(event: :browser_stop, phase: :after, lease: id, host: handle.host)
         rescue StandardError => e
-          receipt_error = e
+          receipt_errors << e
         end
 
         failures = []
         failures << "process stop failed (#{stop_error.class})" if stop_error
-        failures << "stop receipt failed (#{receipt_error.class})" if receipt_error
+        failures << "stop receipt failed (#{receipt_errors.map { |error| error.class }.join(", ")})" if receipt_errors.any?
         raise Denied, "browser: session #{id} close incomplete: #{failures.join("; ")}" unless failures.empty?
 
         true
@@ -427,7 +448,9 @@ module Master
       # a CDP URL, profile path, cookie, page URL or page content.
       def receipt(event, id:, host: nil, phase:)
         @ledger&.call(event:, phase:, lease: id, host:)
-        yield
+        result = yield
+        @ledger&.call(event:, phase: :after, lease: id, host:) if phase.to_sym == :before
+        result
       end
     end
   end
