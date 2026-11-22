@@ -86,9 +86,10 @@ gaps:
     status: picked
     workstream: brgen_place_directory
     note: >-
-      Shared city-scoped directory, source identity, verification metadata and
-      public coordinate precision are implemented on the existing Places
-      workstream. Upstream POI import/refresh remains open; tests are unrun.
+      Shared city-scoped directory, source identity, verification metadata,
+      public coordinate precision, stable city-scoped slugs and legacy numeric
+      redirects now exist on the shared Place owner. Upstream POI import/refresh
+      remains open; runtime tests are NOT_RUN.
   # --- shared commerce domain (the horizon monetization block, folded) ---
   - { id: commerce_shared_domain, app: fleet, kind: logic, name: "one shared Commerce/Ledger/Campaign/Entitlements domain consumed by the verticals", source: horizon, status: open, workstream: commerce_ledger_first, note: "ledger-first winner: append-only credits and entitlements before any new payment path; existing Stripe plans and Brgen Vipps/Dintero order flows must be preserved during later provider unification" }
   - { id: commerce_private_seller_verification, app: fleet, kind: logic, name: "seller verification badge for a seller with no shop", source: horizon, status: open, note: "a private seller has no organisation number, so this needs its own proof" }
