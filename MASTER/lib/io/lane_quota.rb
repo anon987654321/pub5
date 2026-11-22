@@ -48,7 +48,7 @@ module Master
       }.freeze
       REMEDIATION_TEXT = {
         "quota" => "wait for the provider reset; retrying this lane early will not help",
-        "billing" => "resolve the provider account's past-due balance; this lane is held for six hours, without rapid quota probes",
+        "billing" => "restore the provider's available billing balance; this lane is held for six hours, without rapid probes",
         "unreachable" => "check DNS/network or start the local provider, then probe again",
         "login" => "refresh this provider's CLI login or configured API credential, then probe again",
         "gateway_auth" => "replace OPENROUTER_API_KEY with a valid key, then let the bounded canary verify it",

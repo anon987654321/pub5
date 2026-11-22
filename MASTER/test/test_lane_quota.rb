@@ -107,10 +107,36 @@ class TestLaneQuota < Minitest::Test
     refute Quota.raw.key?("probe:grok-cli"), "billing must not enter the rapid probe ladder"
     report = Quota.report.find { |row| row.start_with?("grok-cli:") }
     assert_match(/billing hold/, report)
-    assert_match(/resolve the provider account's past-due balance/, report)
+    assert_match(/restore the provider's available billing balance/, report)
 
     @now += 6 * 3600 + 1
     refute Quota.dead?("grok-cli:sonnet"), "the bounded hold expires for a fresh operator/provider check"
+  end
+
+  def test_anthropic_low_credit_reply_holds_only_the_direct_anthropic_lane
+    reply = "Anthropic API error: Your credit balance is too low to make API requests."
+    assert_equal :billing, Master::Io::LaneReply.read(reply).kind
+
+    deadline = Quota.note("claude-sonnet-5-5", reply)
+
+    assert_equal @now + 6 * 3600, deadline
+    assert Quota.dead?("claude-sonnet-5-5")
+    refute Quota.dead?("replicate:anthropic/claude-opus-5.5"),
+           "the Replicate-hosted Claude mirror has a separate provider billing boundary"
+    assert_equal "billing", Quota.raw.fetch("reason:claude")
+    refute Quota.raw.key?("unknown:claude"), "a known billing failure is not a guessed quota"
+    refute Quota.raw.key?("probe:claude"), "billing must not enter the rapid probe ladder"
+    report = Quota.report.find { |row| row.start_with?("claude:") }
+    assert_match(/billing hold/, report)
+    assert_match(/restore the provider's available billing balance/, report)
+  end
+
+  def test_operator_doctor_uses_the_canonical_lane_report
+    source = File.read(File.expand_path("../tools/doctor.rb", __dir__))
+
+    assert_includes source, 'require_relative "../lib/io/lane_quota"'
+    assert_includes source, "Master::Io::LaneQuota.report"
+    refute_match(/lanes_yml.*scan|File\.read\(lanes_yml\).*scan/m, source)
   end
 
   def test_expiry_revives_the_lane

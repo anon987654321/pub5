@@ -13,6 +13,7 @@
 # --remote adds the one ssh probe to vm23 (read-only).
 
 require_relative "../lib/io/exec"
+require_relative "../lib/io/lane_quota"
 require "json"
 require "etc"
 
@@ -146,6 +147,16 @@ def lanes
   tags, ok = run("curl", "-s", "-m", "3", "http://127.0.0.1:11434/api/tags")
   models = ok ? JSON.parse(tags)["models"].to_a.map { |m| m["name"] } : []
   say(models.empty? ? :warn : :ok, "ollama", models.empty? ? "not answering on 11434: no local lane" : "#{models.size} models: #{models.first(4).join(', ')}")
+
+  dead = Master::Io::LaneQuota.report
+  if dead.empty?
+    say(:ok, "dead", "no configured or recorded dead lanes")
+  else
+    names = dead.first(6).map { |line| line.split(": ", 2).first }
+    summary = "#{dead.size} configured or recorded: #{names.join(', ')}"
+    summary += "…" if dead.size > 6
+    say(:warn, "dead", summary)
+  end
 rescue StandardError => e
   say(:warn, "model", "lane check failed: #{e.class}")
 end
