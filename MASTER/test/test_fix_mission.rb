@@ -68,26 +68,26 @@ class FixMissionTest < Minitest::Test
     end
   end
 
-  def test_automatic_mission_blocks_after_its_bounded_attempt_budget
+  def test_automatic_mission_remains_resumable_after_many_attempts
     Dir.mktmpdir do |root|
       mission = Master::Fix::Mission.new(root:).start!(
         goal: "repair repository", scope: root, origin: "fold", auto_continue: true,
       )
       mission.send(:with_lock) do
         record = mission.instance_variable_get(:@record)
-        record["attempt_count"] = Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS
+        record["attempt_count"] = 50
         mission.send(:persist!)
       end
 
-      mission.defer!(reason: "worker failed")
+      mission.defer!(reason: "provider temporarily unavailable")
 
       record = Master::Fix::Mission.current(root:)
-      assert_equal "blocked", record.fetch("state")
-      assert_equal false, record.fetch("auto_continue")
-      assert_equal Master::Fix::Mission::MAX_AUTOMATIC_ATTEMPTS, record.fetch("attempt_count")
-      assert_equal 0, record.fetch("retry_count")
-      assert_nil record.fetch("next_wake_at")
-      assert_match(/automatic retry budget exhausted/, record.fetch("wake_reason"))
+      assert_equal "waiting", record.fetch("state")
+      assert_equal true, record.fetch("auto_continue")
+      assert_equal 50, record.fetch("attempt_count")
+      assert_equal 1, record.fetch("retry_count")
+      assert_operator Time.iso8601(record.fetch("next_wake_at")), :>, Time.now.utc
+      assert_equal "provider temporarily unavailable", record.fetch("wake_reason")
     end
   end
 
