@@ -748,16 +748,45 @@ module Operator
         timeout_s = suite_timeout_s(name)
         Master::Trace::Dmesg.status("suite0", "#{name} starting, timeout #{timeout_s}s")
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        ok, out = capture(*cmd, chdir: dir, env:, unbundled:, timeout_s:, label: name, heartbeat_unit: "suite0")
+        ok, out, exit_status = capture(
+          *cmd, chdir: dir, env:, unbundled:, timeout_s:, label: name, heartbeat_unit: "suite0"
+        )
         elapsed = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).round
-        Master::Trace::Dmesg.status("suite0", "#{name} #{ok ? "ok" : "FAIL"}, elapsed #{elapsed}s")
-        [name, ok, out]
+        state = if ok
+                  :pass
+                elsif exit_status == 3
+                  :inconclusive
+                elsif exit_status == 124
+                  :timeout
+                else
+                  :fail
+                end
+        Master::Trace::Dmesg.status("suite0", "#{name} #{state}, elapsed #{elapsed}s")
+        [name, state, out, exit_status]
       end
-      failed = results.reject { |_, ok, _| ok }
-      body = results.map { |name, ok, _| "#{name}: #{ok ? "ok" : "FAIL"}" }
-      body += failed.flat_map { |name, _, out| out.last(12).map { |line| "#{name}| #{line}" } }
-      body << "suites: #{results.size - failed.size}/#{results.size} green"
-      [failed.empty?, body, failed.empty? ? 0 : 1]
+
+      failed = results.select { |_, state, _, _| state == :fail }
+      timed_out = results.select { |_, state, _, _| state == :timeout }
+      inconclusive = results.select { |_, state, _, _| state == :inconclusive }
+      passed = results.count { |_, state, _, _| state == :pass }
+      body = results.map { |name, state, _, _| "#{name}: #{state.to_s.upcase}" }
+      unproven = results.reject { |_, state, _, _| state == :pass }
+      body += unproven.flat_map do |name, _, output, _|
+        Array(output).last(12).map { |line| "#{name}| #{line}" }
+      end
+      body << "suites: #{passed}/#{results.size} passed, #{failed.size} failed, " \
+              "#{timed_out.size} timed out, #{inconclusive.size} inconclusive"
+
+      status = if failed.any?
+                 1
+               elsif timed_out.any?
+                 124
+               elsif inconclusive.any?
+                 3
+               else
+                 0
+               end
+      [status.zero?, body, status]
     end
 
     # Reduction, not rearrangement. The census counts a directory bought for one
