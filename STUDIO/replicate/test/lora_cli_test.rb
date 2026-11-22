@@ -112,8 +112,6 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal 4, captured.fetch(:count)
   end
 
-
-
   def test_all_subjects_preflight_independently_before_any_prediction
     events = []
     factory = lambda do |subject|
@@ -163,6 +161,5 @@ class TestStudioLoraCli < Minitest::Test
     assert_empty rendered
     assert_equal %w[BLOCKED BLOCKED], report.fetch("subject_status").values.map { |item| item.fetch("state") }
   end
-
 
 end

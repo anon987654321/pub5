@@ -111,7 +111,6 @@ def studio_photograph_options(argv)
   options
 end
 
-
 # All-subject generation is independent per person. Every subject is preflighted
 # before the first prediction, but one person's missing permission/model must not
 # prevent another subject with a complete, valid preflight from proceeding.

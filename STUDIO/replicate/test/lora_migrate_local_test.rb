@@ -55,7 +55,7 @@ class TestLoraLocalMigration < Minitest::Test
         "granted_by" => "synthetic rights holder",
         "granted_on" => "2026-11-19",
         "covers" => %w[generation_use provider_processing],
-        "stored_at" => "evidence/#{filename}"
+        "stored_at" => "evidence/#{filename}",
       }
     end
 
@@ -69,14 +69,14 @@ class TestLoraLocalMigration < Minitest::Test
           "granted_by" => "synthetic subject authority",
           "granted_on" => "2026-11-19",
           "covers" => %w[likeness_generation provider_processing],
-          "stored_at" => "evidence/subject.txt"
-        }
+          "stored_at" => "evidence/subject.txt",
+        },
       },
       "source_rights" => {
         "generation_use" => true,
         "provider_processing" => true,
-        "evidence" => source_evidence
-      }
+        "evidence" => source_evidence,
+      },
     }
     path = File.join(directory, "consent.yml")
     File.write(path, YAML.dump(record), mode: "w", perm: 0o600)

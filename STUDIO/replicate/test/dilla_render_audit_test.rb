@@ -50,7 +50,7 @@ class TestDillaRenderAudit < Minitest::Test
         "mp3" => {
           "path" => mp3_path, "bytes" => File.size(mp3_path),
           "sha256" => Digest::SHA256.file(mp3_path).hexdigest
-        }
+        },
       }
     }
     {

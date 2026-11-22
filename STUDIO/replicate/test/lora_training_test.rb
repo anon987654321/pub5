@@ -200,7 +200,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
           "billing" => {
             "cost_status" => "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE",
             "provider_compute_seconds" => "120.000000",
-            "calculated_cost_usd" => "1.464000"
+            "calculated_cost_usd" => "1.464000",
           }
         }
       end
@@ -316,7 +316,7 @@ class TestStudioLoraTrainingRunner < Minitest::Test
           "training_id" => "training_123",
           "provider_request_dispatched" => true,
           "billing" => { "cost_status" => "NOT_REPORTED_BY_PROVIDER" },
-          "error" => "must not enter the receipt; includes a signed upload URL"
+          "error" => "must not enter the receipt; includes a signed upload URL",
         }]
       }
 

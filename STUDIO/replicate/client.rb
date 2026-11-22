@@ -370,7 +370,7 @@ module Studio
             "estimate_basis" => estimate ? "catalogue rate and reserved request bounds before POST" : "no catalogue estimate configured",
             "actual_cost_usd" => nil,
             "actual_cost_status" => "NOT_REPORTED_BY_PREDICTION_API",
-            "metrics" => settled["metrics"].is_a?(Hash) ? settled["metrics"] : nil
+            "metrics" => settled["metrics"].is_a?(Hash) ? settled["metrics"] : nil,
           }
           [settled, receipt]
         end
@@ -495,7 +495,6 @@ module Studio
       rescue StandardError
         ""
       end
-
 
       def self.resolve_download_addresses(host)
         Timeout.timeout(DNS_RESOLUTION_TIMEOUT_S) do

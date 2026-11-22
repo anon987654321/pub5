@@ -82,11 +82,11 @@ main { max-width: var(--maxw); margin: 0 auto; }
   outline: 2px solid var(--acc);
   outline-offset: 3px;
 }
-.swiper-pagination { position: static; margin-top: 10px; }
+.swiper-pagination { position: static; margin-top: 8px; }
 .swiper-pagination-bullet { background: var(--mut); opacity: 1; }
 .swiper-pagination-bullet-active { background: var(--acc); }
 
-.counter { text-align: center; color: var(--mut); margin: 6px 0 0; }
+.counter { text-align: center; color: var(--mut); margin: 4px 0 0; }
 
 .empty, .soundtrack {
   border: 1px solid var(--brd);
@@ -100,14 +100,14 @@ main { max-width: var(--maxw); margin: 0 auto; }
   background: #111;
   border: 1px solid var(--brd);
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 8px 12px;
 }
 .soundtrack { display: flex; align-items: center; gap: 12px; }
 .soundtrack button {
   background: none;
   border: 1px solid var(--acc);
   color: var(--acc);
-  padding: 8px 14px;
+  padding: 8px 12px;
   font: inherit;
   text-transform: uppercase;
   letter-spacing: 0.05em;

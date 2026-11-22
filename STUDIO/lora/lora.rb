@@ -394,7 +394,7 @@ module Studio
           "a late-night record-shop selfie between listening shelves, wearing a dark espresso suede leather blouson over a cream cashmere zip cardigan and charcoal merino crewneck, the suede nap and simple collar clearly visible, one warm tungsten practical and a cool street-window fill, mixed warm and cool catchlights, amused mid-conversation expression, 50mm",
           "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow and dark pine outside, one warm lamp behind and cold sky fill across the face, visible breath, unguarded eyes, 85mm",
           "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight, a real small grin, documentary colour-negative photography, 50mm",
-          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, rich Tri-X silver tones, direct gaze and natural facial texture, 85mm"
+          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, rich Tri-X silver tones, direct gaze and natural facial texture, 85mm",
         ].freeze,
         "ragnhild" => [
           "a painter's-studio selfie beside a large unfinished canvas, wearing a sharply tailored oxblood wool jacket with matching high-waisted trousers and an ivory silk-charmeuse blouse, the clean lapel and fluid blouse visible in a waist-up crop, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, soft rectangular catchlights, restrained editorial framing, 85mm",
@@ -402,7 +402,7 @@ module Studio
           "a waterfront selfie on a windy Bergen afternoon, wearing a dark chestnut suede coat with a soft shearling collar over a pale cashmere knit, the collar and knit clearly framed against the grey sea and distant mountains, soft overcast light, hair moving naturally, the moment just after a laugh, 50mm",
           "a small old-town café selfie on a rainy afternoon, wearing a structured black leather blazer over a vivid chartreuse fine-gauge merino sweater and dark tailored trousers, the clean leather shoulders and bright knit visible in the crop, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, 85mm",
           "a monochrome studio portrait selfie in front of a charcoal drawing, one Rembrandt key light and a clear shadow side, direct calm gaze, tactile HP5 documentary grain, 85mm",
-          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, a reflective unposed expression, muted Fuji colour, 50mm"
+          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, a reflective unposed expression, muted Fuji colour, 50mm",
         ].freeze,
         "merethe" => [
           "a coastal-cliff selfie in western Norway, wearing a warm camel suede coat with a neat shearling collar over an ivory ribbed cashmere turtleneck, the soft pile and knit clearly visible in the chest-up frame, sea and pale sky behind, low warm sunlight, a genuine half-smile, 85mm",
@@ -410,7 +410,7 @@ module Studio
           "a candlelit kitchen selfie late in the evening, wearing a clean black leather jacket over a deep burgundy charmeuse blouse and dark straight-leg trousers, open jacket framing the blouse, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, 50mm",
           "a backlit-window selfie on a grey morning, wearing a long deep-olive brushed-wool coat over an ivory cable-knit sweater with a restrained aubergine scarf, the coat's structured shoulder and knit pattern clearly visible, soft daylight outlining the subject, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
           "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, restrained amber and blue mixed light, an amused expression, 50mm",
-          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, practical wool outerwear, open unguarded expression, natural colour-negative film, 50mm"
+          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, practical wool outerwear, open unguarded expression, natural colour-negative film, 50mm",
         ].freeze
       }.freeze
 

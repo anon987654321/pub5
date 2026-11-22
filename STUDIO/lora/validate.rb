@@ -136,7 +136,7 @@ module Studio
           "checks" => [],
           "blockers" => [],
           "warnings" => [],
-          "errors" => ["#{error.class}: #{error.message}"]
+          "errors" => ["#{error.class}: #{error.message}"],
         }
       end
 

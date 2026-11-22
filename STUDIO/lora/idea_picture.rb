@@ -458,11 +458,11 @@ module Studio
           "provider_prediction" => provider_receipt || {
             "status" => "NOT_CAPTURED",
             "actual_cost_usd" => nil,
-            "actual_cost_status" => "NOT_REPORTED"
+            "actual_cost_status" => "NOT_REPORTED",
           },
           "human_review" => {
             "visual" => "NOT_REVIEWED",
-            "likeness" => "NOT_REVIEWED"
+            "likeness" => "NOT_REVIEWED",
           }
         }
         Tempfile.create([".film-receipt-", ".json"], File.dirname(receipt_path), mode: 0o600) do |file|

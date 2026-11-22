@@ -31,7 +31,7 @@ module Studio
       JOHANN_HISTORY_FILES = {
         "20240627_000251.jpg" => "08cf030b763a919a71bd4dc19aa1da48313faa89",
         "20240705_161331.jpg" => "1db28036f6397d1a2f30da8d38385e1ab85e976b",
-        "20260725_015451.jpg" => "cac622e9a061181a99738074909f4ef639ee35d2"
+        "20260725_015451.jpg" => "cac622e9a061181a99738074909f4ef639ee35d2",
       }.freeze
 
       class Error < StandardError; end
