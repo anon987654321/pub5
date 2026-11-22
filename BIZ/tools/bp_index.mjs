@@ -80,7 +80,7 @@ const FRESHNESS_INPUTS = {
   ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
   pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
   govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
-  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
+  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
   speis: ['tools/speis.html', 'tools/bp_print.mjs'],
   future_nato_weapons: ['tools/future_nato_weapons.html', 'tools/bp_print.mjs'],
   norwegianhedge: ['tools/norwegianhedge.html', 'tools/bp_print.mjs'],
