@@ -6,7 +6,9 @@
 # Use this to limit dissemination of sensitive information.
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
-  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate,
+  :otp, :ssn, :cvv, :cvc, :phone, :authorization, :api_key, :access_token, :refresh_token,
+  :private_key, :credit_card, :card_number, :iban,
 ]
 
 # `/unlock <operator token>` and `/pair <code>` arrive as the command or message

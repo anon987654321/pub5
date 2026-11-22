@@ -67,6 +67,31 @@ class TrackedSecretsTest < Minitest::Test
   # The check above only sees what is tracked now. This one keeps `git add` from
   # making it tracked in the first place, which is the layer that was missing when
   # MASTER/web/config/master.key was committed.
+  # The public apps have separate Rails boots, so a shared initializer
+  # does not protect the standalone mrdamascy or MASTER web process.
+  # Keep the same sensitive key families filtered at each boundary.
+  def test_each_public_app_filters_the_sensitive_parameter_family
+    expected = %i[
+      passw email secret token _key crypt salt certificate otp ssn cvv cvc phone
+      authorization api_key access_token refresh_token private_key credit_card card_number iban
+    ]
+    initializers = %w[
+      RAILS/__shared/config/initializers/filter_parameter_logging.rb
+      RAILS/mrdamascy/config/initializers/filter_parameter_logging.rb
+      MASTER/web/config/initializers/filter_parameter_logging.rb
+    ]
+
+    initializers.each do |path|
+      source = File.read(File.join(ROOT, path))
+      filters = source[/Rails\.application\.config\.filter_parameters \+= \[(.*?)\n\]/m, 1]
+      refute_nil filters, "#{path} must declare its parameter filter list"
+
+      expected.each do |key|
+        assert_includes filters, ":#{key}", "#{path} must redact #{key}"
+      end
+    end
+  end
+
   def test_gitignore_still_covers_master_key
     ignored = File.read(File.join(ROOT, ".gitignore"))
 

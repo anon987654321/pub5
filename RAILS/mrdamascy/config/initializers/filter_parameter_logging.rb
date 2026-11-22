@@ -10,5 +10,7 @@
 # Phones and one-time codes are the credentials of this app — keep both out of
 # the logs alongside the usual password/secret family.
 Rails.application.config.filter_parameters += [
-  :passw, :email, :secret, :token, :crypt, :salt, :certificate, :otp, :cvv, :cvc, :phone
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate,
+  :otp, :ssn, :cvv, :cvc, :phone, :authorization, :api_key, :access_token, :refresh_token,
+  :private_key, :credit_card, :card_number, :iban,
 ]
