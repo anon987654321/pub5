@@ -130,6 +130,7 @@ module Operator
       failed = statuses.count("FAIL")
       timed_out = statuses.count("TIMEOUT")
       blocked = statuses.count("BLOCKED")
+      inconclusive = statuses.count("INCONCLUSIVE")
       repository_evidence_complete = metadata[:main_sha].to_s.match?(/\\A[0-9a-f]{40}\\z/i) &&
                                      metadata[:checked_out_sha].to_s.match?(/\\A[0-9a-f]{40}\\z/i) &&
                                      !metadata[:branch].to_s.empty? &&
@@ -141,6 +142,8 @@ module Operator
                  "TIMEOUT"
                elsif blocked.positive?
                  "BLOCKED"
+               elsif inconclusive.positive?
+                 "INCONCLUSIVE"
                elsif statuses.empty?
                  "NOT_RUN"
                elsif !repository_evidence_complete
@@ -176,6 +179,7 @@ module Operator
           "failed" => failed,
           "timed_out" => timed_out,
           "blocked" => blocked,
+          "inconclusive" => inconclusive,
         },
         "test_counts" => nil,
         "receipt_path" => receipt_path,
@@ -211,6 +215,7 @@ module Operator
       return "TIMEOUT" if result.respond_to?(:timed_out) && result.timed_out
       return "PASS" if result.success
       return "BLOCKED" if result.name.to_s.match?(/\bunavailable\b/i)
+      return "INCONCLUSIVE" if result.exit_status == 3
 
       "FAIL"
     end
