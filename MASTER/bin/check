@@ -106,6 +106,7 @@ end
 require "optparse"
 require_relative "../lib/operator/check_runner"
 require_relative "../lib/operator/check_brief"
+require_relative "../lib/io/atomic_write"
 require_relative "../lib/operator/ruby_runner"
 require_relative "../lib/trace/dmesg"
 
@@ -325,16 +326,38 @@ failures = runner.results.reject { |r| r.success }.map(&:name)
 exit_status = failures.empty? ? 0 : 1
 
 if format == "json"
+  receipt_id = SecureRandom.uuid
+  operation_id = SecureRandom.uuid
+  relative_receipt_path = ".master/check/receipts/#{receipt_id}.json"
+  absolute_receipt_path = File.join(ROOT, relative_receipt_path)
   receipt = JSON.parse(Operator::CheckBrief.render_json(
     profile:, results: runner.results, metadata:,
     started_at: started_at.iso8601(3), finished_at: finished_at.iso8601(3),
     duration_s:, exit_status:,
     command: "MASTER/bin/check --profile=#{profile} --format=json",
-    log_path: check_relative_log(ROOT, runner.log_path)
+    log_path: check_relative_log(ROOT, runner.log_path),
+    receipt_id:, operation_id:, receipt_path: relative_receipt_path,
+    receipt_persisted: true
   ))
   exit_status = receipt.fetch("status") == "PASS" ? 0 : 1
   receipt["exit_status"] = exit_status
-  puts JSON.pretty_generate(receipt)
+  json = JSON.pretty_generate(receipt) << "\n"
+
+  begin
+    Master::Io::AtomicWrite.write_atomic(absolute_receipt_path, json, mode: 0o600)
+  rescue StandardError => error
+    receipt["status"] = "DELIVERY_FAILED"
+    receipt["exit_status"] = 1
+    receipt["receipt_path"] = nil
+    receipt["receipt_output"] = "stdout"
+    receipt["evidence"]["receipt_persisted"] = false
+    receipt["evidence"]["receipt_write_error"] = error.class.name
+    json = JSON.pretty_generate(receipt) << "\n"
+    warn "checkreceipt0: unable to persist receipt (#{error.class})"
+    exit_status = 1
+  end
+
+  puts json
 else
   body = if format == "brief"
            Operator::CheckBrief.render(profile:, results: runner.results)
