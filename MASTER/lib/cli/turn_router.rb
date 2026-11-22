@@ -130,10 +130,16 @@ module Master
         return if trees.empty?
 
         mode = value[/--mode(?:=|\s+)([a-z]+)/i, 1]
-        flags = value.scan(/--(?:dry-run|read-only|plan|no-autofix)\b/i).uniq
+        flags = value.scan(/--(?:apply|dry-run|read-only|plan|no-autofix)\b/i).uniq
+        explicit_apply = value.match?(
+          /\A\s*(?:(?:please|go\ ahead\ and)\s+)?apply\b|
+           \A\s*i\s+(?:want|need)\s+you\s+to\s+(?:please\s+)?apply\b|
+           \A\s*(?:can|could)\s+you\s+(?:please\s+)?apply\b/ix
+        )
+        flags << "--apply" if explicit_apply && !flags.include?("--apply")
         lane = value[/--lane(?:=|\s+)([a-z]+)/i, 1]
         flags << "--lane=#{lane}" if lane
-        ["/fix", "--mode=#{mode || "all"}", trees.join(" "), *flags].join(" ")
+        ["/fix", "--mode=#{mode || "repair"}", trees.join(" "), *flags].join(" ")
       end
 
       # Bare words that are complete instructions, not conversation. "status?"
