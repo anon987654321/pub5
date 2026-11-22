@@ -288,6 +288,22 @@ class TestPipeline < Minitest::Test
     assert_equal MasterPaths::TREES.map { |tree| "#{tree}/**" }.sort, contract.scope
   end
 
+  def test_fix_phase_timings_are_accumulated_for_structured_reporting
+    pass = Master::CLI::Pipeline::Pass.allocate
+    pass.instance_variable_set(:@unit, "review0")
+    pass.instance_variable_set(:@stage_timings, Hash.new(0.0))
+    result = nil
+
+    Master::Trace::Dmesg.stub(:attach, ->(*) {}) do
+      result = pass.send(:log_phase, "scan0", "observe", nil) { :scanned }
+    end
+
+    assert_equal :scanned, result
+    timings = pass.instance_variable_get(:@stage_timings)
+    assert_includes timings, "observe"
+    assert_operator timings.fetch("observe"), :>=, 0.0
+  end
+
   def test_fix_writes_only_after_explicit_apply_authorization
     registry = Master::CLI::CommandRegistry
 
