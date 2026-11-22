@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "json"
+require "digest"
+require "tempfile"
 require "yaml"
 require "fileutils"
 require "rbconfig"
@@ -424,12 +426,54 @@ module Studio
 
       def render_film(words, still, stamp, duration)
         path = File.join(@directory, "#{safe_stem(stamp)}.mp4")
+        receipt_path = "#{path}.json"
         raise "refusing to replace an existing film: #{path}" if File.exist?(path) || File.symlink?(path)
+        raise "refusing to replace an existing film receipt: #{receipt_path}" if File.exist?(receipt_path) || File.symlink?(receipt_path)
 
-        output = client.predict(film_engine, film_input(words, still, duration), timeout: 600)
-        client.download_url(first_url(output), path)
+        input = film_input(words, still, duration)
+        prediction = if client.respond_to?(:predict_with_receipt)
+                       client.predict_with_receipt(film_engine, input, timeout: 600)
+                     else
+                       { "output" => client.predict(film_engine, input, timeout: 600), "receipt" => nil }
+                     end
+        client.download_url(first_url(prediction.fetch("output")), path)
+        raise "film download did not produce a regular file" unless File.file?(path) && !File.symlink?(path)
+
         File.chmod(0o600, path)
+        write_film_receipt(path, still, duration, prediction["receipt"])
         path
+      end
+
+      def write_film_receipt(path, still, duration, provider_receipt)
+        receipt_path = "#{path}.json"
+        receipt = {
+          "schema" => "studio.film_render.v1",
+          "created_at" => Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
+          "subject" => @subject,
+          "model" => film_engine,
+          "requested_duration_seconds" => duration,
+          "source_still_sha256" => Digest::SHA256.file(still).hexdigest,
+          "output_video_sha256" => Digest::SHA256.file(path).hexdigest,
+          "output_bytes" => File.size(path),
+          "provider_prediction" => provider_receipt || {
+            "status" => "NOT_CAPTURED",
+            "actual_cost_usd" => nil,
+            "actual_cost_status" => "NOT_REPORTED"
+          },
+          "human_review" => {
+            "visual" => "NOT_REVIEWED",
+            "likeness" => "NOT_REVIEWED"
+          }
+        }
+        Tempfile.create([".film-receipt-", ".json"], File.dirname(receipt_path), mode: 0o600) do |file|
+          file.write(JSON.pretty_generate(receipt) + "\\n")
+          file.flush
+          file.fsync
+          file.close
+          File.link(file.path, receipt_path)
+        end
+        File.chmod(0o600, receipt_path)
+        receipt
       end
 
       def ffmpeg?
