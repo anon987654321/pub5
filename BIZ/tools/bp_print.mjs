@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { OUTPUT_DIR as OUT, BIZ_ROOT, PUBLISHED_INPUTS } from './paths.mjs';
 
-const ORDER = ['syre', 'ragnhild', 'ragnhild_legater', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os', 'fetat'];
+const ORDER = ['syre', 'ragnhild', 'ragnhild_legater', 'nordvakt', 'norwegianfinancial', 'pubhealthcare', 'govt_bergen', 'future_healthcare_os', 'neolimb', 'fetat'];
 // fetat.html is built by fetat_build.rb straight into the published BIZ
 // folder (it owns the svg mark and the traced cover), so its printed
 // source is the published copy unless the output dir carries it too.
