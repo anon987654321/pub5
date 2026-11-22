@@ -100,8 +100,10 @@ module Operator
       return unless @log_path
       raise IOError, "check log is a symlink" if File.symlink?(@log_path)
 
-      exit_detail = if !status.respond_to?(:exitstatus)
+      exit_detail = if status.respond_to?(:timed_out?) && status.timed_out?
                       "timeout"
+                    elsif !status.respond_to?(:exitstatus)
+                      "unknown"
                     elsif status.exited?
                       "exit=#{status.exitstatus}"
                     elsif status.signaled?
