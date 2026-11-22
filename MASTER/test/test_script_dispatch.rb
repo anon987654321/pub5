@@ -38,7 +38,7 @@ class TestScriptDispatch < Minitest::Test
     workspace = File.expand_path("../..", __dir__)
     path = Master::Io::ScriptDispatch.script_path(workspace, "lora")
 
-    assert_equal File.join(MasterPaths.repo, "STUDIO", "photograph.rb"), path
+    assert_equal File.join(MasterPaths.repo, "STUDIO", "lora", "photograph.rb"), path
     assert File.file?(path)
   end
 

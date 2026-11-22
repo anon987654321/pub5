@@ -61,7 +61,7 @@ class TestDillaRenderAudit < Minitest::Test
     path
   end
 
-  test "technical pass stays inconclusive until a person auditions the render" do
+  def test_technical_pass_stays_inconclusive_until_a_person_auditions_the_render
     Dir.mktmpdir("dilla-audit-") do |directory|
       path = write_fixture(directory)
       report = Dilla.audit_render(path)
@@ -78,7 +78,7 @@ class TestDillaRenderAudit < Minitest::Test
     end
   end
 
-  test "a WAV whose checksum disagrees with provenance fails the audit" do
+  def test_a_wav_whose_checksum_disagrees_with_provenance_fails_the_audit
     Dir.mktmpdir("dilla-audit-") do |directory|
       path = write_fixture(directory)
       provenance_path = File.join(directory, "audit-fixture.provenance.json")
@@ -93,7 +93,7 @@ class TestDillaRenderAudit < Minitest::Test
     end
   end
 
-  test "the audit refuses to overwrite its report unless requested" do
+  def test_the_audit_refuses_to_overwrite_its_report_unless_requested
     Dir.mktmpdir("dilla-audit-") do |directory|
       path = write_fixture(directory)
       Dilla.audit_render(path)
