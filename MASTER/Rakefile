@@ -260,11 +260,13 @@ task "test:all_trees" do
   end.sort
   failures = []
   inconclusive = []
+  timed_out = []
   inventory = {}
-  node_bin = %w[node nodejs].find do |candidate|
-    system(candidate, "--version", out: File::NULL, err: File::NULL)
-  end
+  node_available = system("node", "--version", out: File::NULL, err: File::NULL)
 
+  # One source/configuration census over every owned tree. Actual test suites
+  # are delegated to CheckChain below; do not re-run arbitrary Rakefiles or
+  # standalone tests here as that duplicates the canonical app/host runners.
   trees.each do |tree|
     path = File.join(root, tree)
     ruby_files = Dir.glob(File.join(path, "**", "*.rb")).reject { |file| ignored_path.call(file) }
@@ -285,88 +287,77 @@ task "test:all_trees" do
       failures << "#{file}: Ruby syntax" unless system(RbConfig.ruby, "-c", file, out: File::NULL, err: File::NULL)
     end
 
-    test_roots = Dir.glob(File.join(path, "**", "Rakefile")).select { |file| !ignored_path.call(file) }
-    test_roots.each do |rakefile|
-      suite = File.dirname(rakefile)
-      next unless File.read(rakefile).match?(/(?:task|Rake::TestTask).*test/)
-      failures << "#{suite}: rake test" unless system(RbConfig.ruby, "-S", "rake", "test", chdir: suite)
-    end
-
-    standalone_tests = test_files.reject do |file|
-      test_roots.any? { |rakefile| file.start_with?(File.dirname(rakefile) + File::SEPARATOR) }
-    end
-    standalone_tests.each do |test|
-      suite_root = File.dirname(test)
-      while suite_root != path && !File.file?(File.join(suite_root, "test_helper.rb"))
-        suite_root = File.dirname(suite_root)
-      end
-      lib = File.join(suite_root, "lib")
-      test_dir = File.join(suite_root, "test")
-      load_paths = [lib, test_dir].select { |dir| File.directory?(dir) }
-      args = load_paths.map { |dir| "-I#{dir}" } + [test]
-      failures << "#{test}: test process" unless system(RbConfig.ruby, *args)
-    end
-
-    if javascript_tests.any?
-      if node_bin
-        groups = javascript_tests.group_by do |file|
-          if file.start_with?(File.join(root, "MASTER", "web") + File::SEPARATOR)
-            File.join(root, "MASTER")
-          elsif file.start_with?(File.join(root, "RAILS") + File::SEPARATOR)
-            File.join(root, "RAILS")
-          else
-            path
-          end
-        end
-        groups.each do |working_dir, tests|
-          failures << "#{tree}: Node runtime tests" unless system(node_bin, "--test", *tests, chdir: working_dir)
-        end
-      else
-        inconclusive << "#{tree}: #{javascript_tests.size} JavaScript runtime test(s) not measured (Node.js unavailable)"
-      end
-    end
-
     Dir.glob(File.join(path, "**", "*.{sh,zsh,ksh}")).reject { |file| ignored_path.call(file) }.each do |file|
       first = File.foreach(file).first.to_s
       shell = if first.include?("zsh")
-        ["zsh", "-n"]
-      elsif first.include?("ksh")
-        ["ksh", "-n"]
-      else
-        ["sh", "-n"]
+                ["zsh", "-n"]
+              elsif first.include?("ksh")
+                ["ksh", "-n"]
+              else
+                ["sh", "-n"]
+              end
+      next if system(*shell, file, out: File::NULL, err: File::NULL)
+
+      executable = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |dir|
+        File.executable?(File.join(dir, shell.first))
       end
-      unless system(*shell, file, out: File::NULL, err: File::NULL)
-        executable = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |dir|
-          File.executable?(File.join(dir, shell.first))
-        end
-        if executable
-          failures << "#{file}: shell syntax"
-        else
-          inconclusive << "#{file}: #{shell.first} unavailable; syntax not measured"
-        end
+      if executable
+        failures << "#{file}: shell syntax"
+      else
+        inconclusive << "#{file}: #{shell.first} unavailable; syntax not measured"
       end
     end
   end
 
   %w[yml yaml json].each do |ext|
     Dir.glob(File.join(root, "**", "*.#{ext}")).reject { |file| ignored_path.call(file) }.each do |file|
-      loader = ext == "json" ? "require 'json'; JSON.parse(File.read(ARGV.fetch(0)))" : "require 'yaml'; YAML.safe_load_file(ARGV.fetch(0), permitted_classes: [Symbol], aliases: true)"
+      loader = if ext == "json"
+                 "require 'json'; JSON.parse(File.read(ARGV.fetch(0)))"
+               else
+                 "require 'yaml'; YAML.safe_load_file(ARGV.fetch(0), permitted_classes: [Symbol], aliases: true)"
+               end
       failures << "#{file}: #{ext} parse" unless system(RbConfig.ruby, "-e", loader, file, out: File::NULL, err: File::NULL)
     end
   end
 
-  inventory.each do |tree, counts|
-    source_files = counts.values_at(:ruby, :shell, :javascript).sum
-    discovered_tests = counts.values_at(:tests, :javascript_tests).sum
-    next if source_files.zero? || discovered_tests.positive?
+  # The MASTER full profile already runs the complete MASTER CI suite. Reuse
+  # CheckChain's bounded canonical jobs for the other four trees: Rails app CI
+  # + contracts, OPENBSD per-file tests, STUDIO media tests, and BIZ documents.
+  require_relative "lib/operator/check_chain"
+  suite_trees = %w[RAILS OPENBSD STUDIO]
+  if node_available
+    suite_trees << "BIZ"
+  else
+    inconclusive << "BIZ documents: Node.js unavailable; bp_check.mjs not measured"
+  end
+  jobs = Operator::CheckChain.suite_jobs(suite_trees)
+  covered = jobs.map { |job| job.fetch(4) }.uniq
+  missing = suite_trees - covered
+  missing.each { |tree| inconclusive << "#{tree}: no canonical CheckChain suite job is registered" }
 
-    inconclusive << "#{tree}: #{source_files} source file(s), no discovered Ruby or JavaScript test files"
+  unless jobs.empty?
+    suite_ok, suite_output, suite_status = Operator::CheckChain.suites(suite_trees)
+    suite_output.each { |line| puts line }
+    case suite_status
+    when 0
+      nil
+    when 3
+      inconclusive << "canonical tree suites: CheckChain reported INCONCLUSIVE"
+    when 124
+      timed_out << "canonical tree suites: CheckChain reported TIMEOUT"
+    else
+      failures << "canonical tree suites: #{suite_output.join("; ")}" unless suite_ok
+    end
   end
 
-  abort "test:all_trees: #{failures.size} failure(s)\n#{failures.join("\n")}" unless failures.empty?
   inventory.each do |tree, counts|
     puts "test:all_trees: #{tree}: ruby=#{counts[:ruby]} tests=#{counts[:tests]} shell=#{counts[:shell]} " \
          "javascript=#{counts[:javascript]} javascript_tests=#{counts[:javascript_tests]}"
+  end
+  abort "test:all_trees: #{failures.size} failure(s)\n#{failures.join("\n")}" unless failures.empty?
+  unless timed_out.empty?
+    timed_out.each { |finding| warn "test:all_trees: timeout: #{finding}" }
+    exit 124
   end
   unless inconclusive.empty?
     inconclusive.each { |finding| warn "test:all_trees: inconclusive: #{finding}" }
