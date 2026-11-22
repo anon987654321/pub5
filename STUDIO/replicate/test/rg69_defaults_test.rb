@@ -65,6 +65,15 @@ class TestRg69Defaults < Minitest::Test
   # reaches Chebyshev 30, Distortion 0.8, BitCrusher 2 bits and PitchShift ±12
   # — at wet. A bad roll produced a crushed, detuned master, which read as
   # "unusable and inaudible". The boot must now install one fixed chain.
+  def test_transport_callback_uses_numeric_note_durations
+    body = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    refute_match(/triggerAttackRelease\([^;]*['"](?:8n|2n|16n|32n)['"]/, body,
+                 "musical duration strings must not be parsed inside scheduled callbacks")
+    %w[eighth thirtySecond sixteenthDuration half].each do |duration|
+      assert_includes body, duration
+    end
+  end
+
   def test_live_and_offline_audio_graphs_do_not_require_audio_worklets
     refute_includes js, "Tone.FrequencyShifter",
                     "FrequencyShifter loads an AudioWorklet from a blob URL and fails on opaque origins"
