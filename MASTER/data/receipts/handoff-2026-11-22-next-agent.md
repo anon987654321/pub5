@@ -960,3 +960,156 @@ comparison, legal research audit and governed `/fix`. No source-level test
 or README assertion is reported as a runtime pass. Re-run the mandatory
 agent-context and focused owner suites from the live checkout before closing
 these workstreams.
+
+
+## 12. Phase 15 — STUDIO and BIZ completion sweep — 2026-11-22
+
+Status: the remaining safe source-level changes in this sweep were committed
+directly to `main`. No new owner, root file, Markdown backlog or parallel
+registry was introduced. All new runtime/test proof remains NOT_RUN because
+this environment has no working checkout and cannot resolve GitHub for clone.
+
+### Delivered
+
+- **L-07 / gallery revocation — IMPLEMENTED FOR THE LOCAL GALLERY, external
+  propagation still OPEN.**
+  `STUDIO/lora/selfies_gallery.rb` now rebuilds the local publication manifest
+  from subjects whose action-scoped publication consent and per-source rights
+  still validate. Missing/revoked permission excludes that subject, increments
+  `excluded_subject_count`, and changes the manifest state to `PARTIAL`;
+  other separately approved subjects remain listed. The manifest is written
+  through a same-directory temporary file, fsync and rename, mode 0600; symlink
+  and non-regular destinations are refused. Private source/render files are
+  not deleted. Tests cover initial exclusion, a real synthetic
+  permitted-then-revoked transition, owner-only manifest mode and symlink
+  refusal. The consent-boundary test now expects a safe empty PARTIAL manifest
+  rather than an exception before replacement. The STUDIO README explains
+  that external copies/caches are not recalled.
+  Files: `STUDIO/lora/selfies_gallery.rb`,
+  `STUDIO/replicate/test/selfies_gallery_test.rb`,
+  `STUDIO/replicate/test/consent_enforcement_test.rb`,
+  `STUDIO/replicate/README.md`.
+  Commits: `709df24c10c453ba6d3ac66084c39a3a22514e58`,
+  `3905833f8af375b6d27335aa9b88b610fc419dea`,
+  `5d5d58b68fcfb4a5565ec6496b5898a4b0ad4a58`,
+  `bc129b4a235b0b09f246576f4a44975a61ec6b9d`.
+
+- **R-01 / bounded video prediction receipt — IMPLEMENTED FOR THE FILM
+  PATH; actual billing and other paid paths remain OPEN.**
+  `Studio::ReplicateClient` now exposes `predict_with_receipt` while keeping
+  the existing `predict` return contract unchanged. The receipt records
+  model/version, prediction ID/status, metrics when returned and the catalogue
+  estimate reserved before POST. `actual_cost_usd` remains null and
+  `actual_cost_status` is `NOT_REPORTED_BY_PREDICTION_API`: this is not an
+  invoice. `IdeaPicture#render_film` saves a private `.mp4.json` receipt
+  beside each completed film, binding the source still and film by SHA-256 and
+  recording duration, model, provider receipt and explicit
+  `NOT_REVIEWED` visual/likeness states. Existing per-call and per-run caps
+  still reserve before the paid prediction. Tests cover estimate versus
+  actual-cost semantics, output hashes and private file modes.
+  Files: `STUDIO/replicate/client.rb`,
+  `STUDIO/lora/idea_picture.rb`,
+  `STUDIO/replicate/test/replicate_client_test.rb`,
+  `STUDIO/replicate/test/idea_picture_test.rb`,
+  `STUDIO/replicate/README.md`.
+  Commits: `4fbbbf5192b1121422e46647186fc9054a2f61cd`,
+  `329ed26bd689064c58219aa85950a5b84d2e99b8`,
+  `5a1f7c5e66360d1b7449ba8a3b381b83cec0a62f`,
+  `cde63a127708aa1f22cd1f86a2fbf8c844796a38`,
+  `c072346b9cc24a19769b1a5129537ae552895d80`,
+  `b46f185b525d9cfbb90e0edb1e9d89db0e02bc1a`.
+
+- **D-03 / future Dilla replay evidence — IMPROVED; replay command OPEN.**
+  New `.provenance.json` files now record invocation mode/style, the Dilla
+  renderer source SHA-256, the active music-theory data SHA-256, and the
+  operator-supplied sample loop's absolute path, byte length and SHA-256 when
+  it is a regular non-symlink file. Missing/symlinked sample inputs are
+  recorded as unavailable, not as reproducible. Tests cover the pinned
+  fingerprints and unavailable source state. This does not create a replay
+  command or certify that the complete runtime/environment can be reconstructed.
+  Older provenance records remain incomplete. A full `dilla:reproduce` flow
+  remains OPEN until every rendering input and external dependency has a
+  verified recovery path.
+  Files: `STUDIO/dilla/dilla.rb`,
+  `STUDIO/replicate/test/dilla_test.rb`,
+  `STUDIO/dilla/README.md`.
+  Commits: `6681045a09cfb58ec327647b06f2f85c2405e49d`,
+  `9b14243185cfaaa3a7f19186a614fdcc7d7b8aa2`,
+  `b6fdf31e2b7fd28e6ecafa2efad05b1dc6a358e2`.
+
+- **S-02 / Postpro collision preservation — EXTENDED, proof NOT_RUN.**
+  The explicit `--export-lut --output` branch now calls the same occupied
+  destination guard as one-shot and stock-sheet output. Its focused static
+  regression checks that the LUT path uses the guard. The earlier removal of
+  the destructive prior-take retirement remains in force. A shared
+  cross-STUDIO takes allocator/listing is not implemented: Postpro's source-
+  adjacent outputs, Dilla's dated render lane and LoRA's subject-rooted media
+  do not yet have one complete inventory boundary.
+  Files: `STUDIO/postpro/lib/vocab_check.rb`,
+  `STUDIO/replicate/test/postpro_cli_contract_test.rb`.
+  Commits: `07db2286b6c09124670cfdd8eceb024be0b70866`,
+  `7384deb9a35b95867978493abcbed7fb5f0686e1`.
+
+- **B-01/B-03/B-06 / BIZ output integrity and freshness — IMPLEMENTED IN THE
+  RELEASE CHAIN, proof NOT_RUN.**
+  `bp_build.mjs` now refuses to work in an output directory containing any
+  prior per-plan build directory, including a partial prior attempt. Use a
+  fresh empty `BIZ_OUT_DIR`. `bp_print.mjs` refuses existing PDF, cover PNG,
+  page PNG or print receipt destinations. After a successful print it writes
+  a per-document `.print.json` record with SHA-256 for source HTML, PDF and
+  cover PNG, byte sizes, page geometry/count, all-page raster count/bytes and
+  explicit `NOT_REVIEWED` visual/accessibility states. The record is
+  published atomically without replacing an existing receipt.
+  `bp_index.mjs` requires matching print receipts for active plans and
+  Ragnhild's funding guide; verifies their filenames, hashes, geometry and
+  review states; and checks editable HTML freshness separately from print/PDF
+  freshness. Archives are still checked for their existing HTML/PDF pairs but
+  are not forced through the new receipt gate. The BIZ README describes the
+  scratch build, manual full-page/cover review and precise copy-in step.
+  Files: `BIZ/tools/bp_build.mjs`, `BIZ/tools/bp_print.mjs`,
+  `BIZ/tools/bp_index.mjs`, `BIZ/README.md`.
+  Commits: `012abf6f91e90ba9c90b732d9a7e95d79144e5a1`,
+  `5d49e682ee3325d1f5ef3fef357f64fac9d34866`,
+  `93ca662cbb777d7a40aa6a16b3c25547ded0e961`,
+  `ca812aa0eff07bdcf3350d9a6549f2df026186cc`,
+  `f43ba6e7de5aded702d426a8795d029842026a09`,
+  `90933990a936be2b21f4d87e16982085b15c9f26`,
+  `58c77c5219a51b5d8fc5275919778184ed1adfdf`,
+  `61821895eb2bf205cbd6cbc5340e2a3c039ae862`,
+  `9b8b858b58459953f3e7db5b92371198d5d19923`,
+  `d9cb370dee08b37163167a84297e5ce22df0fcf5`.
+
+### Remaining operator/evidence boundaries
+
+- No persistent per-day/all-provider spend ledger or generic pre-payment
+  approval gate was added. Existing video estimates/caps cover the configured
+  MiniMax path; other paid image, film and training calls do not yet share one
+  persistent spend authority. The prediction API does not prove final billing.
+- Local gallery rebuild does not retract files already distributed, copied or
+  cached outside the local manifest. Repository visibility/history cleanup and
+  subject-data retention are separate operator actions.
+- No complete cross-STUDIO take inventory was added because the known output
+  producers span different roots and, for Postpro, arbitrary source-adjacent
+  directories. A partial listing would misrepresent completeness.
+- Listening acceptance, likeness review, rendered visual acceptance, rights
+  attestations, legal-source review, PDF accessibility review and publication
+  approval remain human-owned. Print/film receipts deliberately say
+  `NOT_REVIEWED`; no visual/audio/legal approval was inferred.
+- BIZ active HTML/PDF/PNG/print-receipt pairs have not been regenerated or
+  copied into the published directories. The new index gate will require the
+  receipts after an operator-reviewed scratch release is copied in.
+
+### Execution boundary for Phase 15
+
+Remote GitHub source inspection and direct file commits were available. A fresh
+local `git ls-remote https://github.com/anon987654321/pub5.git refs/heads/main`
+again failed because this execution environment could not resolve
+`github.com`. Therefore these remain **NOT_RUN**: mandatory
+`ruby MASTER/tools/agent_context.rb --json --tree`; `cd STUDIO && rake check`;
+`cd STUDIO && rake test`; focused Dilla, gallery, Replicate and Postpro tests;
+Ruby syntax census; BIZ Node syntax/build/check/index commands; Chromium/PDF
+generation; print-receipt/index validation against real published files;
+rendered visual comparison; legal research audit; governed `/fix`; deployment.
+No source read-back, authored regression or GitHub write is represented as a
+runtime test pass. Re-run the mandatory context and owner suites from a
+compatible local checkout before closing these lanes.
