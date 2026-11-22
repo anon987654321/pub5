@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "minitest_helper"
+require_relative "../../postpro/constitution"
 
 class TestPostproCliContract < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
@@ -50,6 +51,34 @@ class TestPostproCliContract < Minitest::Test
     assert_includes constitution, "raise ArgumentError, \"constitutional output already exists:"
     assert_includes constitution, "def available_output_path"
     assert_includes constitution, "verify_unused_output!(output)"
+  end
+
+  def test_random_take_identity_is_stable_and_bound_to_its_inputs
+    take_class = Struct.new(:number, :look, :lane)
+    take = take_class.new(2, :noir, :subtle)
+    chain_a = [[:grain, { "intensity" => 0.2, "radius" => 1 }], [:halation, { "threshold" => 0.8 }]]
+    chain_b = [[:grain, { "radius" => 1, "intensity" => 0.2 }], [:halation, { "threshold" => 0.8 }]]
+    common = {
+      input_sha256: "a" * 64,
+      seed: 1234,
+      take:,
+      grade_version: "grade-v1",
+    }
+
+    identity = Postpro::Constitution.take_identity(**common, chain: chain_a)
+    assert_match(/\\A[a-f0-9]{64}\\z/, identity)
+    assert_equal identity, Postpro::Constitution.take_identity(**common, chain: chain_b)
+    refute_equal identity, Postpro::Constitution.take_identity(**common.merge(seed: 1235), chain: chain_a)
+    refute_equal identity, Postpro::Constitution.take_identity(**common.merge(input_sha256: "b" * 64), chain: chain_a)
+    refute_equal identity, Postpro::Constitution.take_identity(**common.merge(grade_version: "grade-v2"), chain: chain_a)
+    refute_equal identity, Postpro::Constitution.take_identity(**common.merge(take: take_class.new(3, :noir, :subtle)), chain: chain_a)
+  end
+
+  def test_random_chain_sidecars_include_the_content_bound_take_identity
+    sidecars = source("postpro/lib/sidecars.rb")
+
+    assert_includes sidecars, "Postpro::Constitution.take_identity("
+    assert_includes sidecars, "data[:take_id] ="
   end
 
   def test_explicit_postpro_destinations_refuse_to_replace_existing_takes
