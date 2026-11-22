@@ -1021,10 +1021,10 @@ this environment has no working checkout and cannot resolve GitHub for clone.
 
 - **D-03 / future Dilla replay evidence — IMPROVED; replay command OPEN.**
   New `.provenance.json` files now record invocation mode/style, the Dilla
-  renderer source SHA-256, the active music-theory data SHA-256, and the
-  operator-supplied sample loop's absolute path, byte length and SHA-256 when
-  it is a regular non-symlink file. Missing/symlinked sample inputs are
-  recorded as unavailable, not as reproducible. Tests cover the pinned
+  renderer and `analog_core.rb` SHA-256 values, every `data/*.json` digest,
+  and the operator-supplied sample loop's absolute path, byte length and
+  SHA-256 when it is a regular non-symlink file. Missing/symlinked sample
+  inputs are recorded as unavailable, not as reproducible. Tests cover the pinned
   fingerprints and unavailable source state. This does not create a replay
   command or certify that the complete runtime/environment can be reconstructed.
   Older provenance records remain incomplete. A full `dilla:reproduce` flow
@@ -1035,7 +1035,10 @@ this environment has no working checkout and cannot resolve GitHub for clone.
   `STUDIO/dilla/README.md`.
   Commits: `6681045a09cfb58ec327647b06f2f85c2405e49d`,
   `9b14243185cfaaa3a7f19186a614fdcc7d7b8aa2`,
-  `b6fdf31e2b7fd28e6ecafa2efad05b1dc6a358e2`.
+  `b6fdf31e2b7fd28e6ecafa2efad05b1dc6a358e2`,
+  `2e3b1f846c086ec0394213630be055b812f2c501`,
+  `b5b43d2f6c02600b3bee69fcf611730f9761d8f1`,
+  `66bbf3be261fb2955f279399a0cb591f9f1a06a5`.
 
 - **S-02 / Postpro collision preservation — EXTENDED, proof NOT_RUN.**
   The explicit `--export-lut --output` branch now calls the same occupied
