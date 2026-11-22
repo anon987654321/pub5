@@ -195,21 +195,36 @@ class TestPlugins < Minitest::Test
 
   # The Core broker must reach every adapter that used to launch Chromium itself,
   # so no plugin keeps a private process path once a broker is threaded in. A fake
-  # broker records the open/close pair and returns a lease whose CDP URL is never
-  # dialled, because the assertions are about ownership, not navigation.
+  # broker records leases and attaches a narrow stand-in session; no CDP URL or
+  # Ferrum browser object crosses into the plugin test.
   class FakeBroker
-    Lease = Data.define(:id, :host, :cdp_url)
-    attr_reader :opened, :closed
+    Lease = Data.define(:id, :host)
+
+    class Attachment
+      def create_page
+        Object.new.tap { |page| page.define_singleton_method(:go_to) { |_| } }
+      end
+
+      def quit(wait: true) = true
+    end
+
+    attr_reader :opened, :closed, :attached
 
     def initialize
       @opened = []
       @closed = []
+      @attached = []
     end
 
     def open(host:, url: nil, ttl_seconds: nil, profile: nil, persistent: false, headless: true)
       id = "lease-#{@opened.size + 1}"
       @opened << { host:, url:, profile:, persistent:, headless: }
-      Lease.new(id:, host:, cdp_url: "ws://127.0.0.1:9/#{id}")
+      Lease.new(id:, host:)
+    end
+
+    def attach(id, **options)
+      @attached << { id:, **options }
+      Attachment.new
     end
 
     def close(id)
