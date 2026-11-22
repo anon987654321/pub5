@@ -600,8 +600,8 @@ can.
 1 vCPU, ~1GB RAM. The production deploy inventory is `master`, `brgen`,
 `mrdamascy`, `amber` and `bsdports`. A load average of 1.0 here means the
 single core is busy — not
-distress. `resource_guard.sh` (cron, every 5 min) sheds `amber` then
-`bsdports` under sustained pressure and restores them when it clears. It is
+distress. `resource_guard.sh` (cron, every 5 min) sheds `bsdports` then
+`amber` under sustained pressure and restores them when it clears. It is
 armed: the pause flag `/var/db/pub5_all_apps` is absent on vm23, and this
 paragraph described the flag as paused for two months after that stopped
 being true. The operator recalibrated it twice since, each time against the
