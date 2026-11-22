@@ -406,6 +406,49 @@ class TestStudioReplicateClientPaths < Minitest::Test
     assert_empty @client.requests
   end
 
+  def test_training_timeout_reports_cancellation_only_after_provider_confirmation
+    client, cancellations = timeout_client("canceled")
+
+    error = assert_raises(RuntimeError) { client.wait_for_training("training_123", timeout: 1) }
+
+    assert_includes error.message, "cancellation confirmed by provider"
+    assert_equal ["training_123"], cancellations
+  end
+
+  def test_training_timeout_does_not_claim_cancellation_when_provider_is_still_running
+    client, cancellations = timeout_client("processing")
+
+    error = assert_raises(RuntimeError) { client.wait_for_training("training_123", timeout: 1) }
+
+    assert_includes error.message, "cancellation NOT confirmed"
+    assert_includes error.message, "processing"
+    assert_equal ["training_123"], cancellations
+  end
+
+  def test_training_completion_racing_the_timeout_returns_provider_metrics
+    client, cancellations = timeout_client("succeeded", metrics: { "predict_time" => 120.0 })
+
+    result = client.wait_for_training("training_123", timeout: 1)
+
+    assert_equal "succeeded", result.fetch("status")
+    assert_equal 120.0, result.dig("metrics", "predict_time")
+    assert_equal ["training_123"], cancellations
+  end
+
+  def timeout_client(final_status, metrics: {})
+    client = StubClient.new
+    responses = [
+      { "id" => "training_123", "status" => "processing" },
+      { "id" => "training_123", "status" => final_status, "metrics" => metrics }
+    ]
+    cancellations = []
+    ticks = [0.0, 2.0]
+    client.define_singleton_method(:get_training) { |_id| responses.shift || responses.last }
+    client.define_singleton_method(:cancel_training) { |id| cancellations << id; nil }
+    client.define_singleton_method(:monotonic_now) { ticks.shift || 2.0 }
+    [client, cancellations]
+  end
+
   def test_training_and_prediction_resource_ids_cannot_be_paths
     assert_raises(ArgumentError) { @client.get_training("../account") }
     assert_nil @client.send(:cancel_prediction, "../account")
