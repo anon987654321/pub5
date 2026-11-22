@@ -608,7 +608,7 @@ class TestVoiceSupport < Minitest::Test
 
     assert_equal Encoding::BINARY, observed_encoding
     assert outcome.ok
-  end  
+  end
   def test_canonical_music_vocabulary_contains_researched_dilla_grammars_and_voicings
     path = File.expand_path("../../data/music_theory_chords.yml", __dir__)
     catalogue = YAML.safe_load_file(path, permitted_classes: [], aliases: false)
