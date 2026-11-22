@@ -60,6 +60,8 @@ class TestCheckBrief < Minitest::Test
     assert_equal 0, receipt.dig("steps", 0, "exit_status")
     assert_equal "bundle exec rake test:core", receipt.dig("steps", 0, "command")
     assert_nil receipt.fetch("test_counts")
+    assert_nil receipt.fetch("receipt_path")
+    assert_equal "stdout", receipt.fetch("receipt_output")
     refute_includes json, "do-not-publish-this-output"
     assert_equal false, receipt.dig("evidence", "raw_output_included")
   end
