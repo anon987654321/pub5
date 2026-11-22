@@ -325,13 +325,16 @@ failures = runner.results.reject { |r| r.success }.map(&:name)
 exit_status = failures.empty? ? 0 : 1
 
 if format == "json"
-  puts Operator::CheckBrief.render_json(
+  receipt = JSON.parse(Operator::CheckBrief.render_json(
     profile:, results: runner.results, metadata:,
     started_at: started_at.iso8601(3), finished_at: finished_at.iso8601(3),
     duration_s:, exit_status:,
     command: "MASTER/bin/check --profile=#{profile} --format=json",
     log_path: check_relative_log(ROOT, runner.log_path)
-  )
+  ))
+  exit_status = receipt.fetch("status") == "PASS" ? 0 : 1
+  receipt["exit_status"] = exit_status
+  puts JSON.pretty_generate(receipt)
 else
   body = if format == "brief"
            Operator::CheckBrief.render(profile:, results: runner.results)
