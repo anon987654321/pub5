@@ -103,29 +103,13 @@ there is no parallel Markdown checklist or generated backlog.
 
 ## First hour
 
-In a container with no Ruby, no Chrome, no libvips and no root — a sandbox,
-a CI image, a fresh machine — do not improvise the setup: run
-`MASTER/bin/sandbox-bootstrap`, which builds the vendored Ruby, installs
-every tree's bundle, extracts the libvips `.deb` closure, installs Chrome
-for Testing and the two gems the bare-ruby suites need, then strips the
-interpreter pin bundler writes into the lockfiles. Source
-`MASTER/bin/sandbox-env` in the shell that follows it. `--dry-run` prints
-what it would do without doing it. On a machine that already has the
-stack, skip it.
+For a disposable sandbox without Ruby, Chrome, libvips or root, run
+`MASTER/bin/sandbox-bootstrap` and source `MASTER/bin/sandbox-env`.
+Use `--dry-run` to inspect the plan. Skip this step on a machine that already
+has the required stack.
 
-Use an installed Ruby 3.2 or newer and run `bundle install` in
-`MASTER/`. Keep API keys in the environment, never in Git. Run
-`MASTER/bin/operator doctor` for checkout/host readiness and
-`MASTER/bin/doctor` for MASTER runtime/provider/voice readiness. They are
-different read-only reports. Then take one narrow dry run from `MASTER/`:
-
-```text
-bin/master '/fix --dry-run --critique --only critique,map MASTER/lib/cli'
-```
-
-Read veto, INCONCLUSIVE and skip lines as failures of proof, never as success. Deploy only
-through the OPENBSD runbook path. Commit path-scoped changes to main; never force-push.
-
+For normal host setup, diagnostics and the first repair, follow the canonical
+[MASTER first-hour and failure guide](MASTER/README.md#doctor-first-hour-and-failures).
 ## Source authority and Laws
 
 `MASTER/data/soul.yml` owns global identity, preservation principles,
