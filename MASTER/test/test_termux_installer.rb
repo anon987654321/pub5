@@ -15,7 +15,8 @@ class TermuxInstallerTest < Minitest::Test
   def master_source = File.read(MASTER_ENTRYPOINT)
 
   def test_termux_bootstrap_delegates_to_canonical_multi_distro_installer
-    assert_match(%r{#!/data/data/com\.termux/files/usr/bin/bash}, source)
+    assert_match(%r{#!/data/data/com\.termux/files/usr/bin/zsh}, source)
+    assert_includes source, "set -euo pipefail"
     assert_includes source, "master-mobile-install"
     assert_includes source, "--auto"
     refute_includes source, "ruby bin/deps install"
@@ -131,8 +132,8 @@ class TermuxInstallerTest < Minitest::Test
   end
 
   def test_termux_bootstrap_shell_syntax
-    skip "bash unavailable" unless system("command -v bash >/dev/null 2>&1")
-    output, status = Open3.capture2e("bash", "-n", SCRIPT)
+    skip "zsh unavailable" unless system("command -v zsh >/dev/null 2>&1")
+    output, status = Open3.capture2e("zsh", "-n", SCRIPT)
     assert status.success?, output
   end
 end
