@@ -93,7 +93,7 @@ module Operator
     rescue StandardError => e
       @log_error = "#{e.class}: #{e.message}"
       @log_path = nil
-      Master::Trace::Dmesg.status("checklog0", "cannot create combined log, #{@log_error}")
+      Master::Trace::Dmesg.status("checklog0", "cannot create combined log, #{@log_error}", io: @quiet ? $stderr : $stdout)
     end
 
     def record_run_step(name, ok, elapsed, output, command, status)
@@ -111,9 +111,14 @@ module Operator
                     else
                       "unknown"
                     end
+      step_status = if status.respond_to?(:timed_out?) && status.timed_out?
+                      "TIMEOUT"
+                    else
+                      ok ? "PASS" : "FAIL"
+                    end
       File.open(@log_path, File::WRONLY | File::APPEND | File::CREAT, 0o600) do |file|
         File.chmod(0o600, @log_path)
-        file.write("=== #{name} | #{ok ? "PASS" : "FAIL"} | #{elapsed.round(2)}s | #{exit_detail} ===\n")
+        file.write("=== #{name} | #{step_status} | #{elapsed.round(2)}s | #{exit_detail} ===\n")
         file.write("command: #{Shellwords.join(command)}\n")
         file.write("cwd: #{@root}\n")
         file.write(output.to_s)
@@ -125,7 +130,7 @@ module Operator
     rescue StandardError => e
       @log_error ||= "#{e.class}: #{e.message}"
       @log_path = nil
-      Master::Trace::Dmesg.status("checklog0", "combined log incomplete, #{@log_error}")
+      Master::Trace::Dmesg.status("checklog0", "combined log incomplete, #{@log_error}", io: @quiet ? $stderr : $stdout)
     end
 
     def report(unit, name, ok, elapsed)
