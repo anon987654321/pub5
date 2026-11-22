@@ -30,8 +30,8 @@ class TestCheckBrief < Minitest::Test
     )
     metadata = {
       repository: "anon987654321/pub5", branch: "main",
-      main_sha: "abc123", main_ref: "refs/heads/main",
-      checked_out_sha: "abc123", clean_checkout: true,
+      main_sha: "a".repeat(40), main_ref: "refs/heads/main",
+      checked_out_sha: "b".repeat(40), clean_checkout: true,
       environment: "ruby 3.4.0"
     }
 
@@ -49,10 +49,12 @@ class TestCheckBrief < Minitest::Test
     assert_equal "master_check", receipt.fetch("receipt_type")
     assert_equal "PASS", receipt.fetch("status")
     assert_match(/\A[0-9a-f-]{36}\z/, receipt.fetch("receipt_id"))
+    assert_match(/\A[0-9a-f-]{36}\z/, receipt.fetch("operation_id"))
     assert_equal "check", receipt.fetch("operation_type")
-    assert_equal "abc123", receipt.fetch("exact_main_sha")
-    assert_equal "abc123", receipt.fetch("exact_checked_out_sha")
+    assert_equal "a" * 40, receipt.fetch("exact_main_sha")
+    assert_equal "b" * 40, receipt.fetch("exact_checked_out_sha")
     assert_equal true, receipt.fetch("clean_checkout")
+    assert_equal true, receipt.fetch("repository_evidence_complete")
     assert_equal 1, receipt.dig("counts", "passed")
     assert_equal 1_250, receipt.dig("steps", 0, "duration_ms")
     assert_equal 0, receipt.dig("steps", 0, "exit_status")
@@ -113,6 +115,20 @@ class TestCheckBrief < Minitest::Test
     ))
     assert_equal "BLOCKED", blocked.fetch("status")
     assert_equal 1, blocked.dig("counts", "blocked")
+
+    dirty = JSON.parse(Operator::CheckBrief.render_json(
+      profile: "agent", results: [Operator::CheckRunner::Result.new(
+        name: "law syntax", success: true, output: "ok",
+        started_at: "start", finished_at: "finish", elapsed_s: 1,
+        exit_status: 0, command: "ruby -c"
+      )], metadata: metadata.merge(main_sha: "a" * 40, checked_out_sha: "b" * 40,
+                                   branch: "main", main_ref: "refs/heads/main",
+                                   clean_checkout: false),
+      started_at: "start", finished_at: "finish", duration_s: 1,
+      exit_status: 0, command: "MASTER/bin/check --profile=agent --format=json"
+    ))
+    assert_equal "INCONCLUSIVE", dirty.fetch("status")
+    assert_equal false, dirty.fetch("repository_evidence_complete")
   end
 
   def test_render_failure
