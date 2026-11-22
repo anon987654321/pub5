@@ -83,6 +83,29 @@ class BrowserBrokerTest < Minitest::Test
                     "BrowserBroker is the sole owner of Chromium process creation"
   end
 
+  def test_all_six_adapters_release_the_broker_even_when_driver_quit_raises
+    adapters = {
+      "lib/io/web_browse.rb" => ["browser&.quit", "@broker&.close(lease.id)"],
+      "lib/io/browser_agent.rb" => ["browser&.quit", "@broker&.close(lease.id)"],
+      "lib/io/web_chat.rb" => ["cleanup_browser(browser)", "@broker.close(lease.id)"],
+      "plugins/session_browser/session_browser.rb" => ["browser&.quit", "owner&.close(lease.id)"],
+      "plugins/social_browser/social_browser.rb" => ["browser&.quit", "owner&.close(lease.id)"],
+      "plugins/travel_browser/travel_browser.rb" => ["browser&.quit", "owner&.close(lease.id)"],
+    }
+
+    adapters.each do |relative, (driver_cleanup, broker_release)|
+      source = File.read(File.join(Master::ROOT, relative))
+      driver_index = source.index(driver_cleanup)
+      release_index = source.index(broker_release)
+
+      refute_nil driver_index, "#{relative} must attempt driver cleanup"
+      refute_nil release_index, "#{relative} must release its broker lease"
+      assert_operator driver_index, :<, release_index
+      assert_includes source[driver_index...release_index], "ensure",
+                      "#{relative} must release its lease even if driver cleanup raises"
+    end
+  end
+
   def test_a_context_without_the_capability_cannot_open_a_session
     engine = FakeEngine.new
     refused = broker(capabilities: Caps.read_only, engine:)
