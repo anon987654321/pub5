@@ -288,6 +288,40 @@ class TestPipeline < Minitest::Test
     assert_equal MasterPaths::TREES.map { |tree| "#{tree}/**" }.sort, contract.scope
   end
 
+  def test_fix_writes_only_after_explicit_apply_authorization
+    registry = Master::CLI::CommandRegistry
+
+    refute registry.writes_requested?(apply: nil, only: nil)
+    refute registry.writes_requested?(apply: false, only: nil)
+    refute registry.writes_requested?(apply: true, only: "critique")
+    assert registry.writes_requested?(apply: true, only: nil)
+  end
+
+  def test_mutating_fix_requires_an_explicit_mode_and_named_target
+    registry = Master::CLI::CommandRegistry
+
+    missing_mode = registry.send(:fix_dispatch_options, "--apply MASTER", nil)
+    missing_target = registry.send(:fix_dispatch_options, "--mode=repair --apply", nil)
+    authorized = registry.send(:fix_dispatch_options, "--mode=repair --apply MASTER", nil)
+
+    assert_match(/explicit --mode/, missing_mode.fetch(:mode_error))
+    assert_match(/named repository target/, missing_target.fetch(:mode_error))
+    assert_nil authorized[:mode_error]
+    assert_equal "repair", authorized.fetch(:mode)
+    assert_equal "MASTER", authorized.fetch(:target)
+    assert_equal true, authorized.fetch(:apply)
+  end
+
+  def test_audit_and_visual_modes_remain_read_only_even_with_apply
+    registry = Master::CLI::CommandRegistry
+
+    %w[audit visual].each do |mode|
+      options = registry.send(:fix_dispatch_options, "--mode=#{mode} --apply MASTER", nil)
+      refute options.fetch(:apply), "#{mode} must never mutate"
+      refute registry.writes_requested?(apply: options.fetch(:apply), only: options.fetch(:only))
+    end
+  end
+
   def test_intake_rejects_an_empty_message
     result = Master::CLI::Pipeline.new([Master::CLI::Stages::Intake.new])
                                    .call(Master::CLI::PipelineContext.build(user_message: "   "))
