@@ -216,7 +216,7 @@ frame dimensions/rate/count, audio-copy status and measured duration/temporary b
 
 A bare path, or `--random` with a path (`--random photo.jpg` or `--random --count 10
 photo.jpg`), renders several variations of that photograph, each through its own chain, with a
-JSON sidecar naming every effect, the seed, the take number, the look and the lane. `--random`
+JSON sidecar naming every effect, the seed, the take number, the look and the lane. Each random-chain sidecar also carries a stable `take_id`: a SHA-256 identity bound to the source bytes, seed, take position, look/lane, canonical recipe and renderer digest. Identical rerenders of the same inputs keep the identity; changing any bound input changes it. This identifies Postpro takes without claiming a complete cross-STUDIO inventory. `--random`
 with no path draws from the downloads folder instead. Several paths on one line get one family
 each. A take is named for what it is, in draw order:
 `postpro_photo_03_neon_night_artistic_analog_v1.jpg`. A family of two or more also gets
