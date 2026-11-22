@@ -210,7 +210,8 @@ class TestWebBrowse < Minitest::Test
         assert_includes request.response_options[:body], "Blocked unsafe redirect"
         assert follow_up.aborted, "the browser follow-up is independently refused"
         assert_equal ["example.com"], requested_hosts
-        assert_equal ["example.com", "127.0.0.1", "127.0.0.1"], resolved_hosts
+        assert_equal ["example.com"], resolved_hosts,
+                     "an out-of-grant redirect target is refused before DNS resolution"
       end
     end
   end
