@@ -76,15 +76,15 @@ function fundingAsk(path) {
   return Math.round(value);
 }
 const FRESHNESS_INPUTS = {
-  syre: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
-  ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
-  pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
-  govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
-  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs'],
-  speis: ['tools/speis.html'],
-  future_nato_weapons: ['tools/future_nato_weapons.html'],
-  norwegianhedge: ['tools/norwegianhedge.html'],
-  fetat: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
+  syre: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
+  ragnhild: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
+  pubhealthcare: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
+  govt_bergen: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
+  future_healthcare_os: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs', 'tools/bp_check.mjs', 'tools/bp_print.mjs'],
+  speis: ['tools/speis.html', 'tools/bp_print.mjs'],
+  future_nato_weapons: ['tools/future_nato_weapons.html', 'tools/bp_print.mjs'],
+  norwegianhedge: ['tools/norwegianhedge.html', 'tools/bp_print.mjs'],
+  fetat: ['tools/fetat_build.rb', 'tools/fetat_image.jpg', 'tools/bp_print.mjs'],
 };
 
 function requirePair(key) {
