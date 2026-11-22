@@ -7,14 +7,22 @@ require_relative "test_helper"
 class TestLanePolicyFromYaml < Minitest::Test
   Selection = Master::Io::LaneSelection
 
-  # A bare gemini-3 id reads images; a blind family never does; the dispatcher
-  # asks the same reader.
-  def test_vision_families_cover_every_gemini_and_the_dispatcher_agrees
-    assert Selection.vision?("gemini-3.1-pro")
+  # Image understanding has its own Google, Grok, ChatGPT and Qwen tier.
+  # DeepSeek V4.1 Flash is the text primary, not an image-input model.
+  def test_vision_tier_uses_the_four_designated_families
+    expected = %w[
+      google/gemini-3.1-flash-lite
+      x-ai/grok-4.3
+      openai/gpt-5.4
+      qwen/qwen3.8-flash
+    ]
+    assert_equal expected, Selection.tier("vision")
+    expected.each { |model| assert Selection.vision?(model), "#{model} must accept image input" }
+    refute Selection.vision?("ollama_cloud:deepseek-v4.1-flash")
     refute Selection.vision?("deepseek-chat")
 
     dispatcher = Master::Review::LLMDispatcher.allocate
-    assert dispatcher.send(:vision_capable?, "gemini-3.1-pro")
+    expected.each { |model| assert dispatcher.send(:vision_capable?, model) }
   end
 
   def test_subscription_lanes_come_from_models_yml
