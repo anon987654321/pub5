@@ -352,10 +352,13 @@ module Master
           coverage and two consecutive clean readings after the last mutation.
           Never convert unsupported or unmeasured work into a pass.
 
-          /fix and --dry-run are distinct. Bare /fix is the write-enabled
-          convergence operation; its read-only pre-repair baseline is a preflight,
-          not a downgrade of the requested mode. --dry-run performs the same
-          inventory, analysis and repair planning but writes nothing.
+          /fix and --dry-run are distinct. Bare /fix is read-only: it may
+          inventory, inspect, critique and preview a repair, but it does not
+          mutate the repository. A write requires the explicit operator
+          authorization `--apply`, an explicit `--mode=repair|elevate|all`,
+          and a named governed repository target. --dry-run and --read-only
+          always override --apply; audit and visual modes remain read-only.
+          Startup, retry and autonomous triggers never imply write consent.
           Never promise that literally every defect was repaired. DONE means the
           complete applicable scope met its proof contract. Every exclusion,
           unmeasured surface, unresolved finding and blocker must be named, and
