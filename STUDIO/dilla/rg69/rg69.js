@@ -118,7 +118,7 @@ voice:{brightness:.58,level:.82},
 
 rig:{delay:{feedback:.18,lowpass:2600,throw_chords:.04},reverb:{size:.3,level_chords:.1},wobble:{rate_hz:.5},vinyl:{level:.05,crackle:.3},},
 
-effects:{delay_feedback_range:.37,reverb_decay_scale:4,wobble_frequency_cap_hz:.15}
+effects:{delay_time:"8n",delay_feedback_range:.37,reverb_decay_scale:4,wobble_frequency_cap_hz:.15}
 };
 function finalizeRG69AudioProfile(profile){
 const kit=profile.kit,tone=profile.tone;
@@ -544,7 +544,7 @@ padsG=new Tone.Gain(Tone.dbToGain(-12));
 revSend=new Tone.Gain(0);
 dlySend=new Tone.Gain(0);
 fxRev=new Tone.Reverb(1.5);
-fxDly=new Tone.FeedbackDelay(Tone.Time('8n').toSeconds(),0.2);
+fxDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds(),rg69AudioProfile.rig.delay.feedback);
 fxFlt=new Tone.Filter(16000,'lowpass');
 tapeSat=new Tone.Distortion(0.08);
 compPar=new Tone.Compressor(-18,4);
@@ -944,7 +944,7 @@ const oLimiter=new Tone.Limiter(-1);
 const oRevSend=new Tone.Gain((aud_.reverb/100)*rg69AudioProfile.rig.reverb.level_chords);
 const oDlySend=new Tone.Gain((aud_.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
 const oRev=new Tone.Reverb(1+(aud_.reverb/100)*rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale);
-const oDly=new Tone.FeedbackDelay(Tone.Time('8n').toSeconds(),rg69AudioProfile.rig.delay.feedback+(aud_.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
+const oDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds(),rg69AudioProfile.rig.delay.feedback+(aud_.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
 const oDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 oRev.wet.value=1;
 oDly.wet.value=1;
