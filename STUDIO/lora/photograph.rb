@@ -224,7 +224,7 @@ if $PROGRAM_NAME == __FILE__
       { "subject" => options[:subject], "model" => Studio::Visual::IdeaPicture.new(subject: options[:subject], lora_only: true).validate_model! }
     elsif options[:all_subjects]
       raise ArgumentError, "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
- 
+
       studio_all_subjects_render(
         subjects: %w[johann ragnhild merethe], count: options[:count] || 4
       )

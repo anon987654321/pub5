@@ -340,7 +340,7 @@ module Studio
     end
 
     def probe_duration(audio)
-      out, err, status = Open3.capture3(Studio::Subprocess.environment, 
+      out, err, status = Open3.capture3(Studio::Subprocess.environment,
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
         "-of", "default=nk=1:nw=1", audio
       )
