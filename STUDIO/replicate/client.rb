@@ -329,17 +329,16 @@ module Studio
         # server-side deadline, so a stuck run stops billing even if this process
         # dies.
         def run(model_id, input, timeout: 600)
-          timeout = operation_timeout!(timeout, "prediction timeout")
-          owner, name, pinned = model_reference!(model_id)
-          version = pinned || latest_version("#{owner}/#{name}")
-          validate_input_schema!("#{owner}/#{name}:#{version}", input)
-          Models.reserve_video_spend!("#{owner}/#{name}", input)
-          headers = {
-            "Prefer" => "wait=#{[timeout, MAX_SYNC_WAIT].min}",
-            "Cancel-After" => "#{timeout.clamp(CANCEL_AFTER_RANGE)}s",
-          }
-          pred = post(URI("#{BASE}/predictions"), { version:, input: }, headers:)
-          settle(pred, timeout:)
+          prediction, = execute_prediction(model_id, input, timeout:)
+          prediction
+        end
+
+        # A caller that writes a media deliverable beside its output can keep
+        # this receipt with it. The estimate is a pre-request reservation, not
+        # an invoice; the prediction response does not report the final charge.
+        def predict_with_receipt(model_id, input, timeout: 600)
+          prediction, receipt = execute_prediction(model_id, input, timeout:)
+          { "output" => prediction["output"], "receipt" => receipt }
         end
 
         # The input names a model declares, for refusing a key it would ignore.
@@ -348,6 +347,33 @@ module Studio
         end
 
         private
+
+        def execute_prediction(model_id, input, timeout:)
+          timeout = operation_timeout!(timeout, "prediction timeout")
+          owner, name, pinned = model_reference!(model_id)
+          version = pinned || latest_version("#{owner}/#{name}")
+          validate_input_schema!("#{owner}/#{name}:#{version}", input)
+          estimate = Models.reserve_video_spend!("#{owner}/#{name}", input)
+          headers = {
+            "Prefer" => "wait=#{[timeout, MAX_SYNC_WAIT].min}",
+            "Cancel-After" => "#{timeout.clamp(CANCEL_AFTER_RANGE)}s",
+          }
+          prediction = post(URI("#{BASE}/predictions"), { version:, input: }, headers:)
+          settled = settle(prediction, timeout:)
+          receipt = {
+            "schema" => "studio.replicate.prediction.v1",
+            "model" => "#{owner}/#{name}",
+            "version" => version,
+            "prediction_id" => settled["id"],
+            "status" => settled["status"].to_s,
+            "estimated_cost_usd" => estimate,
+            "estimate_basis" => estimate ? "catalogue rate and reserved request bounds before POST" : "no catalogue estimate configured",
+            "actual_cost_usd" => nil,
+            "actual_cost_status" => "NOT_REPORTED_BY_PREDICTION_API",
+            "metrics" => settled["metrics"].is_a?(Hash) ? settled["metrics"] : nil
+          }
+          [settled, receipt]
+        end
 
         def validate_input_schema!(model_id, input)
           raise ArgumentError, "prediction input must be a Hash" unless input.is_a?(Hash)
