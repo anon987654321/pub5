@@ -22,12 +22,27 @@ class TestRuns < Minitest::Test
   end
 
   def test_all_tree_survey_runs_javascript_tests_and_reports_missing_runtime
-    source = File.read(File.join(Operator::Runs::ROOT, "MASTER", "Rakefile"))
+    root = Operator::Runs::ROOT
+    source = File.read(File.join(root, "MASTER", "Rakefile"))
+    check_source = File.read(File.join(root, "MASTER", "bin", "check"))
 
     assert_includes source, 'Dir.glob(File.join(path, "**", "*.test.mjs"))'
-    assert_includes source, 'system(node_bin, "--test", *tests, chdir: working_dir)'
+    assert_includes source, 'node_available = system("node", "--version"'
+    assert_includes source, "javascript_tests: javascript_tests.size"
     assert_includes source, "inconclusive <<"
     assert_includes source, "exit 3"
+    assert_includes check_source, '["web ui behaviour", node_bin, "--test", *web_node_tests]'
+  end
+
+  def test_bin_check_does_not_activate_default_date_before_the_locked_bundle
+    root = Operator::Runs::ROOT
+    check = File.read(File.join(root, "MASTER", "bin", "check"))
+    preboot = check.split('require_relative "../lib/boot/entrypoint"', 2).first
+    entrypoint = File.read(File.join(root, "MASTER", "lib", "boot", "entrypoint.rb"))
+    activation = entrypoint.split('require "bundler/setup"', 2).last
+
+    refute_includes preboot, 'require "time"'
+    assert_includes activation, 'require "time"'
   end
 
   def test_every_declared_runner_is_a_tracked_file
@@ -73,6 +88,18 @@ class TestRuns < Minitest::Test
 
     assert_includes Operator::Runs.who_runs(shared), "MASTER/checks/release.rb"
     assert_includes Operator::Runs.who_runs(web), "MASTER/checks/release.rb"
+  end
+
+  def test_archived_rails_app_tests_remain_reachable_without_entering_the_deploy_matrix
+    targets = {
+      "RAILS/hjerterom/test/controllers/home_controller_test.rb" => "RAILS/hjerterom/bin/ci",
+      "RAILS/mytoonz/test/models/comic_strip_test.rb" => "RAILS/mytoonz/bin/ci",
+    }
+
+    targets.each do |path, runner|
+      assert_includes Operator::Runs.test_files, path
+      assert_includes Operator::Runs.who_runs(path), runner
+    end
   end
 
   def test_who_runs_answers_for_a_known_file
@@ -141,6 +168,9 @@ class TestRuns < Minitest::Test
     assert_includes studio, "STUDIO/replicate/test/idea_picture_test.rb"
     assert_includes Operator::Runs.who_runs("STUDIO/replicate/test/dilla_test.rb"), "STUDIO/replicate/Rakefile"
     assert_includes Operator::Runs.who_runs("STUDIO/replicate/test/idea_picture_test.rb"), "STUDIO/replicate/Rakefile"
+    assert_includes studio, "STUDIO/test/idea_picture_test.rb"
+    assert_includes studio, "STUDIO/test/selfie_series_test.rb"
+    assert_includes Operator::Runs.who_runs("STUDIO/test/idea_picture_test.rb"), "STUDIO/replicate/Rakefile"
   end
 
   # What makes a file a test is the directory, not the name — three source files
