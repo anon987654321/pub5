@@ -21,7 +21,7 @@ esac
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
 deploy_user=${VPS_DEPLOY_USER:-dev}
-[[ $deploy_user == [a-z][a-z0-9_]## ]] || {
+[[ $deploy_user == [a-z]* && $deploy_user != *[^a-z0-9_]* ]] || {
   print -u2 "vps_ci: refused - invalid deploy-user identifier"
   exit 2
 }
@@ -38,8 +38,51 @@ git_as_deploy_user() {
   run_as_deploy_user "cd $(printf '%q' "$repo") && git $args_q"
 }
 
-# This helper is an internal child of a pinned, admitted release. Check every
-# workstation proof before the first permission change or copy-tree sync.
+# This helper is an internal child of a pinned, admitted release. Verify the
+# parent's live lock record and process identity; an environment flag alone
+# must never authorize a production copy-tree mutation.
+lock_dir=${VPS_DEPLOY_LOCK_DIR:-${VPS_DEPLOY_HOME:-/home/$deploy_user}/.pub5-vps-deploy.lock}
+[[ ${VPS_DEPLOY_LOCK_HELD:-} == 1 && ${VPS_DEPLOY_LOCK_PID:-} == <-> && -n ${VPS_DEPLOY_LOCK_IDENTITY:-} ]] || {
+  print -u2 "vps_ci: refused - no inherited parent deployment lock"
+  exit 75
+}
+[[ -d $lock_dir && ! -L $lock_dir && -f $lock_dir/owner && ! -L $lock_dir/owner ]] || {
+  print -u2 "vps_ci: refused - parent deployment lock record is missing or unsafe"
+  exit 75
+}
+read -r owner_pid owner_host owner_epoch owner_identity < "$lock_dir/owner" || {
+  print -u2 "vps_ci: refused - cannot read parent deployment lock record"
+  exit 75
+}
+[[ $owner_pid == "$VPS_DEPLOY_LOCK_PID" && $owner_host == "$(hostname -s)" &&
+   $owner_epoch == <-> && $owner_identity == "$VPS_DEPLOY_LOCK_IDENTITY" ]] || {
+  print -u2 "vps_ci: refused - parent lock record does not match the inherited identity"
+  exit 75
+}
+owner_started=$(LC_ALL=C ps -p "$owner_pid" -o lstart= 2>/dev/null) || {
+  print -u2 "vps_ci: refused - cannot read parent process start time"
+  exit 75
+}
+owner_command=$(ps -ww -p "$owner_pid" -o command= 2>/dev/null) || {
+  print -u2 "vps_ci: refused - cannot read parent process command"
+  exit 75
+}
+[[ -n $owner_started && -n $owner_command ]] || {
+  print -u2 "vps_ci: refused - parent process identity is unavailable"
+  exit 75
+}
+owner_started=${owner_started//[^A-Za-z0-9]/_}
+owner_digest=$(print -rn -- "$owner_command" | cksum) || {
+  print -u2 "vps_ci: refused - cannot fingerprint parent process"
+  exit 75
+}
+owner_digest=${owner_digest// /_}
+[[ ${owner_started}_${owner_digest} == "$owner_identity" ]] || {
+  print -u2 "vps_ci: refused - parent deployment process identity changed"
+  exit 75
+}
+
+# Verify every workstation proof before the first permission change or sync.
 head=$(git_as_deploy_user rev-parse HEAD 2>/dev/null) || {
   print -u2 "vps_ci: refused - cannot read the checkout HEAD"
   exit 1
@@ -57,7 +100,12 @@ attested=${VPS_DEPLOY_CI_SHA:-}
   print -u2 "vps_ci: refused - no matching parent host-admission token for $head; no sync was started"
   exit 1
 }
-if [[ ${VPS_DEPLOY_PREFLIGHT_SHA:-} != "$head" ]]; then
+if [[ -n ${VPS_DEPLOY_PREFLIGHT_SHA:-} ]]; then
+  [[ $VPS_DEPLOY_PREFLIGHT_SHA == "$head" ]] || {
+    print -u2 "vps_ci: refused - workstation preflight SHA does not match $head; no sync was started"
+    exit 1
+  }
+else
   [[ ${VPS_DEPLOY_SKIP_PREFLIGHT:-0} == 1 && ${I_UNDERSTAND_FAST_DEPLOY:-0} == 1 ]] || {
     print -u2 "vps_ci: refused - no matching workstation preflight for $head; no sync was started"
     exit 1
@@ -134,9 +182,9 @@ sync_from_repo() {
   doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"
 }
 
-print "vps_ci: $app (sync + lock + read-only bundle check)"
-# Establish group access and private-storage modes before the app-owned
-# synchronizer reads the checkout and updates the production copy-tree.
+print "vps_ci: $app (bounded sync + read-only bundle check)"
+# The parent owns deployment serialization; prepare app permissions before the
+# app-owned synchronizer updates the production copy-tree.
 pub5_ensure_ci_lock >/dev/null
 doas /usr/local/libexec/ci-prepare.ksh "$app"
 deploy_status "$app" "sync tree"
