@@ -393,11 +393,16 @@ namespace :test do
 
   desc "The cli, operator-intent, turn-routing, io and fix subsystem tests on their own"
   task :subsystems do
+    require_relative "../lib/operator/parallel_tests"
     files = FileList[
       "test/test_cli_*.rb", "test/test_io_*.rb", "test/test_fix_*.rb",
       "test/test_operator_intent.rb", "test/test_turn_router.rb"
     ].uniq.sort
-    files.each { |f| ruby "-Itest", f }
+    loader = File.join(Gem.loaded_specs.fetch("rake").full_gem_path, "lib", "rake", "rake_test_loader.rb")
+    options = ["-v", *ENV.fetch("TESTOPTS", "").split].uniq
+    command = ->(batch) { [RbConfig.ruby, "-Ilib:test", loader, *batch, *options] }
+    abort "test:subsystems: a worker failed; inspect .master/check/suite-report.json" unless
+      Operator::ParallelTests.run(files, command:)
   end
 
   desc "Live web HTTP/browser tests (requires Falcon on MASTER_WEB_PORT)"
