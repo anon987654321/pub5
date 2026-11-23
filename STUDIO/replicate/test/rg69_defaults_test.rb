@@ -440,7 +440,6 @@ class TestRg69Defaults < Minitest::Test
   end
 end
 
-
 # Regression coverage for the failure mode and the visible interaction states.
 class TestRg69PlaybackRecovery < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
