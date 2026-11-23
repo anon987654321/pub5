@@ -1,9 +1,9 @@
 #!/usr/bin/env zsh
-# Run one Rails app CI on vm23 with mutex + load check (serial operator entrypoint).
-# Usage: zsh OPENBSD/bin/vps_ci.sh brgen
+# Verify workstation CI attestation and the preinstalled production bundle for one Rails app on vm23.
+# Usage: zsh OPENBSD/bin/vps_ci.sh APP (internal child of the pinned vps-deploy flow)
 set -euo pipefail
 
-usage="usage: zsh OPENBSD/bin/vps_ci.sh APP - sync APP's copy-tree, then run its bin/ci under the CI lock"
+usage="usage: zsh OPENBSD/bin/vps_ci.sh APP - sync APP's copy-tree, then verify workstation CI attestation and the read-only production bundle"
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
   print -r -- "$usage"
   exit 0
