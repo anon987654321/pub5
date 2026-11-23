@@ -43,7 +43,7 @@ class TestToolsMedia < Minitest::Test
       assert_match(/outside the Replicate API origin/, error.message)
     end
 
-    assert_equal "Token studio-replicate-test", request["Authorization"]
+    assert_equal "Bearer studio-replicate-test", request["Authorization"]
     assert_equal "/v1/models", request.path
   end
 
@@ -111,7 +111,7 @@ class TestToolsMedia < Minitest::Test
       assert_equal "studio", client.account_username
     end
 
-    assert_equal "Token studio-replicate-test", request["Authorization"]
+    assert_equal "Bearer studio-replicate-test", request["Authorization"]
   end
 
   def test_postpro_key_readers_cover_every_declared_preset_knob

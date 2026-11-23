@@ -700,7 +700,7 @@ module Studio
         boundary = "ReplicateBoundary#{SecureRandom.hex(18)}"
         uri = URI("#{BASE}/files")
         req = Net::HTTP::Post.new(uri)
-        req["Authorization"] = "Token #{@token}"
+        req["Authorization"] = "Bearer #{@token}"
         req["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
 
         # Stream the multipart payload from a temporary file instead of holding
@@ -765,14 +765,14 @@ module Studio
       def get(uri)
         uri = api_uri(uri)
         req = Net::HTTP::Get.new(uri)
-        req["Authorization"] = "Token #{@token}"
+        req["Authorization"] = "Bearer #{@token}"
         request(req, uri)
       end
 
       def post(uri, body, headers: {})
         uri = api_uri(uri)
         req = Net::HTTP::Post.new(uri)
-        req["Authorization"] = "Token #{@token}"
+        req["Authorization"] = "Bearer #{@token}"
         req["Content-Type"] = "application/json"
         headers.each { |name, value| req[name] = value }
         req.body = body.to_json
