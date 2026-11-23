@@ -141,9 +141,16 @@ if(!voice.brightness||!rig.delay||!rig.reverb||!rig.wobble)throw new Error("RG-6
 return finalizeRG69AudioProfile({name:config.name,tone:config.tone,kit,voice,rig,effects:config.effects,source:config.source});
 }
 let rg69AudioProfile=finalizeRG69AudioProfile(RG69_AUDIO_FALLBACK);
+let rg69AudioProfileLocked=false;
 const rg69AudioProfileReady=fetch("../data/dilla.json",{cache:"force-cache"})
 .then(response=>{if(!response.ok)throw new Error("Dilla catalogue request failed: "+response.status);return response.json();})
-.then(data=>{rg69AudioProfile=resolveRG69AudioProfile(data);log("shared Dilla sound profile: "+rg69AudioProfile.name,"k");return rg69AudioProfile;})
+.then(data=>{
+const loaded=resolveRG69AudioProfile(data);
+if(rg69AudioProfileLocked){log("Dilla catalogue arrived after audio startup; embedded profile remains active","w");return rg69AudioProfile;}
+rg69AudioProfile=loaded;
+log("shared Dilla sound profile: "+rg69AudioProfile.name,"k");
+return rg69AudioProfile;
+})
 .catch(error=>{console.warn("RG-69 shared Dilla sound profile unavailable; embedded fallback retained:",error);log("shared Dilla sound profile unavailable; using embedded RG-69 patch","w");return rg69AudioProfile;});
 function createToneInstruments(){
 const p=rg69AudioProfile,t=p.tone,k=p.kit,v=p.voice;
@@ -531,6 +538,9 @@ refreshStepGrid();
 }
 
 async function initAudio(activationPromise){
+// Lock the fetched or embedded profile before the first await. Audio startup
+// never waits on a catalogue request or a network timeout.
+rg69AudioProfileLocked=true;
 // Tone.start() must be invoked synchronously by the trusted click handler.
 await (activationPromise||Tone.start());
 Tone.getContext().rawContext.addEventListener('statechange',()=>{
@@ -538,7 +548,6 @@ Tone.getContext().rawContext.addEventListener('statechange',()=>{
     st_.playing=false;clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
-await rg69AudioProfileReady;
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 driftLFO=new Tone.LFO(0.05,-4,4).start();
 const instruments=createToneInstruments();
@@ -977,7 +986,7 @@ log('FX randomized','k');
 
 async function exportWAV(){
 try{
-await rg69AudioProfileReady;
+rg69AudioProfileLocked=true;
 const bars=8,len=bars*4*(60/aud_.bpm);
 $id('progress-wrap').style.display='block';
 $id('progress-pct').textContent='0%';
@@ -1166,17 +1175,18 @@ sel_k.addEventListener('change',e=>{pushHistory();pat_.k=e.target.value;updateRo
 sel_p.addEventListener('change',e=>{pushHistory();pat_.p=e.target.value;updateRootDisplay();highlightActiveChip();log(`pads: ${pat_.p}`)});
 const styles_c=$id('styles');
 const filterStyles=q=>{
-const query=q.toLowerCase();
-styles_c.querySelectorAll('.style-chip').forEach(chip=>{
+const query=q.trim().toLowerCase();
+const source=$id('tab-moods').classList.contains('active')?$id('moods'):styles_c;
+source.querySelectorAll('.style-chip').forEach(chip=>{
 const txt=chip.textContent.toLowerCase();
-const mood=chip.title.toLowerCase();
-chip.style.display=(txt.includes(query)||mood.includes(query))?'':'none';
+const mood=(chip.title||'').toLowerCase();
+chip.style.display=(!query||txt.includes(query)||mood.includes(query))?'':'none';
 });
 };
 $id('style-search').addEventListener('input',debounce(e=>filterStyles(e.target.value),150));
 // Tab switching
-$id('tab-styles').addEventListener('click',()=>{$id('styles').style.display='flex';$id('moods').style.display='none';$id('tab-styles').classList.add('active');$id('tab-moods').classList.remove('active');$id('style-search').placeholder='Search styles…'});
-$id('tab-moods').addEventListener('click',()=>{$id('moods').style.display='flex';$id('styles').style.display='none';$id('tab-moods').classList.add('active');$id('tab-styles').classList.remove('active');$id('style-search').placeholder='Search moods…'});
+$id('tab-styles').addEventListener('click',()=>{$id('styles').style.display='flex';$id('moods').style.display='none';$id('tab-styles').classList.add('active');$id('tab-moods').classList.remove('active');$id('style-search').placeholder='Search styles…';filterStyles($id('style-search').value)});
+$id('tab-moods').addEventListener('click',()=>{$id('moods').style.display='flex';$id('styles').style.display='none';$id('tab-moods').classList.add('active');$id('tab-styles').classList.remove('active');$id('style-search').placeholder='Search moods…';filterStyles($id('style-search').value)});
 STYLES.forEach(s=>{
 const chip=document.createElement('div');
 chip.className='style-chip';
@@ -1375,8 +1385,9 @@ function showCtxMenu(x,y,items){
 const menu=$id('ctx-menu');
 menu.replaceChildren();
 menu.style.display='block';
-menu.style.left=`${x}px`;
-menu.style.top=`${y}px`;
+const margin=8;
+menu.style.left=`${Math.max(margin,Math.min(x,window.innerWidth-menu.offsetWidth-margin))}px`;
+menu.style.top=`${Math.max(margin,Math.min(y,window.innerHeight-menu.offsetHeight-margin))}px`;
 items.forEach(it=>{
 const btn=document.createElement('button');
 btn.textContent=it.label;
