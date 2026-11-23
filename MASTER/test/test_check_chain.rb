@@ -113,7 +113,7 @@ class TestCheckChain < Minitest::Test
   end
 
   def test_source_only_rails_suites_do_not_promote_archived_apps_to_deploy_targets
-    inventory = YAML.safe_load_file(File.join(G::ROOT, "RAILS", "apps.yml")).fetch("apps")
+    inventory = YAML.safe_load_file(File.join(G::ROOT, "RAILS", "apps.yml"), aliases: true).fetch("apps")
 
     %w[hjerterom mytoonz].each { |app| refute inventory.key?(app), "#{app} is source-only, not an active deploy target" }
     ["hjerterom source CI", "mytoonz source CI"].each do |label|
