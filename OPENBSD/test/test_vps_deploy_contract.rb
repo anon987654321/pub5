@@ -513,12 +513,21 @@ class VpsDeployContractTest < Minitest::Test
   # Since 2026-10-28 the deploy runs as root and re-execs itself through
   # passwordless doas. Root has no github.com host key by design, so every git
   # call must still go through the unprivileged deploy user.
-  # A CI attestation vouches for one commit: vps-deploy refuses any other, and
-  # vps_ci.sh skips the suite only when the checked-out HEAD is that commit.
+  # The helper may sync only after the parent has pinned and admitted the
+  # exact commit and supplied workstation CI/preflight attestations.
   def test_a_ci_attestation_covers_exactly_the_commit_it_names
     assert_includes SOURCE, %q{[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]}
     assert_includes CI_SOURCE, %q{head=$(git -C "$repo" rev-parse HEAD)}
+    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_SHA:-} == "$head" ]]}
     assert_includes CI_SOURCE, %q{[[ $attested == "$head" ]]}
+    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]]}
+    assert_includes CI_SOURCE, %q{VPS_DEPLOY_PREFLIGHT_SHA:-}
+    sync = CI_SOURCE.index("sync_from_repo\\n")
+    %w[VPS_DEPLOY_SHA VPS_DEPLOY_CI_SHA VPS_DEPLOY_ADMITTED_SHA VPS_DEPLOY_PREFLIGHT_SHA].each do |name|
+      position = CI_SOURCE.index(name)
+      refute_nil position, "missing #{name} guard"
+      assert_operator position, :<, sync, "#{name} must be checked before copy-tree sync"
+    end
     assert_includes CI_SOURCE, %q{"bundle-check"}
     refute_includes CI_SOURCE, "ci-run.ksh"
     refute_includes CI_SOURCE, "bundle_install_as_app"
@@ -526,6 +535,15 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes SOURCE, "SKIP_CI=1"
     refute_includes SOURCE, "preflight-boot"
     refute_includes SOURCE, 'canary.rb" --no-rehearse'
+  end
+
+  def test_bulk_ci_wrapper_refuses_standalone_production_sync
+    wrapper = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci_all.sh"), encoding: "UTF-8")
+
+    assert_includes wrapper, "standalone bulk sync/bundle path is retired"
+    assert_includes wrapper, "exit 69"
+    refute_includes wrapper, 'zsh "$script"'
+    refute_includes wrapper, "ruby_select.sh"
   end
 
   def test_the_ci_stamp_only_records_a_workstation_attestation
