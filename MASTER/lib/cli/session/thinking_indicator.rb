@@ -153,6 +153,7 @@ module Master
             else
               last = @think_last_tool_activity
               next unless last && now - last[:at] <= TOOL_ACTIVITY_HOLD_SECONDS
+              next "#{last[:label]} ..." if last[:state].to_s == "active"
 
               state = last[:state].to_s == "done" ? "done" :
                       last[:state].to_s == "blocked" ? "blocked" : "failed"
@@ -215,7 +216,15 @@ module Master
         def safe_activity_path(value)
           raw = value.to_s.strip.tr("\\", "/")
           return "workspace" if raw == "." || raw.empty?
-          return "protected file" if raw.start_with?("/") || raw.match?(/\A[A-Za-z]:/)
+
+          if raw.start_with?("/") || raw.match?(/\A[A-Za-z]:/)
+            root = File.expand_path(Master::REPO_ROOT)
+            expanded = File.expand_path(raw)
+            prefix = "#{root}/"
+            return "protected file" unless expanded.start_with?(prefix)
+
+            raw = expanded.delete_prefix(prefix)
+          end
 
           parts = raw.split("/").reject(&:empty?)
           return "protected file" if parts.empty? || parts.any? do |part|
@@ -515,6 +524,7 @@ module Master
         def update_think_stage(payload)
           event = payload[:event].to_s
           @activity&.record(event, payload)
+          update_scan_activity(event, payload)
           if %w[llm:send llm:stream_started pipeline:stage_start].include?(event)
             @think_mutex&.synchronize { @think_last_tool_activity = nil }
           end
@@ -529,9 +539,29 @@ module Master
           end
         end
 
+        def update_scan_activity(event, payload)
+          field, action = case event
+                          when "fix:phase" then [payload[:file], "scan"]
+                          when "scan:ast_assessment" then [payload[:path], "inspect"]
+                          when "fix_loop:scan_progress" then [payload[:file], "review"]
+                          when "scan:inconclusive", "scan:semantic_inconclusive" then [payload[:path], "semantic gap"]
+                          end
+          return if field.to_s.empty?
+
+          path = safe_activity_path(field) || "file"
+          label = "#{action} #{path}"
+          @think_mutex&.synchronize do
+            @think_last_tool_activity = { label:, state: "active", at: monotonic_now, elapsed_ms: nil }
+          end
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.scan_activity", event_bus: @refs&.bus)
+          nil
+        end
+
         def stage_for(event, payload)
           return stage_with_detail(event, payload) if event.start_with?("stage:")
           return payload[:stage].to_s.downcase if event == "pipeline:stage_start"
+          return payload[:phase].to_s.downcase if event == "fix:phase"
           return provider_outcome_stage(payload) if event == "llm:provider_outcome"
 
           stage = STAGE_EVENTS[event]

@@ -799,9 +799,8 @@ module Master
         # speaks in rollups — how many were asked, how many failed, how many
         # lanes it walked — and a failure the chain recovered from is not news.
         # Every call is still in runtime/events/activity.jsonl.
-        # Normal mode gives one lane a visible chance, then reports the
-        # aggregate. Repeated quota/auth failures are not conversational progress;
-        # verbose and trace still expose every call when an operator asks.
+        # Normal and verbose modes show the first route and useful aggregate;
+        # trace exposes every attempt when an operator explicitly asks.
         BURST_AFTER = 1
         ROLLUP_EVERY = 50
         ROLLUP_SECONDS = 60
@@ -832,7 +831,7 @@ module Master
           tally = llm_tally(parent)
           tally[:calls] += 1
           tally[:models] << model_name(payload[:model])
-          return ["#{unit} at #{parent}: #{model_name(payload[:model])}"] if Dmesg.detail_enabled? || Dmesg.verbose? || tally[:calls] <= BURST_AFTER
+          return ["#{unit} at #{parent}: #{model_name(payload[:model])}"] if Dmesg.detail_enabled? || Dmesg.trace? || tally[:calls] <= BURST_AFTER
 
           rollup(parent, tally)
         end
@@ -846,7 +845,11 @@ module Master
           usage, @usage = @usage, nil
           tally = llm_tally(parent)
           tally[:failed] += 1 unless payload[:status].to_s == "success"
-          return rollup(parent, tally) if !Dmesg.detail_enabled? && !Dmesg.verbose? && tally[:calls] > BURST_AFTER
+          unless Dmesg.detail_enabled? || Dmesg.trace?
+            return [] unless payload[:status].to_s == "success" && tally[:calls] <= BURST_AFTER
+
+            return ["#{unit}: answer received"]
+          end
 
           unless payload[:status].to_s == "success"
             digest = payload[:error_digest].to_s
@@ -934,8 +937,13 @@ module Master
         # each finding a hook sees, each cognition tick. A chat turn that set off
         # a background self-scan printed 2,657 of these ahead of a one-line
         # reply. Verbose shows the work; trace shows every item of it.
-        CHURN = %w[scan:file_read scan:pass scan:complete scan:semantic_skipped scan:progress
-                   hook:on_violation_found cognition:tick homeostat:observe conflict:resolved].freeze
+        CHURN = %w[
+          scan:file_read scan:pass scan:complete scan:semantic_skipped scan:progress scan:ast_assessment
+          scan:inconclusive scan:semantic_inconclusive fix:phase fix_loop:scan_progress
+          model:ask_failover model:failover_skip model:lanes_silent model:cost model:transparency
+          cache:hit cache:miss cache:write error:swallowed
+          hook:on_violation_found cognition:tick homeostat:observe conflict:resolved
+        ].freeze
 
         def verbose_event(payload)
           return [] unless Dmesg.verbose? || Dmesg.trace?

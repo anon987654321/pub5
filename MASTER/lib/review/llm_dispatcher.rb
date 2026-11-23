@@ -306,7 +306,8 @@ module Master
         unit = PassClock.active? ? "council0" : "llm0"
         cooloff = Io::LaneSilence::SILENCE_COOLOFF_S / 60
         Master::Trace::Dmesg.status(unit,
-                                    "#{model} gave no answer in #{seconds}s; #{lane} is skipped for #{cooloff} minutes")
+                                    "#{model} gave no answer in #{seconds}s; #{lane} is skipped for #{cooloff} minutes") if
+          Master::Trace::Dmesg.trace?
         Result.err("#{model} exceeded its #{call_deadline_for(model)}s call deadline", category: :timeout)
       end
 
@@ -447,7 +448,7 @@ module Master
         return silence_local_runtime(lane, failure) if failure && local_runtime_failure?(model, failure)
         return unless Io::LaneSilence.record(failure.nil?, lane, reason: failure)
 
-        Master::Trace::Dmesg.once("llm0-#{lane}", Io::LaneSilence.message(lane))
+        Master::Trace::Dmesg.once("llm0-#{lane}", Io::LaneSilence.message(lane)) if Master::Trace::Dmesg.trace?
         @bus&.publish("llm:lanes_silent", lane:, after: Io::LaneSilence::SILENT_AFTER)
       end
 
@@ -456,7 +457,8 @@ module Master
         Io::LaneSilence.silence(lane, reason: failure)
         last = failure.lines.first.to_s.strip[0, 160]
         Master::Trace::Dmesg.once("llm0-#{lane}",
-                                  "#{lane} local runtime failed; skipped for #{cooloff / 60} minutes (last: #{last})")
+                                  "#{lane} local runtime failed; skipped for #{cooloff / 60} minutes (last: #{last})") if
+          Master::Trace::Dmesg.trace?
         @bus&.publish("llm:lanes_silent", lane:, after: cooloff, reason: :local_runtime_failure)
       end
 

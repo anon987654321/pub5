@@ -185,7 +185,7 @@ module Master
           relative = relative_progress_path(path)
           @semantic_gap_mutex.synchronize { @semantic_gaps[relative] ||= "INCONCLUSIVE: #{error.message}"[0, 240] }
           @bus&.publish("scan:inconclusive", path: relative, reason: error.message)
-          Master::Trace::Dmesg.status("scan0", "inconclusive, #{error.message}"[0, 200])
+          Master::Trace::Dmesg.status("scan0", "inconclusive, #{error.message}"[0, 200]) if Master::Trace::Dmesg.trace?
           Result.ok([])
         end
 
@@ -208,7 +208,8 @@ module Master
           return unless first_file
 
           @bus&.publish("scan:semantic_inconclusive", path: relative, law: law_id, message: detail)
-          Master::Trace::Dmesg.status("law0", "semantic assessment inconclusive; details recorded for #{relative}"[0, 200]) if announce
+          Master::Trace::Dmesg.status("law0", "semantic assessment inconclusive; details recorded for #{relative}"[0, 200]) if
+            announce && Master::Trace::Dmesg.trace?
         end
       end
     end

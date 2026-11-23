@@ -179,6 +179,39 @@ class TestDmesgDetail < Minitest::Test
     end
   end
 
+  def test_verbose_hides_per_file_and_recovered_fallback_churn_until_trace
+    events = %w[
+      fix:phase scan:ast_assessment fix_loop:scan_progress
+      scan:inconclusive scan:semantic_inconclusive
+      model:ask_failover model:lanes_silent model:cost model:transparency cache:write error:swallowed
+    ]
+
+    Dmesg.with_verbosity("verbose") do
+      console = Dmesg::Console.new
+      events.each { |event| assert_empty console.lines(event: event, file: "MASTER/lib/example.rb") }
+    end
+
+    Dmesg.with_verbosity("trace") do
+      console = Dmesg::Console.new
+      events.each { |event| refute_empty console.lines(event: event, file: "MASTER/lib/example.rb"), event }
+    end
+  end
+
+  def test_verbose_shows_the_first_route_but_not_every_failed_fallback
+    Dmesg.with_verbosity("verbose") do
+      console = Dmesg::Console.new
+      first_send = console.lines(event: "llm:send", model: "provider/first")
+      first_failure = console.lines(event: "llm:provider_outcome", model: "provider/first", status: :quota_exceeded)
+      second_send = console.lines(event: "llm:send", model: "provider/second")
+      second_success = console.lines(event: "llm:provider_outcome", model: "provider/second", status: :success)
+
+      assert_equal 1, first_send.size
+      assert_empty first_failure
+      assert_empty second_send
+      assert_empty second_success
+    end
+  end
+
   def test_detail_disables_model_call_burst_rollups
     enable_detail
     Dmesg.with_verbosity("normal") do

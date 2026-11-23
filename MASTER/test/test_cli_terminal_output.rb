@@ -327,6 +327,7 @@ class TestCLITerminalOutput < Minitest::Test
 
   def test_spinner_shows_stage_and_safe_tool_activity_without_private_arguments
     cli = session
+    cli.instance_variable_set(:@think_mutex, Mutex.new)
     assert_equal "* waiting grok-cli", cli.send(:spin_line, "waiting grok-cli", "*")
 
     file = cli.send(:safe_tool_activity_label, "read_file", { path: "MASTER/lib/cli/session.rb" })
@@ -339,6 +340,11 @@ class TestCLITerminalOutput < Minitest::Test
     assert_equal "run shell", shell
     protected_file = cli.send(:safe_tool_activity_label, "read_file", { path: "MASTER/.master/config.yml" })
     assert_equal "read protected file", protected_file
+    absolute = File.join(Master::REPO_ROOT, "MASTER/lib/cli/session.rb")
+    assert_equal "MASTER/lib/cli/session.rb", cli.send(:safe_activity_path, absolute)
+
+    cli.send(:update_scan_activity, "fix:phase", { file: "MASTER/lib/cli/session.rb", phase: "scan" })
+    assert_equal "scan MASTER/lib/cli/session.rb ...", cli.send(:tool_activity_line)
 
     rendered = cli.send(:spin_line, "waiting grok-cli", "*", activity: "read MASTER/lib/cli/session.rb ...")
     assert_equal "* read MASTER/lib/cli/session.rb ...", rendered
