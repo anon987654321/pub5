@@ -105,10 +105,10 @@ module OpenBSDAdmin
   def run(argv, executor: method(:execute), output: $stdout)
     diagnostic = Array(argv).map(&:to_s) == ["diagnose"]
     commands_for(argv).each do |command|
-      output.write("\\n=== #{command.join(" ")} ===\\n") if diagnostic
+      output.write("\n=== #{command.join(" ")} ===\n") if diagnostic
       status, body = executor.call(*command)
       output.write(body)
-      output.write("\\n") unless body.end_with?("\\n")
+      output.write("\n") unless body.end_with?("\n")
       return status.exitstatus || 1 unless status.success?
     end
     0
