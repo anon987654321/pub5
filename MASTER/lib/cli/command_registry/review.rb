@@ -285,7 +285,8 @@ module Master
       # applied on top, and this dispatch's cancellation, activated.
       def fix_dispatch_options(raw, ctx)
         host_evidence = raw.to_s.split(/\s+/).any? { |token| token.casecmp?("--host-evidence") }
-        raw = raw.to_s.split(/\s+/).reject { |token| token.casecmp?("--host-evidence") }.join(" ")
+        # Keep the opt-in flag in raw so CodeWatch's safe re-exec preserves the
+        # operator's request. DISPATCH_FLAG removes it from the target path.
         mode_explicit = raw.to_s.split(/\s+/).any? { |token| MODE_FLAG.match?(token) }
         mode, raw, mode_error = extract_fix_mode(raw)
         return { mode_error: } if mode_error
@@ -699,7 +700,8 @@ module Master
       # wrappers. This keeps the control path shallow without changing its
       # cancellation, refusal, verification, or final-delivery boundaries.
       def render_fix_workflow(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
-                              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:, host_evidence: nil)
+                              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:,
+                              trace_scope:, host_evidence: nil)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
         phase_refusal = run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:,
