@@ -326,6 +326,20 @@ class TestPipeline < Minitest::Test
     assert_equal "repair", authorized.fetch(:mode)
     assert_equal "MASTER", authorized.fetch(:target)
     assert_equal true, authorized.fetch(:apply)
+
+    host_read = registry.send(:fix_dispatch_options, "--host-evidence OPENBSD", nil)
+    assert_nil host_read[:mode_error]
+    assert_equal true, host_read.fetch(:host_evidence)
+    assert_equal "OPENBSD", host_read.fetch(:target)
+    refute registry.writes_requested?(apply: host_read.fetch(:apply), only: host_read.fetch(:only))
+
+    host_write = registry.send(:fix_dispatch_options, "--mode=repair --apply OPENBSD --host-evidence", nil)
+    assert_nil host_write[:mode_error]
+    assert_equal true, host_write.fetch(:host_evidence)
+    assert registry.writes_requested?(apply: host_write.fetch(:apply), only: host_write.fetch(:only))
+
+    refused_host = registry.send(:fix_dispatch_options, "--host-evidence MASTER", nil)
+    assert_match(/exact OPENBSD target/, refused_host.fetch(:mode_error))
   end
 
   def test_audit_and_visual_modes_remain_read_only_even_with_apply
