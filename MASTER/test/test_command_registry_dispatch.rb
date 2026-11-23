@@ -164,6 +164,47 @@ class TestCommandRegistryDispatch < Minitest::Test
     refute Registry.respond_to?(:dispatch_tools)
   end
 
+  def test_doctor_host_captures_and_records_the_read_only_vm23_snapshot
+    snapshot = { digest: "a" * 64, output: "uptime: 3 days\\nvm.loadavg: 0.10 0.20 0.30", bytes: 48 }
+    recorded = nil
+    capture = ->(root) do
+      assert_equal Master::ROOT, root
+      snapshot
+    end
+    record = ->(root:, snapshot:) { recorded = [root, snapshot] }
+
+    output = Registry.stub(:capture_openbsd_host_diagnostics, capture) do
+      Registry.stub(:record_openbsd_host_diagnostics, record) do
+        Registry.dispatch_doctor(Master::ROOT, ctx: { args: "host" })
+      end
+    end
+
+    assert_equal [Master::ROOT, snapshot], recorded
+    assert_includes output, "vm23 read-only diagnostics captured"
+    assert_includes output, "uptime: 3 days"
+  end
+
+  def test_doctor_host_refuses_visitors_without_contacting_vm23
+    previous = Fiber[:master_visitor]
+    Fiber[:master_visitor] = true
+    output = Registry.dispatch_doctor(Master::ROOT, ctx: { args: "host" })
+
+    assert_includes output, "local operator only"
+  ensure
+    Fiber[:master_visitor] = previous
+  end
+
+  def test_host_diagnostic_redactor_covers_flags_and_bearer_tokens
+    output = Registry.redact_host_diagnostic_output(
+      "worker --api-key abc123 --password 'secret value' Authorization: Bearer token123"
+    )
+
+    refute_includes output, "abc123"
+    refute_includes output, "secret value"
+    refute_includes output, "token123"
+    assert_equal 3, output.scan("[REDACTED]").length
+  end
+
   def test_mcp_status_command_is_a_passive_snapshot
     snapshot = {
       configured: 2, enabled: 1, connected: 1, failed: 0,
