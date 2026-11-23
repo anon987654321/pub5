@@ -67,6 +67,14 @@ class TestRuns < Minitest::Test
     end
   end
 
+  def test_release_runner_resolves_rails_and_cross_tree_paths
+    shared = "RAILS/__shared/test/seo_kit_test.rb"
+    web = "MASTER/web/test/pwa_master_contract_test.rb"
+
+    assert_includes Operator::Runs.who_runs(shared), "MASTER/checks/release.rb"
+    assert_includes Operator::Runs.who_runs(web), "MASTER/checks/release.rb"
+  end
+
   def test_who_runs_answers_for_a_known_file
     assert_includes Operator::Runs.who_runs("MASTER/test/test_runs.rb"), "MASTER/Rakefile"
     assert_empty Operator::Runs.who_runs("MASTER/test/no_such_file.rb")
