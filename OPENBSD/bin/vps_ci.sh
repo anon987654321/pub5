@@ -12,8 +12,8 @@ fi
 app=${1:-}
 [[ -n $app ]] || { print -u2 -r -- "$usage"; exit 2 }
 
-# Validate before using the argument in any filesystem path. This entrypoint
-# only runs Rails app CI; an arbitrary app string must never widen its reach.
+# Validate before using the argument in any filesystem path. This deployment
+# child accepts only registered Rails apps and cannot widen its filesystem reach.
 case $app in
   brgen|amber|bsdports|mrdamascy) ;;
   *) print -u2 "vps_ci: unknown app \"$app\" - allowed: brgen, amber, bsdports, mrdamascy"; exit 2 ;;
@@ -26,9 +26,8 @@ app_dir=/home/${app}/app
 [[ -d $app_dir ]] || { print -u2 "missing $app_dir"; exit 1 }
 
 
-# deploy_status (from RAILS/_core.sh) -- same in-progress status file the
-# SKIP_CI=1 path (_deploy.sh/_runtime_check.sh) writes, so `bin/vps-state`
-# is one place to check regardless of which deploy path is running.
+# deploy_status (from RAILS/_core.sh) records this app's active release stage.
+# `bin/vps-state` reads the same per-app progress record.
 [[ -f ${repo}/RAILS/_core.sh ]] && . "${repo}/RAILS/_core.sh"
 command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
 
@@ -66,7 +65,7 @@ unaccounted_tracked_files() {
     # :- is load-bearing under `set -u`. (I) yields an index and is 0 when there
     # is no match, so it is safe bare; (r) yields the matched VALUE, and a search
     # that matches nothing is an unset parameter, which nounset makes fatal. This
-    # aborted every deploy's CI step with "synced[(r)$top/*]: parameter not set"
+    # aborted every deployment sync step with "synced[(r)$top/*]: parameter not set"
     # — the guard erroring rather than the thing it guards.
     [[ -n ${synced[(r)$top/*]:-} ]] && continue
     (( ${kept[(Ie)$top]} )) && continue
@@ -77,7 +76,7 @@ unaccounted_tracked_files() {
   local -a uniq_missing=(${(u)missing})
   (( ${#uniq_missing} )) || return 0
   print -u2 "vps_ci: $app - tracked but neither synced nor kept local: ${uniq_missing}"
-  print -u2 "vps_ci: $app - add each to paths (bin/ci reads the copy-tree) or to kept_local with a reason"
+  print -u2 "vps_ci: $app - account for each path used by the deployed app or add it to kept_local with a reason"
 }
 
 # The installed synchronizer is purpose-built and runs as the selected app
@@ -91,9 +90,9 @@ sync_from_repo() {
   doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"
 }
 
-print "vps_ci: $app (sync + mutex + load check)"
-# Establish group access and the private-storage mode before the app-owned
-# synchronizer reads the checkout and updates the CI copy-tree.
+print "vps_ci: $app (sync + lock + read-only bundle check)"
+# Establish group access and private-storage modes before the app-owned
+# synchronizer reads the checkout and updates the production copy-tree.
 pub5_ensure_ci_lock >/dev/null
 doas /usr/local/libexec/ci-prepare.ksh "$app"
 deploy_status "$app" "sync tree"
@@ -115,7 +114,7 @@ run_rails_as_app "$app" "$app_dir" "bundle-check" || {
   print -u2 "vps_ci: $app production bundle is incomplete; build the matching OpenBSD bundle off-host"
   exit 1
 }
-print "vps_ci: $app CI attested locally; production bundle already present"
+print "vps_ci: $app workstation CI attestation matches; production bundle is present"
 ci_stamp=ci_attested
 
 sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)
