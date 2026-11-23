@@ -15,8 +15,8 @@
 # an unprivileged account cannot create anything inside it — there is no symlink to
 # follow. That also lets the mode drop from 666 to 644.
 #
-# Three scripts held their own copy of the path (vps_ci.sh, vps_master_scan.sh,
-# vps_weekly_integrity.sh); this is the single source. The lock file is dev-owned;
+# The retired vps_master_scan.sh no longer uses this lock. vps_ci.sh ensures
+# the shared lock file before its bounded sync; the file is dev-owned;
 # only the directory is root's.
 
 PUB5_CI_LOCK_DIR=/var/db/pub5
@@ -43,11 +43,11 @@ pub5_ci_lock_path() {
 #
 # The lock itself is taken by OPENBSD/bin/with-ci-lock and Operator::CiGuard, both
 # flock(2). OpenBSD has neither lockf(1) nor flock(1), so no shell script here can
-# take the lock with a command; vps_master_scan.sh once tried and never ran.
+# take the lock with a command; the retired vps_master_scan.sh once tried and never ran.
 #
 # Note what this function does and does not do. It ENSURES the file — creates it
 # with the right owner and mode. It does not lock anything. vps_ci.sh calls it
-# and prints "sync + mutex + load check"; the mutex in that sentence is the one
+# before sync; the deployment mutex and host admission gate belong to vps-deploy.
 # bin/ci takes through CiGuard, on this same path since 2026-08-14. Before that
 # CiGuard locked /var/tmp/pub5-ci.lock instead, so the file created here was
 # never locked by anyone and the file that was locked was the world-writable one
