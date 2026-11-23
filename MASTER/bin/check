@@ -4,7 +4,6 @@
 require "shellwords"
 require "open3"
 require "timeout"
-require "time"
 
 # Read-only help and log retrieval stay available even when the MASTER runtime
 # itself cannot boot. This command verifies; /fix is the canonical repair loop.
