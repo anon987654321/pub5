@@ -11,10 +11,15 @@ except where marked.
    MASTER (incl. `MASTER/web`), RAILS (`RAILS/**`), OPENBSD, STUDIO.
    `/fix` passes sweep MASTER → RAILS → MASTER/web → OPENBSD → STUDIO
    with model `zai-cli:auto`.
-2. **Push.** Push frequently to `origin main`. Pushes need the operator's
-   PAT (supplied per session):
-   `git push https://<PAT>@github.com/anon987654321/pub5.git main`.
-   Never write the PAT to a file or a remote config.
+2. **Delivery.** Commit verified, path-scoped units to `main`; use
+   `MASTER/bin/operator land -m "<message>" <paths...>` from the shared
+   checkout. Push only through the configured SSH agent, approved OS
+   credential manager or an approved session credential helper. Never embed
+   a PAT in a remote URL or command argument, or expose it in shell history,
+   process listings, logs, `.git/config` or a commit. Never save it in the
+   repository. If secure authentication is unavailable, do not push; report
+   `DELIVERY_FAILED` and preserve the local commit. Treat any PAT pasted into
+   a chat or transcript as compromised and rotate it.
 3. **Cron 541280** (08:40 / 16:40 / 23:40 Oslo) runs `/fix --no-publish
    --model zai-cli:auto`. It never pushes, never edits by hand; its work
    lands as commits we can accept or revert.
