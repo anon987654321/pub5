@@ -718,6 +718,7 @@ return (position-0.5)*sixteenth*2;
 function triggerNotes(stepIdx,baseTime,synths,opts){
 const sixteenth=opts.sixteenth||60/aud_.bpm/4;
 const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);
+const noteTime=offsetMs=>Math.max(0,swungTime+(Number(offsetMs)||0)/1000);
 // Resolve note lengths to seconds before scheduling. Tone's musical-time
 // parser consults Transport when given strings such as "8n"; doing that
 // inside a Transport callback causes timing warnings and extra work.
@@ -733,7 +734,7 @@ const vel=dp[v]?dp[v][stepIdx]:0;
 const prob=seq_[v][stepIdx].p||100;
 if(vel>0&&(!opts.applyProb||Math.random()*100<prob)){
 const drift=opts.applyTranspose?(Math.random()-0.5)*5:0;
-const t=swungTime+seq_[v][stepIdx].t/1000;
+const t=noteTime(seq_[v][stepIdx].t);
 const vl=vel*seq_[v][stepIdx].v;
 const ratch=opts.applyRatchet?seq_[v][stepIdx].r||1:1;
 for(let r=0;r<ratch;r++){
@@ -758,23 +759,25 @@ if(bn[stepIdx]&&bn[stepIdx]!==''){
 const nt=bn[stepIdx];
 const drift=opts.applyTranspose?(Math.random()-0.5)*2:0;
 const freq=opts.applyTranspose?Tone.Frequency(nt).toFrequency()*(1+drift/1200):Tone.Frequency(nt).toFrequency();
-synths.bass.triggerAttackRelease(freq,eighth,swungTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v);
-synths.bassSub.triggerAttackRelease(Tone.Frequency(nt).toFrequency()/2,eighth,swungTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v*0.7);
+const bassTime=noteTime(seq_.b[stepIdx].t);
+synths.bass.triggerAttackRelease(freq,eighth,bassTime,seq_.b[stepIdx].v);
+synths.bassSub.triggerAttackRelease(Tone.Frequency(nt).toFrequency()/2,eighth,bassTime,seq_.b[stepIdx].v*0.7);
 }
 const kn=KEYS_PATS[pat_.k]||[];
 if(kn[stepIdx]&&kn[stepIdx]!==0){
 const ch=kn[stepIdx];
+const keyTime=noteTime(seq_.keys[stepIdx].t);
 if(Array.isArray(ch)){
-synths.keys.triggerAttackRelease(ch,eighth,swungTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
+synths.keys.triggerAttackRelease(ch,eighth,keyTime,seq_.keys[stepIdx].v);
 }else if(typeof ch==='string'){
-synths.keys.triggerAttackRelease(ch,eighth,swungTime+seq_.keys[stepIdx].t/1000,seq_.keys[stepIdx].v);
+synths.keys.triggerAttackRelease(ch,eighth,keyTime,seq_.keys[stepIdx].v);
 }
 }
 const pn=PAD_PATS[pat_.p]||[];
 if(pn[stepIdx]&&pn[stepIdx]!==0){
 const pad=pn[stepIdx];
 if(Array.isArray(pad)){
-synths.pads.triggerAttackRelease(pad,half,swungTime+seq_.p[stepIdx].t/1000,seq_.p[stepIdx].v*0.6);
+synths.pads.triggerAttackRelease(pad,half,noteTime(seq_.p[stepIdx].t),seq_.p[stepIdx].v*0.6);
 }
 }
 }
