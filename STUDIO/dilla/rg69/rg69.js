@@ -75,7 +75,7 @@ const log=(message,level="i")=>{
   while(trace.children.length>PARAMS.TRACE_MAX_LINES)trace.removeChild(trace.firstChild);
   trace.scrollTop=trace.scrollHeight;
 };
-const st=s=>$id("status").textContent=`status: ${s}`;
+const st=s=>{const node=$id("status");node.textContent=`status: ${s}`;node.dataset.state=s.split(/[ —]/,1)[0].toLowerCase();};
 const tp=(a,t)=>Array.isArray(a)?a:Array(t||16).fill(a);
 const tpP=object=>Object.fromEntries(Object.entries(object).map(([key,value])=>[key,tp(value)]));
 const debounce=(f,d)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f(...a),d)}};
@@ -535,7 +535,7 @@ async function initAudio(activationPromise){
 await (activationPromise||Tone.start());
 Tone.getContext().rawContext.addEventListener('statechange',()=>{
   if(Tone.getContext().rawContext.state==='suspended'){
-    st_.playing=false;clearTimeout(st_.timer);$id('play').textContent='▶ Play';st('suspended — tap to resume');log('audio suspended by browser','w');
+    st_.playing=false;clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
 await rg69AudioProfileReady;
@@ -1516,6 +1516,7 @@ st_.booting=null;
 await (activationPromise||Tone.start());
 }
 st_.playing=true;
+$id('play').setAttribute('aria-pressed','true');
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
 st_.idx=-1;
 Tone.Transport.bpm.value=aud_.bpm;
@@ -1536,17 +1537,19 @@ log('engine started via welcome gate','k');
 }catch(error){
 st_.playing=false;
 st('audio startup failed — check browser permissions');
+$id('play').setAttribute('aria-pressed','false');
 log(`audio startup failed: ${error.message}`,'e');
 }
 });
 $id('play').addEventListener('click',async()=>{
 if(!st_.playing){
-try{const activationPromise=startToneFromGesture();await startPlayback(activationPromise);}catch(error){st_.playing=false;st('audio startup failed');log(`audio startup failed: ${error.message}`,'e');}
+try{const activationPromise=startToneFromGesture();await startPlayback(activationPromise);}catch(error){st_.playing=false;st('audio startup failed');$id('play').setAttribute('aria-pressed','false');log(`audio startup failed: ${error.message}`,'e');}
 }else{
 Tone.Transport.pause();
 st_.playing=false;
 st('paused');
 $id('play').textContent='▶ Play';
+$id('play').setAttribute('aria-pressed','false');
 log('playback paused');
 }
 });
@@ -1559,6 +1562,7 @@ const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
 $id('play').textContent='▶ Play';
 document.querySelectorAll('.step').forEach(el=>el.classList.remove('playing'));
 st('stopped');
+$id('play').setAttribute('aria-pressed','false');
 log("playback stopped");
 });
 $id('random').addEventListener('click',randomize);
@@ -1573,7 +1577,8 @@ $id('theme').addEventListener('click',toggleTheme);
 $id('tap').addEventListener('click',tapTempo);
 $id('steps').addEventListener('click',()=>{
 st_.stepCount=st_.stepCount===16?8:16;
-$id('steps').textContent=`⟨${st_.stepCount}⟩ Steps`;
+$id('steps').textContent=`${st_.stepCount} steps`;
+$id('steps').setAttribute('aria-pressed',st_.stepCount===8?'true':'false');
 document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('inactive',i%16>=st_.stepCount));
 log(`steps: ${st_.stepCount}`);
 });
@@ -1603,6 +1608,8 @@ st_.transportId=null;
 s?.releaseAll?.();
 });
 st('killed');
+$id('play').textContent='▶ Play';
+$id('play').setAttribute('aria-pressed','false');
 log("panic: all stopped","e");
 });
 
@@ -1680,7 +1687,7 @@ else log('usage: bpm <60-170>','e');
 break;
 case'steps':{
 const s=parseInt(args[0]);
-if(s===8||s===16){st_.stepCount=s;$id('steps').textContent=`⟨${s}⟩`;document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('inactive',i%16>=s));log(`steps → ${s}`,'k');}
+if(s===8||s===16){st_.stepCount=s;$id('steps').textContent=`${s} steps`;$id('steps').setAttribute('aria-pressed',s===8?'true':'false');document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('inactive',i%16>=s));log(`steps → ${s}`,'k');}
 else log('usage: steps <8|16>','e');
 break;}
 case'style':{
