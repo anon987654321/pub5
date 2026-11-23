@@ -249,7 +249,7 @@ class TestCliReplExit < Minitest::Test
   # Bare entry must show the working Reline prompt and the fixed mic/TTS
   # indicators without taking keyboard ownership. The terminal face is not
   # part of the default CLI; /help still answers through this same prompt.
-  def test_bare_entry_keeps_the_canonical_prompt_beneath_voice_indicators
+  def test_bare_entry_keeps_the_canonical_prompt_without_voice_overlay
     require "pty"
     output = +""
     completed = false
@@ -268,7 +268,7 @@ class TestCliReplExit < Minitest::Test
                       "the persistent top-right voice overlay must stay disabled")
         refute_includes output, "○ ○", "bare startup must not paint inactive mic/TTS rings"
 
- The /help footer proves
+        # The /help footer proves
         # the command was handled by this same live Reline session.
         writer.write("/help\n")
         deadline = Time.now + 8
