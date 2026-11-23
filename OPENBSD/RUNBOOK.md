@@ -57,6 +57,16 @@ The `all` target is the combined release path, not just the Rails fleet:
 3. The mirror installer validates native configs and NSD zones, backs up changed files and the managed root crontab, installs each file with its declared owner and mode, verifies read-back, and activates only affected services. SSH configuration remains protected; doas changes require the separate guarded path.
 4. The application inventory is deployed serially, with bounded health checks, recovery of services that were up before the run, and post-deploy canaries.
 
+The pinned checkout is the whole pub5 repository, so the same release also
+advances all tracked STUDIO source under `/home/dev/pub5/STUDIO`. STUDIO is
+source and local creative tooling (Dilla, LoRA, Postpro and the Studio CLI),
+not a registered vm23 service: it is not installed as a daemon or exposed as
+a separate deploy target. For a full `all` release, workstation preflight
+syntax-checks STUDIO and runs `rake -f replicate/Rakefile check test` before
+any SSH or production change. A dirty or untracked file in any of MASTER,
+RAILS, OPENBSD or STUDIO blocks the release, so the pinned commit cannot
+silently omit local STUDIO edits.
+
 This is the controlled equivalent of copying the mirror into `/`, not a blind recursive copy. It deliberately does not reboot the host: the installer restarts the affected daemons/services after validation. A reboot is a separate maintenance decision, not an automatic side effect of every release.
 
 For a mirror-only operation, inspect first with `doas zsh OPENBSD/OPERATOR.sh --plan`; apply only after review with `doas zsh OPENBSD/OPERATOR.sh --apply`; verify with `doas zsh OPENBSD/OPERATOR.sh --verify`. A full `vps-deploy all` already runs the apply step as part of its pinned release.
