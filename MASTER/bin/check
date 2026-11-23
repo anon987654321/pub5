@@ -149,10 +149,9 @@ else
   ["integration web unavailable", RUBY, "-e", "warn 'MASTER_WEB_LIVE=1 was not set'; exit 3"]
 end
 
-# test:subsystems groups the cli/io/fix suites for a focused run, and the step
-# is in the operator and contributor profiles and the ci list so a break there
-# is caught by the checks contributors actually run, not only under full.
-# 17s, measured 2026-08-01.
+# test:subsystems groups CLI, operator-intent/routing, I/O and fix regressions
+# for a focused run. It is in the operator and contributor profiles and the CI
+# list so a break there is caught by the checks contributors actually run.
 # rake["tools"] is in agent as well as the two heavy profiles, and it is the
 # only step that is. The agent profile is what runs around law and fix-loop work,
 # which is exactly the work that has silently broken tools before — `bin/check --ladder`'s
