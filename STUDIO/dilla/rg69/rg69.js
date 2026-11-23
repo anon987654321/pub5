@@ -1237,6 +1237,20 @@ log('mood: '+name,'k');
 moods_c.appendChild(chip);
 });
 const tracks_c=$id('tracks');
+const ruler=document.createElement('div');
+ruler.className='track-ruler';
+ruler.setAttribute('aria-hidden','true');
+const rulerMute=document.createElement('span');
+const rulerName=document.createElement('span');
+const rulerGrid=document.createElement('div');
+rulerGrid.className='steps-grid';
+for(let i=0;i<16;i++){
+const tick=document.createElement('span');
+tick.textContent=String(i+1).padStart(2,'0');
+rulerGrid.appendChild(tick);
+}
+ruler.append(rulerMute,rulerName,rulerGrid);
+tracks_c.appendChild(ruler);
 ['Kick','Snare','Clap','Hat','Open'].forEach((nm,ti)=>{
 const tr_=document.createElement('div');
 tr_.className='track';
