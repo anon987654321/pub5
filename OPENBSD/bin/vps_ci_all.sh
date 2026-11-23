@@ -1,10 +1,10 @@
 #!/usr/bin/env zsh
-# Run all active Rails app CIs serially on vm23 — never parallel.
-# Usage: zsh OPENBSD/bin/vps_ci_all.sh      (PUB4_CI_MAX_LOAD=4 waits while load is higher)
+# Run attested, read-only production-bundle checks serially; this does not run Rails CI.
+# Usage: zsh OPENBSD/bin/vps_ci_all.sh      (requires workstation CI attestation)
 set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-  print "usage: zsh OPENBSD/bin/vps_ci_all.sh - vps_ci.sh for every app in RAILS/apps.yml, serially"
+  print "usage: zsh OPENBSD/bin/vps_ci_all.sh - read-only production-bundle checks for every active Rails app"
   exit 0
 fi
 
@@ -17,10 +17,8 @@ apps=(${(f)"$("$RUBY" -r"${repo}/OPENBSD/lib/deploy_inventory" \
 (( ${#apps} )) || { print -u2 "vps_ci_all: no apps read from ${repo}/RAILS/apps.yml"; exit 1 }
 max_load=${PUB4_CI_MAX_LOAD:-4}
 
-# The 5-minute average, and one ruby rather than two awks per tick — the same
-# shape vps_master_scan.sh uses, for the same two reasons: awk is banned in
-# committed scripts here, and one process both reads the figure and decides on
-# it, so there is no window where the value read is not the value compared.
+# The five-minute load gate bounds this compatibility check on the production host.
+# It does not run tests, install gems or compile assets.
 # OpenBSD prints the three numbers bare and macOS wraps them in braces, which is
 # why this scans for numbers rather than splitting on whitespace.
 load_over_max() {
@@ -38,12 +36,12 @@ wait_for_load() {
   done
 }
 
-# MASTER has its own web preflight. The RAILS namespace is selected from
-# deploy_root, so there is no per-app exception list in this runner.
+# The RAILS namespace is selected from deploy_root, so there is no
+# per-app exception list in this read-only bundle-check runner.
 for app in $apps; do
   wait_for_load
   zsh "$script" "$app" || exit $?
   sleep 10
 done
 
-print "vps_ci_all: all apps passed"
+print "vps_ci_all: all attested production-bundle checks passed"
