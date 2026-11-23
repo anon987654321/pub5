@@ -64,6 +64,28 @@ class TestFallbackChain < Minitest::Test
     Master::Io::ModelSkipCache.clear!
   end
 
+  def test_empty_success_is_treated_as_a_failed_lane_and_falls_back
+    dispatcher = CountingDispatcher.new(
+      "empty-model" => -> { Master::Result.ok("  \\n") },
+      "answer-model" => -> { Master::Result.ok("visible answer") },
+    )
+    agent = build_agent(dispatcher)
+
+    response = agent.send(
+      :attempt_chat_with_fallbacks,
+      candidate_models: %w[empty-model answer-model],
+      prompt: "hi",
+      context: [],
+      stream: false,
+    )
+
+    assert response.ok?
+    assert_equal "visible answer", response.value!
+    assert_equal %w[empty-model answer-model], dispatcher.calls
+  ensure
+    Master::Io::ModelSkipCache.clear!
+  end
+
   def test_one_failed_model_is_named_in_the_final_receipt
     dispatcher = CountingDispatcher.new(
       "llm7:gpt-oss:20b" => -> { Master::Result.err("provider timed out after 5s", category: :timeout) },
