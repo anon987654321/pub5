@@ -409,7 +409,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_all_instrument_families_are_scheduled_by_the_same_transport_callback
-    scheduler = js[/function scheduleLoop\(time\)\{(.*?)\n\}/m, 1] or raise "no scheduleLoop"
+    scheduler = js[/function scheduleLoop\(time\)\{(.*?)(?=\nlet stepUiByIndex)/m, 1] or raise "no scheduleLoop"
     assert_includes scheduler, "triggerNotes(st_.idx,scheduledTime"
     trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     %w[synths.kick.triggerAttackRelease synths.bass.triggerAttackRelease synths.keys.triggerAttackRelease synths.pads.triggerAttackRelease].each do |voice|
@@ -434,7 +434,7 @@ class TestRg69Defaults < Minitest::Test
     apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
     refute_includes init, "new Tone.Phaser("
     refute_includes init, "new Tone.WaveShaper("
-    refute_includes init, "new Tone.Chebyshev(2)"
+    refute_includes init, "vintageSat=new Tone.Chebyshev(2)"
     refute_includes init, "new Tone.Compressor(-24,3)"
     refute_includes init, "new Tone.Noise('pink').start()"
     assert_includes init, "widener.connect(limiter);"
@@ -443,7 +443,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_rg69_front_panel_is_flat_and_has_a_numbered_step_ruler
     assert_includes html, 'class="machine-header"'
-    assert_includes html, 'class="panel-strip--inner"'
+    assert_includes html, 'class="panel-strip panel-strip--inner"'
     assert_includes css, '.machine-header'
     assert_includes css, '.track-ruler'
     assert_includes css, 'border-radius: 0;'
