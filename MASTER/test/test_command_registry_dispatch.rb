@@ -165,7 +165,7 @@ class TestCommandRegistryDispatch < Minitest::Test
   end
 
   def test_doctor_host_captures_and_records_the_read_only_vm23_snapshot
-    snapshot = { digest: "a" * 64, output: "uptime: 3 days\\nvm.loadavg: 0.10 0.20 0.30", bytes: 48 }
+    snapshot = { digest: "a" * 64, output: "uptime: 3 days\nvm.loadavg: 0.10 0.20 0.30", bytes: 48 }
     recorded = nil
     capture = ->(root) do
       assert_equal Master::ROOT, root
