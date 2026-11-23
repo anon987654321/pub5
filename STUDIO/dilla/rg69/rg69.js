@@ -846,6 +846,9 @@ if(button){button.setAttribute('aria-pressed',muted?'true':'false');button.textC
 }
 function updateStepUI(){
 const next=st_.idx%16;
+// The animation frame can run once before the first transport tick. At that
+// point idx is -1; leave the grid untouched until the scheduler chooses step 0.
+if(next<0||next>=stepUiByIndex.length)return;
 if(activeStepUiIndex>=0)stepUiByIndex[activeStepUiIndex].forEach(el=>el.classList.remove('playing'));
 stepUiByIndex[next].forEach(el=>el.classList.add('playing'));
 activeStepUiIndex=next;
