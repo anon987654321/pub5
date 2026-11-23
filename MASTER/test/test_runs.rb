@@ -63,6 +63,17 @@ class TestRuns < Minitest::Test
     assert_empty Operator::Runs.who_runs("MASTER/test/no_such_file.rb")
   end
 
+  def test_operator_intent_and_turn_router_are_in_the_supervised_focused_check
+    rakefile = File.read(File.join(Operator::Runs::ROOT, "MASTER", "Rakefile"))
+    checker = File.read(File.join(Operator::Runs::ROOT, "MASTER", "bin", "check"))
+
+    assert_includes rakefile, '"test/test_operator_intent.rb"'
+    assert_includes rakefile, '"test/test_turn_router.rb"'
+    assert_includes rakefile, "Operator::ParallelTests.run(files, command:)"
+    assert_includes rakefile, '"-Ilib:test"'
+    assert_includes checker, 'rake["test:subsystems"]'
+  end
+
   # STUDIO is deliberately small: its two maintained suites cover Dilla and
   # idea-picture output. Its Rakefile builds the glob through File.join, so the
   # census carries that exact runner convention rather than guessing a path.
