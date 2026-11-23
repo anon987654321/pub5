@@ -184,16 +184,29 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
-  def test_studio_is_not_silently_promoted_to_a_production_deployment_target
+  def test_full_release_includes_studio_source_without_inventing_a_service
     with_inventory do |root|
       agent = Object.new
-      result = Master::CLI::OperatorIntent.new(root:, agent:).call(
-        "please redeploy OPENBSD, RAILS, STUDIO and MASTER/web on vm23"
+      message = "please redeploy OPENBSD, RAILS, STUDIO and MASTER/web on vm23"
+
+      assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
+      result = Master::CLI::OperatorIntent.new(root:, agent:).call(message)
+
+      assert_equal :deploy, result.status
+      assert_equal "all", result.target
+      assert_equal %w[control_web city_app wardrobe_app private_service], result.selected
+    end
+  end
+
+  def test_studio_only_request_remains_unsupported
+    with_inventory do |root|
+      result = Master::CLI::OperatorIntent.new(root:, agent: Object.new).call(
+        "please redeploy STUDIO on vm23"
       )
 
       assert_equal :unsupported, result.status
-      assert_includes result.message, "STUDIO is not a registered vm23 deployment target"
-      assert_includes result.message, "MASTER/web"
+      assert_includes result.message, "STUDIO source is included in the pinned pub5 checkout"
+      assert_includes result.message, "no independent vm23 runtime target"
     end
   end
 
