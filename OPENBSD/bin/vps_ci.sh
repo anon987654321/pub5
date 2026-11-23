@@ -3,7 +3,7 @@
 # Usage: zsh OPENBSD/bin/vps_ci.sh APP (internal child of the pinned vps-deploy flow)
 set -euo pipefail
 
-usage="usage: zsh OPENBSD/bin/vps_ci.sh APP - sync APP's copy-tree, then verify workstation CI attestation and the read-only production bundle"
+usage="usage: zsh OPENBSD/bin/vps_ci.sh APP - require pinned parent proofs, sync APP's copy-tree, then check the read-only production bundle"
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
   print -r -- "$usage"
   exit 0
