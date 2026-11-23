@@ -121,7 +121,7 @@ class DeployPreflightTest < Minitest::Test
   end
 
   def remote(env: {}, runner: ->(*) { ["", true] }, app: "all",
-             ci_runner: ->(**) { true }, git: nil, **git_state)
+             ci_runner: ->(**) { true }, admission_check: ->(**) { [true, nil] }, git: nil, **git_state)
     apps = {
       "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53_187,
                     "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
@@ -144,7 +144,8 @@ class DeployPreflightTest < Minitest::Test
     FileUtils.mkdir_p(File.join(dir, "RAILS"))
     File.write(File.join(dir, "MASTER", "lib", "ok.rb"), "x = 1\n")
     File.write(File.join(dir, "RAILS", "apps.yml"), YAML.dump("apps" => apps))
-    Pre.remote_command(root: dir, app:, env:, git: git || fake_git(**git_state), runner:, out: StringIO.new, ci_runner:)
+    Pre.remote_command(root: dir, app:, env:, git: git || fake_git(**git_state), runner:, out: StringIO.new,
+                       ci_runner:, admission_check:)
   ensure
     FileUtils.rm_rf(dir)
   end
@@ -309,6 +310,18 @@ class DeployPreflightTest < Minitest::Test
     refute File.exist?(File.expand_path("../bin/redeploy", __dir__))
     assert_includes source, "bin/operator vps deploy <app|group|all> [--remote]"
     assert_includes source, "Operator::DeployPreflight.remote_command"
+  end
+
+  def test_full_release_fails_fast_when_openbsd_receipt_is_missing
+    dir = tree("MASTER/lib/a.rb" => "x = 1\n")
+
+    ok, reason = Pre.openbsd_release_admission(root: dir)
+
+    refute ok
+    assert_includes reason, "MASTER/.master/openbsd_preflight.json"
+    assert_includes reason, "run /fix OPENBSD before the full release"
+  ensure
+    FileUtils.rm_rf(dir) if dir
   end
 
   def test_remote_command_pins_the_sha_and_attests_preflight_and_all_rails_ci
