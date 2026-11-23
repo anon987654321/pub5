@@ -167,7 +167,7 @@ module Master
         def safe_tool_activity_label(tool, args)
           values = args.respond_to?(:to_h) ? args.to_h : {}
           read = ->(key) { values[key] || values[key.to_s] }
-          name = tool.to_s.downcase
+          name = tool.to_s.gsub(/([a-z0-9])([A-Z])/) { "#{Regexp.last_match(1)}_#{Regexp.last_match(2)}" }.downcase
 
           case name
           when "read_file" then "read #{safe_activity_path(read.call(:path)) || "file"}"

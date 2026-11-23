@@ -331,6 +331,8 @@ class TestCLITerminalOutput < Minitest::Test
 
     file = cli.send(:safe_tool_activity_label, "read_file", { path: "MASTER/lib/cli/session.rb" })
     assert_equal "read MASTER/lib/cli/session.rb", file
+    camel_case_file = cli.send(:safe_tool_activity_label, "ReadFile", { path: "MASTER/lib/cli/session.rb" })
+    assert_equal "read MASTER/lib/cli/session.rb", camel_case_file
     web = cli.send(:safe_tool_activity_label, "web_fetch", { url: "https://example.org/private/path?token=secret" })
     assert_equal "fetch example.org", web
     shell = cli.send(:safe_tool_activity_label, "zsh", { command: "cat ~/.ssh/id_ed25519" })

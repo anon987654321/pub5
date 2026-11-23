@@ -191,16 +191,14 @@ module Master
           [@voice_mic_active == true, false]
         end
 
-        # The persistent top-right ring overlay is intentionally absent.
+        # Persistent top-right indicators are suppressed; /voice status and
+        # /listen remain available for explicit voice control.
         def voice_indicator_overlay
           nil
         end
 
-
-          return unless voice_indicators_enabled?
-
-          overlay = voice_indicator_overlay
-          terminal_print(overlay, guard: false) if overlay
+        def paint_voice_indicators
+          nil
         end
 
         # Called under the terminal write lock after output and prompt redraw.
