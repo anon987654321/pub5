@@ -119,7 +119,7 @@ module Master
         if non_deployable_tree_request?(text)
           return Result.new(
             status: :unsupported,
-            message: "STUDIO is not a registered vm23 deployment target. The full release deploys the OPENBSD mirror, all registered RAILS apps and MASTER/web. Nothing was run.",
+            message: "STUDIO source is included in the pinned pub5 checkout but has no independent vm23 runtime target. The full release deploys the OPENBSD mirror, all registered RAILS apps and MASTER/web; nothing was run.",
           )
         end
 
@@ -168,10 +168,14 @@ module Master
         return false unless request.match?(/\b(?:deploy|re[- ]?deploy)\b/i)
         return false unless self.class.destination_of(request).to_s.downcase == "vm23"
 
-        # An explicit non-deployable tree stays unsupported even when the same
-        # sentence also names the canonical OPENBSD + RAILS release. Otherwise
-        # the deterministic full-stack shortcut silently drops STUDIO and
-        # reports a deploy target the operator did not actually request.
+        # STUDIO is source-only on vm23: it rides in the same pinned pub5
+        # checkout but owns no independent host service. A complete release
+        # therefore includes its source while deploying only registered
+        # production surfaces. A STUDIO-only or partial request remains
+        # unsupported rather than inventing a service target.
+        return false if self.class.full_inventory_scope?(request) ||
+                        self.class.complete_stack_components?(request)
+
         true
       end
 
