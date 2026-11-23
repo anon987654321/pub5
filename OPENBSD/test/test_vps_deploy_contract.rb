@@ -536,16 +536,6 @@ class VpsDeployContractTest < Minitest::Test
       refute_nil position, "missing #{name} guard"
       assert_operator position, :<, sync, "#{name} must be checked before copy-tree sync"
     end
-    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_SHA:-} == "$head" ]]}
-    assert_includes CI_SOURCE, %q{[[ $attested == "$head" ]]}
-    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]]}
-    assert_includes CI_SOURCE, %q{VPS_DEPLOY_PREFLIGHT_SHA:-}
-    sync = CI_SOURCE.index("sync_from_repo\\n")
-    %w[VPS_DEPLOY_SHA VPS_DEPLOY_CI_SHA VPS_DEPLOY_ADMITTED_SHA VPS_DEPLOY_PREFLIGHT_SHA].each do |name|
-      position = CI_SOURCE.index(name)
-      refute_nil position, "missing #{name} guard"
-      assert_operator position, :<, sync, "#{name} must be checked before copy-tree sync"
-    end
     assert_includes CI_SOURCE, %q{"bundle-check"}
     refute_includes CI_SOURCE, "ci-run.ksh"
     refute_includes CI_SOURCE, "bundle_install_as_app"
