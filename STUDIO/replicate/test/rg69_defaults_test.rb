@@ -151,8 +151,10 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "synths.snare.triggerAttackRelease(eighth,rt,vl)"
     assert_includes js, "synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl)"
     assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)"
-    assert_includes js, "synths.hat.triggerAttackRelease(pitch.hat,sixteenthDuration,rt,vl)"
-    assert_includes js, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
+    assert_includes js, "synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl)"
+    assert_includes js, "synths.open.triggerAttackRelease(eighth,rt,vl)"
+    assert_includes js, "hat:new Tone.NoiseSynth("
+    assert_includes js, "open:new Tone.NoiseSynth("
     refute_match(/synths\.(?:kickClk|snare|clap|hat|open)\.triggerAttackRelease\(rt,vl/, js)
   end
 
@@ -323,8 +325,9 @@ class TestRg69Defaults < Minitest::Test
     init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
 
-    assert_includes builder, "new Tone.PolySynth(Tone.FMSynth"
     assert_includes builder, "new Tone.PolySynth(Tone.Synth"
+    assert_includes builder, "maxPolyphony:Math.min(6,t.keys.max_polyphony)"
+    assert_includes builder, "maxPolyphony:Math.min(4,t.pads.max_polyphony)"
     assert_includes init, "const instruments=createToneInstruments();"
     assert_includes export, "const offlineSynths=createToneInstruments();"
     assert_equal 3, js.scan(/createToneInstruments\(\)/).size,
@@ -339,7 +342,7 @@ class TestRg69Defaults < Minitest::Test
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
     apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
 
-    %w[pitch.kick pitch.kickSub pitch.kickBody pitch.snareRing pitch.hat pitch.open].each do |pitch|
+    %w[pitch.kick pitch.kickSub pitch.kickBody pitch.snareRing].each do |pitch|
       assert_includes trigger, pitch
     end
     assert_includes init, "kitProfile.kick.tone"
@@ -380,12 +383,72 @@ class TestRg69Defaults < Minitest::Test
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
 
     assert_includes init, "masterG=new Tone.Gain(0.8);"
-    assert_includes init, "masterG.connect(masterDrive);"
+    assert_includes init, "masterG.connect(fxFlt);"
+    assert_includes init, "fxFlt.connect(tapeSat);"
+    assert_includes init, "tapeSat.connect(compPar);"
+    assert_includes init, "compPar.connect(widener);"
+    assert_includes init, "widener.connect(limiter);"
+    refute_includes init, "masterG.connect(masterDrive);"
     refute_match(/masterG\s*=\s*new Tone\.Gain\([^)]*\)\.connect/, init)
     assert_includes apply, "if(masterG)masterG.gain.value=mix_.master/100;"
+    assert_includes apply, "Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);"
+    assert_includes apply, "PARAMS.COMP_RATIO_MAX"
     assert_includes init, "rg69AudioProfileLocked=true;"
     refute_includes init, "await rg69AudioProfileReady"
     refute_includes export, "await rg69AudioProfileReady"
+  end
+
+
+  def test_sub_bass_is_note_gated_not_a_permanent_oscillator
+    builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no Tone.js instrument builder"
+    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    assert_includes builder, "const bassSub=new Tone.Synth("
+    refute_includes builder, "new Tone.Oscillator(t.bass.sub_frequency,t.bass.sub_oscillator).start()"
+    assert_includes trigger, "synths.bassSub.triggerAttackRelease("
+    refute_includes trigger, "synths.bassSub.frequency.setValueAtTime"
+  end
+
+  def test_all_instrument_families_are_scheduled_by_the_same_transport_callback
+    scheduler = js[/function scheduleLoop\(time\)\{(.*?)\n\}/m, 1] or raise "no scheduleLoop"
+    assert_includes scheduler, "triggerNotes(st_.idx,scheduledTime"
+    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    %w[synths.kick.triggerAttackRelease synths.bass.triggerAttackRelease synths.keys.triggerAttackRelease synths.pads.triggerAttackRelease].each do |voice|
+      assert_includes trigger, voice
+    end
+  end
+
+  def test_live_and_offline_hats_use_short_band_limited_noise_voices
+    builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no Tone.js instrument builder"
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
+    assert_includes builder, 'hat:new Tone.NoiseSynth({noise:{type:"white"}'
+    assert_includes builder, 'open:new Tone.NoiseSynth({noise:{type:"white"}'
+    assert_includes init, "hatFlt=new Tone.Filter(7600,'highpass')"
+    assert_includes init, "openFlt=new Tone.Filter(6200,'highpass')"
+    assert_includes export, "oHatN.connect(oHatFlt)"
+    assert_includes export, "oOpenN.connect(oOpenFlt)"
+  end
+
+  def test_master_path_avoids_the_old_serial_overprocessing_chain
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
+    refute_includes init, "new Tone.Phaser("
+    refute_includes init, "new Tone.WaveShaper("
+    refute_includes init, "new Tone.Chebyshev(2)"
+    refute_includes init, "new Tone.Compressor(-24,3)"
+    refute_includes init, "new Tone.Noise('pink').start()"
+    assert_includes init, "widener.connect(limiter);"
+    assert_includes apply, "PARAMS.COMP_RATIO_MAX"
+  end
+
+  def test_rg69_front_panel_is_flat_and_has_a_numbered_step_ruler
+    assert_includes html, 'class="machine-header"'
+    assert_includes html, 'class="panel-strip--inner"'
+    assert_includes css, '.machine-header'
+    assert_includes css, '.track-ruler'
+    assert_includes css, 'border-radius: 0;'
+    assert_includes js, "ruler.className='track-ruler'"
+    assert_includes js, "tick.textContent=String(i+1).padStart(2,'0')"
   end
 
   def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
@@ -402,6 +465,8 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_transport_and_controls_have_real_hit_areas_and_explicit_states
+    assert_includes html, 'class="machine-header"'
+    assert_includes html, 'class="panel-strip"'
     assert_includes html, 'class="transport-primary"'
     assert_includes html, 'class="transport-actions"'
     assert_includes html, 'aria-pressed="false" title="Play or pause (Space)"'
@@ -479,6 +544,9 @@ class TestRg69PlaybackRecovery < Minitest::Test
 
   def test_touch_controls_have_readable_sizes_and_a_clear_focus_state
     assert_includes css, 'button {'
+    assert_includes css, '.machine-header'
+    assert_includes css, '.track-ruler'
+    assert_includes css, 'border-radius: 0;'
     assert_includes css, 'min-height: 40px;'
     assert_includes css, 'button:focus-visible'
     assert_includes css, '@media (max-width: 640px)'
