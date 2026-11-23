@@ -60,16 +60,9 @@ class TestSpeechSelftestProbe < Minitest::Test
     assert_equal 0, calls, "memoised probe re-spawned the worker"
   end
 
-  # Keyed on content, so a lockfile touch without a change (bundler rewrites
-  # the file when it re-resolves) cannot invalidate the memo.
-  #
-  # The mtime is moved with File.utime rather than by running the worker, and
-  # that is not laziness. Written the obvious way — run the worker, compare —
-  # this test passed against the mtime-keyed version it exists to reject,
-  # because File.mtime(...).to_i truncates to whole seconds and the worker
-  # returns in 0.3s. A test that only fails when the clock happens to roll over
-  # is Scanner Convention 1 in a new costume. Five seconds cannot be truncated
-  # away. The lockfile's own mtime is restored either way.
+  # Both inputs are content-addressed. A deployment can replace the worker
+  # within the same timestamp tick (or preserve timestamps entirely), so mtime
+  # is not a sufficient cache key for readiness after a code update.
   def test_the_stamp_ignores_a_lockfile_touch
     lock = File.join(Master::ROOT, "Gemfile.lock")
     skip "no Gemfile.lock in this checkout" unless File.file?(lock)
@@ -92,6 +85,19 @@ class TestSpeechSelftestProbe < Minitest::Test
 
     before = Speech.send(:selftest_stamp)
     Digest::SHA256.stub(:file, ->(_path) { Digest::SHA256.new.update("a different bundle") }) do
+      refute_equal before, Speech.send(:selftest_stamp)
+    end
+  end
+
+  def test_the_stamp_moves_when_worker_content_changes_even_if_its_mtime_does_not
+    worker = Speech::WORKER
+    skip "no TTS worker in this checkout" unless File.file?(worker)
+
+    before = Speech.send(:selftest_stamp)
+    original = Digest::SHA256.method(:file)
+    Digest::SHA256.stub(:file, lambda { |path|
+      path == worker ? Digest::SHA256.new.update("a different worker") : original.call(path)
+    }) do
       refute_equal before, Speech.send(:selftest_stamp)
     end
   end
