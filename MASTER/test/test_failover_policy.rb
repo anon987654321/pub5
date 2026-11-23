@@ -68,6 +68,7 @@ class TestFailoverPolicy < Minitest::Test
     # The paid-tier spelling a subscription CLI answers with; a spent session
     # cannot succeed on an in-place retry.
     assert chain.failover_skip_model?(Master::Result.err("quota spent", category: :exhausted))
+    assert chain.failover_skip_model?(Master::Result.err("empty assistant response", category: :llm_call_failure))
     refute chain.failover_skip_model?(Master::Result.err("nope", category: :provider_error))
   end
 
