@@ -752,7 +752,7 @@ synths.kickBody.triggerAttackRelease(pitch.kickBody,thirtySecond,rt,vl*.2);
 }
 else if(v==='s'){synths.snare.triggerAttackRelease(eighth,rt,vl);synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)}
 else if(v==='c')synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl);
-else if(v==='h')synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl);
+else if(v==='h')synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl);
 else if(v==='o')synths.open.triggerAttackRelease(eighth,rt,vl);
 }
 }
