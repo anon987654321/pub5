@@ -59,7 +59,7 @@ def usage
       bin/operator vps logs <app> [--lines N] [--remote]
       bin/operator vps canary [--remote] [--app a,b] [--budget-ms N]  post-deploy probe: ports, rcctl, every public GET route (--remote runs on the box, otherwise the public domains)
       bin/operator vps rollback <sha>     prints the manual rollback; vps-deploy refuses non-fast-forward pins, so nothing is run
-      bin/operator vps admin <status|services|service|pf|disk|memory|swap|dmesg|packages|updates|upgrade|reboot> [args] [--remote]
+      bin/operator vps admin <status|diagnose|services|service|pf|disk|memory|swap|dmesg|packages|updates|upgrade|reboot> [args] [--remote]
       bin/operator post-pull
       bin/operator measure [--deep] [--json]
       bin/operator affiliate status
