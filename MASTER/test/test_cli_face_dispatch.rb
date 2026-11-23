@@ -404,6 +404,7 @@ class TestCliFaceDispatch < Minitest::Test
   end
 
 
+  def test_ctrl_c_leaves_hands_free_mode
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@voice_listen_active, true)
 
