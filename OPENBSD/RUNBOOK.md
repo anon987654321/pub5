@@ -533,7 +533,7 @@ When SSH to vm23 is required, use normal paths — but note which of them takes
 |---|---|
 | `doas zsh OPERATOR.sh --apply` | root, it installs `/etc` |
 | `zsh OPENBSD/bin/vps-deploy <app>` | **root** (or `dev` via passwordless doas re-exec) |
-| `zsh OPENBSD/bin/vps_ci.sh <app>` | internal child of pinned `vps-deploy`; read-only bundle check, not a test runner |
+| `zsh OPENBSD/bin/vps_ci.sh <app>` | internal child of pinned `vps-deploy`; bounded app copy-tree sync and read-only bundle check, not a test runner |
 
 `vps-deploy` runs as root. Git fetch/checkout still run as `dev` so the
 `/home/dev/pub5` tree and GitHub deploy key are never used by root. Typing the
@@ -739,8 +739,10 @@ A direct invocation of `OPENBSD/bin/vps-deploy` on vm23 does not perform
 workstation preflight, Rails test suites or asset builds. The supported path is
 `MASTER/bin/operator vps deploy <app|group|all> --remote` from the workstation;
 it supplies matching SHA attestations and runs the independent public canary.
-The host-side `vps_ci.sh` is not a test runner: it verifies the workstation CI
-attestation and checks the preinstalled production bundle. After any separately
+The host-side `vps_ci.sh` is not a test runner: before it changes the app
+copy-tree, it verifies the pinned SHA, workstation CI/preflight proofs and the
+parent admission token. It then performs a bounded sync and checks the
+preinstalled production bundle. After any separately
 authorized manual or recovery operation, run `MASTER/bin/operator vps canary`
 from the workstation before reporting public release success. A failed public
 canary remains a failed release assessment even when the local deploy stamp says
