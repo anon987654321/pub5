@@ -55,6 +55,7 @@ function readStorage(key){try{return window.localStorage.getItem(key)}catch(erro
 function writeStorage(key,value){try{window.localStorage.setItem(key,value);return true}catch(error){return false}}
 function removeStorage(key){try{window.localStorage.removeItem(key);return true}catch(error){return false}}
 const $id=s=>document.getElementById(s),DP=s=>$id(s).parentElement;
+const trace=$id("trace");
 const vizCanvas=$id("viz");
 let vizContext=null;
 let vizColors={background:"#0c0c0c",accent:"#c8902e"};
