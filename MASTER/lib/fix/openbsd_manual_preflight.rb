@@ -14,7 +14,7 @@ module Master
     # boundaries consume the same receipt rather than trusting prompt text.
     module OpenBSDManualPreflight
       MAX_BYTES = 32 * 1024 * 1024
-      MAX_SOURCE_READS = 256
+      MAX_SOURCE_READS = 512
       MAX_MANUAL_PAGES = 80
       RECEIPT_RELATIVE_PATH = "MASTER/.master/openbsd_preflight.json".freeze
       MIRROR_COVERAGE_REPORT_RELATIVE_PATH = "MASTER/.master/openbsd_mirror_coverage.json".freeze
