@@ -151,7 +151,7 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "synths.snare.triggerAttackRelease(eighth,rt,vl)"
     assert_includes js, "synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl)"
     assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)"
-    assert_includes js, "synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl)"
+    assert_includes js, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
     assert_includes js, "synths.open.triggerAttackRelease(eighth,rt,vl)"
     assert_includes js, "hat:new Tone.MetalSynth("
     assert_includes js, "open:new Tone.MetalSynth("
@@ -427,12 +427,20 @@ class TestRg69Defaults < Minitest::Test
     assert_includes builder, "open:new Tone.MetalSynth("
     assert_includes builder, "modulationIndex:t.hat.modulation_index"
     assert_includes builder, "resonance:openResonance"
-    assert_includes trigger, "synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl)"
+    assert_includes trigger, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
     assert_includes trigger, "synths.open.triggerAttackRelease(eighth,rt,vl)"
     assert_includes init, "hatFlt=new Tone.Filter(7600,'highpass')"
     assert_includes init, "openFlt=new Tone.Filter(6200,'highpass')"
     assert_includes export, "oHatN.connect(oHatFlt)"
     assert_includes export, "oOpenN.connect(oOpenFlt)"
+  end
+
+  def test_closed_hat_gate_finishes_before_the_next_humanized_sixteenth
+    trigger = js[/function triggerNotes\\(.*?(?=\\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    assert_includes trigger, "Math.min(sixteenthDuration*0.5,0.06)"
+    assert_includes trigger, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
+    assert_includes trigger, "synths.open.triggerAttackRelease(eighth,rt,vl)"
+    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+(Number(offsetMs)||0)/1000);"
   end
 
   def test_master_path_avoids_the_old_serial_overprocessing_chain
