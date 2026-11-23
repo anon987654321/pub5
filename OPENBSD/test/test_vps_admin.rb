@@ -51,4 +51,20 @@ class VpsAdminTest < Minitest::Test
     assert_includes commands, ["uname", "-a"]
     assert_includes commands, ["doas", "df", "-h"]
   end
+
+  def test_diagnose_is_a_bounded_read_only_incident_snapshot
+    commands = OpenBSDAdmin.commands_for(["diagnose"])
+
+    assert_includes commands, ["uptime"]
+    assert_includes commands, ["vmstat", "1", "5"]
+    assert_includes commands, ["top", "-b", "-n", "1"]
+    assert_includes commands, ["ps", "-axww"]
+    assert_includes commands, ["doas", "rcctl", "ls", "started"]
+    assert_includes commands, ["doas", "rcctl", "ls", "failed"]
+    assert_includes commands, ["netstat", "-an", "-f", "inet"]
+    assert_includes commands, ["doas", "df", "-h"]
+    assert_includes commands, ["doas", "swapctl", "-s"]
+    refute commands.flatten.any? { |arg| %w[start stop restart kill pkill reboot].include?(arg) }
+    assert_raises(ArgumentError) { OpenBSDAdmin.commands_for(["diagnose", "--apply"]) }
+  end
 end
