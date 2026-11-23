@@ -54,6 +54,7 @@ module Operator
     # resolving its test/ glob from MASTER silently pointed at the wrong suite.
     RUNNER_ROOTS = {
       "MASTER/tools/Rakefile" => "MASTER/tools",
+      "MASTER/checks/release.rb" => "RAILS",
     }.freeze
 
     CONVENTIONS = {
@@ -108,8 +109,14 @@ module Operator
           source = File.read(path)
           (source.scan(GLOB).flatten + source.scan(EXACT).flatten).uniq.each do |glob|
             # Explicit tree-rooted paths stay explicit; relative paths use the
-            # runner working directory recorded above, not merely its top tree.
-            found[runner] << (glob.start_with?("MASTER/", "RAILS/", "OPENBSD/", "STUDIO/") ? glob : "#{base}/#{glob}")
+            # runner working directory recorded above. Normalize `../` too:
+            # release.rb runs RAILS-relative paths including ../MASTER/web.
+            resolved = if glob.start_with?("MASTER/", "RAILS/", "OPENBSD/", "STUDIO/")
+                         glob
+                       else
+                         File.expand_path(glob, File.join(ROOT, base)).delete_prefix("#{ROOT}/")
+                       end
+            found[runner] << resolved
           end
         end
 
