@@ -1149,13 +1149,12 @@ module Master
           RbConfig.ruby, operator, "vps", "admin", "diagnose", "--remote",
           chdir: repo_root, timeout: OPENBSD_HOST_DIAGNOSTIC_TIMEOUT, raise_on_timeout: true,
         )
-        output = [stdout, stderr].map(&:strip).reject(&:empty?).join("\n")
+        output = redact_host_diagnostic_output([stdout, stderr].map(&:strip).reject(&:empty?).join("\n"))
         unless status.success?
           detail = output.byteslice(-2_000, 2_000).to_s
           raise IOError, "remote vm23 diagnostics exited #{status.exitstatus || "unknown"}: #{detail}"
         end
 
-        output = redact_host_diagnostic_output(output)
         output = output.byteslice(0, OPENBSD_HOST_DIAGNOSTIC_MAX_BYTES).to_s.force_encoding("UTF-8").scrub
         output << "\n[diagnostic output truncated]" if stdout.bytesize + stderr.bytesize > OPENBSD_HOST_DIAGNOSTIC_MAX_BYTES
         {
@@ -1201,7 +1200,9 @@ module Master
         value.to_s
              .encode("UTF-8", invalid: :replace, undef: :replace, replace: "�")
              .gsub(/(?i)\b((?:authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret)\b\s*[=:]\s*)[^\s,;]+/, '\1[REDACTED]')
+             .gsub(/(?i)(--?(?:authorization|api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)\s+)(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
              .gsub(/(?i)\bBearer\s+[A-Za-z0-9._~+\/=-]+/, "Bearer [REDACTED]")
+             .gsub(%r{(?i)(://)[^/@:\s]+:[^/@\s]+@}, '\1[REDACTED]@')
       end
 
       def dispatch_keyless_probe(root)
