@@ -517,7 +517,25 @@ class VpsDeployContractTest < Minitest::Test
   # exact commit and supplied workstation CI/preflight attestations.
   def test_a_ci_attestation_covers_exactly_the_commit_it_names
     assert_includes SOURCE, %q{[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]}
-    assert_includes CI_SOURCE, %q{head=$(git -C "$repo" rev-parse HEAD)}
+    assert_includes CI_SOURCE, %q{head=$(git_as_deploy_user rev-parse HEAD 2>/dev/null)}
+    assert_includes CI_SOURCE, "git_as_deploy_user() {"
+    assert_includes CI_SOURCE, "run_as_deploy_user"
+    refute_includes CI_SOURCE, %q{git -C "$repo"}
+    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_LOCK_HELD:-} == 1}
+    assert_includes CI_SOURCE, %q{owner_identity == "$VPS_DEPLOY_LOCK_IDENTITY"}
+    assert_includes CI_SOURCE, %q{${owner_started}_${owner_digest} == "$owner_identity"}
+    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_SHA:-} == "$head" ]]}
+    assert_includes CI_SOURCE, %q{[[ $attested == "$head" ]]}
+    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]]}
+    assert_includes CI_SOURCE, %q{if [[ -n ${VPS_DEPLOY_PREFLIGHT_SHA:-} ]]; then}
+    assert_includes CI_SOURCE, "workstation preflight SHA does not match"
+    assert_includes CI_SOURCE, %q{VPS_DEPLOY_SKIP_PREFLIGHT:-0}
+    sync = CI_SOURCE.index("sync_from_repo" + "\n")
+    %w[VPS_DEPLOY_LOCK_HELD VPS_DEPLOY_SHA VPS_DEPLOY_CI_SHA VPS_DEPLOY_ADMITTED_SHA VPS_DEPLOY_PREFLIGHT_SHA].each do |name|
+      position = CI_SOURCE.index(name)
+      refute_nil position, "missing #{name} guard"
+      assert_operator position, :<, sync, "#{name} must be checked before copy-tree sync"
+    end
     assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_SHA:-} == "$head" ]]}
     assert_includes CI_SOURCE, %q{[[ $attested == "$head" ]]}
     assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]]}
