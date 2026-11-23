@@ -11,7 +11,7 @@ stronger than the least-complete requested tree.
 | --- | --- |
 | MASTER | Boot and dependency graph; Law/configuration contracts; core and subsystem suites; CLI/REPL command routes, prompt/face boundaries, model/provider failure states and voice/mobile paths where enabled; current-revision checks and path-scoped delivery evidence. |
 | RAILS | Every active app and vertical; shared engine and consumer contracts; models, routes, jobs, migrations and data boundaries; real browser journeys and responsive/accessibility review where applicable; each app retains its own identity. |
-| OPENBSD | Full target source/dependency review; receipt-backed exact-release/architecture manuals before native commands, daemon/service actions or any OPENBSD/ edit; native syntax and test checks on OpenBSD; authenticated host, deploy, backup and restore evidence for live claims. |
+| OPENBSD | Full target source/dependency review; receipt-backed exact-release/architecture manuals before native commands, daemon/service actions or any OPENBSD/ edit; native syntax and contract tests in an off-host target-compatible environment; vm23 remains a production-only deploy/health target, not a scan, test or build worker. |
 | STUDIO | Deterministic generation and reproducible artifact checks; source, timing, format and metadata validation; rendered/export integrity; human listening, rights and provider/material approval where relevant. |
 | BIZ | A declared document-family profile; source-backed claims and traceable financial arithmetic; HTML/PDF consistency; every PDF page rasterized for visual inspection; accessibility/reading-order and production checks; qualified legal/financial or funder review where the document requires it. |
 
@@ -685,53 +685,29 @@ processing tool; its old unauthenticated static-photo web preview on
 `127.0.0.1:6666` has been retired rather than expanding the HTTP daemon beyond
 the ACME-only boundary.
 
-### `SKIP_CI=1` does not mean "skip CI"
+### Workstation CI and production bundle checks
 
-`bin/vps-deploy <app>` takes one of two branches:
+The supported release entry is
+`MASTER/bin/operator vps deploy <app|group|all> --remote`, run from the
+workstation checkout. Before SSH, it runs the selected Rails apps' `bin/ci`
+suites, workstation preflight and asset builds, then pins one commit and
+attests each result to that exact SHA.
 
-- **Default** (`SKIP_CI` unset): `vps_ci.sh <app>` syncs the repo into a CI
-  mirror and runs `bin/ci` (see below) against a throwaway test DB.
-- **`SKIP_CI=1`**: skips `vps_ci.sh` and runs `RAILS/<app>/<app>.sh`, which
-  calls `deploy_tracked_app` → `rails_runtime_check`. That check bundles,
-  prepares the databases, precompiles assets and runs `bin/ci` inside the
-  deployed `/home/<app>/app` tree. CI still runs, in a different place.
+On vm23, `OPENBSD/bin/vps-deploy` refuses missing or mismatched workstation
+CI and preflight attestations. Its `vps_ci.sh` child syncs the app copy-tree,
+checks the attested SHA and verifies the already-installed production bundle
+with a frozen, read-only bundle check. It does not run `bin/ci`, install gems,
+compile assets or run repository scans. A missing or incomplete production
+bundle is a release blocker: build it off-host and redeploy the same attested
+source. Never use vm23 as a test or build worker.
 
-The fast hotfix path uses `SKIP_RUNTIME_CHECK=1` and `SKIP_CI=1`, but the
-runtime skip is now protected by the human-only `I_UNDERSTAND_FAST_DEPLOY=1`
-acknowledgement. Without that exact acknowledgement, `rails_runtime_check`
-refuses to bypass CI. When the acknowledgement is supplied, the hotfix path
-runs no `bin/ci`; only the loopback checks `vps-deploy` runs after each
-restart.
+`SKIP_CI=1` is refused for Rails releases. The former host-side suite and
+install fallbacks are retired; no checkbox, environment flag or direct
+invocation substitutes for workstation CI, preflight and asset attestations.
 
-### `bin/ci`'s `Setup` step behaves differently locally vs. on the VPS
-
-`RAILS/__shared/config/ci.rb` checks several steps on `vps_host` (true when
-`PUB5_CI_GUARD=1`, `/var/db/pub5_vps` exists, or `/etc/relayd.conf` exists):
-
-- `Security: Importmap audit` and `Tests: System (a11y)` — **skipped on the
-  VPS**, required locally. A local `bin/ci` failure in those two is real; it
-  does not mean the VPS run will also fail. Both need something the box does
-  not have on hand (a booted environment, a browser).
-- `Style: Ruby` (RuboCop) — **runs on the VPS too**, and this list said
-  otherwise until 2026-08-25. `ci.rb` carries the reason next to the step:
-  vm23 is where the deploy check actually runs, so skipping it there left
-  enforcement to a local `bin/ci` that nothing runs automatically. It is a
-  source-text check needing no browser and no database, so the reasons the
-  other two are skipped do not apply. A RuboCop failure on the box is a real
-  deploy blocker — do not read it as a local-only bucket, which is exactly
-  what this file used to say.
-- `Tests: Seeds` — runs with `SKIP_BERGEN_DEMO=1` on the VPS, without it
-  locally. A local seed failure about a duplicate Bergen demo email is a
-  local-DB-state artifact, not a real blocker — don't chase it.
-- `Setup` (`bin/setup --skip-server`, includes `db:prepare`) replays the
-  full migration history. A stale local dev DB can hit a legacy FK-naming
-  mismatch that only existed mid-history and was never a bug in current
-  schema.rb. Confirm against a fresh DB (or the VPS run) before treating this
-  as real.
-
-**Decision test:** a local `bin/ci` failure is only actionable if you can
-name which of the above buckets it's *not* in. When in doubt, read
-`RAILS/__shared/config/ci.rb` directly rather than assuming.
+`OPENBSD/bin/rehearse` is a fast workstation-only static check. It verifies
+deployment paths, copy-tree shape and source contracts, but it does not boot
+Rails or replace the selected apps' full `bin/ci` suites.
 
 ### Two layouts: the repo and the box's copy-tree
 
@@ -762,17 +738,18 @@ What to write, so both layouts work:
   (it is `RAILS/__shared`).
 
 Three static guards enforce this without a Rails boot, and
-`ruby OPENBSD/bin/rehearse` runs them in seconds before any deploy:
+`ruby OPENBSD/bin/rehearse` runs them locally in seconds before release:
 `test_deploy_paths_exist.rb` (every repo path a deploy script names exists),
 `RAILS/test/test_path_idioms_test.rb` (the walk-up and `brgen/` idioms), and
-`RAILS/test/require_relative_targets_test.rb`. Run it before `vps-deploy`;
-the box's `rails_test` is where only the failures it cannot see survive, and
-that step takes about 80 minutes on one vCPU.
+`RAILS/test/require_relative_targets_test.rb`. Rehearsal is not the full app
+suite: the workstation operator runs each selected `bin/ci` before SSH.
+No Rails test suite runs on vm23.
 
 ### Copy-tree sync must delete before it extracts
 
-`vps_ci.sh`'s `sync_from_repo()`/`sync_ci_rails_root()` sync the repo to
-each app's copy-tree via `tar` extraction. Tar extraction only *overlays* —
+`vps_ci.sh`'s `sync_from_repo()` refreshes each app's production
+copy-tree through the installed `ci-sync.ksh` helper and `tar` extraction.
+Tar extraction only *overlays* —
 it never deletes destination files that are absent from the source. A file
 deleted from git therefore survived indefinitely on the VPS's copy-tree
 checkout, invisibly, until something referenced it and broke at runtime.
