@@ -960,11 +960,11 @@ end
 
 Law.define(:PROACTIVE_DEFECT_AUDIT) do
   source "OpenBSD security-audit practice"
-  ask "Does an audit stop at recently changed lines or known vulnerabilities when the same defect class can exist elsewhere in the complete high-risk boundary?"
-  practice "Audit whole trust boundaries and recurring defect classes, not only the incident that exposed them."
-  fix "Trace every entrypoint, caller, state transition and failure path in scope; validate the audit instrument against known positive and negative cases; turn confirmed defect classes into regression tests."
-  bad "Patch the reported vulnerability line and stop."
-  good "Audit the component and sibling paths for the same defect class, record what actually ran, and add a regression case."
+  ask "After a confirmed incident, does the repair trace root cause and the failed control across the complete high-risk boundary, link the lesson to its governing Law, add regression proof, and independently verify high-risk repairs with a distinct check or assessor?"
+  practice "Treat an incident as evidence about both the defect and the control that failed to prevent or detect it. Record root cause, failed control, affected boundary, governing Law ID, durable regression proof and independent verification. Amend laws.yml only when the lesson is genuinely new; never create a parallel Law for an existing requirement."
+  fix "Trace all relevant entrypoints, callers, state transitions and failure paths; identify the failed safeguard; link the lesson to the existing canonical Law or justify a genuinely new invariant; add a regression test that fails before the repair; validate the test instrument with positive and negative cases; independently verify high-risk repairs through a distinct check or assessor. Keep unavailable independent proof INCONCLUSIVE."
+  bad "Patch the reported line, skip the failed control and regression analysis, or add a second Law that repeats an existing requirement."
+  good "Record the root cause and failed control, trace the full boundary, link the existing Law ID, add a regression test, and have a distinct verifier confirm the high-risk repair."
 end
 
 Law.define(:FAIL_SAFE_DEFAULTS) do

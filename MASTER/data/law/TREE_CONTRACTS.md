@@ -27,6 +27,11 @@ their runtime and operational sharp edges here; STUDIO reads its project READMEs
 workflow in `BIZ/README.md`. The harness doors at the repo root route here.
 The content moved out of the per-tree `CLAUDE.md` files; git history holds the originals.
 
+`MASTER/PATH_OWNERSHIP.yml` owns the path-level purpose, risk and check index;
+this file owns cross-tree acceptance and shared architectural contracts. They
+are complementary boundaries: do not duplicate entries or let either silently
+replace the other's responsibility.
+
 ## Documentation and Markdown
 
 This contract applies to every maintained Markdown file in pub5, not only the

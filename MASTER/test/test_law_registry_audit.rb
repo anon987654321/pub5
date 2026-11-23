@@ -244,6 +244,25 @@ class TestLawRegistryAudit < Minitest::Test
     assert rendered.any? { |rule| rule.include?("another studio's exact identity, screen composition, wordmark, key art, characters, or protected expression") }
     assert_match(/inconclusive finding never clears a ratchet/i, finding)
   end
+  def test_incident_learning_law_requires_cause_control_regression_and_independent_proof
+    entry = Master.law_catalogue.fetch("entries").fetch("PROACTIVE_DEFECT_AUDIT")
+    definition = Master::Review::Scan::LawTree.definitions.find do |law|
+      law.id.to_s == "PROACTIVE_DEFECT_AUDIT"
+    end
+
+    assert_equal "error", entry.fetch("severity")
+    assert_equal ["MASTER/law/universal.rb"], Array(entry.fetch("definition_sources"))
+    refute_nil definition
+    assert_includes definition.ask, "root cause"
+    assert_includes definition.ask, "independently verify"
+    assert_includes definition.practice, "failed control"
+    assert_includes definition.fix, "regression test"
+    assert_includes definition.fix, "distinct check or assessor"
+    statement = Master.load_yaml(Master.data_path("laws.yml"))
+      .fetch("ROBUSTNESS_proactive_defect_audit").fetch("statement")
+    assert_includes statement, "competing rule"
+  end
+
   def test_catalogue_reconciliation_is_an_enforced_gate
     report = audit.call
 

@@ -32,6 +32,7 @@ module Operator
       issues = required_paths
       require File.join(@root, "MASTER", "lib", "master") unless defined?(Master::ROOT)
       soul = load_yaml("MASTER/data/soul.yml")
+      issues.concat(authority_source_issues(soul))
       laws = load_yaml("MASTER/data/laws.yml")
       issues << "soul: golden Law reference missing or changed" unless soul.dig("references", "golden_law") == "PRESERVE_FIRST"
       # The 2026-11-09 decree made an empty declaration the valid state -
@@ -73,6 +74,45 @@ module Operator
 
     def load_yaml(relative)
       YAML.safe_load_file(File.join(@root, relative), aliases: true) || {}
+    end
+
+    # soul.yml owns the authority order; this gate verifies that every literal
+    # repository path it names still resolves inside the checkout. Descriptive
+    # labels such as "Git history" and "tree-local README.md..." are not paths.
+    # Checking real paths as well as expanded paths prevents a symlink from
+    # smuggling an authority source in from outside the repository.
+    def authority_source_issues(soul)
+      repository = File.realpath(@root)
+      rows = soul.fetch("authority_order")
+      rows.flat_map do |row|
+        source = row.fetch("source")
+        sources = source.is_a?(Array) ? source : [source]
+        sources.filter_map do |value|
+          next unless value.is_a?(String) && value.include?("/")
+
+          candidate = File.expand_path(value, repository)
+          unless within_repository?(candidate, repository)
+            next "soul: authority source escapes repository: #{value}"
+          end
+
+          begin
+            resolved = File.realpath(candidate)
+          rescue Errno::ENOENT, Errno::ENOTDIR
+            next "soul: authority source missing: #{value}"
+          end
+
+          unless within_repository?(resolved, repository)
+            next "soul: authority source resolves outside repository: #{value}"
+          end
+          nil
+        end
+      end
+    rescue StandardError => e
+      ["soul: authority source validation failed - #{e.class}: #{e.message}"]
+    end
+
+    def within_repository?(path, repository)
+      path == repository || path.start_with?("#{repository}#{File::SEPARATOR}")
     end
 
     def law_issues

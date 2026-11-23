@@ -161,10 +161,44 @@ class TestRefinementContracts < Minitest::Test
     assert_empty result.issues
   end
 
-  def test_constitution_contract_has_a_real_law_catalogue_gate
+  def test_constitution_contract_checks_literal_authority_sources_and_repository_boundaries
+    Dir.mktmpdir("master-authority") do |outer|
+      root = File.join(outer, "repo")
+      data = File.join(root, "MASTER", "data")
+      FileUtils.mkdir_p([data, File.join(root, "MASTER", "law")])
+      File.write(File.join(data, "soul.yml"), "canonical\n")
+      outside = File.join(outer, "outside.yml")
+      File.write(outside, "outside\n")
+      File.symlink(outside, File.join(data, "linked.yml"))
+
+      soul = {
+        "authority_order" => [
+          { "id" => "file", "source" => "MASTER/data/soul.yml", "scope" => "test" },
+          { "id" => "directory", "source" => "MASTER/law/", "scope" => "test" },
+          { "id" => "missing", "source" => "MASTER/data/missing.yml", "scope" => "test" },
+          { "id" => "traversal", "source" => "../outside.yml", "scope" => "test" },
+          { "id" => "symlink", "source" => "MASTER/data/linked.yml", "scope" => "test" },
+          { "id" => "history", "source" => "Git history", "scope" => "test" },
+          { "id" => "tree_docs", "source" => "tree-local README.md and CLAUDE.md", "scope" => "test" },
+        ],
+      }
+
+      issues = Operator::ConstitutionContract.new(root:).send(:authority_source_issues, soul)
+
+      assert_equal [
+        "soul: authority source missing: MASTER/data/missing.yml",
+        "soul: authority source escapes repository: ../outside.yml",
+        "soul: authority source resolves outside repository: MASTER/data/linked.yml",
+      ], issues
+    end
+  end
+
+  def test_constitution_contract_has_a_real_law_catalogue_and_authority_source_gate
     source = File.read(File.expand_path("../lib/operator/constitution_contract.rb", __dir__))
 
     assert_includes source, "law_catalogue_issues"
     assert_includes source, "report.assert_catalogue_integrity!"
+    assert_includes source, "authority_source_issues(soul)"
+    assert_includes source, "File.realpath(candidate)"
   end
 end

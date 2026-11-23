@@ -74,6 +74,9 @@ class TestSoul < Minitest::Test
     assert_equal %w[soul laws executable_laws_and_gates tree_contracts git_history], ids
     assert_equal "MASTER/data/soul.yml", Master::Soul.authority_order.first.fetch("source")
     assert_equal "Git history", Master::Soul.authority_order.last.fetch("source")
+    tree_sources = Master::Soul.authority_order.find { |row| row.fetch("id") == "tree_contracts" }.fetch("source")
+    assert_includes tree_sources, "MASTER/PATH_OWNERSHIP.yml"
+    assert_includes tree_sources, "MASTER/data/law/TREE_CONTRACTS.md"
   end
 
   def test_mastery_and_dns_replication_are_bounded_by_single_source_ownership

@@ -302,7 +302,13 @@ ROBUSTNESS_autonomous_triggers_are_bounded:
 
 ROBUSTNESS_proactive_defect_audit:
   parent: ROBUSTNESS
-  statement: "An audit stops at the reported incident or changed lines without examining the complete high-risk boundary for the same defect class."
+  statement: >-
+    A confirmed incident is closed after patching the reported lines without
+    tracing root cause and the failed control across the complete high-risk
+    boundary, linking the lesson to its governing Law, adding a regression
+    proof, and independently verifying high-risk repairs. A genuinely new
+    invariant belongs in the canonical Law registry; it must not create a
+    competing rule for a requirement that already has an owner.
   resolution: review
 
 ROBUSTNESS_exemption_without_expiry:
