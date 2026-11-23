@@ -4,6 +4,7 @@ require_relative "test_helper"
 require "fileutils"
 require "open3"
 require "rbconfig"
+require "yaml"
 require "tmpdir"
 require_relative "../lib/operator/check_chain"
 require_relative "../lib/review/council/harvest"
@@ -111,6 +112,15 @@ class TestCheckChain < Minitest::Test
     assert_equal File.join(G::ROOT, "STUDIO"), studio.fetch(2)
   end
 
+  def test_source_only_rails_suites_do_not_promote_archived_apps_to_deploy_targets
+    inventory = YAML.safe_load_file(File.join(G::ROOT, "RAILS", "apps.yml")).fetch("apps")
+
+    %w[hjerterom mytoonz].each { |app| refute inventory.key?(app), "#{app} is source-only, not an active deploy target" }
+    %w[hjerterom source CI mytoonz source CI].each do |label|
+      assert_includes G.suite_jobs(%w[RAILS]).map(&:first), label
+    end
+  end
+
   def test_all_five_tree_suite_jobs_are_reachable
     jobs = G.suite_jobs(G::TREES)
     names = jobs.map(&:first)
@@ -165,7 +175,7 @@ class TestCheckChain < Minitest::Test
   end
 
   def test_suite_aggregator_preserves_child_timeout_status
-    job = ["STUDIO media", [G::RUBY, "-S", "rake", "test"], G::ROOT, {}, "STUDIO", true]
+    job = ["STUDIO media", [G::RUBY, "-S", "rake", "-f", "replicate/Rakefile", "test"], File.join(G::ROOT, "STUDIO"), {}, "STUDIO", true]
 
     G.stub(:suite_jobs, [job]) do
       G.stub(:capture, ->(*_args, **_kwargs) { [false, ["child timeout"], 124] }) do
