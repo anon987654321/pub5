@@ -11,13 +11,26 @@ RUBY = RbConfig.ruby
 desc "Load every STUDIO entrypoint and prove the contracts answer"
 task :check do
   expected_owners = %w[dilla lora postpro replicate].sort
-  actual_owners = Dir.children(STUDIO_ROOT).sort
+  # These two root-level files are compatibility proof entrypoints; the
+  # canonical suite is under replicate/test. They are not a fifth code owner.
+  allowed_entries = (expected_owners + ["test"]).sort
+  actual_entries = Dir.children(STUDIO_ROOT).sort
   invalid_owners = expected_owners.reject do |owner|
     path = File.join(STUDIO_ROOT, owner)
     File.directory?(path) && !File.symlink?(path)
   end
-  unless actual_owners == expected_owners && invalid_owners.empty?
-    raise "STUDIO root boundary failed: expected exactly #{expected_owners.join(', ')}; found #{actual_owners.join(', ')}"
+  unexpected_entries = actual_entries - allowed_entries
+  unless unexpected_entries.empty? && invalid_owners.empty?
+    raise "STUDIO root boundary failed: expected owners #{expected_owners.join(', ')} " \
+          "and optional test/ proof entrypoints; found #{actual_entries.join(', ')}"
+  end
+  proof_root = File.join(STUDIO_ROOT, "test")
+  if File.directory?(proof_root) && !File.symlink?(proof_root)
+    invalid_proofs = Dir.children(proof_root).reject do |entry|
+      path = File.join(proof_root, entry)
+      entry.match?(/\\A[a-z0-9_]+_test\\.rb\\z/) && File.file?(path) && !File.symlink?(path)
+    end
+    raise "STUDIO root proof entrypoints are invalid: #{invalid_proofs.join(', ')}" unless invalid_proofs.empty?
   end
 
   require_relative "output_paths"
