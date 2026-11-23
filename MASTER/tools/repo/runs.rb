@@ -49,6 +49,13 @@ module Operator
     # bin/ci reaching its own test tree is a convention, so it is written down
     # rather than inferred -- and named as an assumption, because an assumption
     # that looks like a measurement is how a check ends up measuring nothing.
+    # Most runner globs are relative to the tree root. The tools Rakefile is
+    # different: it is invoked with MASTER/tools as its working directory, so
+    # resolving its test/ glob from MASTER silently pointed at the wrong suite.
+    RUNNER_ROOTS = {
+      "MASTER/tools/Rakefile" => "MASTER/tools",
+    }.freeze
+
     CONVENTIONS = {
       "RAILS/amber/bin/ci" => ["RAILS/amber/test/**/*_test.rb"],
       "RAILS/brgen/bin/ci" => [
@@ -97,11 +104,12 @@ module Operator
           path = File.join(ROOT, runner)
           next unless File.file?(path)
 
-          base = runner.split("/").first
+          base = RUNNER_ROOTS.fetch(runner, runner.split("/").first)
           source = File.read(path)
           (source.scan(GLOB).flatten + source.scan(EXACT).flatten).uniq.each do |glob|
-            # Globs are written relative to the tree the runner lives in.
-            found[runner] << (glob.start_with?("MASTER/", "RAILS/", "OPENBSD/", "MASTER/tools/") ? glob : "#{base}/#{glob}")
+            # Explicit tree-rooted paths stay explicit; relative paths use the
+            # runner working directory recorded above, not merely its top tree.
+            found[runner] << (glob.start_with?("MASTER/", "RAILS/", "OPENBSD/", "STUDIO/") ? glob : "#{base}/#{glob}")
           end
         end
 
