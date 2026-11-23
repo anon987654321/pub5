@@ -153,8 +153,8 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)"
     assert_includes js, "synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl)"
     assert_includes js, "synths.open.triggerAttackRelease(eighth,rt,vl)"
-    assert_includes js, "hat:new Tone.NoiseSynth("
-    assert_includes js, "open:new Tone.NoiseSynth("
+    assert_includes js, "hat:new Tone.MetalSynth("
+    assert_includes js, "open:new Tone.MetalSynth("
     refute_match(/synths\.(?:kickClk|snare|clap|hat|open)\.triggerAttackRelease\(rt,vl/, js)
   end
 
@@ -325,9 +325,10 @@ class TestRg69Defaults < Minitest::Test
     init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
 
-    assert_includes builder, "new Tone.PolySynth(Tone.Synth"
-    assert_includes builder, "maxPolyphony:Math.min(6,t.keys.max_polyphony)"
-    assert_includes builder, "maxPolyphony:Math.min(4,t.pads.max_polyphony)"
+    assert_includes builder, "new Tone.PolySynth(Tone.FMSynth"
+    assert_includes builder, "maxPolyphony:t.keys.max_polyphony"
+    assert_includes builder, "maxPolyphony:t.pads.max_polyphony"
+    assert_includes builder, "oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread}"
     assert_includes init, "const instruments=createToneInstruments();"
     assert_includes export, "const offlineSynths=createToneInstruments();"
     assert_equal 3, js.scan(/createToneInstruments\(\)/).size,
@@ -417,12 +418,17 @@ class TestRg69Defaults < Minitest::Test
     end
   end
 
-  def test_live_and_offline_hats_use_short_band_limited_noise_voices
+  def test_live_and_offline_hats_keep_profile_metal_tone_with_short_envelopes
     builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no Tone.js instrument builder"
+    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
-    assert_includes builder, 'hat:new Tone.NoiseSynth({noise:{type:"white"}'
-    assert_includes builder, 'open:new Tone.NoiseSynth({noise:{type:"white"}'
+    assert_includes builder, "hat:new Tone.MetalSynth("
+    assert_includes builder, "open:new Tone.MetalSynth("
+    assert_includes builder, "modulationIndex:t.hat.modulation_index"
+    assert_includes builder, "resonance:openResonance"
+    assert_includes trigger, "synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl)"
+    assert_includes trigger, "synths.open.triggerAttackRelease(eighth,rt,vl)"
     assert_includes init, "hatFlt=new Tone.Filter(7600,'highpass')"
     assert_includes init, "openFlt=new Tone.Filter(6200,'highpass')"
     assert_includes export, "oHatN.connect(oHatFlt)"
