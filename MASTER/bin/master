@@ -128,6 +128,9 @@ if ARGV.first == "host-health"
       chdir: File.dirname(master_root), timeout: 120, raise_on_timeout: true,
     )
     output = OpenBSDAdmin.redact_diagnostic_output([stdout, stderr].reject(&:empty?).join("\n"))
+    truncated = output.bytesize > 160_000
+    output = output.byteslice(0, 160_000).to_s.force_encoding("UTF-8").scrub
+    output << "\n[diagnostic output truncated]" if truncated
     $stdout.write(output)
     $stdout.write("\n") unless output.empty? || output.end_with?("\n")
     exit(status.exitstatus || (status.success? ? 0 : 1))
