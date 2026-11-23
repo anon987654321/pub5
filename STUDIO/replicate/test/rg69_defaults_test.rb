@@ -73,7 +73,8 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "const mpcSwing=50+Math.max(0,Math.min(100,Number(intensity)||0))*0.16;"
     assert_includes js, "const position=0.5+((mpcSwing-50)/16)*(2/3-0.5);"
     assert_includes js, "return (position-0.5)*sixteenth*2;"
-    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    raise "no triggerNotes" unless js.include?("function triggerNotes")
+    trigger = js.split("function triggerNotes", 2).last.split("function scheduleLoop", 2).first
     assert_includes trigger, "const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);"
     assert_includes trigger, "synths.bass.triggerAttackRelease(freq,eighth,bassTime"
     assert_includes trigger, "synths.keys.triggerAttackRelease(ch,eighth,keyTime"
