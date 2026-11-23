@@ -468,6 +468,14 @@ class TestRg69PlaybackRecovery < Minitest::Test
     assert_includes js, 'fxRev.wet.value = 0;'
   end
 
+  def test_reverb_failure_stays_bypassed_after_later_fx_updates
+    assert_includes js, "let reverbReady = true;"
+    assert_includes js, 'reverbReady=typeof fxRev.generate!=="function";'
+    assert_includes js, "reverbReady = true;"
+    assert_includes js, "reverbReady = false;"
+    assert_match(/if\(fxRev\)\{fxRev\.wet\.value=reverbReady\?1:0;/, js)
+  end
+
   def test_touch_controls_have_readable_sizes_and_a_clear_focus_state
     assert_includes css, 'button {'
     assert_includes css, 'min-height: 40px;'
