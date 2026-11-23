@@ -232,6 +232,7 @@ class OperatorIntentTest < Minitest::Test
         "Hey, could you please redeploy OPENBSD, RAILS, and MASTER web on vm23?",
         "Please, can you redeploy everything on vm23?",
         "I need you to please redeploy OPENBSD, RAILS, and MASTER web on vm23.",
+        "ok, now, you gotta redeploy MASTER, RAILS, OPENBSD onto vm23 properly, and ensure vm23 is in good health",
       ]
 
       messages.each do |message|
