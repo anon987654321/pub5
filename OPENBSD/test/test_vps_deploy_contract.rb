@@ -1196,4 +1196,13 @@ class VpsDeployContractTest < Minitest::Test
   end
 
 
+  def test_legacy_master_scan_entrypoint_refuses_on_production_host
+    scan = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_master_scan.sh"), encoding: "UTF-8")
+
+    assert_includes scan, "vm23 is production-only"
+    assert_includes scan, "exit 69"
+    refute_includes scan, "ruby_select.sh"
+    refute_includes scan, "with-ci-lock"
+  end
+
 end
