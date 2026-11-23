@@ -383,7 +383,7 @@ return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass
 });
 const bootStylePool=bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
-let st_={started:false,playing:false,idx:-1,timer:null,layoutIdx:49,heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0},randomizeFxPending:false};
+let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0},randomizeFxPending:false};
 let aud_={bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
@@ -433,8 +433,7 @@ drumFX=drum;bassFX=bass;keysFX=keys;padsFX=pads;masterFX=[];
 log('FX default chain (fixed)','k');
 }
 
-const layouts=Array.from({length:50},(_,i)=>({id:i+1,gap:4+(i%7),pp:6+(i%5),bh:54+(i%5)*3,sh:46+(i%6)*2,ac:24+i}));
-const finalBlend={id:"final",gap:8,pp:8,bh:60,sh:52,ac:35};
+const DENSITIES=Object.freeze(["comfortable","compact"]);
 
 const tpCache=new Map();
 const tpMemo=(k,v)=>{const key=`${k}-${JSON.stringify(v)}`;if(!tpCache.has(key))tpCache.set(key,tp(v));return tpCache.get(key)};
@@ -444,14 +443,15 @@ function claimOwner(){const o=readOwner();if(o?.id&&o.id!==selfId&&(Date.now()-o
 function keepOwner(){writeStorage(INSTANCE_KEY,JSON.stringify({id:selfId,ts:Date.now()}))}
 function releaseOwner(){const o=readOwner();if(o?.id===selfId)removeStorage(INSTANCE_KEY)}
 
-function applyLayout(cfg,nm){
-document.querySelector("main").style.gap=`${cfg.gap}px`;
-document.querySelectorAll("section,aside,article").forEach(n=>n.style.padding=`${cfg.pp}px`);
-document.querySelectorAll("button").forEach(n=>n.style.minHeight=`${cfg.bh}px`);
-document.querySelectorAll(".step").forEach(n=>n.style.minHeight=`${cfg.sh}px`);
-document.documentElement.style.setProperty("--acc",`hsl(${cfg.ac} 65% 56%)`);
-refreshVizColors();
-$id("meta").textContent=`layout: ${nm} / instance: ${selfId.slice(-6)}`;
+function applyLayout(mode){
+const density=DENSITIES.includes(mode)?mode:"comfortable";
+document.body.dataset.density=density;
+const button=$id("layout"),next=density==="comfortable"?"compact":"comfortable";
+button.textContent=density==="comfortable"?"− dense":"＋ roomy";
+button.setAttribute("aria-pressed",density==="compact"?"true":"false");
+button.setAttribute("aria-label",`Switch to ${next} sequencer spacing`);
+button.title=`Switch to ${next} spacing`;
+$id("meta").textContent=`RG-69 / ${density} spacing`;
 }
 
 
@@ -527,6 +527,7 @@ $id('pads-pat').value=pat_.p;
 updateRootDisplay();
 applyFX();
 highlightActiveChip();
+refreshStepGrid();
 }
 
 async function initAudio(activationPromise){
@@ -807,6 +808,25 @@ st_.uiDirty=true;
 
 let stepUiByIndex=Array.from({length:16},()=>[]);
 let activeStepUiIndex=-1;
+function refreshStepGrid(){
+const pattern=DRUM_PATTERNS[pat_.d]||{};
+document.querySelectorAll('.step[data-track][data-step]').forEach(step=>{
+const lane=step.dataset.track,index=Number(step.dataset.step);
+const velocity=Number(pattern[lane]?.[index]||0);
+const fill=step.querySelector('.vel-fill');
+if(fill)fill.style.height=velocity>0?`${Math.round(30+velocity*70)}%`:'0';
+step.setAttribute('aria-pressed',velocity>0?'true':'false');
+const detail=seq_[lane]?.[index];
+if(detail&&detail.p<100)step.dataset.prob=String(Math.round(detail.p));else delete step.dataset.prob;
+if(detail&&detail.r>1)step.dataset.ratchet=String(detail.r);else delete step.dataset.ratchet;
+});
+document.querySelectorAll('.track[data-track]').forEach(row=>{
+const lane=row.dataset.track,muted=Boolean(st_.muteState[lane]);
+row.classList.toggle('muted',muted);
+const button=row.querySelector('.track-btn');
+if(button){button.setAttribute('aria-pressed',muted?'true':'false');button.textContent=muted?'U':'M';button.title=`${muted?'Unmute':'Mute'} ${row.querySelector('.track-name')?.textContent||lane}`;}
+});
+}
 function updateStepUI(){
 const next=st_.idx%16;
 if(activeStepUiIndex>=0)stepUiByIndex[activeStepUiIndex].forEach(el=>el.classList.remove('playing'));
@@ -1140,10 +1160,10 @@ Object.keys(BASS_PATS).forEach(k=>{const o=document.createElement('option');o.va
 Object.keys(KEYS_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_k.appendChild(o)});
 Object.keys(PAD_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_p.appendChild(o)});
 sel_d.value=pat_.d;sel_b.value=pat_.b;sel_k.value=pat_.k;sel_p.value=pat_.p;
-sel_d.addEventListener('change',e=>{pushHistory();pat_.d=e.target.value;log(`drum: ${pat_.d}`)});
-sel_b.addEventListener('change',e=>{pushHistory();pat_.b=e.target.value;log(`bass: ${pat_.b}`)});
-sel_k.addEventListener('change',e=>{pushHistory();pat_.k=e.target.value;log(`keys: ${pat_.k}`)});
-sel_p.addEventListener('change',e=>{pushHistory();pat_.p=e.target.value;log(`pads: ${pat_.p}`)});
+sel_d.addEventListener('change',e=>{pushHistory();pat_.d=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();log(`drum: ${pat_.d}`)});
+sel_b.addEventListener('change',e=>{pushHistory();pat_.b=e.target.value;updateRootDisplay();highlightActiveChip();log(`bass: ${pat_.b}`)});
+sel_k.addEventListener('change',e=>{pushHistory();pat_.k=e.target.value;updateRootDisplay();highlightActiveChip();log(`keys: ${pat_.k}`)});
+sel_p.addEventListener('change',e=>{pushHistory();pat_.p=e.target.value;updateRootDisplay();highlightActiveChip();log(`pads: ${pat_.p}`)});
 const styles_c=$id('styles');
 const filterStyles=q=>{
 const query=q.toLowerCase();
@@ -1250,6 +1270,7 @@ const ratch=parseInt(step.dataset.ratchet||'1');
 const newR=ratch===1?2:ratch===2?4:1;
 step.dataset.ratchet=newR>1?newR:'';
 seq_[trackKey][i].r=newR;
+refreshStepGrid();
 log(`${nm} step ${i+1} ratchet=${newR}`);
 }else{
 dp[trackKey][i]=dp[trackKey][i]>0?0:0.8;
@@ -1535,6 +1556,7 @@ if(st_.started){Tone.Transport.stop();Tone.Transport.cancel();}st_.transportId=n
 st_.idx=-1;
 st_.barCount=0;
 const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
+$id('play').textContent='▶ Play';
 document.querySelectorAll('.step').forEach(el=>el.classList.remove('playing'));
 st('stopped');
 log("playback stopped");
@@ -1543,11 +1565,9 @@ $id('random').addEventListener('click',randomize);
 $id('export').addEventListener('click',exportWAV);
 $id('record').addEventListener('click',toggleRecord);
 $id('layout').addEventListener('click',()=>{
-st_.layoutIdx=(st_.layoutIdx+1)%51;
-const cfg=st_.layoutIdx===50?finalBlend:layouts[st_.layoutIdx];
-const nm=cfg.id==='final'?'final blend':`layout ${cfg.id}`;
-applyLayout(cfg,nm);
-log(`layout: ${nm}`);
+st_.density=st_.density==='comfortable'?'compact':'comfortable';
+applyLayout(st_.density);
+log(`grid spacing: ${st_.density}`);
 });
 $id('theme').addEventListener('click',toggleTheme);
 $id('tap').addEventListener('click',tapTempo);
@@ -1606,7 +1626,7 @@ st_.theme=savedTheme;
 document.documentElement.setAttribute('data-theme',st_.theme);
 refreshVizColors();
 
-applyLayout(finalBlend,'final blend');
+applyLayout(st_.density);
 resizeVizCanvas();
 buildUI();
 // Reflect this page load's random playable style before the first paint.
