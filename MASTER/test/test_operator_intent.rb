@@ -188,7 +188,7 @@ class OperatorIntentTest < Minitest::Test
     with_inventory do |root|
       agent = Object.new
       result = Master::CLI::OperatorIntent.new(root:, agent:).call(
-        "please redeploy OPENBSD, RAILS, STUDIO on vm23"
+        "please redeploy OPENBSD, RAILS, STUDIO and MASTER/web on vm23"
       )
 
       assert_equal :unsupported, result.status
