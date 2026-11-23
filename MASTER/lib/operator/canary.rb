@@ -266,7 +266,7 @@ module Operator
 
     class GitCommandError < StandardError; end
 
-    SWEEP_GLOBS = %w[MASTER/lib/**/*.rb MASTER/law/**/*.rb RAILS/*/app/**/*.rb].freeze
+    SWEEP_GLOBS = %w[MASTER/lib/**/*.rb MASTER/law/**/*.rb RAILS/*/app/**/*.rb STUDIO/**/*.rb].freeze
     TIMEOUT = 900
     # A single-app Rails suite may take close to an hour on a one-core host.
     # Keep the whole child process group under a real deadline.
@@ -287,9 +287,9 @@ module Operator
 
     # Stops at the first failure: the later checks load the same code, and the
     # first message is the one the operator needs.
-    def run(root:, rehearse: true, runner: method(:capture))
+    def run(root:, rehearse: true, studio: false, runner: method(:capture))
       results = []
-      steps(root, rehearse, runner).each do |name, step|
+      steps(root, rehearse, studio, runner).each do |name, step|
         results << step.call
         results.last.name = name
         break unless results.last.ok
@@ -297,7 +297,7 @@ module Operator
       results
     end
 
-    def steps(root, rehearse, runner)
+    def steps(root, rehearse, studio, runner)
       ruby = RbConfig.ruby
       list = {
         "syntax" => -> { syntax(root) },
@@ -305,6 +305,11 @@ module Operator
         "boot smoke" => -> { shell(runner, [ruby, "tools/boot_smoke.rb"], File.join(root, "MASTER")) },
       }
       list["rehearse"] = -> { shell(runner, [ruby, "OPENBSD/bin/rehearse"], root) } if rehearse
+      if studio
+        list["STUDIO check + test"] = lambda {
+          shell(runner, [ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"], File.join(root, "STUDIO"))
+        }
+      end
       list
     end
 
@@ -368,7 +373,7 @@ module Operator
       return [false, "cannot read HEAD of #{root}"] if sha.empty?
       return [false, "HEAD #{sha[0, 9]} is not origin/main (#{git.call(root, 'rev-parse', 'origin/main')[0, 9]}); the box deploys origin/main, so push and deploy from that commit"] unless git.call(root, "rev-parse", "origin/main") == sha
 
-      dirty = git.call(root, "status", "--porcelain", "--untracked-files=normal", "--", "MASTER", "RAILS", "OPENBSD")
+      dirty = git.call(root, "status", "--porcelain", "--untracked-files=normal", "--", "MASTER", "RAILS", "OPENBSD", "STUDIO")
       return [false, "commit these first; remove untracked files that are not part of the release:\n#{dirty.lines.first(5).join}"] unless dirty.empty?
 
       lead = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{sha}"
@@ -379,7 +384,7 @@ module Operator
 
         preflight_word = "VPS_DEPLOY_SKIP_PREFLIGHT=1 I_UNDERSTAND_FAST_DEPLOY=1"
       else
-        results = run(root:, runner:)
+        results = run(root:, runner:, studio: inventory.target_kind(app) == :all)
         out.puts(report(results))
         return [false, "preflight failed on #{sha[0, 9]}; nothing was sent to the box"] unless results.all?(&:ok)
 
