@@ -28,7 +28,7 @@ task :check do
   if File.directory?(proof_root) && !File.symlink?(proof_root)
     invalid_proofs = Dir.children(proof_root).reject do |entry|
       path = File.join(proof_root, entry)
-      entry.match?(/\\A[a-z0-9_]+_test\\.rb\\z/) && File.file?(path) && !File.symlink?(path)
+      entry.match?(/\A[a-z0-9_]+_test\.rb\z/) && File.file?(path) && !File.symlink?(path)
     end
     raise "STUDIO root proof entrypoints are invalid: #{invalid_proofs.join(', ')}" unless invalid_proofs.empty?
   end
