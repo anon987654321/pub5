@@ -196,13 +196,14 @@ class TestCommandRegistryDispatch < Minitest::Test
 
   def test_host_diagnostic_redactor_covers_flags_and_bearer_tokens
     output = Registry.redact_host_diagnostic_output(
-      "worker --api-key abc123 --password 'secret value' Authorization: Bearer token123"
+      "worker --api-key abc123 --password 'secret value' Authorization: Bearer token123 AWS_SECRET_ACCESS_KEY=awssecret"
     )
 
     refute_includes output, "abc123"
     refute_includes output, "secret value"
     refute_includes output, "token123"
-    assert_equal 3, output.scan("[REDACTED]").length
+    refute_includes output, "awssecret"
+    assert_equal 4, output.scan("[REDACTED]").length
   end
 
   def test_mcp_status_command_is_a_passive_snapshot
