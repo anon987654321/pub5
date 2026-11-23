@@ -101,14 +101,14 @@ module Master
         {
           "url" => browser.current_url,
           "marks" => browser.evaluate(MARKS_JS),
-          "image_base64" => browser.screenshot(format: "jpeg", quality: quality, encoding: :base64),
+          "image_base64" => browser.screenshot(format: "jpeg", quality:, encoding: :base64),
         }
       end
     end
 
     module Wait
       def self.idle!(browser, timeout: 15)
-        browser.network.wait_for_idle(timeout: timeout)
+        browser.network.wait_for_idle(timeout:)
       rescue StandardError => e
         raise Inconclusive, "network idle wait failed (#{e.class})" if e.class.name.to_s.include?("Timeout")
         raise
