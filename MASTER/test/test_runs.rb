@@ -67,7 +67,7 @@ class TestRuns < Minitest::Test
     rakefile = File.read(File.join(Operator::Runs::ROOT, "MASTER", "Rakefile"))
     checker = File.read(File.join(Operator::Runs::ROOT, "MASTER", "bin", "check"))
 
-    assert_includes rakefile, '"test/test_operator_intent.rb"'
+    assert_includes rakefile, '"test/test_operator_*.rb"'
     assert_includes rakefile, '"test/test_turn_router.rb"'
     assert_includes rakefile, "Operator::ParallelTests.run(files, command:)"
     assert_includes rakefile, '"-Ilib:test"'
