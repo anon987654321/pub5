@@ -1201,8 +1201,8 @@ module Master
              .encode("UTF-8", invalid: :replace, undef: :replace, replace: "�")
              .gsub(/(?i)\b(authorization\b\s*[=:]\s*)(?:Bearer\s+)?[^\s,;]+/, '\1[REDACTED]')
              .gsub(/(?i)(--?authorization\s+)(?:Bearer\s+)?(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
-             .gsub(/(?i)\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret)\b\s*[=:]\s*)[^\s,;]+/, '\1[REDACTED]')
-             .gsub(/(?i)(--?(?:api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)\s+)(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
+             .gsub(/(?i)\b([A-Za-z0-9_-]*(?:api[_-]?key|access[_-]?(?:token|key)|refresh[_-]?token|token|password|secret|private[_-]?key|credential)[A-Za-z0-9_-]*\s*[=:]\s*)[^\s,;]+/, '\1[REDACTED]')
+             .gsub(/(?i)(--?[A-Za-z0-9_-]*(?:api[_-]?key|access[_-]?(?:token|key)|refresh[_-]?token|token|password|secret|private[_-]?key|credential)[A-Za-z0-9_-]*\s+)(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
              .gsub(/(?i)\bBearer\s+[A-Za-z0-9._~+\/=-]+/, "Bearer [REDACTED]")
              .gsub(%r{(?i)(://)[^/@:\s]+:[^/@\s]+@}, '\1[REDACTED]@')
       end
