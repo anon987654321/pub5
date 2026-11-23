@@ -167,8 +167,11 @@ module Master
         return false unless request.match?(NON_DEPLOYABLE_TREE_RE)
         return false unless request.match?(/\b(?:deploy|re[- ]?deploy)\b/i)
         return false unless self.class.destination_of(request).to_s.downcase == "vm23"
-        return false if self.class.complete_stack_components?(request) || self.class.full_inventory_scope?(request)
 
+        # An explicit non-deployable tree stays unsupported even when the same
+        # sentence also names the canonical OPENBSD + RAILS release. Otherwise
+        # the deterministic full-stack shortcut silently drops STUDIO and
+        # reports a deploy target the operator did not actually request.
         true
       end
 
