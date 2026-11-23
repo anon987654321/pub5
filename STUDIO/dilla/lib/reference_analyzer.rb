@@ -56,7 +56,10 @@ module Studio
                         pick_onsets(spectral_flux(spectra, band_indices)).first
                       end
 
-        features = { "duration_s" => round(mono.length.to_f / SAMPLE_RATE, 2) }
+        features = {
+          "duration_s" => round(mono.length.to_f / SAMPLE_RATE, 2),
+          "signal" => signal_metrics(mono)
+        }
         features.merge!(grid_features(drum_onsets, envelope, bpm, phase))
         features["bpm"] = round(bpm, 2)
         features["bpm_confidence"] = round(confidence, 3)
@@ -93,6 +96,34 @@ module Studio
       end
 
       private
+
+      def signal_metrics(samples)
+        return {} if samples.empty?
+
+        peak = 0.0
+        sum_squares = 0.0
+        clipped = 0
+        near_silence = 0
+        samples.each do |sample|
+          magnitude = sample.abs
+          peak = magnitude if magnitude > peak
+          sum_squares += sample * sample
+          clipped += 1 if magnitude >= 0.999
+          near_silence += 1 if magnitude <= 0.0005
+        end
+        rms = Math.sqrt(sum_squares / samples.length.to_f)
+        {
+          "peak_dbfs" => round(amplitude_dbfs(peak), 2),
+          "rms_dbfs" => round(amplitude_dbfs(rms), 2),
+          "clipped_samples" => clipped,
+          "clipped_sample_pct" => round(clipped * 100.0 / samples.length, 4),
+          "near_silence_sample_pct" => round(near_silence * 100.0 / samples.length, 3)
+        }
+      end
+
+      def amplitude_dbfs(value)
+        value <= 1e-6 ? -120.0 : 20.0 * Math.log10(value)
+      end
 
       def normalize_duration(value)
         return MAX_SECONDS if value.nil? || value.to_s.empty?

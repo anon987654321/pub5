@@ -24,6 +24,9 @@ module Master
       ].freeze
       MAX_QUERY_BYTES = 240
       MAX_RESULTS = 100
+      MAX_DISCOVERY_QUERIES = 20
+      MAX_ANALYSIS_SECONDS = 60
+      MAX_ANALYSIS_BYTES = 256 * 1024 * 1024
       MAX_LIBRARY_FILES = 200_000
       MAX_HASH_FILES = 50_000
       MAX_SMALL_AUDIO_BYTES = 64 * 1024
@@ -40,12 +43,15 @@ module Master
       def call(action:, query: nil, search_id: nil, path: nil, queries: nil,
                username: nil, filename: nil, size: nil, consent: false,
                rights_basis: nil, paths: nil, output_path: nil, overwrite: false,
-               mode: "candidates", **_options)
+               mode: "candidates", max_duration: nil, **_options)
         law_admission!
         case action.to_s
         when "status" then status
         when "search" then search(query)
+        when "discover" then discover(queries)
         when "results" then search_results(search_id)
+        when "rank" then ranked_search_results(search_id)
+        when "analyze" then analyze_audio(path, max_duration:)
         when "downloads" then downloads
         when "library" then library(path)
         when "quality" then quality(path)
@@ -77,7 +83,7 @@ module Master
           connected: server_connected?(state),
           endpoint: endpoint_label,
           server: state.select { |key, _| %w[state isConnected connected username listenPort].include?(key) },
-          capabilities: %w[search results downloads library quality manifest catalog duplicates gaps queue],
+          capabilities: %w[search discover results rank analyze downloads library quality manifest catalog duplicates gaps queue],
           acquisition: "one explicitly selected file per invocation",
           rights_basis_required: Array(policy.fetch("rights_basis_required")),
         }
@@ -156,6 +162,203 @@ module Master
           results: files.first(MAX_RESULTS),
           note: "Only unlocked audio files are listed. Peer metadata is unverified."
         }
+      end
+
+      def discover(queries)
+        unless queries.is_a?(Array) && queries.any? && queries.length <= MAX_DISCOVERY_QUERIES
+          raise PolicyError, "soulseek: discover needs 1–#{MAX_DISCOVERY_QUERIES} explicit queries"
+        end
+
+        cleaned = queries.map { |value| clean_query(value) }.uniq
+        searches = cleaned.map { |text| search(text).reject { |key, _| key == :action } }
+        {
+          action: "discover",
+          submitted: searches.length,
+          searches:,
+          note: "Searches only. Inspect each search_id with results or rank after peers respond; no files are downloaded."
+        }
+      end
+
+      def ranked_search_results(search_id)
+        result = search_results(search_id)
+        ranked = result.fetch(:results).map { |file| rank_candidate(file) }
+                       .sort_by { |file| [-file.fetch(:candidate_priority_score), file.fetch(:filename)] }
+        result.merge(
+          action: "rank",
+          results: ranked,
+          ranking_note: "Priority is a triage heuristic over filenames and unverified peer metadata, not a measurement or certification of audio quality."
+        )
+      end
+
+      def rank_candidate(file)
+        extension = File.extname(file.fetch(:filename)).downcase
+        score = 0
+        signals = []
+
+        if LOSSLESS_EXTENSIONS.include?(extension)
+          score += 40
+          signals << "lossless_extension_claim"
+        elsif LOSSY_EXTENSIONS.include?(extension)
+          score += 5
+          signals << "lossy_extension_claim"
+        end
+
+        sample_rate = numeric_metadata(file[:sample_rate])
+        if sample_rate && sample_rate >= 48_000
+          score += 20
+          signals << "peer_claims_sample_rate_at_least_48_khz"
+        elsif sample_rate && sample_rate >= 44_100
+          score += 15
+          signals << "peer_claims_sample_rate_at_least_44_1_khz"
+        elsif sample_rate && sample_rate >= 32_000
+          score += 8
+          signals << "peer_claims_sample_rate_at_least_32_khz"
+        end
+
+        bit_depth = numeric_metadata(file[:bit_depth])
+        if bit_depth && bit_depth >= 24
+          score += 15
+          signals << "peer_claims_24_bit_or_higher"
+        elsif bit_depth && bit_depth >= 16
+          score += 10
+          signals << "peer_claims_16_bit_or_higher"
+        end
+
+        if LOSSY_EXTENSIONS.include?(extension)
+          bitrate = numeric_metadata(file[:bitrate])
+          bitrate_kbps = bitrate && (bitrate > 10_000 ? bitrate / 1_000.0 : bitrate)
+          if bitrate_kbps && bitrate_kbps >= 320
+            score += 10
+            signals << "peer_claims_lossy_bitrate_at_least_320_kbps"
+          elsif bitrate_kbps && bitrate_kbps >= 256
+            score += 6
+            signals << "peer_claims_lossy_bitrate_at_least_256_kbps"
+          end
+        end
+
+        if file[:free_slot]
+          score += 10
+          signals << "peer_reports_free_upload_slot"
+        end
+
+        file.merge(
+          candidate_priority_score: score,
+          candidate_signals: signals,
+          ranking_basis: "filename_and_unverified_peer_metadata",
+          quality_verified: false
+        )
+      end
+
+      def numeric_metadata(value)
+        number = Float(value)
+        number.finite? && number >= 0 ? number : nil
+      rescue ArgumentError, TypeError
+        nil
+      end
+
+      def analyze_audio(path, max_duration:)
+        require_policy!("quality_check", expected: "explicit_path_read_only")
+        value = path.to_s.strip
+        raise PolicyError, "soulseek: analyze needs an explicit local WAV path" if value.empty?
+
+        expanded = File.expand_path(value)
+        original_stat = File.lstat(expanded)
+        unless original_stat.file? && !original_stat.symlink?
+          raise PolicyError, "soulseek: analysis path must be a regular non-symlink file"
+        end
+        raise PolicyError, "soulseek: sample analysis currently accepts WAV files only" unless File.extname(expanded).casecmp?(".wav")
+
+        real_path = File.realpath(expanded)
+        size = File.size(real_path)
+        raise PolicyError, "soulseek: WAV is empty" unless size.positive?
+        raise PolicyError, "soulseek: WAV exceeds #{MAX_ANALYSIS_BYTES} bytes" if size > MAX_ANALYSIS_BYTES
+
+        duration = max_duration.nil? ? MAX_ANALYSIS_SECONDS.to_f : Float(max_duration)
+        unless duration.finite? && duration.positive? && duration <= MAX_ANALYSIS_SECONDS
+          raise PolicyError, "soulseek: max_duration must be greater than zero and at most #{MAX_ANALYSIS_SECONDS} seconds"
+        end
+
+        analyzer_path = File.expand_path("../../../STUDIO/dilla/lib/reference_analyzer.rb", __dir__)
+        raise PolicyError, "soulseek: STUDIO's Ruby reference analyzer is unavailable" unless File.file?(analyzer_path)
+        require analyzer_path unless defined?(Studio::DillaReference::Analyzer)
+
+        metadata = wav_metadata(real_path)
+        before_digest = Digest::SHA256.file(real_path).hexdigest
+        features = Studio::DillaReference::Analyzer.new.analyze(real_path, max_duration: duration)
+        after_digest = Digest::SHA256.file(real_path).hexdigest
+        after_stat = File.stat(real_path)
+        stable_before = [original_stat.dev, original_stat.ino, original_stat.size, original_stat.mtime]
+        stable_after = [after_stat.dev, after_stat.ino, after_stat.size, after_stat.mtime]
+        unless before_digest == after_digest && stable_before == stable_after
+          raise PolicyError, "soulseek: WAV changed during analysis; discard this report and retry"
+        end
+
+        bytes_per_frame = metadata.fetch(:channels) * (metadata.fetch(:bits_per_sample) / 8.0)
+        source_duration = metadata.fetch(:data_bytes) / (metadata.fetch(:sample_rate_hz) * bytes_per_frame)
+        {
+          action: "analyze",
+          path: real_path,
+          bytes: size,
+          sha256: after_digest,
+          metadata: metadata.merge(source_duration_s: source_duration.round(3)),
+          analysis: features,
+          decoded: true,
+          note: "STUDIO decoded and analysed this WAV read-only. Peak, RMS, clipping and near-silence measurements cover the analysed segment; they do not identify noise, prove source fidelity or replace human listening."
+        }
+      rescue Errno::ENOENT, Errno::ENOTDIR, Errno::EACCES, IOError, SystemCallError => error
+        raise PolicyError, "soulseek: cannot read sample for analysis (#{error.class})"
+      rescue ArgumentError, TypeError
+        raise PolicyError, "soulseek: max_duration must be a finite number"
+      rescue Studio::DillaReference::AnalysisError => error
+        raise PolicyError, "soulseek: WAV analysis failed: #{error.message}"
+      end
+
+      def wav_metadata(path)
+        format = channels = sample_rate = bits = data_bytes = nil
+        File.open(path, "rb") do |file|
+          header = file.read(12)
+          unless header && header.bytesize == 12 && header.byteslice(0, 4) == "RIFF" && header.byteslice(8, 4) == "WAVE"
+            raise PolicyError, "soulseek: file is not a RIFF/WAVE stream"
+          end
+
+          loop do
+            chunk = file.read(8)
+            break if chunk.nil? || chunk.empty?
+            raise PolicyError, "soulseek: truncated WAV chunk header" unless chunk.bytesize == 8
+
+            chunk_id = chunk.byteslice(0, 4)
+            chunk_size = chunk.byteslice(4, 4).unpack1("V")
+            if chunk_id == "fmt "
+              raise PolicyError, "soulseek: unsupported oversized WAV format chunk" unless chunk_size.between?(16, 4096)
+              payload = file.read(chunk_size)
+              raise PolicyError, "soulseek: truncated WAV format chunk" unless payload && payload.bytesize == chunk_size
+              format, channels, sample_rate = payload.unpack("vvV")
+              bits = payload.byteslice(14, 2).unpack1("v")
+              format = payload.byteslice(24, 2).unpack1("v") if format == 0xfffe && payload.bytesize >= 40
+            else
+              data_bytes = chunk_size if chunk_id == "data"
+              file.seek(chunk_size, IO::SEEK_CUR)
+            end
+            file.seek(1, IO::SEEK_CUR) if chunk_size.odd?
+          end
+        end
+
+        unless [1, 3].include?(format) && channels.to_i.between?(1, 32) &&
+               sample_rate.to_i.between?(4_000, 384_000) && [8, 16, 24, 32, 64].include?(bits) &&
+               data_bytes.to_i.positive?
+          raise PolicyError, "soulseek: WAV format metadata is incomplete or unsupported"
+        end
+
+        {
+          container: "RIFF/WAVE",
+          encoding: format == 1 ? "PCM" : "IEEE_FLOAT",
+          channels: channels,
+          sample_rate_hz: sample_rate,
+          bits_per_sample: bits,
+          data_bytes: data_bytes
+        }
+      rescue Errno::ENOENT, Errno::EACCES, IOError, SystemCallError
+        raise PolicyError, "soulseek: cannot read WAV metadata"
       end
 
       def downloads

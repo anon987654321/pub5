@@ -873,6 +873,17 @@ class TestDillaReferenceProfile < Minitest::Test
     end
   end
 
+  def test_signal_metrics_measure_peak_rms_clipping_and_near_silence
+    analyzer = Studio::DillaReference::Analyzer.new
+    metrics = analyzer.send(:signal_metrics, [0.0, 0.5, -1.0, 1.0])
+
+    assert_in_delta 0.0, metrics.fetch("peak_dbfs"), 0.01
+    assert_in_delta(-2.50, metrics.fetch("rms_dbfs"), 0.02)
+    assert_equal 2, metrics.fetch("clipped_samples")
+    assert_in_delta 50.0, metrics.fetch("clipped_sample_pct"), 0.001
+    assert_in_delta 25.0, metrics.fetch("near_silence_sample_pct"), 0.001
+  end
+
   def test_analyzer_applies_a_finite_ten_minute_default_limit
     analyzer = Studio::DillaReference::Analyzer.new
     assert_equal 600, analyzer.send(:normalize_duration, nil)

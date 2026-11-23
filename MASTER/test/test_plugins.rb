@@ -358,6 +358,89 @@ class TestPlugins < Minitest::Test
     end
   end
 
+  def test_soulseek_discovery_submits_bounded_deduplicated_queries
+    plugin = Master::Plugin.load("soulseek")
+    ids = [
+      "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55",
+      "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd56"
+    ]
+    calls = []
+    plugin.define_singleton_method(:api_request) do |method, path, payload = nil|
+      calls << [method, path, payload]
+      { "id" => ids.fetch(calls.length - 1), "state" => "InProgress" }
+    end
+
+    result = plugin.call(action: "discover", queries: ["J Dilla", "Hugh Mundell", "J Dilla"])
+    assert_equal 2, result.fetch(:submitted)
+    assert_equal ["J Dilla", "Hugh Mundell"], result.fetch(:searches).map { |row| row.fetch(:query) }
+    assert_equal 2, calls.length
+    assert calls.all? { |method, path, _| method == :post && path == "searches" }
+  end
+
+  def test_soulseek_discovery_rejects_more_than_twenty_queries_before_network_access
+    plugin = Master::Plugin.load("soulseek")
+    plugin.define_singleton_method(:api_request) { |*| flunk "invalid discovery must not contact slskd" }
+
+    assert_raises(Master::Plugin::PolicyError) do
+      plugin.call(action: "discover", queries: Array.new(21, "recording"))
+    end
+  end
+
+  def test_soulseek_ranks_candidates_without_claiming_quality_verification
+    plugin = Master::Plugin.load("soulseek")
+    id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
+    plugin.define_singleton_method(:api_request) do |_method, _path, _payload = nil|
+      [{
+        "username" => "peer-a",
+        "hasFreeUploadSlot" => true,
+        "files" => [{
+          "filename" => "A/Break.flac", "size" => 12_000_000,
+          "sampleRate" => 96_000, "bitDepth" => 24, "isLocked" => false
+        }]
+      }, {
+        "username" => "peer-b",
+        "hasFreeUploadSlot" => false,
+        "files" => [{
+          "filename" => "B/Break.mp3", "size" => 320_000,
+          "sampleRate" => 44_100, "bitDepth" => 16, "bitRate" => 320, "isLocked" => false
+        }]
+      }]
+    end
+
+    result = plugin.call(action: "rank", search_id: id)
+    rows = result.fetch(:results)
+    assert_equal ["A/Break.flac", "B/Break.mp3"], rows.map { |row| row.fetch(:filename) }
+    assert_operator rows.first.fetch(:candidate_priority_score), :>, rows.last.fetch(:candidate_priority_score)
+    refute rows.any? { |row| row.fetch(:quality_verified) }
+    assert_equal "filename_and_unverified_peer_metadata", rows.first.fetch(:ranking_basis)
+  end
+
+  def test_soulseek_analyze_uses_studio_wav_decoder_read_only
+    require "tmpdir"
+    sample_rate = 22_050
+    samples = Array.new(sample_rate) do |index|
+      index < 20 ? 32_767 : (Math.sin(2 * Math::PI * 440 * index / sample_rate) * 20_000).round
+    end
+    pcm = samples.pack("s<*")
+    fmt = ["fmt ", 16, 1, 1, sample_rate, sample_rate * 2, 2, 16].pack("a4VvvVVvv")
+    data = ["data", pcm.bytesize].pack("a4V") + pcm
+    chunks = fmt + data
+
+    Dir.mktmpdir("soulseek-analyze") do |root|
+      wav = File.join(root, "approved-sample.wav")
+      File.binwrite(wav, "RIFF" + [4 + chunks.bytesize].pack("V") + "WAVE" + chunks)
+      before = Digest::SHA256.file(wav).hexdigest
+      result = Master::Plugin.load("soulseek").call(action: "analyze", path: wav)
+      assert_equal true, result.fetch(:decoded)
+      assert_equal before, result.fetch(:sha256)
+      assert_equal "RIFF/WAVE", result.dig(:metadata, :container)
+      assert_equal 22_050, result.dig(:metadata, :sample_rate_hz)
+      assert_equal 16, result.dig(:metadata, :bits_per_sample)
+      assert result.dig(:analysis, "signal").key?("peak_dbfs")
+      assert_equal before, Digest::SHA256.file(wav).hexdigest
+    end
+  end
+
   def test_soulseek_search_returns_the_server_search_id
     id = "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55"
     plugin = Master::Plugin.load("soulseek")
