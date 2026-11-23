@@ -686,55 +686,54 @@ sees, for every app. It has to be the union of what all backends need — a
 `geolocation=()` there silently killed brgen's `#nearby` while the Rails
 initializer said `(self)`.
 
-When `bin/vps-deploy` fails it says where. Whatever the stage (pull, ci+sync,
-migrate, precompile, restart, health, checks), an exit trap stamps
-`last_deploy_<app>.json` failed, prints `FAILED at stage "<stage>"`, says
-whether the app was stopped for the deploy and so is down (the next command is
-`doas /usr/sbin/rcctl start <app>` or a rerun), lists amber or bsdports if they are down,
-releases the lock and the deploy flag, and appends `finished ... exit=N
-stage=...` to `/home/dev/vps-deploy.log` directly, so a dropped ssh session still leaves
-the verdict. A kill or hangup counts as a failure with the stage it interrupted.
+When `bin/vps-deploy` fails, the exit trap records the failing stage in
+the durable receipt under `/var/db/pub5/deploy_runs/`, prints
+`FAILED at stage "<stage>"`, attempts to restore services that were running
+before the release, and releases the deploy lock and resource-guard marker.
+The durable receipt remains on vm23; the full transcript belongs to the
+workstation collector under `~/.pub5/deployments/`. A dropped SSH session,
+signal or failed stage is not a successful release.
 
 ### The deploy sequence and its recovery
 
-`bin/vps-deploy all` (or one app) now does this, in order, and stops at the first
-failure. Nothing is stopped before step 4.
+Run `MASTER/bin/operator vps deploy <app|group|all> --remote` from the
+workstation. The workstation performs the expensive and proof-producing work;
+vm23 admits, synchronizes and activates the pinned release. The flow stops at
+the first failure.
 
-1. Take the lock, start the log and atomically create a root-private fleet receipt
-   under `/var/db/pub5/deploy_runs/`. The receipt exists before any service is
-   stopped; child app runs append to the one parent run ID.
-2. Pin one commit. The target is `VPS_DEPLOY_SHA`, or `origin/main` fetched once
-   here, and the run prints `pinned <sha> (box HEAD was <sha>)`. It must be a
-   fast-forward of the box. No later step pulls; each checks `HEAD` against the pin.
-3. Prove the commit boots. `bin/operator vps deploy <app> --remote` runs
-   `Operator::DeployPreflight` (`MASTER/lib/operator/canary.rb`) on your machine (Ruby syntax sweep of
-   `MASTER/lib`, `MASTER/law` and `RAILS/*/app`; `test_law_files_load.rb`;
-   `MASTER/tools/boot_smoke.rb`; `OPENBSD/bin/rehearse`) and sends the box the SHA
-   with `VPS_DEPLOY_PREFLIGHT_SHA`. A run typed on the box has no such word and
-   runs the first three itself, on the pinned commit, detached; a failure puts the
-   checkout back where it was. The exit trap restores that ref if the session is
-   interrupted while the checkout is detached. Break-glass is
-   `VPS_DEPLOY_SKIP_PREFLIGHT=1` and, like the runtime-check skip, only with
-   `I_UNDERSTAND_FAST_DEPLOY=1`.
-4. Record `doas rcctl ls started`. This is what the exit trap restores and what
-   the durable receipt records. The pinned SHA, previous SHA, service snapshot,
-   ports and restore order are immutable after the snapshot is committed.
-5. Choose the order. `master` leads only when every app that was started answers
-   `/up` and the last `resource_guard` tick shows `mem_avail` at or above
-   `VPS_DEPLOY_MASTER_MIN_AVAIL` (10). Otherwise: brgen, mrdamascy, amber, bsdports, master.
-6. For each target: wait until every running app answers `/up` (no CI, bundle or
-   precompile on top of a Falcon boot); disk and load preflight; CI and sync;
-   migrate; precompile (again after settling); restart; `/up`; stylesheet;
-   solid_queue proof; restore anything shed, one service at a time, each waiting for
-   its `/up`; the loopback checks; the flow journeys for that app only
-   (`FLOW_APP=<app>`, HTTP only, one pass or fail line per flow).
-7. On any failure the exit trap of the top-level run restores every service from
-   the step 4 list that is not running, in serving order (brgen, amber, bsdports,
-   master, then remaining started services such as mrdamascy), one at a time,
-   each waiting up to
-   `VPS_DEPLOY_RESTORE_WAIT` (240) seconds for `/up`. Each line says whether the
-   deploy stopped it, `resource_guard` shed it, or it went down for another reason.
-   The exit status stays the failure's, and the trap names the stage.
+1. On the workstation, run preflight and the selected Rails apps' complete
+   `bin/ci` suites. Build production assets and record SHA attestations for
+   the same commit. The operator sends the exact preflight, CI and asset proofs
+   with the remote deployment request. No suite, dependency install, repository
+   scan or asset build runs on vm23.
+2. vm23 acquires the deploy lock, clears any caller-supplied admission token,
+   fetches and pins the exact requested SHA (or the fetched `origin/main`
+   default), and refuses a non-fast-forward update. It requires a matching
+   workstation preflight attestation; every selected Rails app also requires
+   a matching workstation CI attestation. A missing or mismatched proof is a
+   refusal before services are touched. The host does not run a fallback scan.
+3. The lock-owning parent records the original running-service snapshot in the
+   durable receipt, then checks host load, free swap and recent CPU pressure
+   before any mirror or app rollout. Fleet admission runs once; serial child
+   deploys inherit only the parent's internally established token. Resource
+   shedding remains active during the release.
+4. For `all`, apply the reviewed `OPENBSD/mirror/**` payload after admission.
+   Select the deployment order from the inventory and live service/memory
+   evidence. If the evidence is missing or degraded, move MASTER to the end.
+5. For each target, verify the checkout still matches the pinned SHA, check
+   disk and host-load limits, and run the bounded app sync plus frozen,
+   read-only production-bundle check. Verify that the staged asset manifest
+   and workstation build stamp both name the pinned SHA. A missing bundle or
+   asset is an off-host build blocker; vm23 does not install gems or compile.
+6. Prepare and migrate the production databases, restart only the selected
+   service, and verify `/up`, stylesheets, Solid Queue and the app's loopback
+   flow checks. Wait for one app to settle before touching the next. Finish
+   with the independent public canary from the workstation.
+7. On failure, the lock-owning parent restores services recorded as running
+   before the release, in serving order, one at a time. Each restore waits up
+   to `VPS_DEPLOY_RESTORE_WAIT` (240) seconds for `/up`. The receipt records
+   the stage, recovery outcome and any service that remains down. The original
+   failure exit status is preserved.
 
 #### Public release acceptance
 
