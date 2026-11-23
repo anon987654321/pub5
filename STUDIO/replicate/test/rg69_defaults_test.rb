@@ -20,6 +20,7 @@ class TestRg69Defaults < Minitest::Test
   JS = File.join(ROOT, "dilla", "rg69", "rg69.js")
   HTML = File.join(ROOT, "dilla", "rg69", "rg69.html")
   TONE = File.join(ROOT, "dilla", "vendor", "tone", "Tone.min.js")
+  CSS = File.join(ROOT, "dilla", "rg69", "rg69.css")
   DILLA_DATA = File.join(ROOT, "dilla", "data", "dilla.json")
 
   # The controls whose markup default must equal the engine's boot default.
@@ -28,6 +29,7 @@ class TestRg69Defaults < Minitest::Test
   def js = @js ||= File.read(JS)
   def html = @html ||= File.read(HTML)
   def tone = @tone ||= File.read(TONE)
+  def css = @css ||= File.read(CSS)
   def dilla_data = @dilla_data ||= JSON.parse(File.read(DILLA_DATA))
 
   def test_panel_controls_are_driven_by_engine_state_and_mapped_back
@@ -389,7 +391,7 @@ class TestRg69Defaults < Minitest::Test
   def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
     refresh = js[/function refreshStepGrid\(\)(.*?)\n\}/m, 1] or raise "no state-driven step renderer"
     sync = js[/function syncUIFromState\(\)(.*?)\n\}/m, 1] or raise "no syncUIFromState"
-    build = js[/function buildUI\(\)(.*?)\n\}/m, 1] or raise "no buildUI"
+    build = js[/function buildUI\(\)(.*?)(?=\nfunction showCtxMenu\()/m, 1] or raise "no buildUI"
 
     assert_includes refresh, "const pattern=DRUM_PATTERNS[pat_.d]||{};"
     assert_includes refresh, "step.setAttribute('aria-pressed',velocity>0?'true':'false');"
