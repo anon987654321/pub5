@@ -210,6 +210,17 @@
         ]
       },
       "note": "Steps are 16ths from the harmonic bar start (chord changes land on the bar). The sampled break is syncopated and the drum stem carries harmonic bleed, so single-lane grids are approximate and phase-sensitive; the recreation treats these as accents, not a transcription."
+    },
+    "source_reproduction": {
+      "analyzer": "render_evidence/tools/dilla_stem_analyze.js 1.0 (node)",
+      "drums_stem": {
+        "kick_low": 0.627,
+        "snare_mid": 0.099,
+        "hat_high": 0.021,
+        "tempo_bpm": 91.7,
+        "grid_phase_ms": 10
+      },
+      "verdict": "Reproduces measured_canon.json for vO2nWXCVt6o exactly on this SoundCloud source, so the acquisition matches the canon identity."
     }
   },
   "canon_comparison": {
@@ -225,5 +236,38 @@
     "Chord qualities are template-matched. m9 is the best fit; the record may voice the loop as plain minor triads or add extensions the templates do not resolve.",
     "Swing is reported from the canon because the mix-derived off-8th residual is too noisy on this upload.",
     "No listening acceptance is claimed. The rendered WAV still requires human audition."
-  ]
+  ],
+  "render_check": {
+    "take": "16 bars, seed 1971, progression in_space, drums in_space, profile dilla_shadow, 44.34 s",
+    "analyzer": "render_evidence/tools/dilla_stem_analyze.js 1.0 (node) on demucs stems",
+    "drums_stem": {
+      "kick_low": 0.756,
+      "snare_mid": 0.076,
+      "hat_high": 0.014,
+      "tempo_bpm": 91.6
+    },
+    "canon_envelope": {
+      "kick_low": [
+        0.375,
+        0.807
+      ],
+      "snare_mid": [
+        0.055,
+        0.202
+      ],
+      "hat_high": [
+        0.002,
+        0.033
+      ]
+    },
+    "verdicts": {
+      "kick_low": "inside",
+      "snare_mid": "inside",
+      "hat_high": "inside",
+      "tempo": "91.6 folds into the 85-95 window",
+      "per_bar_chords": "G#m9/C#m9 alternation on all 12 measured bars"
+    },
+    "audit": "All technical checks PASS; overall INCONCLUSIVE pending manual audition.",
+    "note": "Rendered WAV and MP3 stay local because the source is not rights-cleared; only these measurements are recorded."
+  }
 }
