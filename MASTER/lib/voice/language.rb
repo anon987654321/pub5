@@ -38,7 +38,18 @@ module Master
       module_function
 
       def detect(text)
-        body = text.to_s
+        # Language detection is also called from queue and media boundaries,
+        # where a UTF-8 byte sequence can arrive tagged as ASCII-8BIT. Ruby
+        # refuses to match the UTF-8 marker regexps against that encoding.
+        # Normalize a private copy; never mutate the caller's string.
+        body = text.to_s.dup
+        if body.encoding == Encoding::BINARY
+          body.force_encoding(Encoding::UTF_8)
+        elsif body.encoding != Encoding::UTF_8
+          body = body.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+        end
+        body = body.scrub
+
         return :nb if body.match?(NORDIC_LETTERS)
         return :ms if body.match?(MALAY_MARKER_RE)
         body.match?(MARKER_RE) ? :nb : :en
