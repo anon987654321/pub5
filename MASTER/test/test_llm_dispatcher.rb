@@ -384,6 +384,24 @@ class TestLLMDispatcher < Minitest::Test
     refute result.retriable?
   end
 
+  def test_ollama_decision_only_models_are_skipped_without_chat_retries
+    dispatcher, = build_dispatcher
+    provider_error = Master::Result.err(
+      "clef:27b is a decision model and only supports /v1/systemone",
+      category: :provider_error,
+    )
+
+    result = dispatcher.send(
+      :reclassify_provider_error,
+      provider_error,
+      model: "ollama_cloud:clef:27b",
+    )
+
+    assert_equal :invalid_request, result.category
+    assert result.permanent?
+    refute result.retriable?
+  end
+
   def test_a_crashed_local_runner_is_classified_for_immediate_failover
     dispatcher, = build_dispatcher
     error = Master::Result.err(
