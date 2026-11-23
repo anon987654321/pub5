@@ -449,6 +449,7 @@ class TestRg69PlaybackRecovery < Minitest::Test
   def css = File.read(CSS)
 
   def test_missing_tone_asset_does_not_leave_the_welcome_gate_covering_the_page
+    assert_includes js, 'const trace=$id("trace");'
     assert_includes js, 'welcome.style.display = "none";'
     assert_includes js, 'welcome.setAttribute("aria-hidden", "true");'
     assert_includes js, 'control.disabled = true;'
