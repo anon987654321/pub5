@@ -139,6 +139,30 @@ class TestCLITerminalOutput < Minitest::Test
     assert_equal "Hello.\n\nHow are you?\n", output
   end
 
+  def test_empty_provider_chunks_do_not_mark_a_turn_as_streamed
+    cli = session
+    accumulated = +""
+    state = {}
+    original_stdout = $stdout
+    fake_stdout = StringIO.new
+    fake_stdout.define_singleton_method(:isatty) { true }
+    $stdout = fake_stdout
+
+    cli.stub(:terminal_print, ->(*, **) {}) do
+      handler = cli.send(:build_on_chunk_handler, accumulated, state)
+      handler.call("")
+
+      assert_empty accumulated
+      refute state[:streamed]
+
+      handler.call("answer")
+      assert_equal "answer", accumulated
+      assert state[:streamed]
+    end
+  ensure
+    $stdout = original_stdout if defined?(original_stdout)
+  end
+
   def test_deploy_completion_uses_registered_targets_and_offers_confirmation
     cli = session
 
