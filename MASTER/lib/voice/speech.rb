@@ -240,8 +240,8 @@ module Master
       def selftest_stamp
         lock = File.join(Master::ROOT, "Gemfile.lock")
         [
-          File.exist?(WORKER) ? File.mtime(WORKER).to_i : 0,
-          File.exist?(lock) ? Digest::SHA256.file(lock).hexdigest : "",
+          File.file?(WORKER) ? Digest::SHA256.file(WORKER).hexdigest : "",
+          File.file?(lock) ? Digest::SHA256.file(lock).hexdigest : "",
         ]
       end
 
