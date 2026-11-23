@@ -196,8 +196,8 @@ hat:new Tone.MetalSynth({frequency:p.notes.hat,envelope:{attack:t.hat.attack,dec
 open:new Tone.MetalSynth({frequency:p.notes.open,envelope:{attack:t.openhat.attack,decay:k.openhat.decay,release:t.openhat.release},harmonicity:t.openhat.harmonicity,modulationIndex:t.openhat.modulation_index,resonance:openResonance,octaves:t.openhat.octaves}),
 bass:new Tone.MonoSynth({oscillator:{type:t.bass.oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:t.bass.sustain,release:t.bass.release}}),
 bassSub,
-keys:new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:t.keys.max_polyphony,harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}),
-pads:new Tone.PolySynth(Tone.Synth,{maxPolyphony:t.pads.max_polyphony,oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}})
+keys:new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:Math.min(6,t.keys.max_polyphony),harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}),
+pads:new Tone.PolySynth(Tone.Synth,{maxPolyphony:Math.min(4,t.pads.max_polyphony),oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}})
 };
 for(const [lane,source] of [["kick","kick"],["kickSub","sub"],["kickClk","kick"],["kickBody","kick"],["snare","snare"],["snareRing","snare"],["clap","perc"],["hat","hat"],["open","openhat"]]){
 const level=Math.max(0.001,Number(k[source].level)||1);
