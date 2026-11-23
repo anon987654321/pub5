@@ -64,7 +64,7 @@ ownership:
     risk: critical
     check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/vps_ci.sh:
-    purpose: serial app CI entrypoint on vm23
+    purpose: pinned deployment child; syncs one app and checks its workstation CI attestation and preinstalled production bundle
     risk: high
     check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/resource_guard.sh:
