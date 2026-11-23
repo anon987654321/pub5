@@ -305,6 +305,29 @@
         "swing": 58,
         "grit": 0.6
       }
+    },
+    {
+      "id": "in_space",
+      "title": "In Space (measured recreation)",
+      "key": "G#m",
+      "bpm": 92,
+      "loop_bars": 2,
+      "bars": 16,
+      "chords": [
+        "G#m9",
+        "C#m9"
+      ],
+      "roman": [
+        "i9",
+        "iv9"
+      ],
+      "sample_provenance": "Two-bar G#m9-C#m9 vamp measured from the J Dilla record at ~92 BPM; engine study, not a note-for-note transcription. Evidence: data/reference_measurements/in_space.json.",
+      "feel": {
+        "bass": "thumb",
+        "melody": "music_box",
+        "swing": 54,
+        "grit": 0.7
+      }
     }
   ],
   "drum_patterns": {
@@ -1324,6 +1347,101 @@
           0.24
         ]
       ]
+    },
+    "in_space": {
+      "comment": "Measured accents: downbeat kick, kick trailing the snare, late snare, sparse dark hats.",
+      "kick": [
+        [
+          0,
+          0.92
+        ],
+        [
+          3,
+          0.5
+        ],
+        [
+          5,
+          1.0
+        ],
+        [
+          9,
+          0.68
+        ],
+        [
+          11,
+          0.6
+        ],
+        [
+          13,
+          0.46
+        ]
+      ],
+      "snare": [
+        [
+          4,
+          1.0
+        ],
+        [
+          12,
+          0.95
+        ]
+      ],
+      "ghost": [
+        [
+          7,
+          0.22
+        ],
+        [
+          15,
+          0.18
+        ]
+      ],
+      "hats": [
+        [
+          0,
+          0.5
+        ],
+        [
+          2,
+          0.34
+        ],
+        [
+          4,
+          0.46
+        ],
+        [
+          6,
+          0.32
+        ],
+        [
+          8,
+          0.5
+        ],
+        [
+          10,
+          0.34
+        ],
+        [
+          12,
+          0.46
+        ],
+        [
+          14,
+          0.32
+        ],
+        [
+          7,
+          0.3
+        ]
+      ],
+      "ride": [],
+      "perc": [
+        [
+          5,
+          0.16
+        ]
+      ],
+      "bust_bars": 4
     }
   },
   "groove_profiles": {
