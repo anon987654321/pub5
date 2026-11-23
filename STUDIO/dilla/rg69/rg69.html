@@ -29,10 +29,18 @@
     <button id="welcome-start" type="button">▶ play</button>
   </div>
 </div>
-<header>
-<h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1>
-<button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
+<header class="machine-header">
+  <div class="brand-lockup">
+    <p class="panel-kicker">DILLA / LIVE INSTRUMENT</p>
+    <h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1>
+    <p class="brand-subline">RHYTHM COMPUTER <span>•</span> 16-STEP PERFORMANCE SURFACE</p>
+  </div>
+  <div class="header-tools">
+    <span class="hardware-label">LIVE / READY</span>
+    <button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
+  </div>
 </header>
+<div class="panel-strip"><span>01 / TRANSPORT</span><span>MASTER CLOCK · PERFORMANCE CONTROL</span></div>
 <div class="transport" aria-label="Beat machine transport">
   <div class="transport-primary">
     <button id="play" data-kind="primary" aria-label="Play sequencer" aria-pressed="false" title="Play or pause (Space)">▶ Play</button>
@@ -52,10 +60,11 @@
   </div>
 </div>
 <p id="status" role="status" aria-live="polite">Ready · choose a style, then press Play</p>
-<div class="vu-meter" id="vu" aria-label="VU Meter"></div>
+<div class="level-meter-row"><span class="hardware-label">OUTPUT / VU</span><div class="vu-meter" id="vu" aria-label="VU Meter"></div><span class="meter-scale">−12 · −6 · 0 dB</span></div>
 <main id="main-content" tabindex="-1">
-<article aria-label="Sequencer" role="region">
-<p id="seq-hint">Mute: <kbd>M</kbd> · Probability: long-press or right-click · Ratchet: shift+click</p>
+<article class="machine-panel" aria-label="Sequencer" role="region">
+<div class="panel-strip panel-strip--inner"><span>02 / STEP MATRIX</span><span>DRUM SEQUENCER · 16 STEPS</span></div>
+<p id="seq-hint">M = mute lane · Probability = hold / right-click · Ratchet = shift + click · Space = run / pause</p>
 <div class="tracks" id="tracks"></div>
 <canvas id="viz" width="400" height="28" title="Waveform" aria-label="Audio waveform visualizer" role="img"></canvas>
 </article>
