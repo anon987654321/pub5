@@ -352,6 +352,35 @@ module Operator
       [out + "timed out after #{timeout}s\n", false]
     end
 
+    # A full fleet release also needs the content-bearing OpenBSD receipt
+    # and a current mirror-coverage report. Check it before the long local Rails
+    # suites so a missing or stale receipt fails fast without contacting vm23.
+    def openbsd_release_admission(root:)
+      require_relative "../fix/task_contract"
+      require_relative "../fix/openbsd_manual_preflight"
+
+      contract = Master::Fix::TaskContract.build(
+        intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []
+      )
+      hydrated = Master::Fix::OpenBSDManualPreflight.contract_with_saved_preflight(
+        contract:, repo_root: root
+      )
+      preflight = hydrated.openbsd_preflight
+      unless preflight
+        return [false, "RTFM_FIRST requires a fresh, exact-HEAD receipt at " \
+                       "MASTER/.master/openbsd_preflight.json; run /fix OPENBSD before the full release"]
+      end
+
+      reason = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(preflight, root:)
+      return [false, reason] if reason
+
+      [true, nil]
+    rescue Master::Fix::TaskContract::Invalid => error
+      [false, "RTFM_FIRST blocked: #{error.message}"]
+    rescue SystemCallError => error
+      [false, "RTFM_FIRST blocked: #{error.class} while checking the local receipt"]
+    end
+
     # `bin/operator vps deploy <app> --remote`: judge the commit here, then hand the
     # box the exact SHA and the word that it passed. Returns [true, command] or
     # [false, reason]; the caller runs the command or prints the reason.
@@ -364,7 +393,7 @@ module Operator
     # SSH. Group and all targets are included: no child deploy can run its suite
     # on vm23.
     def remote_command(root:, app:, env: ENV, git: method(:git_out), runner: method(:capture), out: $stdout,
-                       ci_runner: method(:local_ci))
+                       ci_runner: method(:local_ci), admission_check: method(:openbsd_release_admission))
       inventory = Deploy::Inventory.new(root:)
       return [false, "unknown deployment target #{app.inspect}; no inventory match"] if inventory.target_kind(app) == :unknown
 
@@ -375,6 +404,11 @@ module Operator
 
       dirty = git.call(root, "status", "--porcelain", "--untracked-files=normal", "--", "MASTER", "RAILS", "OPENBSD", "STUDIO")
       return [false, "commit these first; remove untracked files that are not part of the release:\n#{dirty.lines.first(5).join}"] unless dirty.empty?
+
+      if inventory.target_kind(app) == :all
+        admitted, reason = admission_check.call(root:)
+        return [false, reason] unless admitted
+      end
 
       lead = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{sha}"
       tail = "zsh OPENBSD/bin/vps-deploy #{app}"
