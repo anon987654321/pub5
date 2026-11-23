@@ -224,6 +224,32 @@ class TurnRouterTest < Minitest::Test
     )
   end
 
+  def test_colloquial_full_stack_deploy_routes_without_classifier
+    messages = [
+      "ok, now, you gotta redeploy MASTER, RAILS, OPENBSD onto vm23 properly, and ensure vm23 is in good health",
+      "Okay, so please redeploy OPENBSD and RAILS to vm23.",
+      "Alright, you have to deploy OPENBSD and RAILS onto vm23",
+      "Hey, I need you to redeploy OPENBSD and RAILS on vm23",
+    ]
+
+    messages.each do |message|
+      agent = Object.new
+      agent.define_singleton_method(:ask_once) do |*|
+        flunk "a direct full-stack production request must not depend on the model: #{message}"
+      end
+      routed = nil
+
+      Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
+        routed = command
+        Master::Result.ok({ rendered: "captured" })
+      }) do
+        Master::CLI::TurnRouter.call(message:, container: build_container(agent:))
+      end
+
+      assert_equal "/deploy all --confirm", routed, message
+    end
+  end
+
   def test_greeted_polite_full_stack_deploy_routes_with_confirmation_and_cancellation
     message = "Hey, could you please redeploy OPENBSD, RAILS, and MASTER web on vm23 please?"
     proposal = Master::CLI::OperatorIntent::Result.new(status: :deploy, target: "all")
