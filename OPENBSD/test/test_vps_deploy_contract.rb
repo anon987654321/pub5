@@ -145,6 +145,20 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes SOURCE, "unknown app or group"
   end
 
+  # The 2026-09-16 runner.rb deletion killed this deploy under set -e. The
+  # conditional asset check is the fix; an unconditional call ahead of it, or a
+  # second db:prepare, re-opens that outage and costs a second Rails boot on a
+  # one-core box (found 2026-11-23).
+  def test_master_deploy_prepares_the_database_once_and_checks_assets_only_through_the_guard
+    assert_equal 1, MASTER_DEPLOY.scan('echo "==> db prepare"').length
+    assert_equal 1, MASTER_DEPLOY.scan("rails db:prepare").length
+    runner_calls = MASTER_DEPLOY.lines.grep(/exec ruby .*checks\/runner\.rb/)
+    assert_equal 1, runner_calls.length
+    guard = MASTER_DEPLOY.index('if [ -f "$ROOT/MASTER/checks/runner.rb" ]; then')
+    assert guard, "the runner.rb existence guard is missing"
+    assert_operator MASTER_DEPLOY.index(runner_calls.first), :>, guard
+  end
+
   def test_master_deploy_refuses_root_override
     source = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     assert_includes source, 'if [ "$ROOT" != "/home/dev/pub5" ]; then'
