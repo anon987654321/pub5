@@ -109,4 +109,20 @@ class TestFixTreeReasoning < Minitest::Test
     refute File.exist?(Reasoning.hints_path(@root)), "read-only tree reasoning must not save hints"
     refute Dir.exist?(File.join(@root, ".master")), "read-only tree reasoning must not create state directories"
   end
+
+  def test_external_host_evidence_is_bounded_and_added_only_to_the_prompt
+    agent = FakeAgent.new("")
+    evidence = "vm.loadavg: 1.20 0.80 0.50\\n" + ("x" * (Reasoning::MAX_EXTERNAL_EVIDENCE_BYTES + 500))
+
+    result = Reasoning.new(agent:, root: @root).call(
+      target: @root, persist: false, external_evidence: evidence
+    )
+
+    assert_predicate result, :answered?
+    prompt = agent.prompts.fetch(0)
+    assert_includes prompt, "Remote vm23 evidence"
+    assert_includes prompt, "vm.loadavg: 1.20"
+    assert_operator prompt.bytesize, :<=, Reasoning::MAX_PROMPT_BYTES
+    refute File.exist?(Reasoning.hints_path(@root)), "read-only host evidence must not persist tree hints"
+  end
 end
