@@ -192,6 +192,20 @@ class VpsDeployFlowTest < Minitest::Test
     refute_includes SOURCE, "pulls origin/main"
     refute_includes MASTER_SH, "git pull"
     assert_includes SOURCE, "unset VPS_DEPLOY_ADMITTED_SHA"
+    clear_token = SOURCE.index("unset VPS_DEPLOY_ADMITTED_SHA")
+    pin = SOURCE.index('pin=$(git_as_deploy_user rev-parse')
+    parent = SOURCE.index("if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then")
+    admission = SOURCE.index("  ensure_host_admission", parent)
+    child = SOURCE.index('zsh "$0" "$one"', parent)
+
+    refute_nil clear_token
+    refute_nil pin
+    refute_nil admission
+    refute_nil child
+    assert_operator clear_token, :<, pin, "caller-supplied admission must be cleared before pinning"
+    assert_operator pin, :<, admission, "the SHA must be pinned before host admission"
+    assert_operator admission, :<, child, "the parent must admit once before starting child deploys"
+    assert_includes SOURCE, "VPS_DEPLOY_ADMITTED_SHA=$pin"
     assert_operator SOURCE.index("deploy_refuse()"), :<, SOURCE.index(ORDER_BLOCK), "the pin comes before any deploy"
   end
 
