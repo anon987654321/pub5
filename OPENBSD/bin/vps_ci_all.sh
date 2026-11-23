@@ -1,47 +1,14 @@
 #!/usr/bin/env zsh
-# Run attested, read-only production-bundle checks serially; this does not run Rails CI.
-# Usage: zsh OPENBSD/bin/vps_ci_all.sh      (requires workstation CI attestation)
+# Retired: Rails CI runs on the workstation; production sync is owned by
+# the pinned vps-deploy parent and must never run as a standalone bulk command.
 set -euo pipefail
 
 if [[ ${1:-} == -h || ${1:-} == --help ]]; then
-  print "usage: zsh OPENBSD/bin/vps_ci_all.sh - read-only production-bundle checks for every active Rails app"
+  print "usage: zsh OPENBSD/bin/vps_ci_all.sh"
+  print "  refused: run Rails bin/ci on the workstation and deploy through MASTER/bin/operator"
   exit 0
 fi
 
-repo=${PUB5_ROOT:-/home/dev/pub5}
-script=${repo}/OPENBSD/bin/vps_ci.sh
-source "${repo}/OPENBSD/lib/ruby_select.sh"
-# Every app in the RAILS deploy_root namespace participates automatically.
-apps=(${(f)"$("$RUBY" -r"${repo}/OPENBSD/lib/deploy_inventory" \
-  -e 'puts Deploy::Inventory.new(root: ARGV[0]).ordered_apps(group: "rails").map(&:name)' "$repo")"})
-(( ${#apps} )) || { print -u2 "vps_ci_all: no apps read from ${repo}/RAILS/apps.yml"; exit 1 }
-max_load=${PUB4_CI_MAX_LOAD:-4}
-
-# The five-minute load gate bounds this compatibility check on the production host.
-# It does not run tests, install gems or compile assets.
-# OpenBSD prints the three numbers bare and macOS wraps them in braces, which is
-# why this scans for numbers rather than splitting on whitespace.
-load_over_max() {
-  "$RUBY" -e '
-    n = `sysctl -n vm.loadavg 2>/dev/null`.scan(/\d+(?:\.\d+)?/)
-    exit(0) if n.size < 3
-    exit(n[1].to_f > ARGV[0].to_f ? 0 : 1)
-  ' "$max_load"
-}
-
-wait_for_load() {
-  while load_over_max; do
-    print "vps_ci_all: 5-minute load over $max_load - sleeping 60s"
-    sleep 60
-  done
-}
-
-# The RAILS namespace is selected from deploy_root, so there is no
-# per-app exception list in this read-only bundle-check runner.
-for app in $apps; do
-  wait_for_load
-  zsh "$script" "$app" || exit $?
-  sleep 10
-done
-
-print "vps_ci_all: all attested production-bundle checks passed"
+print -u2 "vps_ci_all: refused - the standalone bulk sync/bundle path is retired"
+print -u2 "run MASTER/bin/operator vps deploy rails --remote from the workstation"
+exit 69
