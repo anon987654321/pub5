@@ -330,6 +330,7 @@ class TestPipeline < Minitest::Test
     host_read = registry.send(:fix_dispatch_options, "--host-evidence OPENBSD", nil)
     assert_nil host_read[:mode_error]
     assert_equal true, host_read.fetch(:host_evidence)
+    assert_includes host_read.fetch(:raw), "--host-evidence"
     assert_equal "OPENBSD", host_read.fetch(:target)
     refute registry.writes_requested?(apply: host_read.fetch(:apply), only: host_read.fetch(:only))
 
