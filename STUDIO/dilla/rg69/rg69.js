@@ -833,7 +833,7 @@ document.querySelectorAll('.track[data-track]').forEach(row=>{
 const lane=row.dataset.track,muted=Boolean(st_.muteState[lane]);
 row.classList.toggle('muted',muted);
 const button=row.querySelector('.track-btn');
-if(button){button.setAttribute('aria-pressed',muted?'true':'false');button.textContent=muted?'U':'M';button.title=`${muted?'Unmute':'Mute'} ${row.querySelector('.track-name')?.textContent||lane}`;}
+if(button){button.setAttribute('aria-pressed',muted?'true':'false');button.textContent=muted?'U':'M';button.title=`${muted?'Unmute':'Mute'} ${row.querySelector('.track-name')?.textContent||lane}`;button.style.background=muted?'var(--dng)':'';button.style.color=muted?'#fff':'';}
 });
 }
 function updateStepUI(){
@@ -1253,7 +1253,7 @@ const step=document.createElement('button');
 step.className='step';
 step.type='button';
 step.setAttribute('aria-pressed','false');
-step.setAttribute('role','switch');
+
 step.setAttribute('aria-label',`${nm} step ${i+1}`);
 step.dataset.track=trackKey;
 step.dataset.step=i;
@@ -1261,13 +1261,7 @@ stepUiByIndex[i].push(step);
 const velFill=document.createElement('div');
 velFill.className='vel-fill';
 step.appendChild(velFill);
-const updateVelFill=()=>{
-const dp=DRUM_PATTERNS[pat_.d];
-if(!dp||!dp[trackKey])return;
-const v=dp[trackKey][i];
-velFill.style.height=v>0?Math.round(30+v*70)+'%':'0';
-step.setAttribute('aria-pressed',v>0?'true':'false');
-};
+const updateVelFill=refreshStepGrid;
 step.addEventListener('focus',()=>{st_.lastTrackKey=trackKey;});
 step.addEventListener('click',e=>{
 st_.lastTrackKey=trackKey;
@@ -1289,10 +1283,10 @@ updateVelFill();
 });
 const openStepMenu=(x,y)=>{
 showCtxMenu(x,y,[
-{label:'Probability 25%',action:()=>{seq_[trackKey][i].p=25;step.dataset.prob='25'}},
-{label:'Probability 50%',action:()=>{seq_[trackKey][i].p=50;step.dataset.prob='50'}},
-{label:'Probability 75%',action:()=>{seq_[trackKey][i].p=75;step.dataset.prob='75'}},
-{label:'Probability 100%',action:()=>{seq_[trackKey][i].p=100;step.dataset.prob=''}},
+{label:'Probability 25%',action:()=>{seq_[trackKey][i].p=25;refreshStepGrid()}},
+{label:'Probability 50%',action:()=>{seq_[trackKey][i].p=50;refreshStepGrid()}},
+{label:'Probability 75%',action:()=>{seq_[trackKey][i].p=75;refreshStepGrid()}},
+{label:'Probability 100%',action:()=>{seq_[trackKey][i].p=100;refreshStepGrid()}},
 {label:'Velocity Low (40%)',action:()=>{const dp=DRUM_PATTERNS[pat_.d];if(dp&&dp[trackKey]&&dp[trackKey][i]>0){dp[trackKey][i]=0.4;updateVelFill();}}},
 {label:'Velocity Mid (70%)',action:()=>{const dp=DRUM_PATTERNS[pat_.d];if(dp&&dp[trackKey]&&dp[trackKey][i]>0){dp[trackKey][i]=0.7;updateVelFill();}}},
 {label:'Velocity Full',action:()=>{const dp=DRUM_PATTERNS[pat_.d];if(dp&&dp[trackKey]&&dp[trackKey][i]>0){dp[trackKey][i]=1.0;updateVelFill();}}},
@@ -1458,12 +1452,8 @@ const muted=!Boolean(st_.muteState[trackKey]);
 st_.muteState[trackKey]=muted?1:0;
 row.classList.toggle('muted',muted);
 const button=row.querySelector('.track-btn');
-if(button){
-button.setAttribute('aria-pressed',muted?'true':'false');
-button.style.background=muted?'var(--dng)':'';
-button.style.color=muted?'#fff':'';
-}
 st_.lastTrackKey=trackKey;
+refreshStepGrid();
 log(`${trackKey} ${muted?'muted':'unmuted'}`);
 }
 
@@ -1717,8 +1707,7 @@ const t=args[0];
 if(['k','s','c','h','o'].includes(t)){
 const mute=cmd==='mute';
 st_.muteState[t]=mute?1:0;
-const row=[...document.querySelectorAll('.track')].find(el=>el.querySelector(`.step[data-track="${t}"]`));
-if(row)row.classList.toggle('muted',mute);
+refreshStepGrid();
 log(`${cmd} → ${t}`,'k');
 }else log(`usage: ${cmd} <k|s|c|h|o>`,'e');
 break;}
