@@ -40,6 +40,16 @@ class VpsAdminTest < Minitest::Test
     assert_raises(ArgumentError) { OpenBSDAdmin.commands_for(["service", "master", "exec", "id"]) }
   end
 
+  def test_diagnose_redacts_sensitive_command_line_arguments
+    source = "worker --api-key abc123 --password 'secret value' Authorization: Bearer token123"
+    redacted = OpenBSDAdmin.redact_diagnostic_output(source)
+
+    refute_includes redacted, "abc123"
+    refute_includes redacted, "secret value"
+    refute_includes redacted, "token123"
+    assert_equal 3, redacted.scan("[REDACTED]").length
+  end
+
   def test_reboot_is_one_explicit_action
     assert_equal [["doas", "/sbin/reboot"]], OpenBSDAdmin.commands_for(["reboot"])
   end
