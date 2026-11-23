@@ -41,6 +41,9 @@ module Master
             "event; --detail shows bounded raw payloads on a terminal only.",
             "--normal and --quiet reduce /fix output; MASTER_CLI_QUIET=1 is the explicit CLI opt-out.",
             "--read-only and --dry-run stop after the reading and say what it would take on.",
+            "--host-evidence OPENBSD captures a bounded, read-only vm23 snapshot before the OPENBSD tree review.",
+            "It stores a digest-only evidence receipt; transport or recording failure blocks the /fix run.",
+            "The snapshot is contextual evidence only: it never authorizes service, process, deployment or host changes.",
             "--dry-run --critique --only critique,map is the reading with the council",
             "and the principle map and nothing written; --critique alone is the",
             "council alone (--only critique).",
@@ -301,6 +304,8 @@ module Master
         "doctor" => {
           summary: "MASTER runtime, provider, exposure and device health",
           detail: ["/doctor - MASTER runtime, provider and security report plus capability summary.",
+                   "/doctor host [--remote] - one bounded, read-only vm23 incident snapshot through the operator SSH admission gate.",
+                   "The host snapshot is never a repair or service-control action; use /fix --host-evidence OPENBSD to include it in the OPENBSD tree review.",
                    "MASTER/bin/doctor is the runtime doctor: it checks boot, provider/model, voice and face capability.",
                    "MASTER/bin/operator doctor [--remote] is separate: it checks checkout/host readiness such as disk, Ruby, bundle, hooks, Git, worktrees and vm23.",
                    "Do not confuse either read-only report with /fix, which repairs the requested tree.",
