@@ -345,6 +345,32 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "RAILS/brgen/config/boot.rb"
   end
 
+
+  def test_remote_command_refuses_untracked_studio_source
+    ok, reason = remote(dirty: "?? STUDIO/dilla/new_take.rb\n")
+
+    refute ok
+    assert_includes reason, "commit these first"
+    assert_includes reason, "STUDIO/dilla/new_take.rb"
+  end
+
+  def test_full_release_runs_studio_checks_before_remote_deployment
+    calls = []
+    runner = lambda do |argv, chdir|
+      calls << [argv, chdir]
+      ["", true]
+    end
+
+    ok, command = remote(runner:)
+
+    assert ok
+    assert_includes command, "VPS_DEPLOY_SHA=#{SHA}"
+    assert calls.any? do |argv, chdir|
+      argv == [RbConfig.ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"] &&
+        chdir == File.join(File.expand_path("..", __dir__), "STUDIO")
+    end, "full production release must run STUDIO's check and test tasks on the workstation"
+  end
+
   def test_remote_break_glass_needs_the_acknowledgement
     ok, reason = remote(env: { "VPS_DEPLOY_SKIP_PREFLIGHT" => "1" }, runner: ->(*) { flunk "the preflight must not run" })
     refute ok
