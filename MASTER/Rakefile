@@ -391,9 +391,12 @@ namespace :test do
     FileList["test/test_core_*.rb"].each { |f| ruby "-Ilib", "-Itest", f }
   end
 
-  desc "The cli, io and fix subsystem tests on their own"
+  desc "The cli, operator-intent, turn-routing, io and fix subsystem tests on their own"
   task :subsystems do
-    files = FileList["test/test_cli_*.rb", "test/test_io_*.rb", "test/test_fix_*.rb"]
+    files = FileList[
+      "test/test_cli_*.rb", "test/test_io_*.rb", "test/test_fix_*.rb",
+      "test/test_operator_intent.rb", "test/test_turn_router.rb"
+    ].uniq.sort
     files.each { |f| ruby "-Itest", f }
   end
 
