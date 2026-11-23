@@ -393,7 +393,7 @@ namespace :test do
 
   desc "The cli, operator-intent, turn-routing, io and fix subsystem tests on their own"
   task :subsystems do
-    require_relative "../lib/operator/parallel_tests"
+    require_relative "lib/operator/parallel_tests"
     files = FileList[
       "test/test_cli_*.rb", "test/test_io_*.rb", "test/test_fix_*.rb",
       "test/test_operator_intent.rb", "test/test_turn_router.rb"
