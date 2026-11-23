@@ -11,10 +11,14 @@ module Master
     # count is ModelQuota.
     module ModelSkipCache
       SKIP_CATEGORIES = %i[
-        rate_limit quota_exceeded no_api_key timeout auth_error
-        provider_error llm_call_failure model_missing failure
+        rate_limit quota_exceeded budget no_api_key timeout offline auth_error
+        provider_error llm_call_failure model_missing invalid_request failure
       ].freeze
 
+      # Keep this list aligned with the router's failover_skip_categories:
+      # otherwise a failed lane is skipped only for the current turn and the
+      # cache silently refuses to park it for the next one.
+      #
       # A failure that says nothing about the next call parks a model briefly. One
       # "Upstream error from Nvidia: Service temporarily overloaded" parked the only
       # lane ai.brgen.no could reach for the full ten minutes, and every turn in
@@ -23,7 +27,7 @@ module Master
       # The dispatcher's own generic mapping (`failure_status`, else :failure) counts:
       # on 2026-11-12 an audit run re-walked slow-failing lanes per call because a
       # refusal that named no category parked nothing at all.
-      TRANSIENT_CATEGORIES = %i[timeout provider_error llm_call_failure failure].freeze
+      TRANSIENT_CATEGORIES = %i[timeout offline provider_error llm_call_failure failure].freeze
 
       # A park the provider did not time escalates with the model's own failures
       # in the last day: the first is transient_skip_ttl_ms, then a minute, then
