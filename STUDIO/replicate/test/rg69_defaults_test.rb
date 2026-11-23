@@ -75,9 +75,9 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "return (position-0.5)*sixteenth*2;"
     trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     assert_includes trigger, "const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);"
-    assert_includes trigger, "synths.bass.triggerAttackRelease(freq,eighth,swungTime+"
-    assert_includes trigger, "synths.keys.triggerAttackRelease(ch,eighth,swungTime+"
-    assert_includes trigger, "synths.pads.triggerAttackRelease(pad,half,swungTime+"
+    assert_includes trigger, "synths.bass.triggerAttackRelease(freq,eighth,bassTime"
+    assert_includes trigger, "synths.keys.triggerAttackRelease(ch,eighth,keyTime"
+    assert_includes trigger, "synths.pads.triggerAttackRelease(pad,half,noteTime(seq_.p[stepIdx].t)"
     assert_equal 2, js.scan(/addSwing:true/).size,
                  "live playback and WAV export must use the same swung timing"
     refute_includes trigger, "r*(sixteenth/ratch):r*(sixteenth/ratch)"
