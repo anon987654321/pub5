@@ -114,7 +114,7 @@ const PARAMS={
   DELAY_FB_MAX:0.55,
   FILTER_MAX_HZ:15950,
   FILTER_MIN_HZ:50,
-  COMP_RATIO_MAX:7,
+  COMP_RATIO_MAX:3,
   VU_BARS:10,
   VU_DECAY:0.85,
   TRACE_MAX_LINES:90,
@@ -180,10 +180,7 @@ return rg69AudioProfile;
 .catch(error=>{console.warn("RG-69 shared Dilla sound profile unavailable; embedded fallback retained:",error);log("shared Dilla sound profile unavailable; using embedded RG-69 patch","w");return rg69AudioProfile;});
 function createToneInstruments(){
 const p=rg69AudioProfile,t=p.tone,k=p.kit,v=p.voice;
-const hatResonance=t.hat.resonance_base_hz+k.hat.tone*t.hat.resonance_tone_span_hz;
-const openResonance=t.openhat.resonance_base_hz+k.hat.tone*t.openhat.resonance_tone_span_hz;
-const keysModulation=t.keys.modulation_index*(v.brightness/t.keys.brightness_reference);
-const bassSub=new Tone.Oscillator(t.bass.sub_frequency,t.bass.sub_oscillator).start();bassSub.volume.value=t.bass.sub_volume_db;
+const bassSub=new Tone.Synth({frequency:t.bass.sub_frequency,oscillator:{type:t.bass.sub_oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:0,release:t.bass.release}});bassSub.volume.value=t.bass.sub_volume_db;
 const instruments={
 kick:new Tone.MembraneSynth({pitchDecay:t.kick.pitch_decay,octaves:t.kick.octaves,oscillator:{type:t.kick.oscillator},envelope:{attack:t.kick.attack,decay:k.kick.decay,sustain:0,release:t.kick.release}}),
 kickSub:new Tone.Synth({oscillator:{type:"sine"},envelope:{attack:.001,decay:k.sub.decay,sustain:0,release:.1}}),
@@ -192,12 +189,12 @@ kickBody:new Tone.Synth({oscillator:{type:t.kick.body_oscillator},envelope:{atta
 snare:new Tone.NoiseSynth({noise:{type:t.snare.noise},envelope:{attack:t.snare.attack,decay:k.snare.decay,sustain:0}}),
 snareRing:new Tone.Synth({oscillator:{type:t.snare.ring_oscillator},envelope:{attack:t.snare.ring_attack,decay:t.snare.ring_decay,sustain:0}}),
 clap:new Tone.NoiseSynth({noise:{type:t.clap.noise},envelope:{attack:t.clap.attack,decay:k.perc.decay,sustain:0}}),
-hat:new Tone.MetalSynth({frequency:p.notes.hat,envelope:{attack:t.hat.attack,decay:k.hat.decay,release:t.hat.release},harmonicity:t.hat.harmonicity,modulationIndex:t.hat.modulation_index,resonance:hatResonance,octaves:t.hat.octaves}),
-open:new Tone.MetalSynth({frequency:p.notes.open,envelope:{attack:t.openhat.attack,decay:k.openhat.decay,release:t.openhat.release},harmonicity:t.openhat.harmonicity,modulationIndex:t.openhat.modulation_index,resonance:openResonance,octaves:t.openhat.octaves}),
+hat:new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:t.hat.attack,decay:k.hat.decay,sustain:0,release:t.hat.release}}),
+open:new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:t.openhat.attack,decay:k.openhat.decay,sustain:0,release:t.openhat.release}}),
 bass:new Tone.MonoSynth({oscillator:{type:t.bass.oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:t.bass.sustain,release:t.bass.release}}),
 bassSub,
-keys:new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:t.keys.max_polyphony,harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}),
-pads:new Tone.PolySynth(Tone.Synth,{maxPolyphony:t.pads.max_polyphony,oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}})
+keys:new Tone.PolySynth(Tone.Synth,{maxPolyphony:Math.min(6,t.keys.max_polyphony),oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release}}),
+pads:new Tone.PolySynth(Tone.Synth,{maxPolyphony:Math.min(4,t.pads.max_polyphony),oscillator:{type:"sawtooth"},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}})
 };
 for(const [lane,source] of [["kick","kick"],["kickSub","sub"],["kickClk","kick"],["kickBody","kick"],["snare","snare"],["snareRing","snare"],["clap","perc"],["hat","hat"],["open","openhat"]]){
 const level=Math.max(0.001,Number(k[source].level)||1);
@@ -426,8 +423,8 @@ let seq_={};
 
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt;
 let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,driftLFO,analyser;
-let fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,sslComp,widener,kickSat,keySat,drumSat,outSat,masterDrive,revSend,dlySend;
-let drumTube,kickComp,vintageSat,phaserFX,lofiNoise,lofiComp,tapeWS,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive;
+let fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,kickSat,keySat,drumSat,revSend,dlySend;
+let drumTube,kickComp,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive,hatFlt,openFlt;
 
 const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Phaser','PingPongDelay','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
@@ -609,43 +606,16 @@ fxDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSe
 fxFlt=new Tone.Filter(16000,'lowpass');
 tapeSat=new Tone.Distortion(0.08);
 compPar=new Tone.Compressor(-18,4);
-sslComp=new Tone.Compressor(-18,4);
-sslComp.attack.value=0.01;
-sslComp.release.value=0.3;
 widener=new Tone.StereoWidener(0.4);
-masterDrive=new Tone.Distortion(0.04);
 limiter=new Tone.Limiter(-1);
-outSat=new Tone.Distortion(0.01);
-vintageSat=new Tone.Chebyshev(2);
-vintageSat.wet.value=0.3;
-phaserFX=new Tone.Phaser({frequency:0.5,octaves:2,baseFrequency:350,stages:4});
-phaserFX.wet.value=0.15;
-lofiComp=new Tone.Compressor(-24,3);
-lofiComp.attack.value=0.003;
-lofiComp.release.value=0.1;
-tapeWS=new Tone.WaveShaper((val)=>Math.tanh(val*1.5),4096);
-tapeWS.oversample='none';
 masterG=new Tone.Gain(0.8);
-// The gain node must stand alone: Tone's connect() returns the destination, so
-// chaining the constructor into connect() aliased masterG to masterDrive, threw
-// in applyFX on the missing .gain and looped widener back into the drive stage.
-masterG.connect(masterDrive);
-masterDrive.wet.value=0;
-masterDrive.connect(outSat);
-outSat.connect(limiter);
-limiter.connect(Tone.Destination);
-masterG.disconnect();
 masterG.connect(fxFlt);
-fxFlt.connect(vintageSat);
-vintageSat.connect(phaserFX);
-phaserFX.connect(lofiComp);
-lofiComp.connect(tapeWS);
-tapeWS.connect(tapeSat);
+fxFlt.connect(tapeSat);
 tapeSat.connect(compPar);
-compPar.connect(sslComp);
-sslComp.connect(widener);
-widener.connect(masterDrive);
-widener.connect(analyser=new Tone.Analyser('waveform',256));
+compPar.connect(widener);
+widener.connect(limiter);
+limiter.connect(Tone.Destination);
+widener.connect(analyser=new Tone.Analyser('waveform',128));
 revSend.connect(fxRev);
 fxRev.connect(compPar);
 dlySend.connect(fxDly);
@@ -663,11 +633,6 @@ if (fxRev && typeof fxRev.generate === "function") {
     log(`reverb unavailable; continuing without it: ${error.message}`, "w");
   }
 }
-lofiNoise=new Tone.Noise('pink').start();
-lofiNoise.volume.value=-45;
-const lofiNoiseLP=new Tone.Filter(4000,'lowpass');
-lofiNoise.connect(lofiNoiseLP);
-lofiNoiseLP.connect(compPar);
 vinylNoise=new Tone.Noise('brown').start();
 vinylNoise.volume.value=-40;
 const vinylFlt=new Tone.Filter(2000,'lowpass');
@@ -682,6 +647,8 @@ crackFlt.connect(compPar);
 driftLFO.connect(kickN.oscillator.detune);
 driftLFO.connect(snareRng.detune);
 const livePanners=createRG69Panners();
+hatFlt=new Tone.Filter(7600,'highpass');
+openFlt=new Tone.Filter(6200,'highpass');
 kickN.connect(livePanners.kick);livePanners.kick.connect(kickSat);
 kickSub.connect(livePanners.kickSub);livePanners.kickSub.connect(kickSat);
 kickClkBP.connect(livePanners.kickClick);livePanners.kickClick.connect(kickSat);
@@ -691,8 +658,8 @@ kickComp.connect(drumG);
 snareN.connect(livePanners.snare);livePanners.snare.connect(drumSat);
 snareRngBP.connect(livePanners.snareRing);livePanners.snareRing.connect(drumSat);
 clapN.connect(livePanners.clap);livePanners.clap.connect(drumSat);
-hatN.connect(livePanners.hat);livePanners.hat.connect(drumSat);
-openN.connect(livePanners.open);livePanners.open.connect(drumSat);
+hatN.connect(hatFlt);hatFlt.connect(livePanners.hat);livePanners.hat.connect(drumSat);
+openN.connect(openFlt);openFlt.connect(livePanners.open);livePanners.open.connect(drumSat);
 drumSat.connect(drumG);
 bassN.connect(bassG);
 bassSub.connect(bassG);
@@ -732,12 +699,11 @@ if(fxRev){fxRev.wet.value=reverbReady?1:0;fxRev.decay=1+(aud_.reverb/100)*profil
 if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud_.delay/100)*profile.effects.delay_feedback_range;}
 if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
-if(tapeSat)tapeSat.wet.value=aud_.tape/100;
+if(tapeSat)tapeSat.wet.value=Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);
 if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
 if(widener)widener.width.value=aud_.width/100;
 if(vinylNoise)vinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,profile.rig.vinyl.level,.1);
 if(crackleNoise)crackleNoise.volume.value=rg69NoiseLevelDb(-65,aud_.crackle,profile.rig.vinyl.crackle,.5);
-if(masterDrive)masterDrive.wet.value=(100-aud_.drive)/400;
 if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz);
 }
 
@@ -782,8 +748,8 @@ synths.kickBody.triggerAttackRelease(pitch.kickBody,thirtySecond,rt,vl*.2);
 }
 else if(v==='s'){synths.snare.triggerAttackRelease(eighth,rt,vl);synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)}
 else if(v==='c')synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl);
-else if(v==='h')synths.hat.triggerAttackRelease(pitch.hat,sixteenthDuration,rt,vl);
-else if(v==='o')synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
+else if(v==='h')synths.hat.triggerAttackRelease(sixteenthDuration,rt,vl);
+else if(v==='o')synths.open.triggerAttackRelease(eighth,rt,vl);
 }
 }
 });
@@ -793,7 +759,7 @@ const nt=bn[stepIdx];
 const drift=opts.applyTranspose?(Math.random()-0.5)*2:0;
 const freq=opts.applyTranspose?Tone.Frequency(nt).toFrequency()*(1+drift/1200):Tone.Frequency(nt).toFrequency();
 synths.bass.triggerAttackRelease(freq,eighth,swungTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v);
-synths.bassSub.frequency.setValueAtTime(Tone.Frequency(nt).toFrequency()/2,swungTime+seq_.b[stepIdx].t/1000);
+synths.bassSub.triggerAttackRelease(Tone.Frequency(nt).toFrequency()/2,eighth,swungTime+seq_.b[stepIdx].t/1000,seq_.b[stepIdx].v*0.7);
 }
 const kn=KEYS_PATS[pat_.k]||[];
 if(kn[stepIdx]&&kn[stepIdx]!==0){
@@ -1041,7 +1007,7 @@ const oPadsG=new Tone.Gain(mix_.pads/100*rg69AudioProfile.voice.level);
 const oMaster=new Tone.Gain(mix_.master/100);
 const oFlt=new Tone.Filter(50+aud_.filter/100*15950,'lowpass');
 const oTape=new Tone.Distortion(0.08);
-const oComp=new Tone.Compressor(-18,1+aud_.comp/100*7);
+const oComp=new Tone.Compressor(-18,1+aud_.comp/100*PARAMS.COMP_RATIO_MAX);
 const oLimiter=new Tone.Limiter(-1);
 const oRevSend=new Tone.Gain((aud_.reverb/100)*rg69AudioProfile.rig.reverb.level_chords);
 const oDlySend=new Tone.Gain((aud_.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
@@ -1050,7 +1016,7 @@ const oDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time)
 const oDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 oRev.wet.value=1;
 oDly.wet.value=1;
-oTape.wet.value=aud_.tape/100;
+oTape.wet.value=Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);
 oMaster.connect(oFlt);
 oFlt.connect(oTape);
 oTape.connect(oComp);
@@ -1098,8 +1064,10 @@ oKickSat.connect(oKickComp);oKickComp.connect(oDrumG);
 oSnareN.connect(offlinePanners.snare);offlinePanners.snare.connect(oDrumSat);
 oSnareRngBP.connect(offlinePanners.snareRing);offlinePanners.snareRing.connect(oDrumSat);
 oClapN.connect(offlinePanners.clap);offlinePanners.clap.connect(oDrumSat);
-oHatN.connect(offlinePanners.hat);offlinePanners.hat.connect(oDrumSat);
-oOpenN.connect(offlinePanners.open);offlinePanners.open.connect(oDrumSat);
+const oHatFlt=new Tone.Filter(7600,'highpass');
+const oOpenFlt=new Tone.Filter(6200,'highpass');
+oHatN.connect(oHatFlt);oHatFlt.connect(offlinePanners.hat);offlinePanners.hat.connect(oDrumSat);
+oOpenN.connect(oOpenFlt);oOpenFlt.connect(offlinePanners.open);offlinePanners.open.connect(oDrumSat);
 oDrumSat.connect(oDrumG);
 oBassN.connect(oBassG);oBassSub.connect(oBassG);
 oKeysN.connect(oKeySat);oKeySat.connect(oKeysChorus);oKeysChorus.connect(oKeysTrem);oKeysTrem.connect(oKeysDrive);
