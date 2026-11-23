@@ -38,6 +38,15 @@ class TestPhraseLanguage < Minitest::Test
     assert_equal :en, L.detect("relayd 8080")
   end
 
+  def test_utf8_bytes_tagged_as_binary_are_normalized_before_detection
+    assert_equal :nb, L.detect("Løsningen er ferdig".b)
+    assert_equal :nb, L.detect("Jeg tror ikke det".b)
+  end
+
+  def test_invalid_binary_bytes_do_not_crash_language_detection
+    assert_equal :en, L.detect("plain text \\xFF".b)
+  end
+
   def test_a_mixed_reply_splits_into_phrases_of_different_languages
     text = "Det ser faktisk riktig ut. The problem is in the event bridge."
     emotion = Master::Voice::Emotion.analyze(text)
