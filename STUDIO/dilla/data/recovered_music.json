@@ -1327,6 +1327,40 @@
   ],
   "engine_modules": [
     {
+      "id": "in_space",
+      "title": "In Space (measured-canon study)",
+      "key": "C",
+      "bpm": 92,
+      "loop_bars": 4,
+      "bars_per_chord": 1,
+      "chords": [
+        "Fmaj9",
+        "Em9",
+        "Dm9",
+        "Cmaj9"
+      ],
+      "melody_midi": [
+        76,
+        77,
+        79,
+        76,
+        74,
+        72
+      ],
+      "feel": {
+        "bass": "dub",
+        "melody": "sweet_soul",
+        "swing": 52.7,
+        "grit": 0.7
+      },
+      "source_status": "engine_study",
+      "sources": [
+        "render_evidence/measured_canon.json row slug=in_space (demucs htdemucs + node spectral analysis, 2026-11-22): 91.7 BPM, 52.7% swing, +17.7 ms off-8th residual, C major (Krumhansl r=0.51)",
+        "Ableton remake tutorial (youtube O3Ha5xkLjbA) - arrangement reference only, not source audio"
+      ],
+      "note": "NOT a transcription. Drums and groove are measured from the canon row (patterns in_space_measured, groove in_space); harmony is engine-authored from the measured mix chroma (peaks E/F/G/A) and the motif is an engine hook on those peaks, descending to resolve like the Time chop contour. The record's sample identity is unverified, so no artist harmony is claimed (ORIGINAL AUTHENTICS)."
+    },
+    {
       "id": "gospel_69_ballad_walk",
       "title": "Gospel 6/9 ballad walk (engine study)",
       "key": "D",

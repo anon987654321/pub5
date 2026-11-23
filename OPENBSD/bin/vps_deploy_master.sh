@@ -131,12 +131,6 @@ asset_stamp="$asset_dir/.pub5-build-sha"
 echo "==> db prepare"
 BUNDLE_GEMFILE="$WEB/Gemfile" BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
 
-echo "==> db prepare"
-BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
-
-echo "==> verify prebuilt assets"
-BUNDLE_WITHOUT=development:test BUNDLE_GEMFILE="$WEB/Gemfile" "$BUNDLE" exec ruby "$ROOT/MASTER/checks/runner.rb" master_web_assets
-
 echo "==> runtime dirs"
 doas /bin/ksh -c '
   set -eu

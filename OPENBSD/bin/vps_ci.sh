@@ -123,7 +123,7 @@ app_dir=/home/${app}/app
 [[ -f ${repo}/RAILS/_core.sh ]] && . "${repo}/RAILS/_core.sh"
 command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
 
-export PUB4_CI_GUARD=1
+export PUB5_CI_GUARD=1
 export PUB5_RAILS_ROOT=${PUB5_RAILS_ROOT:-$repo/RAILS}
 
 # Path and safe creation live in OPENBSD/lib/ci_lock.sh — the lock moved out of

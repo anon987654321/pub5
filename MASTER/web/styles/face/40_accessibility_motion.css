@@ -8,7 +8,7 @@
   min-height: var(--tap-min, 44px);
   display: inline-flex;
   align-items: center;
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-fg);
   border: 1px solid var(--border-strong);
   border-radius: 0;
@@ -46,7 +46,7 @@
   bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
   z-index: var(--z-ui);
   padding: 8px 8px;
-  background: color-mix(in srgb, #000 88%, transparent);
+  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
   border: 1px solid var(--border-soft);
   font: var(--text-meta)/1.4 var(--font-mono);
   color: var(--face-muted);
@@ -84,7 +84,7 @@ body.face-loading::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: #000;
+  background: var(--face-bg);
   opacity: 0.35;
   pointer-events: none;
   z-index: 2;
@@ -128,7 +128,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
   padding: 4px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-pill);
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-muted);
   font: var(--text-meta)/1 var(--font-mono);
   letter-spacing: .12em;

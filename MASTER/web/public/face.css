@@ -259,7 +259,7 @@ body[data-focus-mode="1"] #prompt-form {
 
 /* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
 canvas#face {
-  background: #000;
+  background: var(--face-bg);
   z-index: 1;
   transform: translateZ(0);
 }
@@ -612,7 +612,7 @@ body[data-mode="speaking"] #mic-dot {
   padding: 8px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-large);
-  background: #000;
+  background: var(--face-bg);
   contain: layout style paint;
 }
 
@@ -624,7 +624,7 @@ body[data-mode="speaking"] #mic-dot {
   padding: 8px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-pill);
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-muted);
   font: var(--text-meta)/1 var(--font-mono);
   letter-spacing: .14em;
@@ -652,7 +652,7 @@ body[data-mode="speaking"] #mic-dot {
   padding: 8px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-pill);
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-muted);
   font: var(--text-meta)/1 var(--font-mono);
   letter-spacing: .14em;
@@ -936,7 +936,7 @@ body[data-layout="face"].controls-hidden #ui-status,
 body[data-layout="face"][data-edge-hover="1"] .face-controls,
 body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
 
-#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+#shortcut-sheet { border: 1px solid var(--face-dim); background: var(--face-bg); color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
 #shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
 #shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
 .tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }
@@ -1392,7 +1392,7 @@ body[data-history-open="1"] #chat-log {
   min-height: var(--tap-min, 44px);
   display: inline-flex;
   align-items: center;
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-fg);
   border: 1px solid var(--border-strong);
   border-radius: 0;
@@ -1430,7 +1430,7 @@ body[data-history-open="1"] #chat-log {
   bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
   z-index: var(--z-ui);
   padding: 8px 8px;
-  background: color-mix(in srgb, #000 88%, transparent);
+  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
   border: 1px solid var(--border-soft);
   font: var(--text-meta)/1.4 var(--font-mono);
   color: var(--face-muted);
@@ -1468,7 +1468,7 @@ body.face-loading::before {
   content: '';
   position: fixed;
   inset: 0;
-  background: #000;
+  background: var(--face-bg);
   opacity: 0.35;
   pointer-events: none;
   z-index: 2;
@@ -1512,7 +1512,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
   padding: 4px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-pill);
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-muted);
   font: var(--text-meta)/1 var(--font-mono);
   letter-spacing: .12em;

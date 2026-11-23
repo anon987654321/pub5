@@ -74,7 +74,7 @@ end
 
 parser = OptionParser.new do |opts|
   opts.banner = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [options]"
-  opts.on("--dry", "Check readiness without starting /fix") { options[:dry] = true }
+  opts.on("--dry", "Check tree, disk and model only; the parse sweep and lane probe run on the real run") { options[:dry] = true }
   opts.on("--no-probe", "Skip the bounded in-process /fix lane request") { options[:probe] = false }
   opts.on("--no-publish", "Keep verified commits local") { options[:no_publish] = true }
   opts.on("--resume", "Resume the existing run budget") { options[:resume] = true }

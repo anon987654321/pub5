@@ -1,0 +1,3 @@
+#!/bin/sh
+# Convenience shim; MASTER/bin/master is the one entrypoint and resolves its own root.
+exec "$(dirname "$0")/../MASTER/bin/master" "$@"

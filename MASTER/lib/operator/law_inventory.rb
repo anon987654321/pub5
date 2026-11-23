@@ -221,7 +221,14 @@ module Operator
     def rule_dependencies
       raw = Master.load_laws(root: MASTER)
       deps = raw["law_deps"] || {}
-      return deps.transform_keys { |key| key.to_s.downcase }.transform_values { |value| Array(value).map(&:to_s) } if deps.is_a?(Hash)
+      if deps.is_a?(Hash)
+        return deps.transform_keys { |key| key.to_s.downcase }.transform_values do |value|
+          # Entries are { "after" => [...] }; Array(hash) would yield key-value
+          # pairs, so the old Array(value) rendered every dependency list as
+          # stringified Ruby pairs in `laws --card`. Bare arrays pass through.
+          Array(value.is_a?(Hash) ? value["after"] : value).map(&:to_s)
+        end
+      end
 
       {}
     rescue StandardError

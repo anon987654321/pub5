@@ -444,6 +444,12 @@ module Master
         outcome = Result.wrap(result)
         failure = outcome.ok? ? nil : outcome.message.to_s
         Io::LaneQuota.note(model, failure) if failure
+        # A permanent model-level refusal (a decision-only model asked to chat,
+        # an unknown model id) is not a lane fault: counting it silences every
+        # healthy sibling on the provider for five minutes, and the model stays
+        # in the catalogue to fail again. ollama_cloud:clef:27b, 2026-11-23.
+        return if failure && %i[invalid_request model_missing].include?(outcome.category)
+
         lane = Io::LaneSilence.lane_of(model)
         return silence_local_runtime(lane, failure) if failure && local_runtime_failure?(model, failure)
         return unless Io::LaneSilence.record(failure.nil?, lane, reason: failure)

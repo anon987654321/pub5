@@ -179,7 +179,7 @@ body[data-mode="speaking"] #mic-dot {
   padding: 8px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-large);
-  background: #000;
+  background: var(--face-bg);
   contain: layout style paint;
 }
 
@@ -191,7 +191,7 @@ body[data-mode="speaking"] #mic-dot {
   padding: 8px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-pill);
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-muted);
   font: var(--text-meta)/1 var(--font-mono);
   letter-spacing: .14em;
@@ -219,7 +219,7 @@ body[data-mode="speaking"] #mic-dot {
   padding: 8px 8px;
   border: 1px solid var(--border-faint);
   border-radius: var(--radius-pill);
-  background: #000;
+  background: var(--face-bg);
   color: var(--face-muted);
   font: var(--text-meta)/1 var(--font-mono);
   letter-spacing: .14em;

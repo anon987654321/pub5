@@ -85,7 +85,7 @@ switch -- $mode {
     set timeout 20
     console_open
     at_prompt_loose
-    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub4_install_latest.log; pgrep -lf bundle\r"
+    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub5_install_latest.log; pgrep -lf bundle\r"
     at_prompt_loose
     send "doas rcctl check master brgen amber bsdports 2>/dev/null\r"
     at_prompt_loose

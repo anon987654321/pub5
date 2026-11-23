@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Composite two captures into review evidence, or lay the rhythm grid over
+# one. No browser, no gems beyond zlib - PngDiff owns the codec.
+#
+#   visual-register A.png B.png --mode anaglyph --out drift.png
+#   visual-register A.png B.png --mode difference --amplify 4 --out diff.png
+#   visual-register shot.png --grid --spacing 4 --out gridded.png
+#
+# Modes are documented on Deploy::VisualRegister. Captures come from the
+# existing machinery (cdp_session / capture_engine); this tool never opens a
+# page itself, so its output is reproducible from stored PNGs.
+
+require "optparse"
+require_relative "../checks/support/visual_register"
+
+options = { mode: "anaglyph", amplify: Deploy::VisualRegister::DEFAULT_AMPLIFY,
+            tile: Deploy::VisualRegister::DEFAULT_TILE, spacing: 4 }
+parser = OptionParser.new do |o|
+  o.banner = "usage: visual-register A.png [B.png] [--mode M | --grid] --out OUT.png"
+  o.on("--mode M", Deploy::VisualRegister::MODES, "composite mode (#{Deploy::VisualRegister::MODES.join(', ')})")
+  o.on("--grid", "rhythm-grid overlay over A.png (B not used)")
+  o.on("--out PATH", "output PNG (required)")
+  o.on("--amplify N", Integer, "difference amplification (default #{options[:amplify]})")
+  o.on("--tile N", Integer, "checkerboard tile px (default #{options[:tile]})")
+  o.on("--spacing N", Integer, "grid spacing px (default #{options[:spacing]})")
+end
+parser.parse!(ARGV, into: options)
+
+out = options.delete(:out)
+grid = options.delete(:grid)
+parser.abort("the --out PATH is required") unless out
+
+result =
+  if grid
+    parser.abort("--grid takes exactly one capture") unless ARGV.one?
+    Deploy::VisualRegister.grid_overlay(capture_path: ARGV.fetch(0), out_path: out, spacing: options[:spacing])
+  else
+    parser.abort("composite modes take A.png and B.png") unless ARGV.size == 2
+    Deploy::VisualRegister.composite(a_path: ARGV.fetch(0), b_path: ARGV.fetch(1),
+                                     mode: options[:mode], out_path: out,
+                                     amplify: options[:amplify], tile: options[:tile])
+  end
+
+if result[:status] == :dimension_mismatch
+  warn "visual-register: dimensions differ - A #{result[:a_dimensions].join('x')} vs B #{result[:b_dimensions].join('x')}"
+  exit 1
+end
+
+puts "visual-register: #{result[:status]} #{result[:mode] || "grid"} -> #{result[:composite_image]} (#{result[:width]}x#{result[:height]})"
