@@ -111,7 +111,7 @@ class TestLaneFailover < Minitest::Test
     result = Health.ensure_ollama(base: "http://localhost:11434", up:, spawn:)
 
     assert_equal :off, result.state
-    assert_match(/MASTER_NO_OLLAMA=1 refuses it/, result.message)
+    assert_match(/MASTER_NO_OLLAMA=1 refuses local inference/, result.message)
     assert_equal 0, probes
     assert_equal 0, starts
   end
