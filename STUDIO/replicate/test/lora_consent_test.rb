@@ -47,6 +47,17 @@ class TestLoraConsent < Minitest::Test
     assert report.fetch("valid"), report.fetch("errors").join("; ")
   end
 
+  def test_likeness_review_always_requires_an_evaluation_source_record
+    write_record
+    assert_equal ["evaluation_photographs"],
+                 Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir, action: :likeness_review)
+    report = Consent.validate(
+      subject: "probe", subject_directory: @subject_dir, action: :likeness_review
+    )
+    refute report.fetch("valid")
+    assert report.fetch("errors").any? { |error| error.include?("evaluation_photographs") }
+  end
+
   def test_local_likeness_review_requires_its_own_subject_and_source_permissions
     write_record(review: true)
     report = Consent.validate(

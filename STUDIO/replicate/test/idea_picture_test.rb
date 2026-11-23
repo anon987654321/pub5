@@ -191,6 +191,15 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_inference_profiles_are_rejected_for_generic_engines
+    error = assert_raises(ArgumentError) do
+      Studio::Visual::IdeaPicture.new(
+        subject: "probe", engine: "black-forest-labs/flux-dev", inference_profile: "identity"
+      )
+    end
+    assert_match(/only to the subject's pinned LoRA route/, error.message)
+  end
+
   def test_lora_masters_default_to_png_when_provider_url_has_no_suffix
     Dir.mktmpdir do |dir|
       client = Object.new
@@ -503,6 +512,7 @@ class TestIdeaPictureOutput < Minitest::Test
     standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
     profile = standard.fetch("profiles").fetch("balanced")
     picture = Studio::Visual::IdeaPicture.allocate
+    picture.instance_variable_set(:@lora_only, true)
     picture.instance_variable_set(:@inference_profile, "balanced")
     picture.instance_variable_set(
       :@validated_still_inputs,
@@ -524,7 +534,7 @@ class TestIdeaPictureOutput < Minitest::Test
 
   def test_unsupported_inference_profile_is_rejected_before_provider_access
     error = assert_raises(ArgumentError) do
-      Studio::Visual::IdeaPicture.new(subject: "probe", inference_profile: "cinema-ultra")
+      Studio::Visual::IdeaPicture.new(subject: "probe", lora_only: true, inference_profile: "cinema-ultra")
     end
     assert_match(/unknown inference profile/, error.message)
   end

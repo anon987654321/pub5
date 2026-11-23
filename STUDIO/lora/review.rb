@@ -145,7 +145,8 @@ module Studio
           # Check the private reference set and pinned candidate before any
           # provider prediction. A bad dataset must not consume a paid sample.
           picture = Studio::Visual::IdeaPicture.new(
-            subject: @subject, subjects_root: @root, inference_profile: profile
+            subject: @subject, subjects_root: @root, lora_only: true,
+            inference_profile: profile
           )
           version = picture.send(:still_model)
 
@@ -315,6 +316,10 @@ module Studio
           reference_rows = measurement_rows(report.fetch("reference_measurements"))
           render_pixel_rows = pixel_diagnostic_rows(report.fetch("measurements"))
           reference_pixel_rows = pixel_diagnostic_rows(report.fetch("reference_measurements"))
+          rubric_rows = Array(report["quality_rubric"]).map do |item|
+            "<li><strong>#{escape_html(item.fetch("criterion"))}</strong> — " \
+              "#{escape_html(item.fetch("description"))} <em>#{escape_html(item.fetch("status"))}</em></li>"
+          end.join("\n")
           gallery = report.fetch("images").map do |entry|
             relative = escape_html(entry.fetch("relative_path"))
             label = escape_html(entry.fetch("role"))
@@ -347,11 +352,14 @@ module Studio
               <h1>Private likeness review — #{escape_html(@subject)} — #{escape_html(report.fetch("render_kind"))}</h1>
               <p>Candidate model: <code>#{escape_html(report.fetch("model_version"))}</code></p>
               <p class="warning">Identity and photographic verdicts: NOT REVIEWED. Compare every full-size render with the independent holdout photographs. Do not approve from a contact sheet or image metrics alone.</p>
-            <p>Inference profile: <code>#{escape_html(report.fetch("inference_profile", Quality.default_profile))}</code>. A profile remains experimental until reviewed against the same holdout set.</p>
+              <p>Inference profile: <code>#{escape_html(report.fetch("inference_profile", Quality.default_profile))}</code>. A profile remains experimental until reviewed against the same holdout set.</p>
+              <h2>Human photographic review</h2>
+              <p>Inspect every render at full size. Record each criterion as PASS, FAIL or INCONCLUSIVE outside this generated report; none is approved automatically.</p>
+              <ul>#{rubric_rows}</ul>
               <img src="contact-sheet.jpg" alt="#{Integer(report.fetch("reference_count"))} held-out evaluation photographs and #{Integer(report.fetch("render_count"))} #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} portraits">
               <h2>Full-resolution source and render files</h2>
               <div class="gallery">#{gallery}</div>
-              <h2>Source reference measurements</h2>
+              <h2>Independent holdout measurements</h2>
               <p>Whole-frame texture, specular spread, clipping and tonal range are diagnostic proxies, not face recognition.</p>
               <table>
                 <thead><tr><th>Reference</th><th>Texture</th><th>Specular spread</th><th>Clipping</th><th>Tonal range</th></tr></thead>

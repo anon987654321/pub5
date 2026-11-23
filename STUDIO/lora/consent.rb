@@ -36,7 +36,7 @@ module Studio
 
       def required_source_sets(subject:, subject_directory:, action: :generation)
         directory = File.expand_path(subject_directory.to_s)
-        return (local_images?(File.join(directory, "evaluation")) ? ["evaluation_photographs"] : []) if action.to_sym == :likeness_review
+        return ["evaluation_photographs"] if action.to_sym == :likeness_review
 
         sets = if subject.to_s == "merethe"
                  sources = File.join(directory, "sources")

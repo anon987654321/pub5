@@ -43,7 +43,8 @@ module Studio
         end
       end
 
-      def run_all(subjects: SUBJECTS, count: DEFAULT_COUNT, engine: nil)
+      def run_all(subjects: SUBJECTS, count: DEFAULT_COUNT, engine: nil, inference_profile: nil)
+        profile = resolve_inference_profile(engine:, inference_profile:)
         names = validate_subjects(subjects)
         total = Integer(count)
         raise ArgumentError, "count must be between 1 and #{MAX_COUNT}" unless total.between?(1, MAX_COUNT)
@@ -73,7 +74,10 @@ module Studio
 
         results = ready.map do |subject|
           begin
-            build_subject_film!(subject, session:, audio:, count: total, engine:)
+            build_subject_film!(
+              subject, session:, audio:, count: total, engine:,
+              inference_profile: profile
+            )
           rescue StandardError => error
             { "subject" => subject, "state" => "DELIVERY_FAILED", "reason" => concise(error) }
           end
@@ -145,14 +149,29 @@ module Studio
         Consent.require!(subject:, subject_directory: directory, action: :generation)
       end
 
-      def build_subject_film!(subject, session:, audio:, count:, engine:)
+      def resolve_inference_profile(engine:, inference_profile:)
+        if engine
+          raise ArgumentError, "inference profiles apply only to the subject's pinned LoRA route" unless inference_profile.nil?
+
+          return nil
+        end
+
+        settings = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
+        profile = (inference_profile || settings.fetch("profile")).to_s
+        profiles = settings.fetch("profiles")
+        raise ArgumentError, "unknown inference profile #{profile.inspect}; choose #{profiles.keys.join(", ")}" unless profiles.key?(profile)
+
+        profile
+      end
+
+      def build_subject_film!(subject, session:, audio:, count:, engine:, inference_profile:)
         subject_root = File.join(session, subject)
         stills_root = File.join(subject_root, "stills")
         secure_directory!(subject_root)
         secure_directory!(stills_root)
 
         series = Studio::Visual::SelfieSeries.new(
-          subject:, directory: stills_root, engine:,
+          subject:, directory: stills_root, engine:, inference_profile:,
           ledger_path: File.join(subject_root, "ledger.jsonl")
         )
         stills = series.run(count:, replace: false)
@@ -174,6 +193,7 @@ module Studio
         manifest = {
           "schema" => "studio.selfie_film.v1", "subject" => subject,
           "created_at" => Time.now.utc.iso8601, "still_count" => stills.length,
+          "inference_profile" => inference_profile,
           "stills" => still_records,
           "soundtrack" => { "file" => File.basename(audio), "sha256" => Digest::SHA256.file(audio).hexdigest,
                             "renderer" => "STUDIO/dilla/dilla.rb", "seed" => DILLA_SEED },
@@ -185,7 +205,8 @@ module Studio
         }
         write_private_json(File.join(subject_root, "manifest.json"), manifest)
         { "subject" => subject, "state" => "PASS", "film" => final,
-          "manifest" => File.join(subject_root, "manifest.json"), "duration_seconds" => video.fetch("duration_seconds") }
+          "manifest" => File.join(subject_root, "manifest.json"), "duration_seconds" => video.fetch("duration_seconds"),
+          "inference_profile" => inference_profile }
       end
 
       def render_dilla!(audio)
@@ -340,11 +361,12 @@ end
 if $PROGRAM_NAME == __FILE__
   options = { subjects: Studio::Lora::SelfieFilm::SUBJECTS, count: Studio::Lora::SelfieFilm::DEFAULT_COUNT }
   OptionParser.new do |parser|
-    parser.banner = "usage: ruby STUDIO/lora/selfie_film.rb [--all | --subject NAME] [--count N] [--engine MODEL]"
+    parser.banner = "usage: ruby STUDIO/lora/selfie_film.rb [--all | --subject NAME] [--count N] [--engine MODEL] [--inference-profile PROFILE]"
     parser.on("--all", "render all three authorised subjects (default)") { options[:subjects] = Studio::Lora::SelfieFilm::SUBJECTS }
     parser.on("--subject NAME", "render one named subject") { |value| options[:subjects] = [value] }
     parser.on("--count N", Integer, "number of stills per subject (1..12; default 10)") { |value| options[:count] = value }
     parser.on("--engine MODEL", "optional configured Replicate still engine") { |value| options[:engine] = value }
+    parser.on("--inference-profile PROFILE", "pinned LoRA inference profile (identity, balanced, detail, draft)") { |value| options[:inference_profile] = value }
     parser.on("-h", "--help", "show this help") { puts parser; exit 0 }
   end.parse!
   report = Studio::Lora::SelfieFilm.new.run_all(**options)

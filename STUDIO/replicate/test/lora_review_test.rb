@@ -55,16 +55,36 @@ class TestStudioLoraReview < Minitest::Test
     assert_equal latest_paths, @builder.render_files
   end
 
-  def test_reference_inventory_uses_only_private_dataset_images
+  def test_reference_inventory_uses_only_independent_private_holdout_images
     dataset = File.join(@subject, "dataset")
-    FileUtils.mkdir_p(dataset, mode: 0o700)
-    File.chmod(0o700, dataset)
-    5.times { |index| write_private(File.join(dataset, "source-#{index}.jpg")) }
-    File.write(File.join(dataset, "source-0.txt"), "johann_lora", mode: "w", perm: 0o600)
+    evaluation = File.join(@subject, "evaluation")
+    [dataset, evaluation].each do |directory|
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      File.chmod(0o700, directory)
+    end
+    12.times { |index| write_private(File.join(dataset, "training-#{index}.jpg")) }
+    5.times { |index| write_private(File.join(evaluation, "holdout-#{index}.jpg")) }
+    File.write(File.join(dataset, "training-0.txt"), "johann_lora", mode: "w", perm: 0o600)
 
     references = @builder.reference_files
-    assert_equal 3, references.length
-    assert_equal %w[source-0.jpg source-2.jpg source-4.jpg], references.map { |path| File.basename(path) }
+    assert_equal 5, references.length
+    assert references.all? { |path| path.include?("/evaluation/") }
+    assert_equal (0..4).map { |index| "holdout-#{index}.jpg" }, references.map { |path| File.basename(path) }
+  end
+
+  def test_holdout_rejects_a_byte_identical_training_photograph
+    dataset = File.join(@subject, "dataset")
+    evaluation = File.join(@subject, "evaluation")
+    [dataset, evaluation].each do |directory|
+      FileUtils.mkdir_p(directory, mode: 0o700)
+      File.chmod(0o700, directory)
+    end
+    12.times { |index| write_private(File.join(dataset, "training-#{index}.jpg")) }
+    5.times { |index| write_private(File.join(evaluation, "holdout-#{index}.jpg")) }
+    File.write(File.join(evaluation, "duplicate.jpg"), File.read(File.join(dataset, "training-0.jpg")), mode: "w", perm: 0o600)
+
+    error = assert_raises(Studio::Lora::Quality::Error) { @builder.reference_files }
+    assert_match(/overlaps the training dataset/, error.message)
   end
 
   def test_html_review_links_each_reference_and_full_resolution_render
@@ -75,18 +95,26 @@ class TestStudioLoraReview < Minitest::Test
       "render_count" => 3,
       "reference_count" => 3,
       "images" => [
-        { "role" => "REFERENCE", "file" => "source.jpg", "relative_path" => "../../../../dataset/source.jpg" },
+        { "role" => "HOLDOUT_REFERENCE", "file" => "source.jpg", "relative_path" => "../../../../evaluation/source.jpg" },
         { "role" => "CANDIDATE", "file" => "candidate.jpg", "relative_path" => "../../../../candidate.jpg" },
       ],
       "reference_measurements" => [],
       "measurements" => [],
+      "inference_profile" => "balanced",
+      "quality_rubric" => [
+        { "criterion" => "identity", "description" => "Same person at full size", "status" => "NOT_REVIEWED" },
+        { "criterion" => "composition", "description" => "One clear visual centre", "status" => "NOT_REVIEWED" },
+      ],
     }
     html = @builder.send(:html_document, report)
 
     assert_includes html, "UNAPPROVED_CANDIDATE"
-    assert_includes html, "href=\"../../../../dataset/source.jpg\""
+    assert_includes html, "href=\"../../../../evaluation/source.jpg\""
     assert_includes html, "href=\"../../../../candidate.jpg\""
-    assert_includes html, "Source reference measurements"
+    assert_includes html, "Independent holdout measurements"
+    assert_includes html, "Human photographic review"
+    assert_includes html, "One clear visual centre"
+    assert_includes html, "NOT_REVIEWED"
     assert_includes html, "Generated image measurements"
   end
 

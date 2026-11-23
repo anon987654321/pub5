@@ -7,6 +7,7 @@ require "optparse"
 require "yaml"
 require_relative "consent"
 require_relative "validate"
+require_relative "lora"
 
 module Studio
   module Lora
@@ -15,9 +16,8 @@ module Studio
     module Quality
       ROOT = File.expand_path(__dir__).freeze
       STANDARDS_PATH = File.join(ROOT, "training_standards.yml").freeze
-      GUIDES_PATH = File.join(ROOT, "guides.yml").freeze
       STANDARD = YAML.safe_load_file(STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false).freeze
-      GUIDES = YAML.safe_load_file(GUIDES_PATH, permitted_classes: [], permitted_symbols: [], aliases: false).freeze
+      GUIDES = Studio::Lora::Guides.load.freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
 
@@ -43,7 +43,6 @@ module Studio
         guidance_range = guide.fetch("guidance_range").map(&:to_f)
         steps_range = guide.fetch("steps").map(&:to_i)
         guide_scale_range = guide.fetch("lora_scale_range").map(&:to_f)
-        safe_scale_range = [[guide_scale_range.first, 0.0].max, [guide_scale_range.last, 1.0].min]
         checks = []
         checks << check(
           "default_profile", profiles.key?(default_profile),
@@ -64,7 +63,7 @@ module Studio
                   values["num_inference_steps"].is_a?(Integer) &&
                   values["num_inference_steps"].between?(*steps_range) &&
                   values["lora_scale"].is_a?(Numeric) &&
-                  values["lora_scale"].to_f.between?(*safe_scale_range)
+                  values["lora_scale"].to_f.between?(*guide_scale_range)
           checks << check(
             "profile_#{name}", valid,
             "Guidance, steps and LoRA strength stay inside documented and provider operating ranges"
@@ -195,7 +194,7 @@ module Studio
         rescue Error => error
           { "subject" => name, "state" => "BLOCKED", "detail" => error.message, "provider_calls" => 0 }
         end
-        state = configuration["state"] == "PASS" &&
+        state = configuration["state"] == "PASS" && !subjects.empty? &&
                 subjects.all? { |entry| entry["state"] == "READY_FOR_CANDIDATE_REVIEW" } ? "PASS" : "BLOCKED"
         {
           "schema" => "studio.lora.quality.v1",

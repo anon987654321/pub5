@@ -15,6 +15,27 @@ class TestSelfieFilm < Minitest::Test
     FileUtils.remove_entry(@directory) if @directory && File.directory?(@directory)
   end
 
+  def test_lora_film_profile_defaults_to_balanced_and_accepts_named_profiles
+    assert_equal "balanced", @builder.send(:resolve_inference_profile, engine: nil, inference_profile: nil)
+    assert_equal "identity", @builder.send(:resolve_inference_profile, engine: nil, inference_profile: "identity")
+    assert_equal "draft", @builder.send(:resolve_inference_profile, engine: nil, inference_profile: "draft")
+  end
+
+  def test_generic_film_engine_cannot_claim_a_lora_profile
+    assert_nil @builder.send(:resolve_inference_profile, engine: "black-forest-labs/flux-dev", inference_profile: nil)
+    error = assert_raises(ArgumentError) do
+      @builder.send(:resolve_inference_profile, engine: "black-forest-labs/flux-dev", inference_profile: "identity")
+    end
+    assert_match(/only to the subject's pinned LoRA route/, error.message)
+  end
+
+  def test_unknown_film_profile_is_refused_before_media_work
+    error = assert_raises(ArgumentError) do
+      @builder.send(:resolve_inference_profile, engine: nil, inference_profile: "cinema-ultra")
+    end
+    assert_match(/unknown inference profile/, error.message)
+  end
+
   def test_ten_stills_make_a_twenty_five_and_a_half_second_cut
     assert_in_delta 25.5, Studio::Lora::SelfieFilm.expected_duration(10), 0.0001
   end

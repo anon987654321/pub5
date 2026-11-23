@@ -36,11 +36,17 @@ task :check do
   require_relative "output_paths"
   require_relative "subprocess"
   require_relative "../lora/validate"
+  require_relative "../lora/quality"
+  quality_report = Studio::Lora::Quality.audit_configuration
+  unless quality_report.fetch("state") == "PASS"
+    raise "LoRA photographic quality contract failed: #{quality_report.fetch("checks").reject { |item| item.fetch("state") == "PASS" }.map { |item| item.fetch("id") }.join(", ")}"
+  end
   lora_report = Studio::Lora::Validator.new.validate_all
   invalid_lora = lora_report.fetch("subjects").select { |subject| subject.fetch("state") != "PASS" }
   raise "LoRA subject validation failed: #{invalid_lora.map { |subject| subject.fetch("subject") }.join(", ")}" if invalid_lora.any?
   puts "lora0: #{lora_report.fetch("subject_count")} subject profile(s) structurally valid; " \
        "#{lora_report.fetch("subjects").count { |subject| !subject.fetch("training_ready") }} require local preparation"
+  puts "quality0: #{quality_report.fetch("profiles").length} inference profile(s) within the photographic guide; all unbenchmarked"
 
   raise "output_paths: render_directory is not absolute" unless Studio::OutputPaths.render_directory.start_with?(File::SEPARATOR)
   raise "output_paths: reference_root collides with the checkout" if Studio::OutputPaths.inside_repository?(Studio::OutputPaths.reference_root)
@@ -97,6 +103,7 @@ task :check do
 
   %w[
     replicate/bin/studio replicate/doctor.rb lora/lora.rb lora/photograph.rb lora/idea_picture.rb lora/selfie_series.rb lora/selfie_film.rb lora/selfies_gallery.rb
+    lora/quality.rb lora/review.rb
     replicate/client.rb lora/consent.rb lora/validate.rb lora/migrate_local.rb lora/judge.rb replicate/subprocess.rb replicate/test_runner.rb replicate/promo.rb
     dilla/lib/als.rb dilla/lib/als_export.rb dilla/lib/als_to_midi.rb dilla/lib/reference_analyzer.rb
     dilla/analog_core.rb postpro/postpro.rb postpro/uncanny.rb postpro/motion.rb postpro/motion_process.rb

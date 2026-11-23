@@ -135,7 +135,7 @@ module Studio
         subjects = request["subjects"] || (request["subject"] ? [request["subject"]] : Studio::Lora::SelfieFilm::SUBJECTS)
         Studio::Lora::SelfieFilm.new.run_all(
           subjects:, count: request.fetch("count", Studio::Lora::SelfieFilm::DEFAULT_COUNT),
-          engine: request["engine"]
+          engine: request["engine"], inference_profile: request["inference_profile"]
         )
       end
 

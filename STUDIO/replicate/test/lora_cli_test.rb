@@ -4,6 +4,7 @@ require "stringio"
 require_relative "minitest_helper"
 require_relative "../../lora/lora"
 require_relative "../../lora/photograph"
+require_relative "../../lora/selfie_film"
 
 class TestStudioLoraCli < Minitest::Test
   CLI = Studio::Lora::CLI
@@ -36,6 +37,52 @@ class TestStudioLoraCli < Minitest::Test
 
     assert_equal 0, status
     assert_equal ["--all", "--timeout", "7200"], seen
+  end
+
+  def test_quality_api_is_read_only_and_calls_no_provider
+    require_relative "../../lora/quality"
+    report = {
+      "schema" => "studio.lora.quality.v1",
+      "read_only" => true,
+      "provider_calls" => 0,
+      "state" => "BLOCKED",
+    }
+    Studio::Lora::Quality.stub(:report, ->(subject: nil) {
+      assert_nil subject
+      report
+    }) do
+      assert_equal report, CLI.quality_report({})
+    end
+  end
+
+  def test_film_api_passes_the_selected_inference_profile
+    captured = {}
+    fake = Object.new
+    fake.define_singleton_method(:run_all) do |subjects:, count:, engine:, inference_profile:|
+      captured[:subjects] = subjects
+      captured[:count] = count
+      captured[:engine] = engine
+      captured[:inference_profile] = inference_profile
+      { "state" => "BLOCKED" }
+    end
+    Studio::Lora::SelfieFilm.stub(:new, -> { fake }) do
+      report = CLI.film_render({ "subject" => "johann", "count" => 2, "inference_profile" => "detail" })
+      assert_equal "BLOCKED", report.fetch("state")
+    end
+    assert_equal ["johann"], captured.fetch(:subjects)
+    assert_equal 2, captured.fetch(:count)
+    assert_nil captured.fetch(:engine)
+    assert_equal "detail", captured.fetch(:inference_profile)
+  end
+
+  def test_quality_command_is_reachable_without_a_tty
+    seen = nil
+    status = CLI.stub(:quality_command, ->(arguments) { seen = arguments; 0 }) do
+      CLI.run_flags(["quality", "--json", "--subject", "johann"])
+    end
+
+    assert_equal 0, status
+    assert_equal ["--json", "--subject", "johann"], seen
   end
 
   def test_recovery_is_dry_run_when_no_apply_flag_is_given

@@ -63,7 +63,9 @@ module Studio
         @subject_directory = File.join(subjects_root, @subject)
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
+        raise ArgumentError, "inference profiles apply only to the subject LoRA route" if @engine && !inference_profile.nil?
         @lora_only = !!lora_only
+        raise ArgumentError, "inference profiles apply only to the subject's pinned LoRA route" if !inference_profile.nil? && !@lora_only
         @allow_unreviewed_likeness = !!allow_unreviewed_likeness
         raise ArgumentError, "lora_only cannot be combined with a different engine" if @lora_only && @engine
         raise ArgumentError, "unreviewed likeness is available only for the LoRA candidate-review path" if @allow_unreviewed_likeness && !@lora_only
@@ -75,6 +77,8 @@ module Studio
       end
 
       def inference_profile
+        return unless @lora_only
+
         @inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")
       end
 

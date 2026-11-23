@@ -127,6 +127,10 @@ voice of the creative work.
   unapproved until a human has reviewed the likeness and photographic rubric.
   Selfie-series inference can select the same profile with
   `--inference-profile balanced`. The balanced profile is the default.
+  Finished Dilla-scored selfie films accept the same
+  `--inference-profile identity|balanced|detail|draft` option, and their
+  private manifest records the effective profile; a generic still engine
+  cannot be labelled with a LoRA profile.
   The first four scenes for each subject use an original, coordinated
   autumn/winter ’26 wardrobe direction: Johann gets textured wool, a long
   chore coat, waffle-knit layering and a clean suede blouson; Ragnhild and
