@@ -150,7 +150,7 @@ module Master
       end
       private_class_method :probe_open?
 
-      # Epoch milliseconds the model's park ends, nil when it is not parked.
+      # Monotonic milliseconds remaining on the model's park, nil when it is not parked.
       def skipped_until_ms(model)
         @mutex.synchronize { @skips[model.to_s]&.dig(:until_ms) }
       end
