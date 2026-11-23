@@ -474,6 +474,13 @@ class TestRg69Defaults < Minitest::Test
     refute_includes js, "Tone.Buffer.toWav"
   end
 
+  def test_visual_step_cursor_waits_for_the_first_transport_tick
+    update = js[/function updateStepUI\(\)\{(.*?)\n\}/m, 1] or raise "no step cursor updater"
+    assert_includes update, "const next=st_.idx%16;"
+    assert_includes update, "if(next<0||next>=stepUiByIndex.length)return;"
+    assert_includes update, "stepUiByIndex[next].forEach(el=>el.classList.add('playing'));"
+  end
+
   def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
     refresh = js[/function refreshStepGrid\(\)(.*?)\n\}/m, 1] or raise "no state-driven step renderer"
     sync = js[/function syncUIFromState\(\)(.*?)\n\}/m, 1] or raise "no syncUIFromState"
