@@ -24,6 +24,8 @@ module Master
       # tmux run survives a disconnected waiter; reconciliation is read-only.
       DEPLOY_CAPTURE_TIMEOUT = 21_600
       DEPLOY_RECONCILE_TIMEOUT = 45
+      OPENBSD_HOST_DIAGNOSTIC_TIMEOUT = 120
+      OPENBSD_HOST_DIAGNOSTIC_MAX_BYTES = 160_000
 
       # /pair — issue, list, revoke or redeem a pairing code.
       def dispatch_pair(root, ctx: nil)
@@ -1117,6 +1119,7 @@ module Master
         word, rest = subcommand(ctx)
         return dispatch_device(root, ctx: rest) if word == "device"
         return dispatch_doctor_tools(root, ctx: rest) if word == "tools"
+        return dispatch_doctor_host(root, ctx: rest) if word == "host"
         return dispatch_keyless_probe(root) if word == "keyless"
 
         script = File.join(root, "bin", "doctor")
@@ -1130,6 +1133,73 @@ module Master
         audit = Master::Ground::SecurityAudit.report(root:)
         capabilities = ::Operator::CapabilityGraph.new(root:).render(model: ENV["MASTER_MODEL"])
         [body, audit, capabilities].reject { |part| part.to_s.strip.empty? }.join("\n")
+      end
+
+      # Capture the existing allowlisted OpenBSD incident snapshot through the
+      # operator transport. The remote command is read-only; SSH admission,
+      # identity, timeout and logging remain owned by bin/operator.
+      def capture_openbsd_host_diagnostics(root)
+        operator = File.join(root, "bin", "operator")
+        raise ArgumentError, "missing MASTER/bin/operator: #{operator}" unless File.file?(operator)
+
+        repo_root = File.expand_path("..", root)
+        stdout, stderr, status = Master::Io::Exec.capture3(
+          RbConfig.ruby, operator, "vps", "admin", "diagnose", "--remote",
+          chdir: repo_root, timeout: OPENBSD_HOST_DIAGNOSTIC_TIMEOUT, raise_on_timeout: true,
+        )
+        output = [stdout, stderr].map(&:strip).reject(&:empty?).join("\n")
+        unless status.success?
+          detail = output.byteslice(-2_000, 2_000).to_s
+          raise IOError, "remote vm23 diagnostics exited #{status.exitstatus || "unknown"}: #{detail}"
+        end
+
+        output = redact_host_diagnostic_output(output)
+        output = output.byteslice(0, OPENBSD_HOST_DIAGNOSTIC_MAX_BYTES).to_s.force_encoding("UTF-8").scrub
+        output << "\n[diagnostic output truncated]" if stdout.bytesize + stderr.bytesize > OPENBSD_HOST_DIAGNOSTIC_MAX_BYTES
+        {
+          output:,
+          digest: Digest::SHA256.hexdigest(output),
+          bytes: output.bytesize,
+          exit_status: status.exitstatus || 0,
+        }
+      end
+
+      # Operational records keep the digest and byte count, not raw process
+      # arguments or environment values from ps(1). The diagnostic text is
+      # supplied only to the explicitly requested local /fix reasoning pass.
+      def record_openbsd_host_diagnostics(root:, snapshot:)
+        Master::Trace::Log::Evidence.new(root:).append!(
+          "ops:host_diagnostics",
+          {
+            subsystem: "vm23",
+            status: "captured",
+            stage: "vps_admin_diagnose",
+            output_digest: snapshot.fetch(:digest),
+            output_bytes: snapshot.fetch(:bytes),
+            success: true,
+          },
+        )
+      end
+
+      def dispatch_doctor_host(root, ctx: nil)
+        args = Shellwords.split(arg_for(ctx).to_s)
+        unless args.empty? || args == ["--remote"]
+          return "doctor host: usage /doctor host [--remote] (read-only vm23 snapshot)"
+        end
+        return "doctor host: local operator only; visitors cannot query vm23" if Fiber[:master_visitor] == true
+
+        snapshot = capture_openbsd_host_diagnostics(root)
+        record_openbsd_host_diagnostics(root:, snapshot:)
+        "host0: vm23 read-only diagnostics captured sha256=#{snapshot.fetch(:digest)[0, 12]}\n#{snapshot.fetch(:output)}"
+      rescue StandardError => e
+        "host0: INCONCLUSIVE: remote vm23 diagnostics unavailable (#{e.class}: #{e.message})"
+      end
+
+      def redact_host_diagnostic_output(value)
+        value.to_s
+             .encode("UTF-8", invalid: :replace, undef: :replace, replace: "�")
+             .gsub(/(?i)\b((?:authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret)\b\s*[=:]\s*)[^\s,;]+/, '\1[REDACTED]')
+             .gsub(/(?i)\bBearer\s+[A-Za-z0-9._~+\/=-]+/, "Bearer [REDACTED]")
       end
 
       def dispatch_keyless_probe(root)
