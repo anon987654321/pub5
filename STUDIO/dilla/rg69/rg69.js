@@ -1572,14 +1572,14 @@ function reportAudioStartupFailure(error) {
   log(`audio startup failed: ${detail}`, "e");
 }
 
-$id("welcome-start").addEventListener("click", async () => {
+$id('welcome-start').addEventListener('click',async()=>{
   const playButton = $id("play");
   try {
     dismissWelcome();
     playButton.disabled = true;
     playButton.textContent = "Starting…";
     st("starting audio — waking the browser sound engine…");
-    const activationPromise = startToneFromGesture();
+    const activationPromise=startToneFromGesture();
     await startPlayback(activationPromise);
     log("engine started via welcome gate", "k");
   } catch (error) {
@@ -1589,14 +1589,14 @@ $id("welcome-start").addEventListener("click", async () => {
   }
 });
 
-$id("play").addEventListener("click", async () => {
+$id('play').addEventListener('click',async()=>{
   const playButton = $id("play");
   if (!st_.playing) {
     playButton.disabled = true;
     playButton.textContent = "Starting…";
     st("starting audio — waking the browser sound engine…");
     try {
-      const activationPromise = startToneFromGesture();
+      const activationPromise=startToneFromGesture();
       await startPlayback(activationPromise);
     } catch (error) {
       reportAudioStartupFailure(error);
