@@ -367,6 +367,17 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "STUDIO/dilla/new_take.rb"
   end
 
+  def test_remote_full_release_checks_openbsd_admission_before_long_preflight
+    ok, reason = remote(
+      admission_check: ->(**) { [false, "RTFM_FIRST receipt missing"] },
+      runner: ->(*) { flunk "local preflight must not run before OpenBSD admission" },
+      ci_runner: ->(**) { flunk "Rails CI must not run before OpenBSD admission" }
+    )
+
+    refute ok
+    assert_equal "RTFM_FIRST receipt missing", reason
+  end
+
   def test_full_release_runs_studio_checks_before_remote_deployment
     calls = []
     runner = lambda do |argv, chdir|
