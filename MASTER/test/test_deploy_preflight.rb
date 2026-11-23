@@ -365,10 +365,13 @@ class DeployPreflightTest < Minitest::Test
 
     assert ok
     assert_includes command, "VPS_DEPLOY_SHA=#{SHA}"
-    assert calls.any? do |argv, chdir|
-      argv == [RbConfig.ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"] &&
-        chdir == File.join(File.expand_path("..", __dir__), "STUDIO")
-    end, "full production release must run STUDIO's check and test tasks on the workstation"
+    assert(
+      calls.any? do |argv, chdir|
+        argv == [RbConfig.ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"] &&
+          File.basename(chdir) == "STUDIO"
+      end,
+      "full production release must run STUDIO's check and test tasks on the workstation"
+    )
   end
 
   def test_remote_break_glass_needs_the_acknowledgement
