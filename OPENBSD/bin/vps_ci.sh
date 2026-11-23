@@ -20,10 +20,27 @@ case $app in
 esac
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
+deploy_user=${VPS_DEPLOY_USER:-dev}
+[[ $deploy_user == [a-z][a-z0-9_]## ]] || {
+  print -u2 "vps_ci: refused - invalid deploy-user identifier"
+  exit 2
+}
+
+# Git reads the dev-owned checkout as its owner. This helper runs as root for
+# service orchestration; never invoke Git as root or create root-owned repo files.
+run_as_deploy_user() {
+  local snippet=$1
+  /usr/bin/su -s /bin/sh "$deploy_user" -c "$snippet"
+}
+git_as_deploy_user() {
+  local args_q
+  args_q=$(printf '%q ' "$@")
+  run_as_deploy_user "cd $(printf '%q' "$repo") && git $args_q"
+}
 
 # This helper is an internal child of a pinned, admitted release. Check every
 # workstation proof before the first permission change or copy-tree sync.
-head=$(git -C "$repo" rev-parse HEAD 2>/dev/null) || {
+head=$(git_as_deploy_user rev-parse HEAD 2>/dev/null) || {
   print -u2 "vps_ci: refused - cannot read the checkout HEAD"
   exit 1
 }
@@ -77,7 +94,7 @@ unaccounted_tracked_files() {
   local app=$1 repo=$2
   local -a synced=(${(P)3}) kept=(${(P)4})
   local -a tracked missing
-  tracked=(${(f)"$(git -C "$repo" ls-files "RAILS/$app" 2>/dev/null)"}) || return 0
+  tracked=(${(f)"$(git_as_deploy_user ls-files "RAILS/$app" 2>/dev/null)"}) || return 0
   (( ${#tracked} )) || return 0
 
   local rel top
@@ -138,7 +155,7 @@ run_rails_as_app "$app" "$app_dir" "bundle-check" || {
 print "vps_ci: $app workstation CI attestation matches; production bundle is present"
 ci_stamp=ci_attested
 
-sha=$(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)
+sha=$(git_as_deploy_user rev-parse --short HEAD 2>/dev/null || echo unknown)
 # This stamp records that bin/ci passed on the workstation for the pinned SHA.
 doas "$RUBY" -rjson -retc -rtime -rsecurerandom -rfileutils -rsocket -e '
   app, sha, status = ARGV
