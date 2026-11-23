@@ -1,0 +1,229 @@
+{
+  "slug": "in_space",
+  "artist": "J Dilla",
+  "title": "In Space",
+  "identity": {
+    "canon_youtube_id": "vO2nWXCVt6o",
+    "canon_slug": "in_space",
+    "match_class": "full_fan_upload",
+    "source_of_identity": "data/recovered_music.json#measured_canon.tracks[1] and data/curated_references.json#tracks[1]"
+  },
+  "tutorial": {
+    "youtube_id": "O3Ha5xkLjbA",
+    "title": "How to make J Dilla - “In Space” in ABLETON [TUTORIAL]",
+    "author": "Alessio Arca",
+    "url": "https://www.youtube.com/watch?v=O3Ha5xkLjbA",
+    "duration_s": 49,
+    "note": "The linked video is a 49-second Ableton tutorial demonstrating the beat, not the record itself. YouTube media URLs returned HTTP 403 from this host (datacenter IP; PO token and visitor cookies did not clear the CDN block), so the analysis below measures the full recording instead."
+  },
+  "source": {
+    "platform": "SoundCloud",
+    "track_id": 142021091,
+    "uploader": "Incognotion",
+    "duration_s": 202.94,
+    "sha256": "48f892f7b0be4e1099371c2420532e805f0174445b72bc218c85838ea48c15a6",
+    "bytes": 35799118,
+    "note": "Full-length fan upload matching the canon identity. Retained locally only; audio is not committed. Rights remain with the rights holders.",
+    "webpage_url": "https://soundcloud.com/manuel-irvin/j-dilla-in-space",
+    "download_url": "https://api.soundcloud.com/tracks/soundcloud%3Atracks%3A142021091"
+  },
+  "analyzer": {
+    "separation": "demucs htdemucs (CPU), four stems: drums, bass, other, vocals",
+    "measurement": "librosa 1.0.1: onset and beat tracking, band-limited onsets, CQT chroma, Krumhansl key correlation, template chord matching, pyin f0",
+    "ruby_reference": "ruby dilla.rb reference /workspace/analysis/in_space.wav --style j_dilla --no-stems",
+    "date": "2026-11-23"
+  },
+  "measurements": {
+    "tempo_bpm": 92.29,
+    "tempo_ruby_reference_bpm": 92.3,
+    "tempo_canon_bpm": 91.7,
+    "swing": {
+      "canon_position_pct": 52.7,
+      "canon_off8_residual_ms": 17.7,
+      "measured_off8_residual_ms": -1.63,
+      "measured_std_ms": 45.17,
+      "note": "The off-8th residual is noisy on this upload because the 150-1200 Hz band also carries keys; treat swing as the canon value (52.7%) rather than the mix-derived mean."
+    },
+    "key": {
+      "mix_krumhansl": "C# minor (r=0.560)",
+      "keys_stem_krumhansl": "B major (r=0.868)",
+      "tonal_center": "G# minor (relative major B)",
+      "canon_mix_key": "C major (r=0.51)",
+      "note": "The chord loop G#m9-C#m9 fixes the tonal centre on G# minor. The canon's C major estimate is a single-method full-mix correlation at low confidence (r=0.51) and does not agree with the stem chroma."
+    },
+    "chord_loop": [
+      {
+        "chord": "G#m9",
+        "bars": 1,
+        "bass": "G#",
+        "roman": "i9"
+      },
+      {
+        "chord": "C#m9",
+        "bars": 1,
+        "bass": "C#",
+        "roman": "iv9"
+      }
+    ],
+    "loop_bars": 2,
+    "chord_evidence": "Folded over 77 bars, all eight half-bar slots alternate G#m9 and C#m9; the bass stem's strongest pitch class alternates G# and C# in the same two-bar cycle.",
+    "bass_roots": [
+      "G#",
+      "C#"
+    ],
+    "chroma_keys_stem": {
+      "C": 0.408,
+      "C#": 0.474,
+      "D": 0.351,
+      "D#": 0.534,
+      "E": 0.547,
+      "F": 0.349,
+      "F#": 0.5,
+      "G": 0.407,
+      "G#": 0.56,
+      "A": 0.396,
+      "A#": 0.481,
+      "B": 0.64
+    },
+    "chroma_mix": {
+      "C": 0.479,
+      "C#": 0.6,
+      "D": 0.515,
+      "D#": 0.606,
+      "E": 0.676,
+      "F": 0.517,
+      "F#": 0.545,
+      "G": 0.59,
+      "G#": 0.602,
+      "A": 0.441,
+      "A#": 0.467,
+      "B": 0.492
+    },
+    "band_energy_share_drums_stem": {
+      "kick_low_30_130": 0.759,
+      "snare_mid_150_1200": 0.142,
+      "hat_high_5000_11000": 0.022
+    },
+    "canon_band_energy_share": {
+      "kick_low": 0.628,
+      "snare_mid": 0.099,
+      "hat_high": 0.021
+    },
+    "spectral": {
+      "centroid_hz": 397.4,
+      "rolloff85_hz": 1945.9,
+      "flatness": 0.00278
+    },
+    "melody": {
+      "voiced_fraction": 0.605,
+      "midi_median": 63.3,
+      "midi_p10": 48.0,
+      "midi_p90": 71.5,
+      "pitch_classes": {
+        "E": 0.285,
+        "B": 0.246,
+        "D#": 0.172,
+        "C": 0.136,
+        "A": 0.065,
+        "F": 0.039,
+        "A#": 0.019,
+        "F#": 0.011
+      },
+      "note": "pyin over the 'other' stem, C3-C6. The contour centres on E and B, chord tones of the G#m9/C#m9 loop. This is a measured contour summary, not a note-for-note lead transcription."
+    },
+    "drum_evidence": {
+      "per_lane_consistent_steps": {
+        "kick": [
+          5,
+          1,
+          9,
+          11,
+          13
+        ],
+        "snare": [
+          7,
+          4,
+          0,
+          6
+        ],
+        "hat": [
+          0,
+          4,
+          7,
+          13
+        ]
+      },
+      "canon_grid16": {
+        "kick": [
+          0.26,
+          0.11,
+          0.52,
+          0.33,
+          0.0,
+          0.11,
+          1.0,
+          0.63,
+          0.04,
+          0.04,
+          0.67,
+          0.44,
+          0.04,
+          0.07,
+          0.33,
+          0.52
+        ],
+        "snare": [
+          0.11,
+          0.17,
+          0.83,
+          0.61,
+          0.0,
+          0.17,
+          0.83,
+          0.17,
+          0.0,
+          0.06,
+          1.0,
+          0.67,
+          0.0,
+          0.0,
+          0.61,
+          0.67
+        ],
+        "hat": [
+          0.87,
+          0.93,
+          1.0,
+          0.73,
+          0.87,
+          0.87,
+          0.6,
+          0.6,
+          0.87,
+          0.93,
+          1.0,
+          0.73,
+          0.87,
+          0.93,
+          0.87,
+          0.93
+        ]
+      },
+      "note": "Steps are 16ths from the harmonic bar start (chord changes land on the bar). The sampled break is syncopated and the drum stem carries harmonic bleed, so single-lane grids are approximate and phase-sensitive; the recreation treats these as accents, not a transcription."
+    }
+  },
+  "canon_comparison": {
+    "tempo_delta_bpm": 0.59,
+    "kick_share_delta": 0.131,
+    "snare_share_delta": 0.043,
+    "hat_share_delta": 0.001,
+    "agreement": "Tempo and high-band restraint agree with the canon. Key estimate does not: canon says C major (r=0.51); the stems and the chord loop say G# minor / B major."
+  },
+  "limits": [
+    "The tutorial video itself could not be downloaded from this host; the full record was analysed instead.",
+    "Stem separation and band-limited onset detection are approximate; no isolated lane is claimed as a transcription.",
+    "Chord qualities are template-matched. m9 is the best fit; the record may voice the loop as plain minor triads or add extensions the templates do not resolve.",
+    "Swing is reported from the canon because the mix-derived off-8th residual is too noisy on this upload.",
+    "No listening acceptance is claimed. The rendered WAV still requires human audition."
+  ]
+}
