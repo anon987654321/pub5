@@ -126,4 +126,25 @@ class TestModelSkipCache < Minitest::Test
   def test_skip_ttl_from_env
     assert_equal 5000, Master::Io::ModelSkipCache.skip_ttl_ms
   end
+
+  def test_router_failover_categories_are_parked_across_turns
+    cache = Master::Io::ModelSkipCache
+    ENV["MASTER_FALLBACK_SKIP_TTL_MS"] = "600000"
+    travel_to(1_000_000)
+
+    expected = {
+      offline: cache.transient_skip_ttl_ms,
+      budget: cache.skip_ttl_ms,
+      invalid_request: cache.skip_ttl_ms,
+    }
+    expected.each do |category, duration|
+      model = "model-#{category}"
+      cache.skip!(model, reason: "failure without a provider reset time", category:)
+
+      assert_equal 1_000_000 + duration, cache.skipped_until_ms(model), category.to_s
+      refute cache.filter([model]).include?(model), category.to_s
+    end
+  ensure
+    cache.clock = nil
+  end
 end
