@@ -158,7 +158,7 @@ module Master
         flags << "--apply" if explicit_apply && !flags.include?("--apply")
         lane = value[/--lane(?:=|\s+)([a-z]+)/i, 1]
         flags << "--lane=#{lane}" if lane
-        ["/fix", "--mode=#{mode || "repair"}", trees.join(" "), *flags].join(" ")
+        ["/fix", ("--mode=#{mode}" if mode), trees.join(" "), *flags].compact.reject(&:empty?).join(" ")
       end
 
       # Bare words that are complete instructions, not conversation. "status?"

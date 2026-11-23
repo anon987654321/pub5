@@ -119,9 +119,10 @@ class TestThroughInference < Minitest::Test
     assert_equal "lib/cli", kept[:args]
   end
 
-  def test_fix_writes_by_default_and_keeps_review_stages_read_only
+  def test_fix_is_read_only_by_default_and_keeps_review_stages_read_only
     registry = Master::CLI::CommandRegistry
-    assert registry.writes_requested?(apply: nil, only: nil)
+    refute registry.writes_requested?(apply: nil, only: nil)
+    assert registry.writes_requested?(apply: true, only: nil)
     assert registry.writes_requested?(apply: true, only: "fix")
     refute registry.writes_requested?(apply: false, only: nil)
     refute registry.writes_requested?(apply: nil, only: "critique,map")

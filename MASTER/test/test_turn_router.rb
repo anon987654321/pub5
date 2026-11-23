@@ -123,12 +123,14 @@ class TurnRouterTest < Minitest::Test
   def test_natural_fix_routing_never_invents_write_authorization
     router = Master::CLI::TurnRouter
 
-    assert_equal "/fix --mode=repair MASTER",
+    assert_equal "/fix MASTER",
                  router.send(:explicit_fix_request, "Please run /fix MASTER")
-    assert_equal "/fix --mode=repair MASTER --apply",
+    assert_equal "/fix MASTER --apply",
                  router.send(:explicit_fix_request, "Please run /fix --apply MASTER")
-    assert_equal "/fix --mode=repair MASTER --apply",
+    assert_equal "/fix MASTER --apply",
                  router.send(:explicit_fix_request, "Please apply /fix MASTER")
+    assert_equal "/fix --mode=repair MASTER --apply",
+                 router.send(:explicit_fix_request, "Please run /fix --mode=repair --apply MASTER")
   end
 
   def test_operator_shell_commands_are_not_sent_to_the_model_from_the_prompt
