@@ -1,21 +1,46 @@
 "use strict";
 
 // Global error handlers for runtime failure reporting
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
-  // Don't prevent default to allow browser's error reporting
+function showRuntimeFailure(label, reason) {
+  const status = document.getElementById("status");
+  if (!status) return;
+  const detail = String(reason?.message || reason || "unknown error").slice(0, 180);
+  status.textContent = `${label}: ${detail}`;
+  status.dataset.state = "audio";
+}
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason);
+  showRuntimeFailure("Audio error", event.reason);
 });
 
-window.addEventListener('error', (event) => {
-  console.error('Global error:', event.error || event.message);
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error || event.message);
+  showRuntimeFailure("Interface error", event.error || event.message);
 });
 
-if(!window.Tone){
-  const warning=document.createElement("p");
-  warning.className="engine-error";
-  warning.setAttribute("role","alert");
-  warning.textContent="The RG-69 audio engine (Tone.js 14.8.49) did not load. Check your connection and reload.";
+if (!window.Tone) {
+  const message = "The RG-69 audio engine (Tone.js 14.8.49) did not load. Check that the local Tone.js asset is available, then reload.";
+  const warning = document.createElement("p");
+  warning.className = "engine-error";
+  warning.setAttribute("role", "alert");
+  warning.textContent = message;
   document.body.prepend(warning);
+
+  // Do not leave a full-screen welcome dialog covering a page that cannot run.
+  const welcome = document.getElementById("welcome");
+  if (welcome) {
+    welcome.style.display = "none";
+    welcome.setAttribute("aria-hidden", "true");
+  }
+  const status = document.getElementById("status");
+  if (status) {
+    status.textContent = message;
+    status.dataset.state = "audio";
+  }
+  document.querySelectorAll("button, input, select, textarea").forEach((control) => {
+    control.disabled = true;
+  });
   throw new Error("RG-69 audio engine unavailable");
 }
 
@@ -623,7 +648,15 @@ dlySend.connect(fxDly);
 fxDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 fxDly.connect(fxDlyFlt);
 fxDlyFlt.connect(compPar);
-if(fxRev&&typeof fxRev.generate==="function")await fxRev.generate();
+if (fxRev && typeof fxRev.generate === "function") {
+  try {
+    await fxRev.generate();
+  } catch (error) {
+    // Reverb is an enhancement, not a reason to leave the transport unusable.
+    fxRev.wet.value = 0;
+    log(`reverb unavailable; continuing without it: ${error.message}`, "w");
+  }
+}
 lofiNoise=new Tone.Noise('pink').start();
 lofiNoise.volume.value=-45;
 const lofiNoiseLP=new Tone.Filter(4000,'lowpass');
@@ -1528,31 +1561,56 @@ $id('play').textContent='⏸ Pause';
 log('playback started','k');
 }
 
-$id('welcome-start').addEventListener('click',async()=>{
-try{
-dismissWelcome();
-st('starting audio…');
-const activationPromise=startToneFromGesture();
-await startPlayback(activationPromise);
-log('engine started via welcome gate','k');
-}catch(error){
-st_.playing=false;
-st('audio startup failed — check browser permissions');
-$id('play').setAttribute('aria-pressed','false');
-log(`audio startup failed: ${error.message}`,'e');
+function reportAudioStartupFailure(error) {
+  const detail = String(error?.message || error || "unknown error").slice(0, 180);
+  const playButton = $id("play");
+  st_.playing = false;
+  playButton.disabled = false;
+  playButton.textContent = "↻ Retry audio";
+  playButton.setAttribute("aria-pressed", "false");
+  st(`audio startup failed — ${detail}`);
+  log(`audio startup failed: ${detail}`, "e");
 }
+
+$id("welcome-start").addEventListener("click", async () => {
+  const playButton = $id("play");
+  try {
+    dismissWelcome();
+    playButton.disabled = true;
+    playButton.textContent = "Starting…";
+    st("starting audio — waking the browser sound engine…");
+    const activationPromise = startToneFromGesture();
+    await startPlayback(activationPromise);
+    log("engine started via welcome gate", "k");
+  } catch (error) {
+    reportAudioStartupFailure(error);
+  } finally {
+    playButton.disabled = false;
+  }
 });
-$id('play').addEventListener('click',async()=>{
-if(!st_.playing){
-try{const activationPromise=startToneFromGesture();await startPlayback(activationPromise);}catch(error){st_.playing=false;st('audio startup failed');$id('play').setAttribute('aria-pressed','false');log(`audio startup failed: ${error.message}`,'e');}
-}else{
-Tone.Transport.pause();
-st_.playing=false;
-st('paused');
-$id('play').textContent='▶ Play';
-$id('play').setAttribute('aria-pressed','false');
-log('playback paused');
-}
+
+$id("play").addEventListener("click", async () => {
+  const playButton = $id("play");
+  if (!st_.playing) {
+    playButton.disabled = true;
+    playButton.textContent = "Starting…";
+    st("starting audio — waking the browser sound engine…");
+    try {
+      const activationPromise = startToneFromGesture();
+      await startPlayback(activationPromise);
+    } catch (error) {
+      reportAudioStartupFailure(error);
+    } finally {
+      playButton.disabled = false;
+    }
+  } else {
+    Tone.Transport.pause();
+    st_.playing = false;
+    st("paused");
+    playButton.textContent = "▶ Play";
+    playButton.setAttribute("aria-pressed", "false");
+    log("playback paused");
+  }
 });
 $id('stop').addEventListener('click',()=>{
 st_.playing=false;
