@@ -47,6 +47,10 @@ class TestOpenbsdConfig < Minitest::Test
     assert_includes paths, "OPENBSD/mirror/home/johann/.mailcap"
     assert_includes paths, "OPENBSD/mirror/home/johann/.muttrc"
     assert(paths.any? { |path| path.end_with?(".zone") })
+    openbsd_file_count = Dir.glob(File.join(ROOT, "OPENBSD", "**", "*"), File::FNM_DOTMATCH)
+                              .count { |path| File.file?(path) && !File.symlink?(path) }
+    assert_operator Master::Fix::OpenBSDManualPreflight::MAX_SOURCE_READS, :>=, openbsd_file_count + 32,
+                    "the content-bearing receipt must fit every tracked OpenBSD source plus dependency headroom"
     assert_operator Master::Fix::OpenBSDManualPreflight::MAX_SOURCE_READS, :>=, inventory.length
     unmapped = inventory.select { |entry| entry.fetch("manuals").nil? }.map { |entry| entry.fetch("path") }
     assert_empty unmapped
