@@ -122,6 +122,10 @@ task :test do
   require_relative "test_runner"
 
   tests = Dir[File.join(__dir__, "test", "*_test.rb")].sort
+  root_proofs = Dir[File.join(STUDIO_ROOT, "test", "*_test.rb")].sort
+  proofed_names = root_proofs.map { |path| File.basename(path) }
+  tests.reject! { |path| proofed_names.include?(File.basename(path)) }
+  tests.concat(root_proofs).sort!
   abort "no studio tests found" if tests.empty?
 
   timeout_s = Integer(ENV.fetch("STUDIO_TEST_TIMEOUT_S", "300"))
