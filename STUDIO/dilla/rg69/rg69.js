@@ -563,6 +563,8 @@ highlightActiveChip();
 refreshStepGrid();
 }
 
+let reverbReady = true;
+
 async function initAudio(activationPromise){
 // Lock the fetched or embedded profile before the first await. Audio startup
 // never waits on a catalogue request or a network timeout.
@@ -602,6 +604,7 @@ padsG=new Tone.Gain(Tone.dbToGain(-12));
 revSend=new Tone.Gain(0);
 dlySend=new Tone.Gain(0);
 fxRev=new Tone.Reverb(1.5);
+reverbReady=typeof fxRev.generate!=="function";
 fxDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds(),rg69AudioProfile.rig.delay.feedback);
 fxFlt=new Tone.Filter(16000,'lowpass');
 tapeSat=new Tone.Distortion(0.08);
@@ -652,7 +655,9 @@ fxDlyFlt.connect(compPar);
 if (fxRev && typeof fxRev.generate === "function") {
   try {
     await fxRev.generate();
+    reverbReady = true;
   } catch (error) {
+    reverbReady = false;
     // Reverb is an enhancement, not a reason to leave the transport unusable.
     fxRev.wet.value = 0;
     log(`reverb unavailable; continuing without it: ${error.message}`, "w");
@@ -723,7 +728,7 @@ if(padsG)padsG.gain.value=mix_.pads/100*profile.voice.level;
 if(masterG)masterG.gain.value=mix_.master/100;
 if(revSend)revSend.gain.value=(aud_.reverb/100)*profile.rig.reverb.level_chords;
 if(dlySend)dlySend.gain.value=(aud_.delay/100)*profile.rig.delay.throw_chords;
-if(fxRev){fxRev.wet.value=1;fxRev.decay=1+(aud_.reverb/100)*profile.rig.reverb.size*profile.effects.reverb_decay_scale;}
+if(fxRev){fxRev.wet.value=reverbReady?1:0;fxRev.decay=1+(aud_.reverb/100)*profile.rig.reverb.size*profile.effects.reverb_decay_scale;}
 if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud_.delay/100)*profile.effects.delay_feedback_range;}
 if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
