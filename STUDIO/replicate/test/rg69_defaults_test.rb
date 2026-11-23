@@ -372,6 +372,50 @@ class TestRg69Defaults < Minitest::Test
     assert_includes export, "Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds()"
     assert_includes js, "instruments[lane].volume.value=20*Math.log10(level)"
   end
+  def test_master_gain_stays_a_gain_and_audio_boot_does_not_block_on_fetch
+    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
+    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
+    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
+
+    assert_includes init, "masterG=new Tone.Gain(0.8);"
+    assert_includes init, "masterG.connect(masterDrive);"
+    refute_match(/masterG\s*=\s*new Tone\.Gain\([^)]*\)\.connect/, init)
+    assert_includes apply, "if(masterG)masterG.gain.value=mix_.master/100;"
+    assert_includes init, "rg69AudioProfileLocked=true;"
+    refute_includes init, "await rg69AudioProfileReady"
+    refute_includes export, "await rg69AudioProfileReady"
+  end
+
+  def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
+    refresh = js[/function refreshStepGrid\(\)(.*?)\n\}/m, 1] or raise "no state-driven step renderer"
+    sync = js[/function syncUIFromState\(\)(.*?)\n\}/m, 1] or raise "no syncUIFromState"
+    build = js[/function buildUI\(\)(.*?)\n\}/m, 1] or raise "no buildUI"
+
+    assert_includes refresh, "const pattern=DRUM_PATTERNS[pat_.d]||{};"
+    assert_includes refresh, "step.setAttribute('aria-pressed',velocity>0?'true':'false');"
+    assert_includes refresh, "step.dataset.prob"
+    assert_includes sync, "refreshStepGrid();"
+    assert_includes build, "const updateVelFill=refreshStepGrid;"
+    assert_includes build, "refreshStepGrid();updateRootDisplay();highlightActiveChip();"
+  end
+
+  def test_transport_and_controls_have_real_hit_areas_and_explicit_states
+    assert_includes html, 'class="transport-primary"'
+    assert_includes html, 'class="transport-actions"'
+    assert_includes html, 'aria-pressed="false" title="Play or pause (Space)"'
+    assert_includes js, "$id('play').setAttribute('aria-pressed','true');"
+    assert_includes js, "$id('play').setAttribute('aria-pressed','false');"
+    assert_includes css, "input[type=\"range\"]{appearance:none;-webkit-appearance:none;width:100%;height:28px;"
+    assert_includes css, "::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;"
+    assert_includes css, "#play{min-width:104px;min-height:44px;"
+    assert_includes css, ".step{min-height:44px!important}"
+  end
+
+  def test_layout_control_uses_two_predictable_density_modes
+    assert_includes js, 'const DENSITIES=Object.freeze(["comfortable","compact"]);'
+    assert_includes js, "st_.density=st_.density==='comfortable'?'compact':'comfortable';"
+    refute_includes js, "Array.from({length:50}"
+  end
   private
 
   def range_value(name)
