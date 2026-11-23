@@ -127,10 +127,14 @@ all application traffic to the registered Falcon loopback services. The former
 localhost Postpro static-photo preview on port 6666 is retired; Postpro itself
 remains a local processing tool.
 
-Check flow — local: `OPENBSD/bin/check` → `verify_deploy_identity` → Rails
-production/domain/ phantom/frontend checks → OpenBSD deploy smoke. Operator: `git
-pull --ff-only` on vm23 → `vps_ci.sh <app>` → `OPERATOR.sh` or per-app deploy →
-`rcctl restart` affected services → `health_check --public --all-ready-apps`.
+Check flow — workstation: `OPENBSD/bin/check` → `verify_deploy_identity` → Rails
+production/domain/phantom/frontend checks → OpenBSD deploy smoke. Release:
+`MASTER/bin/operator vps deploy <app|group|all> --remote` runs workstation
+preflight, selected Rails `bin/ci` suites and asset builds, pins one SHA, then
+stages and deploys that exact release on vm23. The host performs bounded sync,
+attestation checks, read-only production-bundle verification, service operations
+and loopback health checks. Finish with the workstation public canary. Never run
+`git pull`, Rails test suites, bundle installation or asset precompilation on vm23.
 
 ## Privileged deploy boundary
 
@@ -505,10 +509,10 @@ SAN can stay until the next certificate renewal; neither serves anything.
 
 ## Agent contract
 
-Modes: local contributor (edit repo files, run local checks, do not SSH), VPS
-operator (one SSH session, one CI/deploy operation at a time, tmux for long
-work), recovery (human-directed console or resource guard only to restore access
-or health, then document the fix).
+Modes: local contributor (edit repository files and run local checks; do not SSH),
+workstation release operator (run preflight, selected Rails CI and asset builds;
+start one pinned remote deployment at a time), and recovery (human-directed console
+or resource guard only to restore access or health, then document the fix).
 
 **Hard stops — AI agents must not autonomously:**
 
@@ -520,7 +524,7 @@ or health, then document the fix).
 | Deploy, install, or `pkill` deploy workers from the serial console | Bypasses SSH safety, tmux, and load checks |
 | Target vm27 or any non-vm23 VM | Wrong tenant; production is vm23 (`dev`) |
 | `BOOTSTRAP.sh --stage-1` without `I_UNDERSTAND_DNS_WIPE=1` | Destructive DNS wipe |
-| Parallel SSH deploys, parallel `bin/ci`, or broad `rcctl restart` without a named target | 1 GiB VPS; contention causes outages |
+| Parallel SSH deploys, parallel workstation `bin/ci` suites, or broad `rcctl restart` without a named target | 1 GiB VPS; contention causes outages |
 
 When SSH to vm23 is required, use normal paths — but note which of them takes
 `doas` and which must not:
@@ -529,7 +533,7 @@ When SSH to vm23 is required, use normal paths — but note which of them takes
 |---|---|
 | `doas zsh OPERATOR.sh --apply` | root, it installs `/etc` |
 | `zsh OPENBSD/bin/vps-deploy <app>` | **root** (or `dev` via passwordless doas re-exec) |
-| `zsh OPENBSD/bin/vps_ci.sh <app>` | **dev** |
+| `zsh OPENBSD/bin/vps_ci.sh <app>` | internal child of pinned `vps-deploy`; read-only bundle check, not a test runner |
 
 `vps-deploy` runs as root. Git fetch/checkout still run as `dev` so the
 `/home/dev/pub5` tree and GitHub deploy key are never used by root. Typing the
@@ -542,8 +546,7 @@ command as `dev` is fine: passwordless doas re-executes it as root.
 - Treat `RAILS/apps.yml` and `OPENBSD/deploy_inventory.json` as inventories, not
   suggestions.
 - Any `/etc` change made on vm23 must be copied back to `OPENBSD/mirror/etc/`.
-- Use the available compatible Ruby on OpenBSD (resolved dynamically by `OPENBSD/lib/ruby_select.sh`, which sets `$RUBY` and `$BUNDLE`); `zsh OPENBSD/bin/vps_ci.sh <app>` for
-  per-app CI.
+- Use the available compatible Ruby on OpenBSD (resolved dynamically by `OPENBSD/lib/ruby_select.sh`, which sets `$RUBY` and `$BUNDLE`). The workstation runs each selected app's `bin/ci`; vm23's `vps_ci.sh` only verifies the matching CI attestation and checks the preinstalled production bundle.
 - Keep secrets in `/etc/*.env`; never commit them.
 - Keep Rails `config.assume_ssl = true`; do not enable `force_ssl` behind
   relayd.
@@ -743,12 +746,16 @@ accepted as complete until the log records `post-deploy public canary (PASS)`.
 A `--detach` response means only that the tmux job was started. It is not a
 successful release; follow the local deploy transcript and public-canary result.
 
-Running `OPENBSD/bin/vps-deploy` directly on vm23 performs the pinned
-preflight/CI checks, live-service and loopback health checks, and local canary,
-but does not itself provide an independent public vantage. After a direct run,
-execute `MASTER/bin/operator vps canary` from the workstation before
-reporting public release success. A failed public canary remains a failed
-release assessment even when the local deploy stamp says `ok`.
+A direct invocation of `OPENBSD/bin/vps-deploy` on vm23 does not perform
+workstation preflight, Rails test suites or asset builds. The supported path is
+`MASTER/bin/operator vps deploy <app|group|all> --remote` from the workstation;
+it supplies matching SHA attestations and runs the independent public canary.
+The host-side `vps_ci.sh` is not a test runner: it verifies the workstation CI
+attestation and checks the preinstalled production bundle. After any separately
+authorized manual or recovery operation, run `MASTER/bin/operator vps canary`
+from the workstation before reporting public release success. A failed public
+canary remains a failed release assessment even when the local deploy stamp says
+`ok`. 
 
 #### Interrupted deploy receipt recovery
 
@@ -760,12 +767,17 @@ restore order, ports, per-run log path and last durable stage.
 
 The first rollout of this receipt protocol has one host prerequisite. `vps-deploy`
 deliberately refuses before service control if it cannot create the durable
-receipt. Apply and verify the reviewed mirror once before using the new deployer;
-do not rely on `vps-deploy all` to bootstrap this version transition because its
-receipt preflight runs before its normal mirror apply:
+receipt. This is a one-time mirror bootstrap, not a normal release. Use only the
+exact commit already reviewed and preflighted on the workstation; do not pull an
+unpinned `origin/main`. If that exact commit cannot be established, stop before
+changing the host. The receipt preflight runs before the normal mirror apply:
 
 ```sh
-cd /home/dev/pub5 && git pull --ff-only
+# Set this to the exact 40-character SHA already verified on the workstation.
+export VPS_DEPLOY_SHA="<workstation-verified-40-character-sha>"
+cd /home/dev/pub5
+git fetch -q origin main
+git merge --ff-only "$VPS_DEPLOY_SHA"
 doas zsh OPENBSD/OPERATOR.sh --plan
 doas zsh OPENBSD/OPERATOR.sh --apply
 doas zsh OPENBSD/OPERATOR.sh --verify
@@ -1008,31 +1020,33 @@ OPENBSD/OPERATOR.sh …'`.
 
 ## Rails deploy
 
-Rehearse first, from the checkout you are about to ship: `ruby OPENBSD/bin/rehearse`
-runs in seconds and covers what the box's CI would otherwise tell you forty
-minutes in. It runs the CI lints and the dialect check, and the static contracts
-that tie the deploy scripts to the tree: every repo path a script names exists,
-the CI mirror carries what the tools require, the copy-tree layout matches the
-Gemfiles, and no test file leaves a test call outside its class. It does not boot
-Rails; `rails_test` on the box is where the remaining failures live.
+Rehearse from the workstation checkout you intend to ship:
+`OPENBSD/bin/rehearse` runs fast static deployment contracts. It does not replace
+the selected Rails apps' full `bin/ci` suites or a booted Rails check. The
+supported workstation operator performs preflight, selected Rails CI and asset
+builds before it contacts vm23. vm23 verifies the pinned CI/preflight attestations
+and checks the already-installed production bundle; it does not install gems,
+run Rails suites or compile assets.
 
 ```zsh
-cd /home/dev/pub5 && git pull --ff-only
-zsh OPENBSD/bin/vps-deploy rails      # every active RAILS app, serially
-zsh OPENBSD/bin/vps-deploy brgen      # one app
-zsh OPENBSD/bin/vps-deploy all       # host mirror + MASTER + every active RAILS app
-ruby OPENBSD/checks/health_check.rb --public --all-ready-apps
+cd /path/to/pub5
+git status --short --branch
+OPENBSD/bin/rehearse
+MASTER/bin/operator vps deploy rails --remote
+MASTER/bin/operator vps deploy brgen --remote
+MASTER/bin/operator vps deploy all --remote --follow
 ```
 
-Use only `zsh OPENBSD/bin/vps-deploy <app|group|all>` for production deploys
-(runs as root; re-exec via doas from dev). Group membership is derived from
-`deploy_root` in `RAILS/apps.yml`; the `rails` group excludes MASTER and
-does not apply the host mirror. The full `all` target applies the reviewed
-`OPENBSD/mirror/**` payload before the serial application deploy.
-The compatibility `zsh RAILS/deploy.sh` delegates to it and refuses UID 0.
-The individual `RAILS/<app>/<app>.sh` entrypoints also refuse root because they
+Use `MASTER/bin/operator vps deploy <app|group|all> --remote` from the
+workstation for production releases. `OPENBSD/bin/vps-deploy` is the pinned
+host-side child and is not the workstation entrypoint. Group membership is
+derived from `deploy_root` in `RAILS/apps.yml`; the `rails` group excludes
+MASTER and does not apply the host mirror. The full `all` target applies the
+reviewed `OPENBSD/mirror/**` payload before the serial application deploy.
+The individual `RAILS/<app>/<app>.sh` entrypoints refuse root because they
 source code from the dev-writable checkout. Do not run them with `doas`.
-The supervisor handles asset precompile before restart.
+The production bundle must already be installed; a missing bundle is an
+off-host build blocker, not permission to install gems on vm23.
 
 ```zsh
 cd /home/dev/pub5 && git gc --quiet && git count-objects -v
