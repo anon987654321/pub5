@@ -21,7 +21,7 @@ The default endpoint is loopback HTTP on port 5030. A remote endpoint must use p
 /plugin run soulseek status {}
 /plugin run soulseek search {"query":"J Dilla Jay Dee"}
 /plugin run soulseek discover {"queries":["J Dilla breakbeats","jazz funk drum breaks","Bergen soul jazz records"]}
- /plugin run soulseek results {"search_id":"<UUID returned by search>"}
+/plugin run soulseek results {"search_id":"<UUID returned by search>"}
 /plugin run soulseek rank {"search_id":"<UUID returned by search>"}
 /plugin run soulseek downloads {}
 /plugin run soulseek library {"path":"~/Music"}
@@ -59,7 +59,7 @@ The `quality` action is structural triage: it reports common extension families,
 After a rights-cleared file has completed through slskd, pass a local WAV copy to STUDIO's analyzer:
 
 ```text
-/plugin run soulseek analyze {"path":"~/Music/Downloads/approved-break.wav","max_duration":60}
+/plugin run soulseek analyze {"path":"~/Music/Downloads/approved-break.wav","max_duration":30}
 ```
 
 The read-only `analyze` action currently accepts PCM or IEEE-float RIFF/WAVE files up to 32 MiB and analyses at most 30 seconds. It refuses to run on OpenBSD hosts so this CPU- and memory-bounded work stays on the workstation or an isolated sandbox, never vm23. It verifies that the file remains unchanged during the run, records its SHA-256 and WAV format/sample-rate/bit-depth/channel metadata, and uses STUDIO's existing Ruby analyzer for tempo, onset, harmony, spectral and section features plus measured peak, RMS, clipping and near-silence statistics. It does not classify noise, certify fidelity or replace listening. Convert other formats to a local WAV derivative with an operator-installed audio tool before analysis; preserve the downloaded original.

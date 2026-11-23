@@ -142,7 +142,7 @@ The reference analyzer is now **Ruby + standard library only**. It decodes
 PCM/float WAV, downmixes and resamples to 22.05 kHz, runs a windowed FFT, and
 measures tempo/confidence, onset density, offbeat share, timing spread, swing,
 mix-band energy shares, brightness, key/chord changes, melody range/density,
-16-step kick/snare/hat grids and section energy. Its output is finite,
+16-step kick/snare/hat grids and section energy. It also reports peak and RMS level, near-full-scale sample count and percentage, and near-silence percentage over the analyzed segment; these are signal measurements, not a noise classifier or a substitute for listening. Its output is finite,
 sorted JSON; the profile lands at
 `profiles/<style>/latest_profile.json` for MASTER's media intent.
 
