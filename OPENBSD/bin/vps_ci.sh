@@ -20,6 +20,33 @@ case $app in
 esac
 
 repo=${PUB5_ROOT:-/home/dev/pub5}
+
+# This helper is an internal child of a pinned, admitted release. Check every
+# workstation proof before the first permission change or copy-tree sync.
+head=$(git -C "$repo" rev-parse HEAD 2>/dev/null) || {
+  print -u2 "vps_ci: refused - cannot read the checkout HEAD"
+  exit 1
+}
+[[ ${VPS_DEPLOY_SHA:-} == "$head" ]] || {
+  print -u2 "vps_ci: refused - no matching pinned deployment SHA for $head"
+  exit 1
+}
+attested=${VPS_DEPLOY_CI_SHA:-}
+[[ $attested == "$head" ]] || {
+  print -u2 "vps_ci: refused - no matching workstation CI attestation for $head; no sync was started"
+  exit 1
+}
+[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]] || {
+  print -u2 "vps_ci: refused - no matching parent host-admission token for $head; no sync was started"
+  exit 1
+}
+if [[ ${VPS_DEPLOY_PREFLIGHT_SHA:-} != "$head" ]]; then
+  [[ ${VPS_DEPLOY_SKIP_PREFLIGHT:-0} == 1 && ${I_UNDERSTAND_FAST_DEPLOY:-0} == 1 ]] || {
+    print -u2 "vps_ci: refused - no matching workstation preflight for $head; no sync was started"
+    exit 1
+  }
+fi
+
 app_dir=/home/${app}/app
 # The Gemfiles name path gems relative to the app dir (../__shared, engines/*),
 # so the copy-tree keeps them as siblings of app/, the layout RAILS/_deploy.sh builds.
@@ -101,12 +128,6 @@ sync_from_repo
 # Every selected Rails app runs bin/ci on the workstation before SSH.
 # vm23 verifies the attestation against this checkout and performs a read-only
 # check of the preinstalled OpenBSD/Ruby production bundle.
-attested=${VPS_DEPLOY_CI_SHA:-}
-head=$(git -C "$repo" rev-parse HEAD)
-[[ $attested == "$head" ]] || {
-  print -u2 "vps_ci: refused - no matching workstation CI attestation for $head; host-side tests and installs are forbidden"
-  exit 1
-}
 . "${repo}/RAILS/_runtime_check.sh"
 deploy_status "$app" "bundle check"
 run_rails_as_app "$app" "$app_dir" "bundle-check" || {
