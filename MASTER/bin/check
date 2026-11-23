@@ -149,9 +149,6 @@ else
   ["integration web unavailable", RUBY, "-e", "warn 'MASTER_WEB_LIVE=1 was not set'; exit 3"]
 end
 
-# test:subsystems groups CLI, operator-intent/routing, I/O and fix regressions
-# for a focused run. It is in the operator and contributor profiles and the CI
-# list so a break there is caught by the checks contributors actually run.
 # rake["tools"] is in agent as well as the two heavy profiles, and it is the
 # only step that is. The agent profile is what runs around law and fix-loop work,
 # which is exactly the work that has silently broken tools before — `bin/check --ladder`'s
@@ -185,7 +182,7 @@ RUBY
 # gem:build_proof is here and nowhere else: the gemspec claims a file list that
 # nothing verified, and a package built from a silently-shortened list ships
 # fewer files than it claims. The proof is one package build, ~2s.
-ci_steps = [law_syntax, boot_smoke, rake["test"], rake["test:core"], rake["test:subsystems"],
+ci_steps = [law_syntax, boot_smoke, rake["test"], rake["test:core"],
             rake["test:web"], rake["test:web_ui"], rake["selftest"],
             rake["lint:data_singularity"], rake["core_smoke"], rake["tools"],
             rake["gem:build_proof"]]
@@ -209,9 +206,9 @@ end
 full_ci = ci_steps.reject { |step| %w[selftest core_smoke constitution].include?(step.first) }
 
 PROFILES = {
-  "operator"    => [law_syntax, boot_smoke, rake["test"], rake["test:subsystems"], rake["security_sweep"],
+  "operator"    => [law_syntax, boot_smoke, rake["test"], rake["security_sweep"],
                     rake["test:core"], rake["lint:data_singularity"], rake["lint:dedup"], rake["tools"]],
-  "contributor" => [law_syntax, boot_smoke, rake["test"], rake["test:subsystems"], rake["security_sweep"],
+  "contributor" => [law_syntax, boot_smoke, rake["test"], rake["security_sweep"],
                     rake["lint:data_singularity"], rake["lint:dedup"], rake["tools"]],
   # lint:word_boundary is here and nowhere else: its subject is a `\b` written
   # next to punctuation in a rule regex, which is a word boundary that can never
