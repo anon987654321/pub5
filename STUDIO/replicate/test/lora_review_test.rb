@@ -90,6 +90,27 @@ class TestStudioLoraReview < Minitest::Test
     assert_includes html, "Generated image measurements"
   end
 
+  def test_review_pixel_diagnostic_rows_show_sample_dimensions_and_exposure_without_a_quality_score
+    diagnostics = {
+      dimensions: [1536, 2048],
+      exposure: {
+        mean_luminance: 0.42, p01: 0.03, p99: 0.96,
+        clipped_highlights_pct: 0.12, clipped_shadows_pct: 0.08,
+      },
+      tonal: { histogram_spread: 0.61 },
+      contrast: { rms_contrast: 0.27 },
+    }
+    html = @builder.send(
+      :pixel_diagnostic_rows,
+      [{ "file" => "portrait.png", "pixel_diagnostics" => diagnostics }]
+    )
+
+    assert_includes html, "1536 × 2048"
+    assert_includes html, "0.4200"
+    assert_includes html, "0.1200%"
+    assert_includes html, "0.2700"
+  end
+
   def test_likeness_review_reuses_the_full_training_dataset_validator
     validator = Object.new
     validator.define_singleton_method(:validate_subject) do |subject|

@@ -75,6 +75,12 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal 4, options.fetch(:count)
   end
 
+  def test_photograph_cli_parses_a_named_inference_profile
+    options = studio_photograph_options(%w[--inference-profile identity])
+
+    assert_equal "identity", options.fetch(:inference_profile)
+  end
+
   def test_photograph_cli_only_opens_the_wizard_without_explicit_arguments
     assert studio_photograph_interactive?([], tty: true)
     refute studio_photograph_interactive?(%w[--all-subjects --count 4], tty: true)
@@ -98,9 +104,10 @@ class TestStudioLoraCli < Minitest::Test
       []
     end
 
-    Studio::Visual::SelfieSeries.stub(:new, lambda { |subject:, engine:|
+    Studio::Visual::SelfieSeries.stub(:new, lambda { |subject:, engine:, inference_profile:|
       captured[:subject] = subject
       captured[:engine] = engine
+      captured[:inference_profile] = inference_profile
       fake_series
     }) do
       result = studio_photograph_actions.fetch("series").call({})
@@ -109,6 +116,7 @@ class TestStudioLoraCli < Minitest::Test
 
     assert_equal "ragnhild", captured.fetch(:subject)
     assert_nil captured.fetch(:engine)
+    assert_nil captured.fetch(:inference_profile)
     assert_equal 4, captured.fetch(:count)
   end
 

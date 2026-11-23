@@ -99,6 +99,34 @@ voice of the creative work.
   writes a separately named graded sibling, and the append-only series ledger
   records the graded file as the final portrait. Review sheets use those
   per-image Postpro outputs, not the ungraded originals.
+  The photographic quality gate is read-only:
+  `ruby STUDIO/lora/lora.rb quality --json`. It validates the inference
+  profile catalogue, training readiness, independent evaluation photographs
+  and their separate review permissions; it makes no provider calls.
+  Every subject's private `lora/<subject>/evaluation/` directory must contain
+  5–24 approved photographs that are not in `dataset/`. Keep this directory
+  owner-only (0700), and each photograph owner-only (0600), singly-linked,
+  non-empty and byte-distinct from every training photograph. These are
+  evaluation-only sources: never copy them into the training archive.
+  They are used for local comparison only and are not uploaded or included in
+  candidate-render requests; the candidate render uses the already trained,
+  immutable LoRA version and the selected scene prompt.
+  The subject's private `consent.yml` must separately grant
+  `subject_consent.likeness_review: true` and include
+  `likeness_review` in its subject-consent evidence `covers`; its
+  `source_rights` must grant `review_use: true` and include an
+  `evaluation_photographs` evidence entry covering `review_use`, backed by
+  a separate private evidence file. The regular training and provider
+  permissions remain independently required for candidate rendering.
+  Candidate LoRA comparison accepts `--profile identity|balanced|detail|draft`,
+  for example
+  `ruby STUDIO/lora/review.rb --subject johann --candidate --profile identity`.
+  Profiles are controlled starting points, not quality rankings. Keep the
+  scene, seed, approved model version and holdout set fixed when comparing
+  them; inspect every finalist at full size and leave the model version
+  unapproved until a human has reviewed the likeness and photographic rubric.
+  Selfie-series inference can select the same profile with
+  `--inference-profile balanced`. The balanced profile is the default.
   The first four scenes for each subject use an original, coordinated
   autumn/winter ’26 wardrobe direction: Johann gets textured wool, a long
   chore coat, waffle-knit layering and a clean suede blouson; Ragnhild and

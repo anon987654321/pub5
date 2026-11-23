@@ -47,6 +47,16 @@ class TestLoraConsent < Minitest::Test
     assert report.fetch("valid"), report.fetch("errors").join("; ")
   end
 
+  def test_local_likeness_review_requires_its_own_subject_and_source_permissions
+    write_record(review: true)
+    report = Consent.validate(
+      subject: "probe", subject_directory: @subject_dir, action: :likeness_review
+    )
+    assert report.fetch("valid"), report.fetch("errors").join("; ")
+    assert_equal ["evaluation_photographs"],
+                 Consent.required_source_sets(subject: "probe", subject_directory: @subject_dir, action: :likeness_review)
+  end
+
   def test_publication_and_distribution_are_separate_permissions
     write_record(training: true)
     refute Consent.validate(subject: "probe", subject_directory: @subject_dir, action: :publication).fetch("valid")
@@ -156,7 +166,7 @@ class TestLoraConsent < Minitest::Test
 
   private
 
-  def write_record(training: false, publication: false, distribution: false)
+  def write_record(training: false, publication: false, distribution: false, review: false)
     FileUtils.mkdir_p(@subject_dir, mode: 0o700)
     evidence = File.join(@subject_dir, "evidence")
     FileUtils.mkdir_p(evidence, mode: 0o700)
@@ -165,30 +175,42 @@ class TestLoraConsent < Minitest::Test
     subject_file = File.join(evidence, "subject-consent.txt")
     source_file = File.join(evidence, "source-rights.txt")
     dataset_file = File.join(evidence, "dataset-rights.txt")
+    evaluation_file = File.join(evidence, "evaluation-rights.txt")
     sources = File.join(@subject_dir, "sources")
     FileUtils.mkdir_p(sources, mode: 0o700)
     File.write(File.join(sources, "photo.jpg"), "synthetic source image", mode: "w", perm: 0o600)
     if training
       dataset = File.join(@subject_dir, "dataset")
       FileUtils.mkdir_p(dataset, mode: 0o700)
-      File.write(File.join(dataset, "training.jpg"), "synthetic training image")
+      File.chmod(0o700, dataset)
+      File.write(File.join(dataset, "training.jpg"), "synthetic training image", mode: "w", perm: 0o600)
+    end
+    if review
+      evaluation = File.join(@subject_dir, "evaluation")
+      FileUtils.mkdir_p(evaluation, mode: 0o700)
+      File.chmod(0o700, evaluation)
+      File.write(File.join(evaluation, "holdout.jpg"), "synthetic holdout image", mode: "w", perm: 0o600)
     end
     File.write(subject_file, "synthetic subject authority\n", mode: "w", perm: 0o600)
     File.write(source_file, "synthetic source authority\n", mode: "w", perm: 0o600)
     File.write(dataset_file, "synthetic dataset authority\n", mode: "w", perm: 0o600)
+    File.write(evaluation_file, "synthetic evaluation authority\n", mode: "w", perm: 0o600) if review
     File.chmod(0o600, subject_file)
     File.chmod(0o600, source_file)
     File.chmod(0o600, dataset_file)
 
     subject_scopes = %w[likeness_generation provider_processing]
     source_scopes = %w[generation_use provider_processing]
+    subject_scopes << "likeness_review" if review
     subject_permissions = {
       "likeness_generation" => true, "provider_processing" => true,
+      "likeness_review" => review,
       "model_training" => training, "model_retention" => training,
       "model_publication" => publication, "model_distribution" => distribution
     }
     source_permissions = {
       "generation_use" => true, "provider_processing" => true, "training_use" => training,
+      "review_use" => review,
       "model_publication" => publication, "model_distribution" => distribution
     }
     if training
@@ -229,6 +251,14 @@ class TestLoraConsent < Minitest::Test
               "granted_on" => "2026-11-14",
               "covers" => source_scopes.dup,
               "stored_at" => "evidence/dataset-rights.txt",
+            },
+          } : {}),
+          **(review ? {
+            "evaluation_photographs" => {
+              "granted_by" => "synthetic evaluation authority",
+              "granted_on" => "2026-11-14",
+              "covers" => ["review_use"],
+              "stored_at" => "evidence/evaluation-rights.txt",
             },
           } : {}),
         }

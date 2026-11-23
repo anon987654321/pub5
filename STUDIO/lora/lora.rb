@@ -44,12 +44,14 @@ module Studio
 
         choice = wizard.choose("What would you like to do with a LoRA subject?", [
           ["Validate a subject's training plan", :validate],
+          ["Audit photographic quality standards", :quality],
           ["Review or restore local private source material", :recover],
           ["Render a selfie series", :selfie],
           ["Produce finished selfie films", :film],
         ])
         case choice
         when :validate then validate
+        when :quality then quality_command([])
         when :recover then puts JSON.pretty_generate(recovery_command([]))
         when :selfie then selfie(wizard)
         when :film then film_command([])
@@ -61,6 +63,7 @@ module Studio
       def api_actions
         {
           "validate" => ->(request) { validate_report(request) },
+          "quality" => ->(request) { quality_report(request) },
           "subjects" => ->(_request) { subjects },
           "craft" => ->(_request) { craft },
           "recover" => ->(request) { recovery_report(request) },
@@ -84,6 +87,11 @@ module Studio
             "subjects" => [validator.validate_subject(subject)],
           }
         end
+      end
+
+      def quality_report(request)
+        require_relative "quality"
+        Studio::Lora::Quality.report(subject: request["subject"])
       end
 
       def subjects
@@ -146,13 +154,16 @@ module Studio
         subject = request.fetch("subject", "ragnhild")
         count = request.fetch("count", 4).to_i.clamp(1, 24)
         engine = request["engine"]
-        series = Studio::Visual::SelfieSeries.new(subject:, engine:)
+        series = Studio::Visual::SelfieSeries.new(
+          subject:, engine:, inference_profile: request["inference_profile"]
+        )
         { "subject" => subject, "rendered" => series.run(count:), "prior_renders_retained" => true }
       end
 
       def run_flags(argv)
         case argv.first
         when "validate" then validate_with_flags(argv.drop(1))
+        when "quality" then quality_command(argv.drop(1))
         when "recover"
           puts JSON.pretty_generate(recovery_command(argv.drop(1)))
           0
@@ -163,6 +174,11 @@ module Studio
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
         end
+      end
+
+      def quality_command(argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("quality.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
       end
 
       def validate
@@ -193,7 +209,8 @@ module Studio
             ruby STUDIO/lora/lora.rb train --all      preflight and train all three private LoRAs
             ruby STUDIO/lora/lora.rb recover         dry-run local source recovery from ../pub4
             ruby STUDIO/lora/lora.rb recover --apply  copy only after private rights preflight
-            ruby STUDIO/lora/lora.rb validate --json  read-only machine-readable profile audit
+            ruby STUDIO/lora/lora.rb validate --json  read-only training and consent audit
+            ruby STUDIO/lora/lora.rb quality --json   read-only photography/profile/holdout audit
             ruby STUDIO/lora/lora.rb selfie          render a selfie series after likeness approval
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
           The subject craft itself (scenes, prompting rules, grades) lives in
@@ -215,7 +232,11 @@ module Studio
       FOCUS = "sharp focus on the nearest eye"
       # Shared craft contains capture technique only. Film stock is a per-shot
       # decision, not a universal prompt fragment.
-      PHOTOGRAPHIC_CRAFT = [GEOMETRY, LIGHT, SKIN, FOCUS, "no text in the frame"].join(", ")
+      COMPOSITION = "one unmistakable visual centre, deliberate headroom and eye-line, " \
+                    "clear separation between subject and background, foreground and background " \
+                    "kept in distinct readable planes, negative space supporting the subject's gaze, " \
+                    "every visible object serving the frame"
+      PHOTOGRAPHIC_CRAFT = [GEOMETRY, LIGHT, SKIN, FOCUS, COMPOSITION, "no text in the frame"].join(", ")
 
       def self.photographic(words)
         [words, PHOTOGRAPHIC_CRAFT].compact.join(", ")

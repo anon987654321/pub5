@@ -19,7 +19,7 @@ module Studio
       # Each prompt carries its own environment, moment, lens and light.
       SCENES = Studio::Lora::Selfie::SCENES
 
-      def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil)
+      def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil, inference_profile: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @scenes = scenes.nil? ? nil : Array(scenes)
@@ -27,7 +27,8 @@ module Studio
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:, engine:, lora_only: engine.nil?
+          subject: @subject, directory: @directory, client:, engine:, lora_only: engine.nil?,
+          inference_profile:
         )
         @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
       end
@@ -43,7 +44,7 @@ module Studio
         preflight!
         rendered = []
         series_id = SecureRandom.hex(8)
-        record("series_start", series_id:, count: total)
+        record("series_start", series_id:, count: total, inference_profile: @series.inference_profile)
         total.times do |index|
           scene = if @scenes
                     @scenes[index % @scenes.size]

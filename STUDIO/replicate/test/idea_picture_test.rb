@@ -191,6 +191,43 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_lora_masters_default_to_png_when_provider_url_has_no_suffix
+    Dir.mktmpdir do |dir|
+      client = Object.new
+      client.define_singleton_method(:download_url) { |_url, path| File.write(path, "provider-png") }
+      picture = Studio::Visual::IdeaPicture.new(
+        client:, directory: dir, subject: "probe", subjects_root: dir, lora_only: true
+      )
+      picture.define_singleton_method(:render_with_fallback) { |_words| "https://provider.example/download?id=123" }
+      picture.define_singleton_method(:grade) do |path, seed: nil|
+        graded = File.join(File.dirname(path), "postpro_#{File.basename(path, ".png")}_test_v1.png")
+        File.write(graded, "graded-png")
+        graded
+      end
+
+      graded = picture.send(:render_still, "portrait prompt", "probe_master")
+      original = File.join(dir, "probe_master.png")
+      assert_equal "provider-png", File.read(original)
+      assert_equal "graded-png", File.read(graded)
+      assert_equal 0o600, File.stat(original).mode & 0o777
+    end
+  end
+
+  def test_any_existing_media_extension_blocks_before_a_paid_prediction
+    Dir.mktmpdir do |dir|
+      existing = File.join(dir, "probe_master.jpg")
+      File.write(existing, "existing render")
+      picture = Studio::Visual::IdeaPicture.new(directory: dir)
+      picture.define_singleton_method(:render_with_fallback) { |_words| flunk "must reject collision before provider access" }
+
+      error = assert_raises(RuntimeError) do
+        picture.send(:render_still, "portrait prompt", "probe_master")
+      end
+      assert_match(/refusing to replace an existing still/, error.message)
+      assert_equal "existing render", File.read(existing)
+    end
+  end
+
   def test_grade_fails_instead_of_returning_an_ungraded_still
     Dir.mktmpdir do |dir|
       source = File.join(dir, "portrait.jpg")
@@ -462,18 +499,34 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
-  def test_subject_lora_input_uses_shared_inference_settings_and_schema_optional_fields
+  def test_subject_lora_input_uses_the_named_profile_and_lossless_master_settings
     standard = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
+    profile = standard.fetch("profiles").fetch("balanced")
     picture = Studio::Visual::IdeaPicture.allocate
-    picture.instance_variable_set(:@validated_still_inputs, %w[prompt model num_inference_steps guidance_scale aspect_ratio])
+    picture.instance_variable_set(:@inference_profile, "balanced")
+    picture.instance_variable_set(
+      :@validated_still_inputs,
+      %w[prompt model num_inference_steps guidance_scale aspect_ratio output_format lora_scale seed]
+    )
     picture.define_singleton_method(:photographic) { |words| "johann_lora, #{words}" }
 
     input = picture.send(:lora_input, "portrait")
     assert_equal standard.fetch("model"), input.fetch(:model)
-    assert_equal standard.fetch("num_inference_steps"), input.fetch(:num_inference_steps)
-    assert_equal standard.fetch("guidance_scale"), input.fetch(:guidance_scale)
+    assert_equal profile.fetch("num_inference_steps"), input.fetch(:num_inference_steps)
+    assert_equal profile.fetch("guidance_scale"), input.fetch(:guidance_scale)
+    assert_equal profile.fetch("lora_scale"), input.fetch(:lora_scale)
     assert_equal standard.fetch("aspect_ratio"), input.fetch(:aspect_ratio)
+    assert_equal "png", input.fetch(:output_format)
+    assert_equal standard.fetch("seed"), input.fetch(:seed)
+    refute input.key?(:output_quality)
     refute input.key?(:go_fast)
+  end
+
+  def test_unsupported_inference_profile_is_rejected_before_provider_access
+    error = assert_raises(ArgumentError) do
+      Studio::Visual::IdeaPicture.new(subject: "probe", inference_profile: "cinema-ultra")
+    end
+    assert_match(/unknown inference profile/, error.message)
   end
 
   def test_still_schema_preflight_catches_every_field_before_prediction

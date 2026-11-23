@@ -10,7 +10,9 @@ require "vips"
 require_relative "idea_picture"
 require_relative "consent"
 require_relative "validate"
+require_relative "quality"
 require_relative "../postpro/uncanny"
+require_relative "../postpro/lib/quality_analyzer"
 
 module Studio
   module Lora
@@ -22,6 +24,15 @@ module Studio
       TILE_HEIGHT = 560
       COLUMNS = 3
       BACKGROUND = [18, 18, 18].freeze
+      QUALITY_RUBRIC = {
+        "identity" => "Does the face remain recognisably the same person at full size?",
+        "expression" => "Does the expression feel natural rather than performed?",
+        "composition" => "Is there one clear visual centre, with deliberate framing and readable depth?",
+        "lighting" => "Do light direction, shadow shape and catchlights agree?",
+        "optical_realism" => "Do skin texture, highlights, eyes and fine detail read as photographic?",
+        "colour_and_tone" => "Are skin tones, highlight roll-off and shadow detail convincing?",
+        "technical_integrity" => "Are focus, edges, hands, teeth, jewellery and background details intact?",
+      }.freeze
 
       class Error < StandardError; end
 
@@ -102,37 +113,28 @@ module Studio
           raise Error, "expected #{expected} private Postpro renders for #{@subject}; found #{count}"
         end
 
+        # Review against photographs never used to train the adapter. A
+        # training-set comparison leaks the answer and can make a weak LoRA
+        # appear more faithful than it is.
         def reference_files
-          dataset = File.join(@subject_directory, "dataset")
-          raise Error, "private training dataset is missing; no approved comparison images available" unless
-            File.directory?(dataset) && !File.symlink?(dataset)
-          stat = File.lstat(dataset)
-          raise Error, "training dataset must be owner-only (0700)" unless
-            stat.uid == Process.uid && (stat.mode & 0o077).zero?
-
-          images = Dir.children(dataset).sort.filter_map do |name|
-            # IMAGE_EXTENSIONS carries bare words; File.extname carries the dot.
-            next unless IMAGE_EXTENSIONS.include?(File.extname(name).delete_prefix(".").downcase)
-
-            path = File.join(dataset, name)
-            file_stat = File.lstat(path)
-            next unless file_stat.file? && !file_stat.symlink? && file_stat.uid == Process.uid &&
-                        file_stat.nlink == 1 && (file_stat.mode & 0o077).zero? && file_stat.size.positive?
-
-            path
-          rescue SystemCallError
-            nil
-          end
-          raise Error, "fewer than three approved training photographs are available for comparison" if images.length < 3
-
-          indices = [0, images.length / 2, images.length - 1].uniq
-          indices.map { |index| images.fetch(index) }
+          Quality.evaluation_files(subject: @subject, root: @root)
+        rescue Quality::Error => error
+          raise Error, error.message
         end
 
-        def build(candidate: false)
+        def build(candidate: false, profile: nil)
           consent = Consent.require!(
             subject: @subject, subject_directory: @subject_directory, action: :training
           )
+          references = reference_files
+          review_consent = Consent.require!(
+            subject: @subject, subject_directory: @subject_directory,
+            action: :likeness_review, required_sources: ["evaluation_photographs"]
+          )
+          profile ||= candidate ? Quality.default_profile : latest_inference_profile
+          profile = profile.to_s
+          raise Error, "unknown inference profile #{profile.inspect}" unless Quality.profiles.key?(profile)
+
           cache = File.join(@subject_directory, ".cache")
           secure_directory!(cache)
 
@@ -142,14 +144,15 @@ module Studio
 
           # Check the private reference set and pinned candidate before any
           # provider prediction. A bad dataset must not consume a paid sample.
-          references = reference_files
-          picture = Studio::Visual::IdeaPicture.new(subject: @subject, subjects_root: @root)
+          picture = Studio::Visual::IdeaPicture.new(
+            subject: @subject, subjects_root: @root, inference_profile: profile
+          )
           version = picture.send(:still_model)
 
           render_kind = candidate ? "UNAPPROVED_CANDIDATE" : "FINAL_SERIES"
           if candidate
             output = new_review_directory(File.join(cache, "likeness-review"))
-            renders = render_candidate_renders(output)
+            renders = render_candidate_renders(output, profile:)
             validate_render_count!(renders, expected: 3)
           else
             renders = render_files
@@ -169,17 +172,28 @@ module Studio
             "render_kind" => render_kind,
             "render_count" => renders.length,
             "reference_count" => references.length,
+            "evaluation_set" => {
+              "kind" => "HELD_OUT",
+              "directory" => Quality.evaluation_directory_name,
+              "image_count" => references.length,
+              "disjoint_from_training" => true,
+            },
+            "inference_profile" => profile,
             "contact_sheet" => File.basename(sheet_path),
             "reference_measurements" => reference_metrics,
             "measurements" => metrics,
             "images" => images,
             "identity_assessment" => "NOT_AUTOMATED",
+            "quality_rubric" => QUALITY_RUBRIC.map do |id, description|
+              { "criterion" => id, "description" => description, "status" => "NOT_REVIEWED" }
+            end,
             "human_review_required" => true,
             "approval_field" => "LIKELINESS_REVIEWED_VERSION",
-            "approval_instruction" => "Compare every full-size render with the approved source photographs. Do not approve a model from the contact sheet or image-quality metrics alone.",
+            "approval_instruction" => "Compare every full-size render with the independent held-out evaluation photographs. Do not approve a model from the contact sheet or image-quality metrics alone.",
             "provider_predictions" => (candidate ? renders.length : 0),
             "provider_uploads" => 0,
             "consent_valid" => consent.fetch("valid"),
+            "review_consent_valid" => review_consent.fetch("valid"),
           }
           write_private(File.join(output, "review.json"), JSON.pretty_generate(report) + "\n")
           write_private(File.join(output, "index.html"), html_document(report))
@@ -217,10 +231,11 @@ module Studio
           path
         end
 
-        def render_candidate_renders(output)
+        def render_candidate_renders(output, profile:)
           picture = Studio::Visual::IdeaPicture.new(
             subject: @subject, subjects_root: @root, directory: output,
-            lora_only: true, allow_unreviewed_likeness: true
+            lora_only: true, allow_unreviewed_likeness: true,
+            inference_profile: profile
           )
           picture.validate_model!
           [1, 4, 6].each_with_index.map do |scene_number, index|
@@ -233,21 +248,31 @@ module Studio
           end
         end
 
+        def latest_inference_profile
+          latest = ledger_rows.reverse.find do |row|
+            row["kind"] == "series_start" && row["subject"] == @subject
+          end
+          value = latest && latest["inference_profile"]
+          Quality.profiles.key?(value.to_s) ? value.to_s : Quality.default_profile
+        end
+
         def measure_images(paths)
           paths.map do |path|
-            reading = Postpro::Uncanny.read(path)
+            image = Vips::Image.new_from_file(path, access: :random)
+            reading = Postpro::Uncanny.read_image(image)
             {
               "file" => File.basename(path),
               "texture" => reading.texture,
               "specular_spread" => reading.specular_spread,
               "clipping_percent" => reading.clipping,
               "tonal_range" => reading.tonal_range,
+              "pixel_diagnostics" => Postpro::QualityAnalyzer.report_image(image),
             }
           end
         end
 
         def review_images(output, references, renders)
-          entries = references.map { |path| ["REFERENCE", path] } + renders.map do |path|
+          entries = references.map { |path| ["HOLDOUT_REFERENCE", path] } + renders.map do |path|
             ["#{renders.length == 3 ? "CANDIDATE" : "FINAL"}", path]
           end
           entries.map do |role, path|
@@ -266,7 +291,7 @@ module Studio
         end
 
         def write_contact_sheet(references, renders, path, render_label: "RENDER")
-          entries = references.map.with_index { |file, index| [file, "REFERENCE #{index + 1}"] } +
+          entries = references.map.with_index { |file, index| [file, "HOLDOUT #{index + 1}"] } +
                     renders.map.with_index { |file, index| [file, format("%s %02d", render_label, index + 1)] }
           cells = entries.map { |file, label| contact_cell(file, label) }
           sheet = Vips::Image.arrayjoin(
@@ -288,6 +313,8 @@ module Studio
         def html_document(report)
           render_rows = measurement_rows(report.fetch("measurements"))
           reference_rows = measurement_rows(report.fetch("reference_measurements"))
+          render_pixel_rows = pixel_diagnostic_rows(report.fetch("measurements"))
+          reference_pixel_rows = pixel_diagnostic_rows(report.fetch("reference_measurements"))
           gallery = report.fetch("images").map do |entry|
             relative = escape_html(entry.fetch("relative_path"))
             label = escape_html(entry.fetch("role"))
@@ -319,8 +346,9 @@ module Studio
             <body>
               <h1>Private likeness review — #{escape_html(@subject)} — #{escape_html(report.fetch("render_kind"))}</h1>
               <p>Candidate model: <code>#{escape_html(report.fetch("model_version"))}</code></p>
-              <p class="warning">Identity verdict: NOT AUTOMATED. Compare all #{Integer(report.fetch("render_count"))} full-size #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} renders with the references. Do not approve from image metrics alone.</p>
-              <img src="contact-sheet.jpg" alt="#{Integer(report.fetch("reference_count"))} approved source images and #{Integer(report.fetch("render_count"))} #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} portraits">
+              <p class="warning">Identity and photographic verdicts: NOT REVIEWED. Compare every full-size render with the independent holdout photographs. Do not approve from a contact sheet or image metrics alone.</p>
+            <p>Inference profile: <code>#{escape_html(report.fetch("inference_profile", Quality.default_profile))}</code>. A profile remains experimental until reviewed against the same holdout set.</p>
+              <img src="contact-sheet.jpg" alt="#{Integer(report.fetch("reference_count"))} held-out evaluation photographs and #{Integer(report.fetch("render_count"))} #{report.fetch("render_kind") == "UNAPPROVED_CANDIDATE" ? "candidate" : "final"} portraits">
               <h2>Full-resolution source and render files</h2>
               <div class="gallery">#{gallery}</div>
               <h2>Source reference measurements</h2>
@@ -329,10 +357,21 @@ module Studio
                 <thead><tr><th>Reference</th><th>Texture</th><th>Specular spread</th><th>Clipping</th><th>Tonal range</th></tr></thead>
                 <tbody>#{reference_rows}</tbody>
               </table>
+              <h3>Sampled pixel diagnostics — held-out photographs</h3>
+              <p>Dimensions, decoded-sRGB linear-light exposure, clipping, tonal spread and RMS contrast. These diagnostics do not assess composition, focus, expression or likeness.</p>
+              <table>
+                <thead><tr><th>File</th><th>Dimensions</th><th>Mean luminance</th><th>p01 / p99</th><th>Clipped highlights</th><th>Clipped shadows</th><th>Tonal spread</th><th>RMS contrast</th></tr></thead>
+                <tbody>#{reference_pixel_rows}</tbody>
+              </table>
               <h2>Generated image measurements</h2>
               <table>
                 <thead><tr><th>File</th><th>Texture</th><th>Specular spread</th><th>Clipping</th><th>Tonal range</th></tr></thead>
                 <tbody>#{render_rows}</tbody>
+              </table>
+              <h3>Sampled pixel diagnostics — generated portraits</h3>
+              <table>
+                <thead><tr><th>File</th><th>Dimensions</th><th>Mean luminance</th><th>p01 / p99</th><th>Clipped highlights</th><th>Clipped shadows</th><th>Tonal spread</th><th>RMS contrast</th></tr></thead>
+                <tbody>#{render_pixel_rows}</tbody>
               </table>
               <p>After visual review, record the exact immutable version in the owner's private <code>subject.env</code> as <code>LIKELINESS_REVIEWED_VERSION</code>. Leave it unset if any portrait does not clearly match.</p>
             </body>
@@ -347,6 +386,28 @@ module Studio
               "<td>#{format_optional(row["specular_spread"])}</td>" \
               "<td>#{format("%.4f", row.fetch("clipping_percent"))}%</td>" \
               "<td>#{format("%.4f", row.fetch("tonal_range"))}</td></tr>"
+          end.join("\n")
+        end
+
+        def pixel_diagnostic_rows(rows)
+          rows.map do |row|
+            diagnostic = row.fetch("pixel_diagnostics")
+            exposure = diagnostic.fetch(:exposure)
+            tonal = diagnostic.fetch(:tonal)
+            contrast = diagnostic.fetch(:contrast)
+            dimensions = diagnostic.fetch(:dimensions).join(" × ")
+            <<~HTML.strip
+              <tr>
+                <td>#{escape_html(row.fetch("file"))}</td>
+                <td>#{escape_html(dimensions)}</td>
+                <td>#{format("%.4f", exposure.fetch(:mean_luminance))}</td>
+                <td>#{format("%.4f", exposure.fetch(:p01))} / #{format("%.4f", exposure.fetch(:p99))}</td>
+                <td>#{format("%.4f", exposure.fetch(:clipped_highlights_pct))}%</td>
+                <td>#{format("%.4f", exposure.fetch(:clipped_shadows_pct))}%</td>
+                <td>#{format("%.4f", tonal.fetch(:histogram_spread))}</td>
+                <td>#{format("%.4f", contrast.fetch(:rms_contrast))}</td>
+              </tr>
+            HTML
           end.join("\n")
         end
 
@@ -382,15 +443,16 @@ module Studio
       module_function
 
       def run_cli(argv)
-        options = { subject: nil, candidate: false }
+        options = { subject: nil, candidate: false, profile: nil }
         OptionParser.new do |parser|
           parser.banner = "Usage: ruby STUDIO/lora/review.rb --subject NAME"
           parser.on("--subject NAME", "review a subject's portraits") { |value| options[:subject] = value }
           parser.on("--candidate", "render three private LoRA samples before approving a new model") { options[:candidate] = true }
+          parser.on("--profile NAME", "select a controlled inference profile (default: balanced)") { |value| options[:profile] = value }
         end.parse!(argv)
         raise ArgumentError, "--subject is required" if options[:subject].to_s.empty?
 
-        result = Builder.new(subject: options[:subject]).build(candidate: options[:candidate])
+        result = Builder.new(subject: options[:subject]).build(candidate: options[:candidate], profile: options[:profile])
         puts JSON.pretty_generate(result)
         0
       rescue Error, Consent::Error, ArgumentError, SystemCallError, IOError, Vips::Error => error

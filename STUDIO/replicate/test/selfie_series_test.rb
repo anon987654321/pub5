@@ -83,12 +83,13 @@ class TestSelfieSeries < Minitest::Test
   # The graded pass shells out to postpro and the manifest lookup needs a
   # subject with an approved training — both are no-op'd in setup here the way
   # idea_picture_test.rb stubs the same seams, and every write stays in tmpdir.
-  def series(fail_download_at: nil)
+  def series(fail_download_at: nil, inference_profile: nil)
     Studio::Visual::SelfieSeries.new(
       subject: "probe",
       client: fail_download_at ? FakeClient.new(fail_download_at:) : @client,
       directory: File.join(@dir, "stills"),
       ledger_path: File.join(@dir, "ledger.jsonl"),
+      inference_profile:,
     )
   end
 
@@ -112,6 +113,17 @@ class TestSelfieSeries < Minitest::Test
     assert_equal rendered.sort, @graded_paths.sort
     assert rendered.all? { |path| File.basename(path).start_with?("postpro_probe_selfie_") }
     rendered.each { |path| assert_equal "postpro graded image", File.read(path) }
+  end
+
+  def test_selected_profile_reaches_inference_and_is_recorded_in_the_series_ledger
+    run_series(series(inference_profile: "identity"), count: 1)
+
+    settings = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profiles").fetch("identity")
+    input = @client.predictions.fetch(0).fetch(1)
+    assert_equal settings.fetch("guidance_scale"), input.fetch(:guidance_scale)
+    assert_equal settings.fetch("num_inference_steps"), input.fetch(:num_inference_steps)
+    row = ledger_rows("series_start").fetch(0)
+    assert_equal "identity", row.fetch("inference_profile")
   end
 
   def test_default_batch_contains_four_new_portraits

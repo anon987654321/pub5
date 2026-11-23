@@ -4,6 +4,14 @@ require_relative "minitest_helper"
 require_relative "../../lora/lora"
 
 class TestStudioLoraCraft < Minitest::Test
+  def test_shared_photographic_craft_carries_composition_without_forcing_one_stock
+    assert_includes Studio::Lora::Craft::PHOTOGRAPHIC_CRAFT, Studio::Lora::Craft::COMPOSITION
+    assert_match(/visual centre/, Studio::Lora::Craft::COMPOSITION)
+    assert_match(/negative space/, Studio::Lora::Craft::COMPOSITION)
+    refute_includes Studio::Lora::Craft::PHOTOGRAPHIC_CRAFT, "Portra"
+    refute Studio::Lora::Craft.const_defined?(:HOUSE_STOCK, false)
+  end
+
   def test_shared_photographic_craft_does_not_force_one_film_stock
     refute_includes Studio::Lora::Craft::PHOTOGRAPHIC_CRAFT, "Portra"
     refute Studio::Lora::Craft.const_defined?(:HOUSE_STOCK, false)

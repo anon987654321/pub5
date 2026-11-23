@@ -7,6 +7,7 @@ require "yaml"
 require "fileutils"
 require "rbconfig"
 require "securerandom"
+require "uri"
 require_relative "../replicate/output_paths"
 require_relative "../replicate/client"
 require_relative "../replicate/models"
@@ -49,7 +50,8 @@ module Studio
         film_resolution: nil,
         subjects_root: SUBJECTS,
         lora_only: false,
-        allow_unreviewed_likeness: false
+        allow_unreviewed_likeness: false,
+        inference_profile: nil
       )
         @client = client
         @directory = directory
@@ -67,6 +69,13 @@ module Studio
         raise ArgumentError, "unreviewed likeness is available only for the LoRA candidate-review path" if @allow_unreviewed_likeness && !@lora_only
         @film_engine = film_engine&.to_s
         @film_resolution = film_resolution&.to_s
+        configured_profiles = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profiles")
+        @inference_profile = (inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")).to_s
+        raise ArgumentError, "unknown inference profile #{@inference_profile.inspect}; choose #{configured_profiles.keys.join(", ")}" unless configured_profiles.key?(@inference_profile)
+      end
+
+      def inference_profile
+        @inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
@@ -265,10 +274,15 @@ module Studio
       end
 
       def render_still(words, stem, grade_seed: nil)
-        path = File.join(@directory, "#{safe_stem(stem)}.jpg")
-        raise "refusing to replace an existing still: #{path}" if File.exist?(path) || File.symlink?(path)
+        base_path = File.join(@directory, safe_stem(stem))
+        existing = %w[.png .jpg .jpeg .webp].map { |extension| "#{base_path}#{extension}" }
+                                              .find { |candidate| File.exist?(candidate) || File.symlink?(candidate) }
+        raise "refusing to replace an existing still: #{existing}" if existing
 
         output = render_with_fallback(words)
+        path = "#{base_path}#{still_extension(output)}"
+        raise "refusing to replace an existing still: #{path}" if File.exist?(path) || File.symlink?(path)
+
         client.download_url(first_url(output), path)
         File.chmod(0o600, path)
         graded = grade(path, seed: grade_seed)
@@ -336,14 +350,17 @@ module Studio
         end
       end
 
-      # The subject's trained LoRA: the input shape its FLUX base declares.
+      # The subject's trained LoRA: one named profile supplies all three
+      # inference controls. A/B reviews can vary the profile without changing
+      # scene text, model version, seed, output format or post-production.
       def lora_input(words)
         settings = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
+        profile = settings.fetch("profiles").fetch(inference_profile)
         desired = {
           prompt: photographic(words),
           model: settings.fetch("model"),
-          num_inference_steps: settings.fetch("num_inference_steps"),
-          guidance_scale: settings.fetch("guidance_scale"),
+          num_inference_steps: profile.fetch("num_inference_steps"),
+          guidance_scale: profile.fetch("guidance_scale"),
         }
         optional = {
           aspect_ratio: settings["aspect_ratio"],
@@ -351,7 +368,8 @@ module Studio
           output_format: settings["output_format"],
           output_quality: settings["output_quality"],
           go_fast: settings["go_fast"],
-          lora_scale: settings["lora_scale"],
+          lora_scale: profile.fetch("lora_scale"),
+          seed: settings["seed"],
         }
         allowed = Array(@validated_still_inputs).map(&:to_s)
         optional.each do |key, value|
@@ -669,6 +687,20 @@ module Studio
         raise "no trained, pinned Replicate version for #{@subject}; expected #{path} or owner/model:version in #{@subject}/subject.env"
       rescue JSON::ParserError => error
         raise "invalid training manifest #{path}: #{error.message}"
+      end
+
+      # Honour the provider's actual media suffix. When a signed URL has no
+      # useful suffix, LoRA masters default to the configured lossless format.
+      def still_extension(output)
+        url = first_url(output)
+        extension = File.extname(URI.parse(url).path).downcase
+        return extension if %w[.png .jpg .jpeg .webp].include?(extension)
+
+        format = @lora_only ? Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("output_format") : "jpg"
+        ".#{format}"
+      rescue URI::InvalidURIError
+        format = @lora_only ? Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("output_format") : "jpg"
+        ".#{format}"
       end
 
       # postpro writes its grade beside the still it was given.

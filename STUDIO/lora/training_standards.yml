@@ -27,13 +27,34 @@ dataset:
 review:
   candidate_render_count: 3
   final_render_count: 4
+  evaluation_directory: evaluation
+  min_evaluation_images: 5
+  max_evaluation_images: 24
 inference:
   model: dev
+  profile: balanced
+  # These are controlled experiment candidates, not measured winners.
+  # Compare each against the same holdout photographs and scene prompts.
+  profiles:
+    identity:
+      guidance_scale: 2.5
+      num_inference_steps: 45
+      lora_scale: 0.8
+    balanced:
+      guidance_scale: 3.0
+      num_inference_steps: 45
+      lora_scale: 1.0
+    detail:
+      guidance_scale: 3.5
+      num_inference_steps: 50
+      lora_scale: 1.0
+    draft:
+      guidance_scale: 3.0
+      num_inference_steps: 28
+      lora_scale: 1.0
+  seed: 261123
   aspect_ratio: "2:3"
   num_outputs: 1
-  guidance_scale: 7.5
-  num_inference_steps: 28
-  output_format: jpg
-  output_quality: 95
+  output_format: png
+  output_quality: null
   go_fast: false
-  lora_scale: 1.0

@@ -25,14 +25,17 @@ def studio_photograph_actions
 
       Studio::Visual::IdeaPicture.new(
         subject: request.fetch("subject", "ragnhild"), engine: request["engine"],
-        film_engine: request["film_engine"], film_resolution: request["film_resolution"]
+        film_engine: request["film_engine"], film_resolution: request["film_resolution"],
+        inference_profile: request["inference_profile"]
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5)
       )
     end,
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
-      paths = Studio::Visual::SelfieSeries.new(subject:, engine: request["engine"]).run(
+      paths = Studio::Visual::SelfieSeries.new(
+        subject:, engine: request["engine"], inference_profile: request["inference_profile"]
+      ).run(
         count: request.fetch("count", 4)
       )
       { "subject" => subject, "rendered" => paths, "prior_renders_retained" => true }
@@ -86,7 +89,7 @@ end
 
 def studio_photograph_options(argv)
   options = {
-    film: false, duration: 5, count: 4, all_subjects: false,
+    film: false, duration: 5, count: 4, all_subjects: false, inference_profile: nil,
     subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild")
   }
   OptionParser.new do |parser|
@@ -102,6 +105,7 @@ def studio_photograph_options(argv)
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
+    parser.on("--inference-profile NAME", "LoRA profile from training_standards.yml (identity, balanced, detail, draft)") { |value| options[:inference_profile] = value }
     parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
     parser.on("--film-resolution RES", "H3 Lite resolution: 480P (default) or 768P") { |value| options[:film_resolution] = value }
     parser.on("--free", "stay inside Replicate's free tier (flux-dev, flux-schnell)") { options[:engine] = "black-forest-labs/flux-dev" }
@@ -114,8 +118,8 @@ end
 # All-subject generation is independent per person. Every subject is preflighted
 # before the first prediction, but one person's missing permission/model must not
 # prevent another subject with a complete, valid preflight from proceeding.
-def studio_all_subjects_render(subjects:, count:, series_factory: nil)
-  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:) }
+def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil)
+  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:, inference_profile:) }
   prepared = subjects.map do |subject|
     begin
       series = factory.call(subject)
@@ -225,13 +229,16 @@ if $PROGRAM_NAME == __FILE__
       raise ArgumentError, "--all-subjects requires the subject's trained LoRA; --engine is not allowed" if options[:engine]
 
       studio_all_subjects_render(
-        subjects: %w[johann ragnhild merethe], count: options[:count] || 4
+        subjects: %w[johann ragnhild merethe], count: options[:count] || 4,
+        inference_profile: options[:inference_profile]
       )
     elsif options[:series]
       # A series defaults to the subject's pinned LoRA. An explicit --engine is
       # an intentional opt-out for reference/text experiments.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
-      Studio::Visual::SelfieSeries.new(subject: options[:subject], engine: options[:engine]).run(
+      Studio::Visual::SelfieSeries.new(
+        subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile]
+      ).run(
         count: options[:count] || 4
       )
     elsif options[:animate]
@@ -240,7 +247,7 @@ if $PROGRAM_NAME == __FILE__
 
       picture = Studio::Visual::IdeaPicture.new(
         subject: options[:subject], film_engine: options[:film_engine],
-        film_resolution: options[:film_resolution]
+        film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       )
       result = picture.animate(options[:animate], prompt, duration: options[:duration])
       result["scored"] = picture.add_soundtrack(result["clip"], options[:soundtrack]) if options[:soundtrack]
@@ -251,7 +258,7 @@ if $PROGRAM_NAME == __FILE__
 
       Studio::Visual::IdeaPicture.new(
         subject: options[:subject], film_engine: options[:film_engine],
-        film_resolution: options[:film_resolution]
+        film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
         prompt, film: options[:film], duration: options[:duration]
       )

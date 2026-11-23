@@ -17,6 +17,7 @@ module Studio
       SUBJECT_PERMISSIONS = {
         generation: %w[likeness_generation provider_processing].freeze,
         training: %w[likeness_generation provider_processing model_training model_retention].freeze,
+        likeness_review: %w[likeness_generation likeness_review].freeze,
         publication: %w[model_publication].freeze,
         distribution: %w[model_distribution].freeze,
       }.freeze
@@ -24,6 +25,7 @@ module Studio
       SOURCE_PERMISSIONS = {
         generation: %w[generation_use provider_processing].freeze,
         training: %w[generation_use provider_processing training_use].freeze,
+        likeness_review: %w[review_use].freeze,
         publication: %w[model_publication].freeze,
         distribution: %w[model_distribution].freeze,
       }.freeze
@@ -34,6 +36,8 @@ module Studio
 
       def required_source_sets(subject:, subject_directory:, action: :generation)
         directory = File.expand_path(subject_directory.to_s)
+        return (local_images?(File.join(directory, "evaluation")) ? ["evaluation_photographs"] : []) if action.to_sym == :likeness_review
+
         sets = if subject.to_s == "merethe"
                  sources = File.join(directory, "sources")
                  additional = File.join(sources, "additional")
