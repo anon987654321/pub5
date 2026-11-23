@@ -27,6 +27,10 @@ class TestFallbackChain < Minitest::Test
   class FakeRouter
     def failover_max_retries = 2
     def failover_cooldown_seconds = 300
+    def failover_skip_categories = %i[
+      timeout no_api_key offline auth_error rate_limit budget exhausted
+      model_missing invalid_request llm_call_failure
+    ]
   end
 
   def build_agent(dispatcher)
