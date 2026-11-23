@@ -437,3 +437,41 @@ class TestRg69Defaults < Minitest::Test
     end
   end
 end
+
+
+# Regression coverage for the failure mode and the visible interaction states.
+class TestRg69PlaybackRecovery < Minitest::Test
+  ROOT = File.expand_path("../..", __dir__)
+  JS = File.join(ROOT, "dilla", "rg69", "rg69.js")
+  CSS = File.join(ROOT, "dilla", "rg69", "rg69.css")
+
+  def js = File.read(JS)
+  def css = File.read(CSS)
+
+  def test_missing_tone_asset_does_not_leave_the_welcome_gate_covering_the_page
+    assert_includes js, 'welcome.style.display = "none";'
+    assert_includes js, 'welcome.setAttribute("aria-hidden", "true");'
+    assert_includes js, 'control.disabled = true;'
+    assert_includes js, 'status.dataset.state = "audio";'
+  end
+
+  def test_play_button_reports_startup_and_exposes_a_retry_on_failure
+    assert_includes js, 'playButton.textContent = "Starting…";'
+    assert_includes js, 'playButton.textContent = "↻ Retry audio";'
+    assert_includes js, 'st(`audio startup failed — ${detail}`);'
+    assert_includes js, 'finally {'
+  end
+
+  def test_reverb_generation_failure_cannot_block_the_transport
+    assert_includes js, 'reverb unavailable; continuing without it:'
+    assert_includes js, 'fxRev.wet.value = 0;'
+  end
+
+  def test_touch_controls_have_readable_sizes_and_a_clear_focus_state
+    assert_includes css, 'button {'
+    assert_includes css, 'min-height: 40px;'
+    assert_includes css, 'button:focus-visible'
+    assert_includes css, '@media (max-width: 640px)'
+    assert_includes css, 'grid-template-columns: repeat(2, minmax(0, 1fr));'
+  end
+end
