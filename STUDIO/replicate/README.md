@@ -1,6 +1,6 @@
 # STUDIO
 
-The source root has exactly four owners: `dilla/` (music and RG-69), `lora/` (subjects and selfie gallery), `postpro/` (image and film processing), and `replicate/` (shared runtime, CLI, checks, tests, and the Replicate client).
+The source root has four code owners: `dilla/` (music and RG-69), `lora/` (subjects and selfie gallery), `postpro/` (image and film processing), and `replicate/` (shared runtime, CLI, checks, tests, and the Replicate client). The root-level `test/` directory contains only two compatibility proof entrypoints; the canonical suites live under `replicate/test/`.
 
 **STUDIO owns pub5's music, image and video tools.** Its tracked source
 travels with the pinned full-repository checkout on vm23, and the full production
