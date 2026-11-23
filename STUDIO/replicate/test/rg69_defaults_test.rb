@@ -326,8 +326,8 @@ class TestRg69Defaults < Minitest::Test
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
 
     assert_includes builder, "new Tone.PolySynth(Tone.FMSynth"
-    assert_includes builder, "maxPolyphony:t.keys.max_polyphony"
-    assert_includes builder, "maxPolyphony:t.pads.max_polyphony"
+    assert_includes builder, "maxPolyphony:Math.min(6,t.keys.max_polyphony)"
+    assert_includes builder, "maxPolyphony:Math.min(4,t.pads.max_polyphony)"
     assert_includes builder, "oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread}"
     assert_includes init, "const instruments=createToneInstruments();"
     assert_includes export, "const offlineSynths=createToneInstruments();"
