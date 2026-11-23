@@ -58,6 +58,15 @@ class TestRuns < Minitest::Test
                     "only #{reaching.size} runners carry globs - extraction is broken, not the repo"
   end
 
+  def test_nested_tools_runner_resolves_its_own_test_directory
+    %w[test_tools_check.rb test_event_bus_reach.rb].each do |name|
+      path = "MASTER/tools/test/#{name}"
+      assert_includes Operator::Runs.test_files, path
+      assert_includes Operator::Runs.who_runs(path), "MASTER/tools/Rakefile",
+                      "#{path} is selected by the tools Rakefile but was resolved from the wrong root"
+    end
+  end
+
   def test_who_runs_answers_for_a_known_file
     assert_includes Operator::Runs.who_runs("MASTER/test/test_runs.rb"), "MASTER/Rakefile"
     assert_empty Operator::Runs.who_runs("MASTER/test/no_such_file.rb")
