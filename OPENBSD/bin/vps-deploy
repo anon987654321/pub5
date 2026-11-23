@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# Serial VPS deploy entrypoint — sync, CI, restart, health, deploy stamp.
+# Serial VPS deploy entrypoint — sync, read-only bundle check, restart, health and deploy stamp.
 # Usage: zsh OPENBSD/bin/vps-deploy all|GROUP|APP
 set -euo pipefail
 
@@ -1125,7 +1125,7 @@ if (( lock_owner )); then
   if [[ -n ${VPS_DEPLOY_CI_SHA:-} ]]; then
     [[ $VPS_DEPLOY_CI_SHA == $pin ]] \
       || deploy_refuse "bin/ci ran on $VPS_DEPLOY_CI_SHA but this run would deploy $pin"
-    print "vps-deploy: bin/ci passed on the operator's machine for $pin; the box skips its suite"
+    print "vps-deploy: workstation bin/ci passed for $pin; vm23 will only verify the preinstalled production bundle"
   fi
   if [[ -n ${VPS_DEPLOY_PREFLIGHT_SHA:-} ]]; then
     [[ $VPS_DEPLOY_PREFLIGHT_SHA == $pin ]] \
@@ -1231,8 +1231,9 @@ if [[ $deploy_target_kind == all || $deploy_target_kind == group ]]; then
     fi
     first=0
     print "vps-deploy: $app -> $one"
-    # Each child executes the complete per-app CI, sync, migration, restart,
-    # health-check and deploy-stamp path. A failure halts this group.
+    # Workstation CI is already attested for the pinned SHA. Each child syncs its
+    # app, verifies the installed bundle, migrates, restarts and records health.
+    # A failure halts this group.
     set_stage "$app:$one"
     zsh "$0" "$one" || { halted_app=$one; print -u2 "vps-deploy: $app halted at $one"; exit 1 }
   done
