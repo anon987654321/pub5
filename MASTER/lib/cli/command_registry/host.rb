@@ -3,6 +3,8 @@
 require "shellwords"
 require "yaml"
 require "json"
+require "digest"
+require "rbconfig"
 require_relative "../skills"
 require_relative "../../operator/capability_graph"
 require_relative "../../io/exec"
