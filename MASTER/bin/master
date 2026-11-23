@@ -119,8 +119,22 @@ if ARGV.first == "host-health"
     warn "usage: bin/master host-health"
     exit 64
   end
-  exec(RbConfig.ruby, File.join(master_root, "bin", "operator"),
-       "vps", "admin", "diagnose", "--remote")
+  require_relative "../lib/io/exec"
+  load File.join(File.dirname(master_root), "OPENBSD", "bin", "vps-admin")
+  begin
+    stdout, stderr, status = Master::Io::Exec.capture3(
+      RbConfig.ruby, File.join(master_root, "bin", "operator"),
+      "vps", "admin", "diagnose", "--remote",
+      chdir: File.dirname(master_root), timeout: 120, raise_on_timeout: true,
+    )
+    output = OpenBSDAdmin.redact_diagnostic_output([stdout, stderr].reject(&:empty?).join("\n"))
+    $stdout.write(output)
+    $stdout.write("\n") unless output.empty? || output.end_with?("\n")
+    exit(status.exitstatus || (status.success? ? 0 : 1))
+  rescue Master::Io::Exec::TimeoutError
+    warn "host-health: TIMEOUT after 120s; no recovery action was attempted"
+    exit 124
+  end
 end
 
 if ARGV.first == "core"
