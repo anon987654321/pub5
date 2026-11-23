@@ -437,7 +437,8 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_closed_hat_gate_finishes_before_the_next_humanized_sixteenth
-    trigger = js[/function triggerNotes\\(.*?(?=\\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    raise "no triggerNotes" unless js.include?("function triggerNotes")
+    trigger = js.split("function triggerNotes", 2).last.split("function scheduleLoop", 2).first
     assert_includes trigger, "Math.min(sixteenthDuration*0.5,0.06)"
     assert_includes trigger, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
     assert_includes trigger, "synths.open.triggerAttackRelease(eighth,rt,vl)"
