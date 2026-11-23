@@ -107,7 +107,7 @@ class TestCheckChain < Minitest::Test
                   "hjerterom source CI", "mytoonz source CI"],
                  G.suite_jobs(%w[RAILS]).map(&:first)
     studio = G.suite_jobs(%w[STUDIO]).fetch(0)
-    assert_equal ["rake", "-f", "replicate/Rakefile", "test"], studio.fetch(1).drop(1)
+    assert_equal ["-S", "rake", "-f", "replicate/Rakefile", "test"], studio.fetch(1).drop(1)
     assert_equal File.join(G::ROOT, "STUDIO"), studio.fetch(2)
   end
 
