@@ -38,6 +38,8 @@ module Operator
       OPENBSD/bin/check-vps
       OPENBSD/test/run_all.rb
       RAILS/test/run_all.rb
+      RAILS/hjerterom/bin/ci
+      RAILS/mytoonz/bin/ci
       RAILS/package.json
       MASTER/tools/rails/premerge.rb
       STUDIO/replicate/Rakefile
@@ -67,6 +69,8 @@ module Operator
       "RAILS/bsdports/bin/ci" => ["RAILS/bsdports/test/**/*_test.rb"],
       "MASTER/web/bin/ci" => ["MASTER/web/test/**/*_test.rb"],
       "RAILS/mrdamascy/bin/ci" => ["RAILS/mrdamascy/test/**/*_test.rb"],
+      "RAILS/hjerterom/bin/ci" => ["RAILS/hjerterom/test/**/*_test.rb"],
+      "RAILS/mytoonz/bin/ci" => ["RAILS/mytoonz/test/**/*_test.rb"],
       # These runners construct their Node inventory from a runtime path variable
       # or invoke npm script names; the complete target glob is therefore explicit.
       "MASTER/bin/check" => ["MASTER/web/test/**/*.test.mjs"],
@@ -76,7 +80,7 @@ module Operator
       ],
       # STUDIO's Rakefile builds this path from separate File.join arguments,
       # so the source-glob reader cannot recover the directory on its own.
-      "STUDIO/replicate/Rakefile" => ["STUDIO/replicate/test/*_test.rb"],
+      "STUDIO/replicate/Rakefile" => ["STUDIO/replicate/test/*_test.rb", "STUDIO/test/*_test.rb"],
     }.freeze
 
     # npm scripts name their test files inside `node --test ...` strings, so no
