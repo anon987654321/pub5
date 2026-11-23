@@ -1199,10 +1199,12 @@ module Master
       def redact_host_diagnostic_output(value)
         value.to_s
              .encode("UTF-8", invalid: :replace, undef: :replace, replace: "�")
-             .gsub(/(?i)\b((?:authorization|api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret)\b\s*[=:]\s*)[^\s,;]+/, '\1[REDACTED]')
-             .gsub(/(?i)(--?(?:authorization|api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)\s+)(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
-             .gsub(/(?i)\bBearer\s+[A-Za-z0-9._~+\/=-]+/, "Bearer [REDACTED]")
-             .gsub(%r{(?i)(://)[^/@:\s]+:[^/@\s]+@}, '\1[REDACTED]@')
+             .gsub(/(?i)\\b(authorization\\b\\s*[=:]\\s*)(?:Bearer\\s+)?[^\\s,;]+/, '\\1[REDACTED]')
+             .gsub(/(?i)(--?authorization\\s+)(?:Bearer\\s+)?(?:"[^"]*"|'[^']*'|[^\\s,;]+)/, '\\1[REDACTED]')
+             .gsub(/(?i)\\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret)\\b\\s*[=:]\\s*)[^\\s,;]+/, '\\1[REDACTED]')
+             .gsub(/(?i)(--?(?:api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)\\s+)(?:"[^"]*"|'[^']*'|[^\\s,;]+)/, '\\1[REDACTED]')
+             .gsub(/(?i)\\bBearer\\s+[A-Za-z0-9._~+\\/=-]+/, "Bearer [REDACTED]")
+             .gsub(%r{(?i)(://)[^/@:\\s]+:[^/@\\s]+@}, '\\1[REDACTED]@')
       end
 
       def dispatch_keyless_probe(root)
