@@ -173,8 +173,9 @@ module Master
         # therefore includes its source while deploying only registered
         # production surfaces. A STUDIO-only or partial request remains
         # unsupported rather than inventing a service target.
-        return false if self.class.full_inventory_scope?(request) ||
-                        self.class.complete_stack_components?(request)
+        full_release = self.class.full_inventory_scope?(request) ||
+                       self.class.complete_stack_components?(request)
+        return false if full_release && !request.match?(EXCLUSION_RE)
 
         true
       end
