@@ -264,8 +264,11 @@ module Master
       # The reply as the model writes it: the first words reach the terminal seconds before the last.
       def build_on_chunk_handler(accumulated, state)
         lambda do |chunk|
-          accumulated << chunk
-          handle_stream_text(chunk, state) if $stdout.isatty
+          text = chunk.to_s
+          next if text.empty?
+
+          accumulated << text
+          handle_stream_text(text, state) if $stdout.isatty
         end
       end
 
