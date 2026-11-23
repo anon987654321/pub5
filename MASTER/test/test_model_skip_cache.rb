@@ -55,7 +55,8 @@ class TestModelSkipCache < Minitest::Test
     cache.skip!("m1", reason: "provider overloaded", category: :provider_error)
 
     assert_equal long, cache.skipped_until_ms("m1")
-    assert_in_delta 6 * 3600 * 1000, long - (Time.now.to_f * 1000), 5000
+    monotonic_now = Process.clock_gettime(Process::CLOCK_MONOTONIC) * 1000
+    assert_in_delta 6 * 3600 * 1000, long - monotonic_now, 5000
   end
 
   def test_a_rate_limit_without_a_stated_wait_parks_briefly
