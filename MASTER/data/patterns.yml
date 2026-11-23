@@ -978,7 +978,7 @@ operator_playbook:
     - id: vps_ci_app_user
       area: deploy
       signal: "bin/ci fails as dev user; bundle without errors"
-      action: "Run each selected app's bin/ci on the workstation through MASTER/bin/operator vps deploy <target> --remote. vm23's vps_ci.sh only verifies the exact workstation attestation and the preinstalled production bundle; never run the suite or install gems there."
+      action: "Run each selected app's bin/ci on the workstation through MASTER/bin/operator vps deploy <target> --remote. vm23's vps_ci.sh verifies the live parent lock and exact workstation attestation, refreshes the bounded production copy-tree, and checks the preinstalled bundle; it never runs the suite or installs gems."
       proof: "Workstation bin/ci passes for the pinned SHA; the remote frozen bundle check confirms that same SHA and installed bundle"
 
     - id: master_smoke_low_resource
@@ -1086,7 +1086,7 @@ operator_playbook:
     - id: vps_ci_lock_perms
       area: deploy
       signal: "pub5-ci-guard: EACCES on flock or EPERM deleting lock.holder"
-      action: "The lock at /var/db/pub5/ci.lock mode 644 serializes the legacy sync and read-only bundle-check helper. vps_ci.sh does not run bin/ci or a Rails suite on vm23. Do not pre-create .holder as root; the helper owns its cleanup and locking."
+      action: "The /var/db/pub5/ci.lock file is a shared CiGuard/with-ci-lock mutex. pub5_ensure_ci_lock only creates and validates the file; it does not acquire the lock or serialize vps_ci.sh. The pinned vps-deploy parent lock serializes production sync and service changes. vps_ci.sh runs no Rails suite on vm23."
       proof: "With a matching VPS_DEPLOY_CI_SHA, vps_ci.sh completes the frozen production bundle check without running tests or installing gems"
 
     - id: git_shared_worktree_commit_scope
