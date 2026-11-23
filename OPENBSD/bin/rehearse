@@ -1,15 +1,14 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Rehearses a deploy on this machine, in seconds, before it costs forty minutes
-# on vm23. Everything vps_ci.sh and bin/ci check that needs no Rails boot runs
-# here: the CI lints from RAILS/__shared/config/ci.rb, the dialect check, and the
-# static contracts that tie the deploy scripts to the checkout (every named repo
-# path exists, the CI mirror carries what the tools require, the copy-tree layout
-# matches the Gemfiles, no test file leaves a call outside its class).
+# Rehearses a workstation release checkout with fast static deployment checks.
+# It runs the CI lints, dialect check and source contracts: named repo paths exist,
+# the production copy-tree matches the Gemfiles, and test files keep calls inside
+# their classes. It does not boot Rails or replace the selected apps' full bin/ci
+# suites, which the workstation operator runs before contacting vm23.
 #
-# It does not boot Rails or run the suite; that is the box's rails_test step, and
-# the failures that survive this rehearsal are the real ones.
+# vm23 does not run Rails suites, repository scans, dependency installs or asset
+# builds. It only receives the pinned release and checks preinstalled bundles.
 #
 # Usage: OPENBSD/bin/rehearse   (exit 0 only when every check passes)
 
