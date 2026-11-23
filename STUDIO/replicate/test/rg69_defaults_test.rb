@@ -451,6 +451,17 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "tick.textContent=String(i+1).padStart(2,'0')"
   end
 
+  def test_offline_export_clamps_negative_first_step_humanization
+    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
+    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+(Number(offsetMs)||0)/1000);"
+    assert_includes trigger, "const t=noteTime(seq_[v][stepIdx].t)"
+    assert_includes trigger, "const bassTime=noteTime(seq_.b[stepIdx].t)"
+    assert_includes trigger, "const keyTime=noteTime(seq_.keys[stepIdx].t)"
+    assert_includes trigger, "noteTime(seq_.p[stepIdx].t)"
+    refute_includes trigger, "swungTime+seq_.",
+                     "offline events must never receive negative AudioParam times at render start"
+  end
+
   def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
     refresh = js[/function refreshStepGrid\(\)(.*?)\n\}/m, 1] or raise "no state-driven step renderer"
     sync = js[/function syncUIFromState\(\)(.*?)\n\}/m, 1] or raise "no syncUIFromState"
