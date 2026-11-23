@@ -462,6 +462,18 @@ class TestRg69Defaults < Minitest::Test
                      "offline events must never receive negative AudioParam times at render start"
   end
 
+  def test_wav_export_encodes_native_audio_buffer_as_pcm16
+    encoder = js[/function encodeWav16\(audioBuffer\)\{(.*?)\n\}/m, 1] or raise "no PCM WAV encoder"
+    assert_includes encoder, "writeText(0,'RIFF');"
+    assert_includes encoder, "writeText(8,'WAVE');"
+    assert_includes encoder, "view.setUint16(20,1,true);"
+    assert_includes encoder, "view.setUint16(34,bytesPerSample*8,true);"
+    assert_includes encoder, "audioBuffer.getChannelData(channel)"
+    assert_includes encoder, "view.setInt16(offset,sample<0?sample*32768:sample*32767,true);"
+    assert_includes js, "const wav=encodeWav16(buf.get());"
+    refute_includes js, "Tone.Buffer.toWav"
+  end
+
   def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
     refresh = js[/function refreshStepGrid\(\)(.*?)\n\}/m, 1] or raise "no state-driven step renderer"
     sync = js[/function syncUIFromState\(\)(.*?)\n\}/m, 1] or raise "no syncUIFromState"
