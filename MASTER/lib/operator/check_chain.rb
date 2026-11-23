@@ -53,6 +53,8 @@ module Operator
     SUITE_TIMEOUTS = {
       "MASTER" => 1_800,
       "RAILS contracts" => 1_200,
+      "hjerterom source CI" => 1_200,
+      "mytoonz source CI" => 1_200,
       "brgen CI" => 1_200,
       "amber CI" => 1_200,
       "bsdports CI" => 1_200,
@@ -730,9 +732,14 @@ module Operator
         *%w[brgen amber bsdports mrdamascy].map do |app|
           ["#{app} CI", [RUBY, "bin/ci"], File.join(ROOT, "RAILS", app), {}, "RAILS"]
         end,
+        # Restored source-only apps are tested, but remain outside apps.yml and
+        # the production deploy matrix until separately approved.
+        *%w[hjerterom mytoonz].map do |app|
+          ["#{app} source CI", [RUBY, "bin/ci"], File.join(ROOT, "RAILS", app), {}, "RAILS"]
+        end,
         ["OPENBSD", [RUBY, "test/run_all.rb"], File.join(ROOT, "OPENBSD"), {}, "OPENBSD"],
         ["tools", [RUBY, "-S", "rake"], File.join(MASTER, "tools"), {}, "MASTER", true],
-        ["STUDIO media", [RUBY, "-S", "rake", "test"], File.join(ROOT, "STUDIO"), {}, "STUDIO", true],
+        ["STUDIO media", [RUBY, "-S", "rake", "-f", "replicate/Rakefile", "test"], File.join(ROOT, "STUDIO"), {}, "STUDIO", true],
         ["BIZ documents", ["node", File.join(ROOT, "BIZ", "tools", "bp_check.mjs")],
          File.join(ROOT, "BIZ"), { "BIZ_OUT_DIR" => File.join(ROOT, "BIZ") }, "BIZ"],
       ].select { |job| trees.include?(job[4]) }
