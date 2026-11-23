@@ -33,21 +33,25 @@
 <h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1>
 <button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
 </header>
-<div class="transport">
-<button id="play" data-kind="primary" title="Play/Pause (Space)">▶ play</button>
-<button id="stop" type="button" aria-label="Stop" title="Stop (S)">⏹</button>
-<label class="ctrl-bpm">bpm <input id="bpm" type="range" min="60" max="170" value="96"> <output id="bpm-o">96</output></label>
-<button id="tap" title="Tap Tempo">tap</button>
-<button id="steps" type="button" aria-label="Change step count" title="Step count">⟨16⟩</button>
-<button id="random" title="Randomize (R)">⇌ rnd</button>
-<button id="export" title="Export WAV (E)">↓ wav</button>
-<button id="record" data-kind="danger" title="Record">● rec</button>
-<button id="shareBtn" title="Share URL">link</button>
-<button id="layout" type="button" aria-label="Cycle layout" title="Cycle layout (L)">⊞</button>
-<button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">⟲</button>
-<button id="panic" data-kind="danger" title="Panic (Esc)">✖ panic</button>
+<div class="transport" aria-label="Beat machine transport">
+  <div class="transport-primary">
+    <button id="play" data-kind="primary" aria-label="Play sequencer" aria-pressed="false" title="Play or pause (Space)">▶ Play</button>
+    <button id="stop" type="button" aria-label="Stop" title="Stop (S)">■ Stop</button>
+    <label class="ctrl-bpm">BPM <input id="bpm" type="range" min="60" max="170" value="96"> <output id="bpm-o">96</output></label>
+    <button id="tap" title="Tap tempo">Tap</button>
+    <button id="steps" type="button" aria-label="Change step count" title="Switch between 8 and 16 steps">16 steps</button>
+  </div>
+  <div class="transport-actions" aria-label="Other actions">
+    <button id="random" title="Randomize (R)">Randomize</button>
+    <button id="export" title="Export WAV (E)">Export WAV</button>
+    <button id="record" data-kind="danger" title="Record">Record</button>
+    <button id="shareBtn" title="Copy share link">Share</button>
+    <button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
+    <button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
+    <button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button>
+  </div>
 </div>
-<p id="status" role="status" aria-live="polite">idle</p>
+<p id="status" role="status" aria-live="polite">Ready · choose a style, then press Play</p>
 <div class="vu-meter" id="vu" aria-label="VU Meter"></div>
 <main id="main-content" tabindex="-1">
 <article aria-label="Sequencer" role="region">
