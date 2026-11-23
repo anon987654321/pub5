@@ -171,6 +171,9 @@ class TestRuns < Minitest::Test
     assert_includes studio, "STUDIO/test/idea_picture_test.rb"
     assert_includes studio, "STUDIO/test/selfie_series_test.rb"
     assert_includes Operator::Runs.who_runs("STUDIO/test/idea_picture_test.rb"), "STUDIO/replicate/Rakefile"
+    studio_rakefile = File.read(File.join(Operator::Runs::ROOT, "STUDIO", "replicate", "Rakefile"))
+    assert_includes studio_rakefile, 'Dir[File.join(STUDIO_ROOT, "test", "*_test.rb")]'
+    assert_includes studio_rakefile, "tests.concat(root_proofs).sort!"
   end
 
   # What makes a file a test is the directory, not the name — three source files
