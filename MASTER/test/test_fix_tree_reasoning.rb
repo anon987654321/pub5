@@ -112,7 +112,7 @@ class TestFixTreeReasoning < Minitest::Test
 
   def test_external_host_evidence_is_bounded_and_added_only_to_the_prompt
     agent = FakeAgent.new("")
-    evidence = "vm.loadavg: 1.20 0.80 0.50\\n" + ("x" * (Reasoning::MAX_EXTERNAL_EVIDENCE_BYTES + 500))
+    evidence = "vm.loadavg: 1.20 0.80 0.50\n" + ("x" * (Reasoning::MAX_EXTERNAL_EVIDENCE_BYTES + 500))
 
     result = Reasoning.new(agent:, root: @root).call(
       target: @root, persist: false, external_evidence: evidence
