@@ -20,14 +20,49 @@ fi
 . "$ROOT/OPENBSD/lib/ruby_select.sh"
 WEB="$ROOT/MASTER/web"
 
-# This is an internal child, not a standalone deployment command.
+# This is an internal child, not a standalone deployment command. Verify the
+# live parent lock and process fingerprint before reading or changing production.
+deploy_user="${VPS_DEPLOY_USER:-dev}"
+[[ $deploy_user == [a-z]* && $deploy_user != *[^a-z0-9_]* ]] || {
+  echo "vps_deploy_master: invalid deploy-user identifier" >&2
+  exit 2
+}
+lock_dir=${VPS_DEPLOY_LOCK_DIR:-${VPS_DEPLOY_HOME:-/home/$deploy_user}/.pub5-vps-deploy.lock}
+[[ ${VPS_DEPLOY_LOCK_HELD:-} == 1 && ${VPS_DEPLOY_LOCK_PID:-} == <-> && -n ${VPS_DEPLOY_LOCK_IDENTITY:-} ]] || {
+  echo "vps_deploy_master: no inherited parent deployment lock" >&2
+  exit 75
+}
+[[ -d $lock_dir && ! -L $lock_dir && -f $lock_dir/owner && ! -L $lock_dir/owner ]] || {
+  echo "vps_deploy_master: parent deployment lock record is missing or unsafe" >&2
+  exit 75
+}
+read -r owner_pid owner_host owner_epoch owner_identity < "$lock_dir/owner" || {
+  echo "vps_deploy_master: cannot read parent deployment lock record" >&2
+  exit 75
+}
+[[ $owner_pid == "$VPS_DEPLOY_LOCK_PID" && $owner_host == "$(hostname -s)" &&
+   $owner_epoch == <-> && $owner_identity == "$VPS_DEPLOY_LOCK_IDENTITY" ]] || {
+  echo "vps_deploy_master: parent lock record does not match the inherited identity" >&2
+  exit 75
+}
+owner_started=$(LC_ALL=C ps -p "$owner_pid" -o lstart= 2>/dev/null) || { echo "vps_deploy_master: cannot read parent start time" >&2; exit 75; }
+owner_command=$(ps -ww -p "$owner_pid" -o command= 2>/dev/null) || { echo "vps_deploy_master: cannot read parent command" >&2; exit 75; }
+[[ -n $owner_started && -n $owner_command ]] || { echo "vps_deploy_master: parent identity unavailable" >&2; exit 75; }
+owner_started=${owner_started//[^A-Za-z0-9]/_}
+owner_digest=$(print -rn -- "$owner_command" | cksum) || { echo "vps_deploy_master: cannot fingerprint parent process" >&2; exit 75; }
+owner_digest=${owner_digest// /_}
+[[ ${owner_started}_${owner_digest} == "$owner_identity" ]] || {
+  echo "vps_deploy_master: parent deployment process identity changed" >&2
+  exit 75
+}
+
 # Workstation preflight and parent load admission must already pass.
 cd "$ROOT"
 [ -n "${VPS_DEPLOY_SHA:-}" ] || {
   echo "vps_deploy_master: refused - invoke MASTER/bin/operator vps deploy master --remote" >&2
   exit 69
 }
-head=$(git rev-parse HEAD)
+head=$(/usr/bin/su -s /bin/sh "$deploy_user" -c "cd /home/dev/pub5 && git rev-parse HEAD")
 [ "$head" = "$VPS_DEPLOY_SHA" ] || {
   echo "vps_deploy_master: HEAD $head does not match pinned SHA $VPS_DEPLOY_SHA" >&2
   exit 1
@@ -36,11 +71,17 @@ head=$(git rev-parse HEAD)
   echo "vps_deploy_master: no matching parent load-admission token; refusing direct execution" >&2
   exit 69
 }
-if [ "${VPS_DEPLOY_PREFLIGHT_SHA:-}" != "$VPS_DEPLOY_SHA" ] &&
-   ! { [ "${VPS_DEPLOY_SKIP_PREFLIGHT:-}" = 1 ] && [ "${I_UNDERSTAND_FAST_DEPLOY:-}" = 1 ]; }; then
-  echo "vps_deploy_master: no matching workstation preflight; refusing direct execution" >&2
-  exit 69
-}
+if [ -n "${VPS_DEPLOY_PREFLIGHT_SHA:-}" ]; then
+  [ "$VPS_DEPLOY_PREFLIGHT_SHA" = "$VPS_DEPLOY_SHA" ] || {
+    echo "vps_deploy_master: workstation preflight SHA does not match; refusing" >&2
+    exit 69
+  }
+else
+  [ "${VPS_DEPLOY_SKIP_PREFLIGHT:-}" = 1 ] && [ "${I_UNDERSTAND_FAST_DEPLOY:-}" = 1 ] || {
+    echo "vps_deploy_master: no workstation preflight; refusing direct execution" >&2
+    exit 69
+  }
+fi
 echo "==> pinned checkout and parent admission verified: $VPS_DEPLOY_SHA"
 
 cd "$WEB"
