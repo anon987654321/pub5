@@ -284,6 +284,8 @@ module Master
       # the pass flags, the per-dispatch execution overrides with the mode preset
       # applied on top, and this dispatch's cancellation, activated.
       def fix_dispatch_options(raw, ctx)
+        host_evidence = raw.to_s.split(/\s+/).any? { |token| token.casecmp?("--host-evidence") }
+        raw = raw.to_s.split(/\s+/).reject { |token| token.casecmp?("--host-evidence") }.join(" ")
         mode_explicit = raw.to_s.split(/\s+/).any? { |token| MODE_FLAG.match?(token) }
         mode, raw, mode_error = extract_fix_mode(raw)
         return { mode_error: } if mode_error
@@ -291,6 +293,9 @@ module Master
         apply, critique, aesthetic, only, target = parse_pass_flags(raw)
         overrides = execution_overrides(raw)
         apply, critique, only, overrides = apply_fix_mode(mode, raw:, apply:, critique:, only:, overrides:)
+        if host_evidence && !target.to_s.strip.casecmp?("OPENBSD")
+          return { mode_error: "--host-evidence requires the exact OPENBSD target; it is never inferred for another tree" }
+        end
         if apply == true && fix_stage_selected?(only) && (!mode_explicit || target.to_s.strip.empty?)
           return {
             mode_error: "mutating /fix requires explicit --mode=repair|elevate|all and a named repository target; use --dry-run to preview"
@@ -298,7 +303,7 @@ module Master
         end
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
         cancellation.activate! if cancellation&.respond_to?(:activate!)
-        { mode:, raw:, apply:, critique:, aesthetic:, only:, target:, overrides:, cancellation: }
+        { mode:, raw:, apply:, critique:, aesthetic:, only:, target:, overrides:, cancellation:, host_evidence: }
       end
 
       # The run itself: ownership of the shared run budget first, then the
@@ -311,12 +316,29 @@ module Master
         # overrides below. A rejected concurrent caller must not change the
         # active run's mode, lane, check focus or critique pin even briefly.
         Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target: options[:target]) do
+          host_evidence = nil
+          if options[:host_evidence]
+            begin
+              snapshot = Master::CLI::CommandRegistry.capture_openbsd_host_diagnostics(root)
+              Master::CLI::CommandRegistry.record_openbsd_host_diagnostics(root:, snapshot:)
+              host_evidence = snapshot.fetch(:output)
+              Master::Trace::Dmesg.status(
+                "host0", "vm23 read-only snapshot captured for OPENBSD /fix sha256=#{snapshot.fetch(:digest)[0, 12]}"
+              )
+            rescue StandardError => e
+              next Master::Result.err(
+                "BLOCKED: requested vm23 host evidence could not be captured and recorded; no /fix pass started (#{e.class}: #{e.message})",
+                category: :infrastructure,
+              )
+            end
+          end
           with_fix_overrides(options[:overrides]) do
             dispatch_fix_parsed(
               scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw: options[:raw],
               apply: options[:apply], critique: options[:critique], aesthetic: options[:aesthetic],
               only: options[:only], target: options[:target], cancellation: options[:cancellation],
-              mode: options[:mode], task_intent: options[:overrides][:task_intent] || "functional_change"
+              mode: options[:mode], task_intent: options[:overrides][:task_intent] || "functional_change",
+              host_evidence:
             )
           end
         end
@@ -429,7 +451,7 @@ module Master
 
       # The first step of every /fix: lay out the tree and let the model say what it would
       # reshape, before any Law scans. Inconclusive is reported and the run goes on.
-      def first_read(deliberation:, bus:, targets:, persist: true, cancellation: nil)
+      def first_read(deliberation:, bus:, targets:, persist: true, cancellation: nil, host_evidence: nil)
         # An absent/inconclusive current read must not fall back to hints from an older run.
         results = Array(targets).to_h { |target| [target.to_s, []] }
         return results if ENV["MASTER_FIX_TREE"] == "0"
@@ -442,7 +464,10 @@ module Master
         targets.each do |tree_target|
           return results if cancellation&.cancelled?
 
-          result = reasoning.call(target: tree_target, persist:)
+          external_evidence = if host_evidence && File.basename(File.expand_path(tree_target.to_s)) == "OPENBSD"
+                                host_evidence
+                              end
+          result = reasoning.call(target: tree_target, persist:, external_evidence:)
           Master::Trace::Dmesg.status("tree0", result.summary) unless result.answered?
           results[tree_target.to_s] = result.proposals.map(&:to_h) if result.answered?
         end
@@ -579,20 +604,20 @@ module Master
 
       def dispatch_fix_parsed(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
                               apply:, critique:, aesthetic:, only:, target:, cancellation: nil,
-                              mode: "repair", task_intent: "functional_change")
+                              mode: "repair", task_intent: "functional_change", host_evidence: nil)
         writes_requested = writes_requested?(apply:, only:)
         max_passes = writes_requested ? Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES : 0
         Master::Fix::RunBudget.with_shared_run(root: Master::ROOT, max_passes:, bus:, target:) do
           run_fix_in_shared_scope(
             scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:, apply:, critique:,
-            aesthetic:, only:, target:, cancellation:, mode:, task_intent:, writes_requested:
+            aesthetic:, only:, target:, cancellation:, mode:, task_intent:, writes_requested:, host_evidence:
           )
         end
       end
 
       def run_fix_in_shared_scope(scanner:, fix_loop:, deliberation:, root:, bus:, swarm:, raw:,
                                   apply:, critique:, aesthetic:, only:, target:, cancellation:,
-                                  mode:, task_intent:, writes_requested:)
+                                  mode:, task_intent:, writes_requested:, host_evidence: nil)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
         announce_fix_scope(raw:, mode:, target:, writes_requested:)
@@ -608,7 +633,7 @@ module Master
 
         run_fix_report(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
                        cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:,
-                       mode:, task_intent:, trace_scope: execution_trace_scopes(target))
+                       mode:, task_intent:, trace_scope: execution_trace_scopes(target), host_evidence:)
       end
 
       # The lane gate after the target is accepted: the lane summary, the model
@@ -626,10 +651,11 @@ module Master
       # leaves through the dmesg report facade here or the operator never sees it.
       def run_fix_report(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
                          cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:,
-                         mode:, task_intent:, trace_scope:)
+                         mode:, task_intent:, trace_scope:, host_evidence: nil)
         rendered = render_fix_with_voice(
           scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:, cancellation:,
-          writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:
+          writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:,
+          host_evidence:
         )
         return rendered unless Master::Fix::CodeWatch.requested?
 
@@ -657,12 +683,13 @@ module Master
 
       def render_fix_with_voice(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
                                 cancellation:, writes_requested:, apply:, critique:, aesthetic:, only:, mode:,
-                                task_intent:, trace_scope:)
+                                task_intent:, trace_scope:, host_evidence: nil)
         Master::Trace::Dmesg.with_log_voice do
           with_dmesg_verbosity(raw) do
             render_fix_workflow(
               scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
-              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:
+              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:,
+              host_evidence:
             )
           end
         end
@@ -672,11 +699,11 @@ module Master
       # wrappers. This keeps the control path shallow without changing its
       # cancellation, refusal, verification, or final-delivery boundaries.
       def render_fix_workflow(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
-                              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:)
+                              writes_requested:, apply:, critique:, aesthetic:, only:, mode:, task_intent:, trace_scope:, host_evidence: nil)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
         phase_refusal = run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:,
-                                              cancellation:, writes_requested:, trace_scope:)
+                                              cancellation:, writes_requested:, trace_scope:, host_evidence:)
         return phase_refusal if phase_refusal
 
         results, audit_lines = run_fix_target_passes(
@@ -701,8 +728,10 @@ module Master
       # backlog review, the steady execution trace and the fresh-eyes structural
       # review. Returns the result that ends the run, or nil when they all passed.
       def run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:, cancellation:,
-                                writes_requested:, trace_scope:)
-        first_read_results = first_read(deliberation:, bus:, targets:, persist: writes_requested, cancellation:)
+                                writes_requested:, trace_scope:, host_evidence: nil)
+        first_read_results = first_read(
+          deliberation:, bus:, targets:, persist: writes_requested, cancellation:, host_evidence:
+        )
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
         weekly_owner_registry_review(deliberation:, bus:, cancellation:, repo_root: Master.repo_root, record: writes_requested)
@@ -1041,6 +1070,7 @@ module Master
 
       # Repair only the files a red check names, without semantic reads (Fix::CheckFocus).
       BLOCKERS_FLAG = /\A--blockers\z/i
+      HOST_EVIDENCE_FLAG = /\A--host-evidence\z/i
 
       # The critique pins: /simplify and /security are the /fix spellings whose
       # council argues one focus only (TurnRouter::FIX_PIN_SLASH). They are
@@ -1063,7 +1093,7 @@ module Master
       # Flags read per dispatch (execution_overrides), never part of the target.
       TASK_INTENT_FLAG = /\A--intent=(\S+)\z/i
       DISPATCH_FLAG = Regexp.union(
-        AUTOFIX_FLAG, MAX_FILES_FLAG, BLOCKERS_FLAG, LANE_FLAG, TASK_INTENT_FLAG,
+        AUTOFIX_FLAG, MAX_FILES_FLAG, BLOCKERS_FLAG, HOST_EVIDENCE_FLAG, LANE_FLAG, TASK_INTENT_FLAG,
         SIMPLIFY_FLAG, SECURITY_FLAG, /\A--until-checks\z/i, /\A--read-only\z/i
       )
 
