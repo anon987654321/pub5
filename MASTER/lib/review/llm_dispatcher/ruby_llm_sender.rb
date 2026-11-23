@@ -419,7 +419,7 @@ module Master
         # place slept the 30s and 60s backoff while other free models were idle.
         RATE_LIMIT_RE = /rate.?limit|too many requests|\b429\b|overloaded|at capacity/i.freeze
 
-        INVALID_REQUEST_RE = /parameters requires a schema|invalid (?:request|parameter|argument)|malformed request|bad request/i.freeze
+        INVALID_REQUEST_RE = /parameters requires a schema|invalid (?:request|parameter|argument)|malformed request|bad request|decision model.{0,100}only supports|only supports\\s+\\/v1\\/systemone/i.freeze
 
         def offline_error?(err)
           err.message.to_s.match?(OFFLINE_RE)
