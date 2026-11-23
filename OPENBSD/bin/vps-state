@@ -78,10 +78,9 @@ rescue StandardError => e
   { "sha" => "CORRUPT", "at" => "#{path}: #{e.class}" }
 end
 
-# In-progress deploy status (RAILS/_core.sh's deploy_status, written by both
-# the SKIP_CI=1 path and vps_ci.sh). "running" with a pid that no longer
-# exists means a deploy died mid-step rather than finishing -- surface that
-# distinctly from a genuinely live one so it doesn't read as still-in-flight.
+# In-progress deploy status from RAILS/_core.sh's deploy_status. "running"
+# with a pid that no longer exists means a deploy died mid-step rather than
+# finishing -- surface that distinctly from a genuinely live one.
 def deploy_in_progress(app)
   path = File.join(STAMP_DIR, "deploy_status", "#{app}.json")
   return nil unless File.file?(path)
