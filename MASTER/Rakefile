@@ -396,7 +396,7 @@ namespace :test do
     require_relative "lib/operator/parallel_tests"
     files = FileList[
       "test/test_cli_*.rb", "test/test_io_*.rb", "test/test_fix_*.rb",
-      "test/test_operator_intent.rb", "test/test_turn_router.rb"
+      "test/test_operator_*.rb", "test/test_turn_router.rb"
     ].uniq.sort
     loader = File.join(Gem.loaded_specs.fetch("rake").full_gem_path, "lib", "rake", "rake_test_loader.rb")
     options = ["-v", *ENV.fetch("TESTOPTS", "").split].uniq
