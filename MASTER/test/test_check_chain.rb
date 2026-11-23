@@ -116,7 +116,7 @@ class TestCheckChain < Minitest::Test
     inventory = YAML.safe_load_file(File.join(G::ROOT, "RAILS", "apps.yml")).fetch("apps")
 
     %w[hjerterom mytoonz].each { |app| refute inventory.key?(app), "#{app} is source-only, not an active deploy target" }
-    %w[hjerterom source CI mytoonz source CI].each do |label|
+    ["hjerterom source CI", "mytoonz source CI"].each do |label|
       assert_includes G.suite_jobs(%w[RAILS]).map(&:first), label
     end
   end
