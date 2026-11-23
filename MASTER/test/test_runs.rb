@@ -69,6 +69,7 @@ class TestRuns < Minitest::Test
 
     assert_includes rakefile, '"test/test_operator_*.rb"'
     assert_includes rakefile, '"test/test_turn_router.rb"'
+    assert_includes rakefile, 'require_relative "lib/operator/parallel_tests"'
     assert_includes rakefile, "Operator::ParallelTests.run(files, command:)"
     assert_includes rakefile, '"-Ilib:test"'
     assert_includes checker, 'rake["test:subsystems"]'
