@@ -187,7 +187,7 @@ class OperatorIntentTest < Minitest::Test
   def test_full_release_includes_studio_source_without_inventing_a_service
     with_inventory do |root|
       agent = Object.new
-      message = "please redeploy OPENBSD, RAILS, STUDIO and MASTER/web on vm23"
+      message = "please redeploy OPENBSD, RAILS, STUDIO, and MASTER/web on vm23"
 
       assert Master::CLI::OperatorIntent.direct_full_stack_confirmation?(message)
       result = Master::CLI::OperatorIntent.new(root:, agent:).call(message)
