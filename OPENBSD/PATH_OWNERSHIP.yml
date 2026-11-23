@@ -64,7 +64,7 @@ ownership:
     risk: critical
     check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/vps_ci.sh:
-    purpose: pinned deployment child; validates parent admission plus exact workstation CI/preflight proofs before syncing one app and checking the preinstalled production bundle
+    purpose: pinned deployment child; verifies the live parent lock, deploy-user Git reads and exact workstation CI/preflight proofs before syncing one app and checking the preinstalled production bundle
     risk: high
     check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/vps_ci_all.sh:
