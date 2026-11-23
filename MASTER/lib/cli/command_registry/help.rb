@@ -328,6 +328,7 @@ module Master
                    "/voice dilla - enable Dilla's effects rack and room.",
                    "/voice timing - show measured synthesis and first-audio timings; no launch flags needed.",
                    "/voice test - synthesize and play \"MASTER voice test.\" synchronously.",
+                    "The web face keeps its own TTS path enabled; /voice controls CLI playback only.",
                    "Narration and bard default on; /narrate off and /bard off remain session opt-outs."],
         },
         "narrate" => {
