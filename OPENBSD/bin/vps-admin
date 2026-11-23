@@ -122,7 +122,7 @@ module OpenBSDAdmin
          .gsub(/(?i)(--?authorization\s+)(?:Bearer\s+)?(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
          .gsub(/(?i)\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|password|secret)\b\s*[=:]\s*)[^\s,;]+/, '\1[REDACTED]')
          .gsub(/(?i)(--?(?:api[-_]?key|access[-_]?token|refresh[-_]?token|token|password|secret)\s+)(?:"[^"]*"|'[^']*'|[^\s,;]+)/, '\1[REDACTED]')
-         .gsub(/(?i)\bBearer\s+[A-Za-z0-9._~+\/-]+/, "Bearer [REDACTED]")
+         .gsub(/(?i)\bBearer\s+[A-Za-z0-9._~+\/=-]+/, "Bearer [REDACTED]")
          .gsub(%r{(?i)(://)[^/@:\s]+:[^/@\s]+@}, '\1[REDACTED]@')
   end
 
