@@ -1007,6 +1007,11 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes tasks, "bundle-check)"
     assert_includes tasks, 'command="BUNDLE_FROZEN=true $bundle check"'
     assert_includes runtime, "BUNDLE_FROZEN=true bundle_exec check"
+    assert_includes master, %q{[[ ${VPS_DEPLOY_LOCK_HELD:-} == 1}
+    assert_includes master, %q{owner_identity == "$VPS_DEPLOY_LOCK_IDENTITY"}
+    assert_includes master, %q{head=$(/usr/bin/su -s /bin/sh "$deploy_user" -c "cd /home/dev/pub5 && git rev-parse HEAD")}
+    refute_includes master, "head=$(git rev-parse HEAD)"
+    assert_includes master, "workstation preflight SHA does not match"
   end
 
   def test_legacy_fast_deploy_entrypoints_refuse_on_vm23
