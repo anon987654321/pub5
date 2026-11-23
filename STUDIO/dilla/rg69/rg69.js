@@ -992,6 +992,40 @@ applyFX();
 log('FX randomized','k');
 }
 
+function encodeWav16(audioBuffer){
+const channelCount=audioBuffer.numberOfChannels;
+const frameCount=audioBuffer.length;
+const sampleRate=audioBuffer.sampleRate;
+const bytesPerSample=2;
+const dataBytes=frameCount*channelCount*bytesPerSample;
+const wav=new ArrayBuffer(44+dataBytes);
+const view=new DataView(wav);
+const writeText=(offset,text)=>{for(let i=0;i<text.length;i++)view.setUint8(offset+i,text.charCodeAt(i));};
+writeText(0,'RIFF');
+view.setUint32(4,36+dataBytes,true);
+writeText(8,'WAVE');
+writeText(12,'fmt ');
+view.setUint32(16,16,true);
+view.setUint16(20,1,true);
+view.setUint16(22,channelCount,true);
+view.setUint32(24,sampleRate,true);
+view.setUint32(28,sampleRate*channelCount*bytesPerSample,true);
+view.setUint16(32,channelCount*bytesPerSample,true);
+view.setUint16(34,bytesPerSample*8,true);
+writeText(36,'data');
+view.setUint32(40,dataBytes,true);
+const channels=Array.from({length:channelCount},(_,channel)=>audioBuffer.getChannelData(channel));
+let offset=44;
+for(let frame=0;frame<frameCount;frame++){
+for(let channel=0;channel<channelCount;channel++){
+const sample=Math.max(-1,Math.min(1,channels[channel][frame]));
+view.setInt16(offset,sample<0?sample*32768:sample*32767,true);
+offset+=bytesPerSample;
+}
+}
+return wav;
+}
+
 async function exportWAV(){
 try{
 rg69AudioProfileLocked=true;
@@ -1112,7 +1146,7 @@ $id('progress-fill').style.width=`${pct}%`;
 }
 }
 },len,2,44100);
-const wav=Tone.Buffer.toWav(buf);
+const wav=encodeWav16(buf.get());
 const blob=new Blob([wav],{type:'audio/wav'});
 const url=URL.createObjectURL(blob);
 const a=document.createElement('a');
