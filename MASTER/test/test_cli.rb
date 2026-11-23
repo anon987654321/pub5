@@ -5,7 +5,7 @@ require "cli/council_crit"
 require "cli/deliberation_prep"
 require "cli/fold_risk"
 require "cli/pipeline_context"
-require_relative "../lib/voice/renderer/prompt_components"
+require_relative "../lib/voice/renderer"
 
 class TestCLI < Minitest::Test
   def setup
