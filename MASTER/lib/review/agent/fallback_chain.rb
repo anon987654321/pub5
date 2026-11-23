@@ -29,6 +29,17 @@ module Master
             attempted_models << attempt.fetch(:model)
             response = try_fallback_attempt(attempt, timed_out_models:, stage_warnings:, prompt:, context:, stream:, image:, &blk)
             next unless response
+
+            # A provider can report a successful HTTP/stream finish with no
+            # assistant text (for example, a stream that starts but emits no
+            # content). Do not promote or persist an empty answer; turn it into
+            # an ordinary lane failure and continue through the existing
+            # fallback queue.
+            if response.is_a?(Master::Result::Ok) && response.value!.to_s.strip.empty?
+              response = Result.err("provider returned an empty assistant response", category: :llm_call_failure)
+              record_fallback_failure(response, attempt.fetch(:model), mode: attempt.fetch(:mode),
+                                       timed_out_models:, stage_warnings:)
+            end
             return accepted_fallback_response(response, attempt, stage_warnings, head: candidate_models.first) if response.is_a?(Master::Result::Ok)
 
             last_response = response
