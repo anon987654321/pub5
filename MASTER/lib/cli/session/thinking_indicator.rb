@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tty-screen"
+require "uri"
 require_relative "resource_load"
 require_relative "../stream_accumulator"
 require_relative "../../voice/typography"
@@ -14,6 +15,7 @@ module Master
       SPINNER_FRAMES = ["*", "+", "x", "+"].freeze
       SPIN_PROBE_SECONDS = 0.5
       ACTIVITY_REARM_IDLE_S = 0.45
+      TOOL_ACTIVITY_HOLD_SECONDS = 1.2
       STAGE_EVENTS = {
         "infer:resolved" => "infer",
         "infer:confidence" => "infer",
@@ -102,16 +104,136 @@ module Master
 
           @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
           reserve_activity_row_after_quiet(target)
-          line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length)))
+          activity = tool_activity_line
+          line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length), activity:))
           @spin_frame += 1
 
           draw_spin_row(target, spin_tinted(line, @spin_intensity))
           target.flush
         end
 
-        # The spinner is motion, not a second status report.
-        def spin_line(_stage, frame)
-          "#{frame}#{spin_suffix}"
+        # The spinner is the live activity surface: a concise stage while the
+        # model is thinking, or the actual tool action while it is operating.
+        # It never prints prompts, queries, command text or returned content.
+        def spin_line(stage, frame, activity: nil)
+          description = activity.to_s.empty? ? stage.to_s : activity.to_s
+          suffix = spin_suffix
+          [frame, description, suffix.empty? ? nil : suffix].compact.reject(&:empty?).join(" ")
+        end
+
+        def update_tool_activity(tool:, args:, state:, invocation_id: nil, elapsed_ms: nil)
+          label = safe_tool_activity_label(tool, args)
+          return if label.empty?
+
+          now = monotonic_now
+          @think_mutex&.synchronize do
+            @think_active_tools ||= {}
+            key = invocation_id.to_s
+            key = "#{tool}:#{label}" if key.empty?
+            if state.to_s == "started"
+              @think_active_tools[key] = { label:, started_at: now }
+              @think_last_tool_activity = nil
+            else
+              active = @think_active_tools.delete(key)
+              label = active[:label] if active
+              @think_last_tool_activity = { label:, state: state.to_s, at: now, elapsed_ms: }
+            end
+          end
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.tool_activity", event_bus: @refs&.bus)
+          nil
+        end
+
+        def tool_activity_line
+          now = monotonic_now
+          @think_mutex&.synchronize do
+            active = (@think_active_tools || {}).values.last
+            if active
+              "#{active[:label]} ..."
+            else
+              last = @think_last_tool_activity
+              next unless last && now - last[:at] <= TOOL_ACTIVITY_HOLD_SECONDS
+
+              state = last[:state].to_s == "done" ? "done" :
+                      last[:state].to_s == "blocked" ? "blocked" : "failed"
+              duration = last[:elapsed_ms].to_f >= 1_000 ? " (#{format("%.1fs", last[:elapsed_ms].to_f / 1_000)})" : ""
+              "#{last[:label]} #{state}#{duration}"
+            end
+          end
+        rescue StandardError
+          nil
+        end
+
+        def safe_tool_activity_label(tool, args)
+          values = args.respond_to?(:to_h) ? args.to_h : {}
+          read = ->(key) { values[key] || values[key.to_s] }
+          name = tool.to_s.downcase
+
+          case name
+          when "read_file" then "read #{safe_activity_path(read.call(:path)) || "file"}"
+          when "list_dir" then "list #{safe_activity_path(read.call(:path)) || "workspace"}"
+          when "tree" then "map #{safe_activity_path(read.call(:path)) || "workspace"}"
+          when "write_file" then "write #{safe_activity_path(read.call(:path)) || "file"}"
+          when "str_replace", "replace", "ast_edit" then "edit #{safe_activity_path(read.call(:path)) || "file"}"
+          when "search_files"
+            path = safe_activity_path(read.call(:path))
+            "search files#{path ? " in #{path}" : ""}"
+          when "search_knowledge" then "search local knowledge"
+          when "symbol_lookup" then "find symbol"
+          when "zsh" then "run shell"
+          when "git_context"
+            operation = safe_activity_token(read.call(:operation))
+            path = safe_activity_path(read.call(:path))
+            ["git", operation, path].compact.join(" ")
+          when "web_search" then "search web"
+          when "web_fetch" then "fetch #{safe_activity_host(read.call(:url)) || "website"}"
+          when "browser"
+            action = safe_activity_token(read.call(:action))
+            host = safe_activity_host(read.call(:url))
+            ["browser", action, host].compact.join(" ")
+          when "dynamic_http" then "HTTP request"
+          when "githubrepominer", "github_repo_miner" then "search GitHub"
+          when "arxivresearch", "arxiv_research" then "search arXiv"
+          when "youtubetranscript", "youtube_transcript" then "fetch transcript"
+          when "lovdata" then "look up Lovdata"
+          when "nmap" then "network scan"
+          when "ask_llm" then "ask submodel"
+          when "plugin_observe" then "inspect plugin"
+          else
+            safe = name.gsub(/[^a-z0-9_]/, "").tr("_", " ")
+            safe.empty? ? "use tool" : safe
+          end.then { |label| Master::Voice::Typography.ellipsis(label, 54) }
+        rescue StandardError
+          "use tool"
+        end
+
+        def safe_activity_token(value)
+          token = value.to_s.downcase
+          token.match?(/\A[a-z][a-z0-9_-]{0,19}\z/) ? token : nil
+        end
+
+        def safe_activity_path(value)
+          raw = value.to_s.strip.tr("\\", "/")
+          return "workspace" if raw == "." || raw.empty?
+          return "protected file" if raw.start_with?("/") || raw.match?(/\A[A-Za-z]:/)
+
+          parts = raw.split("/").reject(&:empty?)
+          return "protected file" if parts.empty? || parts.any? do |part|
+            part == "." || part == ".." || part.start_with?(".") ||
+              part.match?(/secret|token|password|credential|private|api.?key|id_rsa/i)
+          end
+
+          Master::Voice::Typography.ellipsis(parts.join("/"), 42)
+        end
+
+        def safe_activity_host(value)
+          uri = URI.parse(value.to_s)
+          return unless %w[http https].include?(uri.scheme.to_s.downcase)
+
+          host = uri.host.to_s.downcase
+          host.match?(/\A[a-z0-9.:-]{1,180}\z/) ? host : nil
+        rescue URI::InvalidURIError
+          nil
         end
 
         def spin_tinted(line, _intensity)
@@ -206,6 +328,10 @@ module Master
           @spin_paused = false
 
           @activity&.reset!
+          @think_active_tools = {}
+          @think_last_tool_activity = nil
+          @tool_activity_sink = ->(**details) { update_tool_activity(**details) }
+          Master::Trace::Dmesg.set_activity_sink(@tool_activity_sink)
           # `**`: a single star is colon-free names only, and every stage event has one.
           @think_sub = @refs.bus&.subscribe("**") { |payload| update_think_stage(payload) }
           @unit_sub = @refs.logging.listen { |line| print_unit_line(line) } if units_console?
@@ -361,6 +487,8 @@ module Master
           @spin_thread = nil
           @think_sub&.call
           @think_sub = nil
+          Master::Trace::Dmesg.clear_activity_sink(@tool_activity_sink) if @tool_activity_sink
+          @tool_activity_sink = nil
           if @activity_row_reserved
             Master::Trace::Dmesg.terminal_write(guard: false) { |target| clear_reserved_activity_row(target) }
           elsif $stdout.tty?
@@ -387,6 +515,9 @@ module Master
         def update_think_stage(payload)
           event = payload[:event].to_s
           @activity&.record(event, payload)
+          if %w[llm:send llm:stream_started pipeline:stage_start].include?(event)
+            @think_mutex&.synchronize { @think_last_tool_activity = nil }
+          end
           stage = stage_for(event, payload)
           @think_mutex&.synchronize do
             if event == "user:interrupt"

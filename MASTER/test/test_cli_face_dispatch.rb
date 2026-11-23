@@ -389,43 +389,21 @@ class TestCliFaceDispatch < Minitest::Test
     assert_equal ["mic0: voice input is off by default"], output
   end
 
-  def test_voice_indicator_overlay_shows_each_input_output_state
+  def test_persistent_voice_indicator_overlay_is_disabled
     session = Master::CLI::Session.allocate
-    states = [
-      [false, false, "○ ○"],
-      [true, false, "\e[97m●\e[0m ○"],
-      [false, true, "○ \e[97m●\e[0m"],
-      [true, true, "\e[97m●\e[0m \e[97m●\e[0m"],
-    ]
 
-    states.each do |mic, tts, expected|
-      session.instance_variable_set(:@voice_mic_active, mic)
-      overlay = Master::Voice::Playback.stub(:speaking?, tts) do
-        TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
-      end
-
-      assert_includes overlay, "\e[1;77H#{expected}"
-      assert_includes overlay, "\e7"
-      assert_includes overlay, "\e8"
-      refute_includes overlay, "MIC"
-      refute_includes overlay, "TTS"
-    end
+    refute session.send(:voice_indicators_enabled?)
+    assert_nil session.send(:voice_indicator_overlay)
   end
 
-  def test_assistant_indicator_fills_while_the_turn_is_active_before_audio
+  def test_active_turn_does_not_paint_a_persistent_voice_dot
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@user_active, true)
-    session.instance_variable_set(:@voice_mic_active, false)
 
-    overlay = Master::Voice::Playback.stub(:speaking?, false) do
-      TTY::Screen.stub(:width, 80) { session.send(:voice_indicator_overlay) }
-    end
-
-    assert_includes overlay, "\e[97m●\e[0m"
-    assert_includes overlay, "○"
+    assert_nil session.send(:voice_indicator_overlay)
   end
 
-  def test_ctrl_c_leaves_hands_free_mode
+
     session = Master::CLI::Session.allocate
     session.instance_variable_set(:@voice_listen_active, true)
 

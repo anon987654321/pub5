@@ -318,16 +318,28 @@ class TestCLITerminalOutput < Minitest::Test
     assert_equal wrapper, cli.send(:conversation_output, wrapper)
   end
 
-  def test_two_voice_rings_render_as_a_fixed_top_right_overlay
+  def test_persistent_voice_overlay_is_disabled
     cli = session
-    cli.define_singleton_method(:voice_indicator_state) { [false, false] }
 
-    overlay = TTY::Screen.stub(:width, 80) { cli.send(:voice_indicator_overlay) }
-
-    assert_match(/\A\e7\e\[1;77H/, overlay)
-    assert_includes overlay, "○ ○"
-    assert_match(/\e8\z/, overlay)
-    refute_includes overlay, "\e[s"
-    refute_includes overlay, "\e[u"
+    refute cli.send(:voice_indicators_enabled?)
+    assert_nil cli.send(:voice_indicator_overlay)
   end
+
+  def test_spinner_shows_stage_and_safe_tool_activity_without_private_arguments
+    cli = session
+    assert_equal "* waiting grok-cli", cli.send(:spin_line, "waiting grok-cli", "*")
+
+    file = cli.send(:safe_tool_activity_label, "read_file", { path: "MASTER/lib/cli/session.rb" })
+    assert_equal "read MASTER/lib/cli/session.rb", file
+    web = cli.send(:safe_tool_activity_label, "web_fetch", { url: "https://example.org/private/path?token=secret" })
+    assert_equal "fetch example.org", web
+    shell = cli.send(:safe_tool_activity_label, "zsh", { command: "cat ~/.ssh/id_ed25519" })
+    assert_equal "run shell", shell
+    protected_file = cli.send(:safe_tool_activity_label, "read_file", { path: "MASTER/.master/config.yml" })
+    assert_equal "read protected file", protected_file
+
+    rendered = cli.send(:spin_line, "waiting grok-cli", "*", activity: "read MASTER/lib/cli/session.rb ...")
+    assert_equal "* read MASTER/lib/cli/session.rb ...", rendered
+  end
+
 end

@@ -43,10 +43,38 @@ module Master
           detail_tool_payload("args", args)
           record_trajectory_event(tool: tool_name, args:, phase: "call", ok: nil)
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC, :millisecond)
-          result = invoke_tool(args:, identity:, invocation_id:, started:)
-          return result if result.is_a?(String)
+          terminal_activity(tool: tool_name, args:, state: :started, invocation_id:)
+          activity_finished = false
+          begin
+            result = invoke_tool(args:, identity:, invocation_id:, started:)
+            if result.is_a?(String)
+              terminal_activity(tool: tool_name, args:, state: :failed, invocation_id:,
+                                elapsed_ms: elapsed_ms(started))
+              activity_finished = true
+              return result
+            end
 
-          finish_tool_result(result:, identity:, args:, invocation_id:, started:, &block)
+            response = finish_tool_result(result:, identity:, args:, invocation_id:, started:, &block)
+            activity_state = result.ok? && !response.to_s.start_with?("Error: invocation ") ? :done : :failed
+            terminal_activity(tool: tool_name, args:, state: activity_state, invocation_id:,
+                              elapsed_ms: elapsed_ms(started))
+            activity_finished = true
+            response
+          ensure
+            unless activity_finished
+              terminal_activity(tool: tool_name, args:, state: :failed, invocation_id:,
+                                elapsed_ms: elapsed_ms(started))
+            end
+          end
+        end
+
+        # The interactive spinner consumes this callback. Arguments remain in
+        # process memory and never enter the event bus, activity ledger or log.
+        def terminal_activity(tool:, args:, state:, invocation_id:, elapsed_ms: nil)
+          Master::Trace::Dmesg.activity(tool:, args:, state:, invocation_id:, elapsed_ms:) if
+            defined?(Master::Trace::Dmesg)
+        rescue StandardError
+          nil
         end
 
         def begin_tool_observation(args:, invocation_id:)

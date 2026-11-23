@@ -668,9 +668,13 @@ module Master
 
       # What /fix prints once at its start: the live pool in selection order.
       def announce(cfg: config, alive: method(:alive?))
-        Master::Trace::Dmesg.status("lane0", online_line(cfg:))
         live = live_lanes(cfg:, alive:).to_a
-        Master::Trace::Dmesg.status("lane0", "selection order: #{live.empty? ? "none live" : live.first(6).join(" > ")}")
+        summary = if live.empty?
+                    "no usable model lane"
+                  else
+                    "primary #{live.first}; #{live.length - 1} fallback(s)"
+                  end
+        Master::Trace::Dmesg.status("lane0", summary)
         live
       rescue StandardError
         nil

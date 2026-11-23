@@ -21,8 +21,8 @@ module Master
       def check(agent:, env: ENV)
         return unless agent.class.method_defined?(:model_for)
 
-        rows = routes(agent)
-        explain_skipped
+        rows = routes(agent, env:)
+        explain_skipped(env:)
         return if env["MASTER_FIX_FREE_OK"] == "1"
 
         conflict = free_conflict(agent, rows)
@@ -45,19 +45,23 @@ module Master
         nil
       end
 
-      def routes(agent)
-        OPERATIONS.map do |operation|
+      def routes(agent, env: ENV)
+        rows = OPERATIONS.map do |operation|
           model = agent.model_for(operation:).to_s
           Row.new(operation:, model:, kind: Master::Io::LaneSelection.kind(model))
-        end.each { |row| say("#{row.operation} -> #{row.model} (#{row.kind})") if Master::Trace::Dmesg.verbose? }
+        end
+        if env["MASTER_FIX_ROUTE_DIAGNOSTICS"] == "1" && Master::Trace::Dmesg.verbose?
+          rows.each { |row| say("#{row.operation} -> #{row.model} (#{row.kind})") }
+        end
+        rows
       ensure
         Fiber[:master_operation] = nil
       end
 
-      # One line per catalogue lane LaneState refuses, with the store and its
-      # reason, so a run says which lanes it is not using and why.
-      def explain_skipped
-        return unless Master::Trace::Dmesg.verbose?
+      # The pool census is deliberately opt-in: most runs need the chosen route,
+      # not a line for every provider that has no quota, key or live process.
+      def explain_skipped(env: ENV)
+        return unless env["MASTER_FIX_POOL_DIAGNOSTICS"] == "1" && Master::Trace::Dmesg.verbose?
 
         lanes = Master::Io::LaneSelection.catalogue.uniq { |id| Master::Io::LaneState.lane_of(id) }
         lanes.map { |id| Master::Io::LaneState.verdict(id) }.reject(&:usable?).each do |verdict|

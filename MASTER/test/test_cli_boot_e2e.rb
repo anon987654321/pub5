@@ -264,14 +264,11 @@ class TestCliReplExit < Minitest::Test
         prompt_at = READY.match(output)&.begin(0)
         assert boot_line_end && prompt_at && prompt_at > boot_line_end,
                "the working prompt must start after the boot line's terminating newline"
-        overlay_start = output.index("\e7\e[1;")
-        overlay_end = overlay_start && output.index("\e8", overlay_start)
-        assert overlay_start && overlay_end && overlay_start > boot_line_end && overlay_end < prompt_at,
-               "the top-right indicator must restore the saved cursor before Reline starts"
-        assert_includes output, "○ ○", "bare startup did not render both inactive mic/TTS indicators"
-        refute_match(/\e\[\?1049h/, output, "bare startup must not take over the alternate screen")
+        refute_match(/\e7\e\[1;\d+H/, output,
+                      "the persistent top-right voice overlay must stay disabled")
+        refute_includes output, "○ ○", "bare startup must not paint inactive mic/TTS rings"
 
-        # The rings do not own or animate the prompt. The /help footer proves
+ The /help footer proves
         # the command was handled by this same live Reline session.
         writer.write("/help\n")
         deadline = Time.now + 8

@@ -13,7 +13,7 @@ module Master
       module CliSender
         include CliUsage
 
-        CLI_LANE_TIMEOUT_S = 300
+        CLI_LANE_TIMEOUT_S = 60
 
         private
 

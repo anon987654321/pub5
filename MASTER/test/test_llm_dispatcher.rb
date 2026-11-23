@@ -7,6 +7,10 @@ require "json"
 require "socket"
 
 class TestLLMDispatcher < Minitest::Test
+  def test_cli_lane_timeout_allows_failover_after_one_minute
+    assert_equal 60, Master::Review::LLMDispatcher::CLI_LANE_TIMEOUT_S
+  end
+
   class FakeBus
     attr_reader :events
 

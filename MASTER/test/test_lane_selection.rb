@@ -346,10 +346,7 @@ class TestLaneSelection < Minitest::Test
     end
 
     assert_equal [GROK], live
-    selection_line = messages.find { |unit, message| unit == "lane0" && message.start_with?("selection order:") }
-    refute_nil selection_line
-    assert_includes selection_line.last, GROK
-    refute_includes selection_line.last, ANTHROPIC_OPUS
+    assert_equal [["lane0", "primary #{GROK}; 0 fallback(s)"]], messages
   end
 
   def test_the_primary_report_names_the_lane_and_why

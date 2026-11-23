@@ -24,6 +24,7 @@ module Master
       LEVELS = %w[quiet normal verbose trace everything].freeze
       TERMINAL_WRITE_MUTEX = Mutex.new
       DETAIL_IO_MUTEX = Mutex.new
+      ACTIVITY_SINK_MUTEX = Mutex.new
       @draft_guard = nil
 
       def enabled?
@@ -176,6 +177,28 @@ module Master
       def status(unit, msg, io: $stdout)
         Master::Fix::RunBudget.note_output(unit, msg) if defined?(Master::Fix::RunBudget)
         emit("#{unit}: #{msg}", io:)
+      end
+
+      # A private in-process route to the spinner. It is separate from the event
+      # bus and durable logs; the terminal adapter decides what is safe to show.
+      def set_activity_sink(sink)
+        ACTIVITY_SINK_MUTEX.synchronize { @activity_sink = sink }
+        sink
+      end
+
+      def clear_activity_sink(sink)
+        ACTIVITY_SINK_MUTEX.synchronize do
+          @activity_sink = nil if @activity_sink.equal?(sink)
+        end
+        nil
+      end
+
+      def activity(tool:, args:, state:, invocation_id: nil, elapsed_ms: nil)
+        sink = ACTIVITY_SINK_MUTEX.synchronize { @activity_sink }
+        sink&.call(tool:, args:, state:, invocation_id:, elapsed_ms:)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Trace::Dmesg.activity")
+        nil
       end
 
       # A subordinate terminal-only channel for payloads that the event ledger

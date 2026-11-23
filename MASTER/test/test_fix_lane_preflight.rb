@@ -79,7 +79,7 @@ class TestFixLanePreflight < Minitest::Test
 
     assert_kind_of Master::Result::Err, result
     assert_match(/tree would run on #{Regexp.escape(GEMMA)} \(local\) while #{OPUS} is live/, result.message)
-    assert_includes lines, "structural_review -> #{OPUS} (remote)"
+    assert_equal 1, lines.length, "the refusal is useful; unrelated route rows are not"
   end
 
   def test_only_a_better_provider_for_the_same_operation_blocks_the_free_floor
@@ -120,12 +120,12 @@ class TestFixLanePreflight < Minitest::Test
     result, lines = check({}, live: [OPUS])
 
     assert_nil result
-    assert_equal Preflight::OPERATIONS.size, lines.count { |line| line.include?(" -> ") }
+    assert_empty lines, "normal fix output does not need one line per operation route"
   end
 
   def test_a_refused_catalogue_lane_is_named_with_its_reason
     Master::Io::ModelSkipCache.skip!(GROK, reason: "session limit, resets in 2h", category: :rate_limit)
-    _result, lines = check({}, live: [GROK])
+    _result, lines = check({}, live: [GROK], env: { "MASTER_FIX_POOL_DIAGNOSTICS" => "1" })
 
     assert(lines.any? { |line| line.start_with?("skipped #{GROK}: parked") && line.include?("resets in 2h") })
   ensure
@@ -172,6 +172,13 @@ class TestFixLanePreflight < Minitest::Test
     end
 
     assert_empty lines
+  end
+
+  def test_route_rows_require_an_explicit_diagnostic_opt_in
+    result, lines = check({}, live: [OPUS], env: { "MASTER_FIX_ROUTE_DIAGNOSTICS" => "1" })
+
+    assert_nil result
+    assert_equal Preflight::OPERATIONS.size, lines.count { |line| line.include?(" -> ") }
   end
 
   def test_probe_uses_lane_selection_order_for_suspended_floor_ranking

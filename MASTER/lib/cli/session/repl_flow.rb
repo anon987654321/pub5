@@ -178,9 +178,9 @@ module Master
           terminal_puts(Master::Trace::Dmesg::Report.format_reply(state, unit: "state0"))
         end
 
+        # Persistent voice glyphs are temporarily disabled. Voice controls and
+        # /voice status remain available; the spinner owns transient status.
         def voice_indicators_enabled?
-          $stdin.tty? && $stdout.tty?
-        rescue StandardError
           false
         end
 
@@ -191,28 +191,12 @@ module Master
           [@voice_mic_active == true, false]
         end
 
-        # The terminal equivalent of a fixed overlay: save the live cursor,
-        # paint two compact rings in the upper-right corner, then restore it.
-        # One ring is microphone input; the other is TTS output.
+        # The persistent top-right ring overlay is intentionally absent.
         def voice_indicator_overlay
-          mic, tts = voice_indicator_state
-          width = TTY::Screen.width.to_i
-          width = 80 unless width.positive?
-          return if width < 5
-
-          column = width - 3
-          input_ring = mic ? "\e[97m●\e[0m" : "○"
-          reply_ring = tts ? "\e[97m●\e[0m" : "○"
-          rings = "#{input_ring} #{reply_ring}"
-          # DEC save/restore is the VT100/VT220 contract used by OpenBSD
-          # wscons. CSI s/u is an ANSI.SYS extension and is ignored by some
-          # real consoles, leaving Reline's next prompt at row 1 over the boot.
-          "\e7\e[1;#{column}H\e[0m#{rings}\e[0m\e8"
-        rescue StandardError
           nil
         end
 
-        def paint_voice_indicators
+
           return unless voice_indicators_enabled?
 
           overlay = voice_indicator_overlay
