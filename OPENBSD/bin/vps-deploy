@@ -616,27 +616,24 @@ admin_request() {
   esac
 }
 
-# The guard's deploy flag, held for the whole deploy and not only the restart.
+# The guard's deploy flag is held for the whole release, not only the restart.
 #
 # rc.d/<app> touches .deploying-<app> from rc_pre to the end of its /up wait and
-# removes it there. CI, migrate, precompile and the checks all run outside that
-# window at the box's highest load, and resource_guard counts every one of those
-# ticks as a strike. So the counter already stands past GUARD_SHED_STRIKES when
-# the restart's flag comes off, and the next tick sheds the first OPTIONAL
-# service. bsdports leads that list, which is why its own deploy exits 0 and
-# vps-state then reads bsdports(failed) with :47312 closed.
+# removes it there. Copy-tree sync, migrations and the release checks continue
+# outside that short window, so keep the parent flag alive until the whole
+# serial release and any recovery have finished.
 #
-# Taken after the preflight guard run, which may still shed to free memory for
-# CI. A tick that sees the flag resets the counter, so the guard needs two fresh
-# breaching ticks after this deploy ends before it sheds anything. The name is
+# The flag is taken after the admission/resource-guard check. A tick that sees
+# it resets the strike counter, so the guard needs two fresh breaching ticks
+# after this deploy ends before it sheds an optional service. The name is
 # not .deploying-<app>, because rc.d removes that one mid-deploy; it is touched
 # again at each long stage because the guard ignores a flag older than 30 minutes.
 deploy_flag="$repo/.deploying-vps-deploy-${app}"
 hold_deploy_flag() { touch "$deploy_flag" 2>/dev/null || true }
 
-# The stage touches alone did not hold it: brgen's CI ran 34 minutes between two of
-# them on 2026-10-27, the flag aged out at 30, and the guard's emergency stop fired
-# mid-deploy. A keeper touches it every 4 minutes for as long as this process lives;
+# The stage touches alone did not hold it: a long release once outlived the
+# 30-minute marker and the guard's emergency stop fired mid-deploy. A keeper
+# touches it every 4 minutes for as long as this process lives;
 # finish() stops it before removing the flag, and it exits on its own if we die.
 flag_keeper=
 keep_deploy_flag() {
@@ -770,7 +767,7 @@ wait_up() {
 }
 
 # Every service that was started and is running must answer /up before the next
-# memory-heavy step (CI, bundle, precompile). A service that is down is not booting
+# release stage touches the host. A service that is down is not booting
 # and is not waited for; one that never answers is reported, not waited on forever.
 settle_boots() {
   local svc port
@@ -1296,21 +1293,19 @@ fi
 
 [[ -d /home/${app}/app ]] || { print -u2 "missing /home/${app}/app"; exit 1 }
 
-# Rails apps do not pull inside vps_ci.sh, so without this step a deploy CIs and
-# syncs whatever the VPS checkout already holds, which can lag origin/main by
-# days. master pulls inside vps_deploy_master.sh; this is the matching step for
-# the three copy-tree apps.
-set_stage pull
+# The parent has already fetched and pinned the exact source SHA. Refuse if
+# another operator or process moved the checkout before this app child starts.
+set_stage pin-check
 # No pull here: the top-level process pinned one SHA and moved the checkout to it.
 # A checkout that has moved off it since means another hand touched the box.
 print "vps-deploy: $app (checkout must be ${VPS_DEPLOY_SHA:?no pinned SHA, run through the top-level vps-deploy})"
 [[ $(git_as_deploy_user rev-parse HEAD) == "$VPS_DEPLOY_SHA" ]] \
   || { print -u2 "vps-deploy: $app refused - HEAD is $(git_as_deploy_user rev-parse HEAD), not the pinned $VPS_DEPLOY_SHA"; exit 1 }
 
-# Free space, before anything is stopped. A bundle install, an asset precompile or
-# a CI mirror that runs out of disk dies halfway, after the app was stopped for the
-# migrate; refusing here costs nothing and leaves the previous release serving.
-# /home holds the checkout, the app trees, bundles and storage (3.9 GB free of
+# Free space before anything is stopped. Copy-tree sync, database migration
+# and release state writes need room; missing production bundles or assets are
+# rejected separately and must be built off-host. Refusing here leaves the
+# previous release serving. /home holds the checkout, app trees, bundles and storage (3.9 GB free of
 # 17 GB on 2026-10-12), so it is the filesystem that fills. The floor is a
 # variable because it is a measurement of this box, not a law.
 set_stage preflight-disk
