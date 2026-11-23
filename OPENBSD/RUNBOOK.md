@@ -832,10 +832,12 @@ silences that one signal. The stop path exits 0 when the process is already gone
 kills the process group if one is left, and `rc_post` fails the stop if `:53187` is
 still held, so a start never races a survivor. The ports above are the ones in `RAILS/apps.yml`; read them there if they change.
 
-To deploy an exact commit, not the tip: `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy all`
-on the box, or push it and use `bin/operator vps deploy all --remote` from a clean
-worktree at that commit. A stale `/home/dev/.pub4-vps-deploy.lock` is reaped by the next run
-when its pid is gone; every exit, including a halted `all`, releases it.
+To deploy an exact commit, not the tip, run the workstation operator from a
+clean checkout at that commit:
+`VPS_DEPLOY_SHA=<sha> MASTER/bin/operator vps deploy all --remote`.
+Do not invoke the host-side deployer directly. A stale
+`/home/dev/.pub5-vps-deploy.lock` is reaped by the next supported run when its
+owner is gone; every exit, including a halted `all`, releases it.
 
 ## Deploy-all disambiguation
 
