@@ -189,3 +189,188 @@ body[data-density="compact"] .step{min-height:30px}
 body[data-density="compact"] .track{gap:2px}
 body[data-density="compact"] .tracks{gap:1px}
 @media(max-width:640px){body[data-density="compact"] .step{min-height:44px!important}}
+
+
+/* Usability pass: keep the analogue character, lose the cramped controls. */
+:root {
+  --brd: #353535;
+  --mut: #969696;
+}
+html, body {
+  font-size: 13px;
+  line-height: 1.55;
+}
+body {
+  width: min(100%, 1500px);
+  margin-inline: auto;
+  padding: clamp(10px, 2vw, 24px);
+}
+header {
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+}
+#status {
+  min-height: 22px;
+  margin: 8px 0;
+  font-size: 12px;
+  letter-spacing: 0.035em;
+  overflow-wrap: anywhere;
+}
+.transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0 12px;
+  margin-bottom: 8px;
+}
+.transport-primary, .transport-actions {
+  gap: 7px;
+}
+button {
+  min-height: 40px;
+  padding: 8px 12px;
+  color: var(--txt);
+  font-size: 12px;
+  border-radius: 3px;
+}
+button:focus-visible, .style-chip:focus-visible, summary:focus-visible,
+select:focus-visible, input:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+#play {
+  min-width: 118px;
+  min-height: 48px;
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+}
+#stop { min-height: 44px; }
+.transport-actions button {
+  min-height: 38px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+.ctrl-bpm { font-size: 12px; }
+.ctrl-bpm input[type="range"] { width: 112px; }
+.track { min-width: 0; gap: 6px; }
+.track-name {
+  min-width: 54px;
+  font-size: 10px;
+  color: var(--mut);
+}
+.steps-grid {
+  min-width: 0;
+  gap: 3px;
+}
+.step {
+  min-height: 48px;
+  background: #181818;
+  border: 1px solid #303030;
+  border-radius: 2px;
+}
+.step:hover { border-color: #777; }
+.step[aria-pressed="true"] { background: #242424; }
+.step.playing {
+  outline: 2px solid var(--txt);
+  outline-offset: -3px;
+}
+.track-btn {
+  min-width: 36px;
+  min-height: 36px;
+  font-size: 11px;
+}
+#viz {
+  height: 36px;
+  margin: 8px 0 4px;
+}
+#seq-hint {
+  margin-bottom: 10px;
+  color: var(--mut);
+  font-size: 12px;
+}
+details { margin-top: 4px; }
+summary {
+  min-height: 40px;
+  padding: 8px 0;
+  font-size: 11px;
+}
+fieldset { gap: 6px 16px; }
+label { font-size: 11px; }
+select { min-height: 42px; font-size: 12px; }
+input[type="range"] { height: 34px; }
+.styles {
+  max-height: 260px;
+  gap: 6px;
+}
+.style-chip {
+  min-height: 38px;
+  padding: 7px 11px;
+  color: var(--txt);
+  font-size: 11px;
+}
+#trace { max-height: 180px; font-size: 12px; }
+.term-input-row { min-height: 42px; }
+#term-input { font-size: 13px; }
+.engine-error {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-width: 1px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+@media (max-width: 920px) {
+  .transport { justify-content: flex-start; }
+  .transport-actions { justify-content: flex-start; }
+  .steps-grid { grid-template-columns: repeat(8, minmax(22px, 1fr)); }
+}
+@media (max-width: 640px) {
+  body { padding: 8px 10px; }
+  header { align-items: flex-start; }
+  h1 { font-size: clamp(30px, 10vw, 46px); }
+  .transport {
+    position: sticky;
+    top: 0;
+    z-index: calc(var(--z-modal) - 1);
+    margin: 0 -10px 10px;
+    padding: 8px 10px;
+    background: var(--bg);
+  }
+  .transport-primary {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  #play, #stop { width: 100%; min-width: 0; }
+  .ctrl-bpm {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    padding: 0;
+  }
+  .ctrl-bpm input[type="range"] { width: min(48vw, 180px); }
+  .transport-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .transport-actions button {
+    width: 100%;
+    min-height: 40px;
+    font-size: 11px;
+  }
+  .track-name { min-width: 44px; }
+  .step { min-height: 46px; }
+  .tab-bar { flex-wrap: wrap; }
+  .tab-search { min-width: 100%; }
+  .two-col { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .step, .vel-fill, #progress-fill { transition: none; }
+}
