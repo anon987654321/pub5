@@ -258,6 +258,9 @@ module Master
 
       def analyze_audio(path, max_duration:)
         require_policy!("quality_check", expected: "explicit_path_read_only")
+        if RUBY_PLATFORM.downcase.include?("openbsd")
+          raise PolicyError, "soulseek: audio analysis is disabled on OpenBSD hosts; run it on the workstation or an isolated sandbox"
+        end
         value = path.to_s.strip
         raise PolicyError, "soulseek: analyze needs an explicit local WAV path" if value.empty?
 
@@ -309,8 +312,12 @@ module Master
         raise PolicyError, "soulseek: cannot read sample for analysis (#{error.class})"
       rescue ArgumentError, TypeError
         raise PolicyError, "soulseek: max_duration must be a finite number"
-      rescue Studio::DillaReference::AnalysisError => error
-        raise PolicyError, "soulseek: WAV analysis failed: #{error.message}"
+      rescue StandardError => error
+        if defined?(Studio::DillaReference::AnalysisError) &&
+           error.is_a?(Studio::DillaReference::AnalysisError)
+          raise PolicyError, "soulseek: WAV analysis failed: #{error.message}"
+        end
+        raise
       end
 
       def wav_metadata(path)
