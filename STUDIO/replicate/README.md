@@ -2,7 +2,11 @@
 
 The source root has exactly four owners: `dilla/` (music and RG-69), `lora/` (subjects and selfie gallery), `postpro/` (image and film processing), and `replicate/` (shared runtime, CLI, checks, tests, and the Replicate client).
 
-**STUDIO owns pub5's music, image and video tools.** Dilla, Postpro,
+**STUDIO owns pub5's music, image and video tools.** Its tracked source
+travels with the pinned full-repository checkout on vm23, and the full production
+release runs STUDIO's check and test suite on the workstation before deployment.
+STUDIO does not have a separate vm23 service target; renders, datasets, source
+photographs and other private working output remain local. Dilla, Postpro,
 photograph, Replicate and the private LoRA tools live here. MASTER may call
 them through compatibility symlinks under `MASTER/tools/`, but STUDIO owns
 the implementations.
