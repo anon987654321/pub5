@@ -103,8 +103,12 @@ class TestCheckChain < Minitest::Test
     refute_includes scoped, "rehearse", "the deploy rehearsal covers RAILS and OPENBSD only"
     assert_includes scoped, "ratchets", "the ratchets are repo-wide by definition and cheap"
     assert_equal %w[MASTER tools], G.suite_jobs(%w[MASTER]).map(&:first)
-    assert_equal ["RAILS contracts", "brgen CI", "amber CI", "bsdports CI", "mrdamascy CI"],
+    assert_equal ["RAILS contracts", "brgen CI", "amber CI", "bsdports CI", "mrdamascy CI",
+                  "hjerterom source CI", "mytoonz source CI"],
                  G.suite_jobs(%w[RAILS]).map(&:first)
+    studio = G.suite_jobs(%w[STUDIO]).fetch(0)
+    assert_equal ["rake", "-f", "replicate/Rakefile", "test"], studio.fetch(1).drop(1)
+    assert_equal File.join(G::ROOT, "STUDIO"), studio.fetch(2)
   end
 
   def test_all_five_tree_suite_jobs_are_reachable
@@ -113,7 +117,7 @@ class TestCheckChain < Minitest::Test
     assert_includes names, "tools"
     assert_includes names, "STUDIO media"
     assert_includes names, "BIZ documents"
-    assert_equal 10, jobs.size
+    assert_equal 12, jobs.size
   end
 
   def test_all_tree_rake_task_uses_the_canonical_suite_registry_once
