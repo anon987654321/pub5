@@ -747,19 +747,18 @@ No Rails test suite runs on vm23.
 
 ### Copy-tree sync must delete before it extracts
 
-`vps_ci.sh`'s `sync_from_repo()` refreshes each app's production
-copy-tree through the installed `ci-sync.ksh` helper and `tar` extraction.
-Tar extraction only *overlays* —
-it never deletes destination files that are absent from the source. A file
-deleted from git therefore survived indefinitely on the VPS's copy-tree
-checkout, invisibly, until something referenced it and broke at runtime.
+`vps_ci.sh` calls the installed app-owned `ci-sync.ksh` helper to
+refresh the production copy-tree. The helper checks the repository, source,
+app home, ownership and symlink boundaries, then removes each exact managed
+destination tree before extracting the tracked archive. This matters because
+tar extraction only *overlays*: without the bounded removal, a file deleted
+from git could survive on the VPS and fail later at runtime.
 
-Adding `doas rm -rf` before each `tar xf -` extraction fixed this (both in
-`sync_from_repo()`'s per-directory loop and in `sync_ci_rails_root()`). If
-you're debugging a VPS-only failure where a file "shouldn't exist anymore"
-but the error implies it does, first check whether your local `vps_ci.sh` is
-current — this exact bug reappearing (e.g. via a revert) would look like
-ghost files coming back from the dead.
+Keep deletion inside the helper's explicit, validated app-owned paths. Do not
+replace it with a broad `rm -rf`, remove the ownership checks, or restore the
+retired `sync_ci_rails_root()` implementation. If a deleted file appears in
+the deployed tree, inspect the current `ci-sync.ksh` source and its contract
+tests before changing the sync boundary.
 
 ### `rcctl check` can report "failed" while the service is still booting
 
