@@ -112,6 +112,17 @@ end
 
 master_root = File.expand_path("..", __dir__)
 
+# One-shot read-only vm23 health snapshot. It reuses the operator transport and
+# its SSH admission checks; no daemon, service control or repair is started.
+if ARGV.first == "host-health"
+  unless ARGV.length == 1
+    warn "usage: bin/master host-health"
+    exit 64
+  end
+  exec(RbConfig.ruby, File.join(master_root, "bin", "operator"),
+       "vps", "admin", "diagnose", "--remote")
+end
+
 if ARGV.first == "core"
   require_relative "../lib/boot/entrypoint"
   # Before the shift: a Ruby or Bundler switch re-execs with ARGV, and must land here again.
@@ -157,7 +168,7 @@ end
 # /fix --no-critique, /fix --dry-run). The top-level parser does not know them and
 # must not reject them or drop them: a dropped --dry-run is a write run.
 COMMAND_FLAG = %r{\A--(?:(?:autofix|max-files|only|lane|mode)=|
-                 (?:dry-run|no-autofix|apply|list-recipes|(?:no-)?critique|no-aesthetic|blockers|plan|until-checks|normal|quiet)\z)}x
+                 (?:dry-run|no-autofix|apply|list-recipes|(?:no-)?critique|no-aesthetic|blockers|plan|until-checks|normal|quiet|host-evidence)\z)}x
 COMMAND_FLAG_WITH_VALUE = %w[--only --recipe --mode].freeze
 
 def initial_message_from_argv(argv)
@@ -209,6 +220,7 @@ HELP_USAGE = <<~HELP
     bin/master replay <sequence>
     bin/master --daemon
     bin/master --fast
+    bin/master host-health
     echo '/status' | bin/master
 
   Interactive sessions show useful dmesg progress by default; redirected runs
@@ -228,6 +240,7 @@ def print_master_help
     HELP_USAGE,
     initial_message_parser({}).to_s,
     "Repair: /fix [TREE] previews by default; /fix --mode=repair --apply TREE explicitly authorizes writes.",
+    "Host health: bin/master host-health (one-shot, read-only vm23 diagnostics; SSH required).",
     "Check help: MASTER/bin/check --help; preview: MASTER/bin/check --list --profile=operator.",
     "Check log: MASTER/bin/check --show-log --tail=120 (supplemental verification only).",
     "Operator ladder: MASTER/bin/operator check [--scan-only] is separate and writes by default.",
