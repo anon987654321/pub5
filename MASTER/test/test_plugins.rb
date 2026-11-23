@@ -438,6 +438,9 @@ class TestPlugins < Minitest::Test
       assert_equal 16, result.dig(:metadata, :bits_per_sample)
       assert result.dig(:analysis, "signal").key?("peak_dbfs")
       assert_equal before, Digest::SHA256.file(wav).hexdigest
+      assert_raises(Master::Plugin::PolicyError) do
+        Master::Plugin.load("soulseek").call(action: "analyze", path: wav, max_duration: 31)
+      end
     end
   end
 
