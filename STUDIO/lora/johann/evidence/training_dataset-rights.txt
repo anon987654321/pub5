@@ -1,0 +1,4 @@
+Subject: JOHANN
+Date: 2026-11-24
+Scopes: generation_use, provider_processing, training_use, model_publication, model_distribution
+The pre-existing private LoRA for this subject was trained from operator-authorized likeness data. The operator approved publication and distribution on 2026-11-24.

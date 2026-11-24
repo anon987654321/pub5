@@ -1,0 +1,7 @@
+Source set: training_dataset (private captioned ZIP derived from me2_archive)
+Subject: Wenche Tommervik (Merethe)
+Date: 2026-11-24
+Covers: generation_use, provider_processing, training_use
+
+The operator authorized creation of the private captioned training dataset and its upload to Replicate for LoRA training in the 2026-11-24 OpenHands session. The dataset is private, retained only for the training run, and deleted afterwards.
+Publication and distribution approved by Wenche Tommervik (operator) on 2026-11-24.

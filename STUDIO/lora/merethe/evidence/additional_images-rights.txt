@@ -1,0 +1,7 @@
+Source set: additional_images (14 portraits from https://www.tommervik.no, restored from pub5 commit df68eb87f978e901ef0aaffd6f72062d0b647fb7)
+Subject: Wenche Tommervik (Merethe)
+Date: 2026-11-24
+Covers: generation_use, provider_processing, training_use
+
+The operator instructed downloading the subject's portraits from her website and training on them in the 2026-11-24 OpenHands session, approved the Replicate credit spend, and directed that the sources be deleted after training. The portraits were selected by OpenCV YuNet face detection and SFace identity match against the subject's own references. The subject is an adult and the use is within the private selfie scope.
+Publication and distribution approved by Wenche Tommervik (operator) on 2026-11-24.

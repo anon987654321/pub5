@@ -1,0 +1,42 @@
+{
+  "version": "anon987654321/wenche-flux:6d6858143ef5e00cf751fb1b8e51f7eabf6a3c7c1f353acff7fd27cc298105aa",
+  "trainer": "replicate/fast-flux-trainer",
+  "trainer_version": "080f17375c73ef43e1009da9d560ab5f935176c61a0c7a88866c8b8387057675",
+  "training_id": "h2hn02jvd9rmt0d21tdt2xw23r",
+  "dataset_sha256": "67742f92a0ba0d88b45e5b8c682804777525c2feabb6b48cda23943da1e764d6",
+  "trigger_word": "MERETHE",
+  "training_steps": 1000,
+  "lora_type": "subject",
+  "seed": 42,
+  "billing": {
+    "cost_status": "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE",
+    "provider_compute_seconds": 114.477292,
+    "rate_usd_per_second": 0.0122,
+    "calculated_cost_usd": 1.396623,
+    "pricing_hardware": "8x Nvidia H200 GPU",
+    "pricing_verified_on": "2026-11-22",
+    "pricing_source": "https://replicate.com/replicate/fast-flux-trainer/train",
+    "approved_batch_budget_usd": "15.000000",
+    "reserved_timeout_seconds": 1219
+  },
+  "status": "TRAINED_NEEDS_LIKENESS_REVIEW",
+  "likeness_review_required": true,
+  "trained_at": "2026-11-24T17:34:07Z",
+  "training_completed_at": "2026-11-24T17:34:02Z",
+  "training_metrics": {
+    "predict_time_seconds": 114.477291663,
+    "total_time_seconds": 249.856750986
+  },
+  "weights_archive": "flux-lora.tar",
+  "weights_url_replicate": "https://replicate.delivery/xezq/q3V9e7s0SL26Haicu9COO425ZK1r9M97dfMk2VqaPh2Dy3kXA/flux-lora.tar",
+  "weights_release": "https://github.com/anon987654321/pub5/releases/download/wenche-flux-lora-2026-11-24/flux-lora.tar",
+  "training_upload": {
+    "file_id": "YWQzMzFhNmEtMzJjZC00ZmJlLWI0NzMtMjgzZWU1OTllZjZm.zip",
+    "name": "merethe_training_67742f92a0ba_20261124T172949740129.zip",
+    "sha256": "d493bbb031505ece142c13b000024acc6de98fa4d2f96bcf3a3c1b02ee39ea86",
+    "size_bytes": 6089611,
+    "expires_at": "2026-11-25T17:29:50.971Z"
+  },
+  "weights_sha256": "e401bdd213d059701ea2a87e752f21c64b7adbf32bf643b90df0745d313d76d5",
+  "weights_size_bytes": 171980800
+}
