@@ -51,19 +51,26 @@ task :check do
   raise "output_paths: render_directory is not absolute" unless Studio::OutputPaths.render_directory.start_with?(File::SEPARATOR)
   raise "output_paths: reference_root collides with the checkout" if Studio::OutputPaths.inside_repository?(Studio::OutputPaths.reference_root)
 
-  rg69_files = %w[dilla/rg69/rg69.html dilla/rg69/rg69.css dilla/rg69/rg69.js].map { |name| File.join(STUDIO_ROOT, name) }
-  missing_rg69 = rg69_files.reject { |path| File.file?(path) }
-  raise "RG-69 assets missing: #{missing_rg69.map { |path| File.basename(path) }.join(', ')}" unless missing_rg69.empty?
-  rg69_html = File.read(rg69_files.fetch(0))
-  raise "RG-69 retains an inline style or script block" if rg69_html.match?(/<style\b|<script(?![^>]*\bsrc=)/i)
-  raise "RG-69 references a missing local stylesheet" unless rg69_html.include?('href="rg69.css"')
-  raise "RG-69 references a missing local application script" unless rg69_html.include?('src="rg69.js"')
+  rg69_page = File.join(STUDIO_ROOT, "dilla", "rg69", "rg69.html")
+  raise "RG-69 page missing: rg69.html" unless File.file?(rg69_page)
+  stray_rg69 = %w[rg69.css rg69.js].map { |name| File.join(STUDIO_ROOT, "dilla", "rg69", name) }
+                                        .select { |path| File.exist?(path) }
+  raise "RG-69 still ships separate assets: #{stray_rg69.map { |path| File.basename(path) }.join(', ')}" if stray_rg69.any?
+  rg69_html = File.read(rg69_page)
+  # The page is one self-contained file: styles and engine are inlined, so a
+  # copy of rg69.html plays from any location without a sidecar it cannot find.
+  raise "RG-69 page inlines no stylesheet" unless rg69_html.match?(/^<style>$/)
+  raise "RG-69 page inlines no application script" unless rg69_html.match?(/^<script>$/)
+  raise "RG-69 page loads an external stylesheet" if rg69_html.match?(/<link[^>]+stylesheet/i)
   # The dependency is vendored (5da92e34), which is the version pin: the file
   # must still declare 14.8.49 and the page must load it locally, so no CDN
   # drift or silent vendor swap can slip through.
   raise "RG-69 Tone.js dependency is not version-pinned" unless File.read(File.join(STUDIO_ROOT, "dilla", "vendor", "tone", "Tone.min.js")).include?("14.8.49")
   raise "RG-69 does not load the vendored Tone.js" unless rg69_html.include?('src="../vendor/tone/Tone.min.js"')
-  raise "RG-69 has no keyboard focus indicator" unless File.read(rg69_files.fetch(1)).include?(":focus-visible")
+  tone_at = rg69_html.index('src="../vendor/tone/Tone.min.js"')
+  engine_at = rg69_html.index("<script>\n")
+  raise "RG-69 runs its engine before Tone.js" unless engine_at && tone_at < engine_at
+  raise "RG-69 has no keyboard focus indicator" unless rg69_html.include?(":focus-visible")
 
   selfies_files = %w[lora/selfies/selfies.html lora/selfies/selfies.css lora/selfies/selfies.js].map { |name| File.join(STUDIO_ROOT, name) }
   missing_selfies = selfies_files.reject { |path| File.file?(path) }

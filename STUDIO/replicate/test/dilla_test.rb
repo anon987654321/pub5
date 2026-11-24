@@ -413,8 +413,12 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_equal 1, charts.length
     assert_equal "never_catch_me_flylo", charts.first.fetch("id")
     studies = Dilla.progressions.select { |row| row["source"] == "engine_study" }
-    assert_equal 2, studies.length
-    assert studies.all? { |row| row.fetch("note").include?("not a transcription") }
+    refute_empty studies, "engine studies must stay a separate first-class source"
+    assert_equal studies.length, studies.map { |row| row["id"] }.uniq.length
+    studies.each do |row|
+      assert_match(/not a transcription/i, row.fetch("note"),
+                   "#{row['id']} must declare itself a study, not a transcription")
+    end
   end
 
   def test_archived_corpus_chord_timing_is_explicit_and_loop_complete
@@ -1056,17 +1060,20 @@ class TestRG69BrowserContract < Minitest::Test
     File.expand_path("../..", __dir__)
   end
 
-  def test_rg69_assets_are_separate_and_resolve
+  def test_rg69_page_is_one_self_contained_file
     html_path = File.join(studio_root, "dilla", "rg69", "rg69.html")
-    css_path = File.join(studio_root, "dilla", "rg69", "rg69.css")
-    js_path = File.join(studio_root, "dilla", "rg69", "rg69.js")
-    [html_path, css_path, js_path].each { |path| assert File.file?(path), "missing #{path}" }
+    assert File.file?(html_path), "missing #{html_path}"
+    %w[rg69.css rg69.js].each do |stray|
+      path = File.join(studio_root, "dilla", "rg69", stray)
+      refute File.exist?(path), "#{stray} must live inside rg69.html, not beside it"
+    end
 
     html = File.read(html_path)
     assert_match(/<html[^>]+lang=["']en["']/i, html)
     assert_match(/<meta\s+charset=["']?utf-8/i, html)
-    assert_includes html, 'href="rg69.css"'
-    assert_includes html, 'src="rg69.js"'
+    assert_match(/^<style>$/, html)
+    assert_match(/^<script>$/, html)
+    refute_match(/<link[^>]+stylesheet/i, html)
     tone_path = File.join(studio_root, "dilla", "vendor", "tone", "Tone.min.js")
     license_path = File.join(studio_root, "dilla", "vendor", "tone", "LICENSE.md")
     assert File.file?(tone_path), "missing vendored Tone.js 14.8.49"
@@ -1077,10 +1084,9 @@ class TestRG69BrowserContract < Minitest::Test
     assert_includes File.read(license_path), "MIT License"
     assert_includes html, 'href="#main-content"'
     assert_includes html, 'id="main-content"'
-    refute_match(/<style\b|<script(?![^>]*\bsrc=)/i, html)
     refute_match(/\sstyle=["']/i, html)
 
-    javascript = File.read(js_path)
+    javascript = html
     refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
     refute_match(/wobbLFO\.connect\s*\(\s*Tone\.Transport\.bpm\s*\)/, javascript)
     refute_match(/function applyWobble|applyWobble\(\)|Tone\.Transport\.bpm\.value=aud_\.bpm\*\(/, javascript)
@@ -1095,14 +1101,14 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/muteState:\{k:0,s:0,c:0,h:0,o:0\}/, javascript)
     refute_match(/Tone\.BitCrusher/, javascript)
     refute_match(/\bbitCrush\b/, javascript)
-    assert_match(/widener\.connect\(masterDrive\)/, javascript)
+    assert_match(/widener\.connect\(limiter\);/, javascript)
     assert_match(/let stepUiByIndex=Array\.from\(\{length:16\}/, javascript)
     refute_match(/void posEl\.offsetWidth/, javascript)
     assert_match(/if\(vizCanvas\.width!==width\)vizCanvas\.width=width;/, javascript)
     assert_match(/function scheduleLoop\(time\)\{\s*st_\.idx=\(st_\.idx\+1\)%st_\.stepCount;\s*const scheduledTime=Number\.isFinite\(time\)\?time:Tone\.now\(\);[\s\S]*?triggerNotes\(st_\.idx,scheduledTime,/, javascript)
     assert_includes javascript, "document.createTextNode"
-    assert_includes File.read(css_path), "prefers-reduced-motion"
-    assert_includes File.read(css_path), ":focus-visible"
+    assert_includes html, "prefers-reduced-motion"
+    assert_includes html, ":focus-visible"
   end
 end
 

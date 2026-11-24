@@ -28,7 +28,7 @@ module Studio
       lora/consent.rb lora/consent.example.yml lora/validate.rb lora/migrate_local.rb lora/lora.rb
       lora/photograph.rb lora/idea_picture.rb lora/selfie_series.rb
       lora/selfies_gallery.rb lora/generate_selfies.rb replicate/client.rb replicate/models.yml
-      dilla/analog_core.rb dilla/rg69/rg69.html dilla/rg69/rg69.css dilla/rg69/rg69.js
+      dilla/analog_core.rb dilla/rg69/rg69.html
       lora/selfies/selfies.html lora/selfies/selfies.css lora/selfies/selfies.js
       lora/vendor/swiper/swiper-bundle.min.js lora/vendor/swiper/swiper-bundle.min.css
       dilla/vendor/tone/Tone.min.js

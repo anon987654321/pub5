@@ -17,10 +17,12 @@ require "json"
 # boot state the sources declare, which is exactly what drifted.
 class TestRg69Defaults < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  JS = File.join(ROOT, "dilla", "rg69", "rg69.js")
+  # The page is one self-contained file: its styles and its application code
+  # live inside rg69.html, so the engine and the stylesheet are read from it.
   HTML = File.join(ROOT, "dilla", "rg69", "rg69.html")
+  JS = HTML
+  CSS = HTML
   TONE = File.join(ROOT, "dilla", "vendor", "tone", "Tone.min.js")
-  CSS = File.join(ROOT, "dilla", "rg69", "rg69.css")
   DILLA_DATA = File.join(ROOT, "dilla", "data", "dilla.json")
 
   # The controls whose markup default must equal the engine's boot default.
@@ -129,9 +131,13 @@ class TestRg69Defaults < Minitest::Test
   # reaches Chebyshev 30, Distortion 0.8, BitCrusher 2 bits and PitchShift ±12
   # — at wet. A bad roll produced a crushed, detuned master, which read as
   # "unusable and inaudible". The boot must now install one fixed chain.
-  def test_html_scripts_are_deferred_in_dependency_order
-    assert_match(/<script src="\.\.\/vendor\/tone\/Tone\.min\.js" defer><\/script>/, html)
-    assert_match(/<script src="rg69\.js" defer><\/script>/, html)
+  def test_html_loads_tone_before_the_inlined_engine
+    assert_match(/<script src="\.\.\/vendor\/tone\/Tone\.min\.js"><\/script>/, html)
+    tone_at = html.index('<script src="../vendor/tone/Tone.min.js"></script>')
+    engine_at = html.index("<script>\n")
+    refute_nil engine_at, "the engine must be inlined as a script element"
+    assert_operator tone_at, :<, engine_at, "Tone.js must load and run before the engine that guards on window.Tone"
+    assert_operator engine_at, :>, html.index('id="main-content"'), "the engine runs after the markup it binds"
   end
 
   def test_welcome_gate_releases_the_interface_before_audio_initialization_finishes
@@ -554,8 +560,8 @@ end
 # Regression coverage for the failure mode and the visible interaction states.
 class TestRg69PlaybackRecovery < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
-  JS = File.join(ROOT, "dilla", "rg69", "rg69.js")
-  CSS = File.join(ROOT, "dilla", "rg69", "rg69.css")
+  JS = File.join(ROOT, "dilla", "rg69", "rg69.html")
+  CSS = JS
 
   def js = File.read(JS)
   def css = File.read(CSS)
