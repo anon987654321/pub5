@@ -10,7 +10,6 @@ module Deploy
   # per page (390, 360, 320, then 1280) judged by each Law's evaluator in RenderedDesign, the
   # same code the Laws prove their fixtures with. Findings are soft and name their Law.
   class DesignLawsCheck
-    LIMIT = Integer(ENV.fetch("MASTER_DESIGN_LAW_SURFACES", "6"))
     MOTION_MS = Integer(ENV.fetch("MASTER_DESIGN_LAW_MOTION_MS", "6000"))
 
     def self.run = new.result
@@ -28,7 +27,7 @@ module Deploy
         return result.inconclusive!("design_laws: no Chrome - design Laws not rendered", gap: Master::Gap::NO_BROWSER)
       end
 
-      pages = GeometryProbe.reachable(GeometryProbe.surfaces).uniq(&:url).first(LIMIT)
+      pages = GeometryProbe.reachable(GeometryProbe.surfaces).uniq(&:url)
       return result.inconclusive!("design_laws: no declared surface is reachable") if pages.empty?
 
       GeometryProbe.with_browser(warm: pages) do |cdp|
@@ -42,7 +41,7 @@ module Deploy
     def judge(result, surface:, snap:)
       result.checked!(RenderedDesign.ids.size)
       RenderedDesign.ids.each do |id|
-        RenderedDesign.judge(id, snap).first(4).each do |message|
+        RenderedDesign.judge(id, snap).each do |message|
           result.fail("design_laws: #{surface.app}/#{surface.label} #{message} law=#{id}", severity: :soft)
         end
       end
