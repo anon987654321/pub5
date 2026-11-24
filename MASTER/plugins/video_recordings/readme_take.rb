@@ -3,7 +3,7 @@
 
 # readme_take — the README's opening image, from the README's own words.
 #
-#   ruby tools/readme_take.rb              # speech, then the take
+#   ruby MASTER/plugins/video_recordings/readme_take.rb              # speech, then the take
 #   ruby tools/readme_take.rb --full       # the whole README, not the highlights
 #   ruby tools/readme_take.rb --speech     # only README.wav
 #   ruby tools/readme_take.rb --record     # only loop.mp4 and loop.gif
@@ -29,13 +29,13 @@ require "fileutils"
 require "net/http"
 require "shellwords"
 require "tmpdir"
-require_relative "../lib/trace/dmesg"
+require_relative "../../lib/trace/dmesg"
 
 # The runtime, for Voice::Policy — the one reader of data/voice.yml.
-$LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+$LOAD_PATH.unshift(File.expand_path("../../lib", __dir__))
 require "master"
 
-ROOT = File.expand_path("..", __dir__)
+ROOT = File.expand_path("../..", __dir__)
 REPO = File.expand_path("..", ROOT)
 RAILS_DIR = File.join(REPO, "RAILS")
 FACE_URL = "http://127.0.0.1:53187/"
