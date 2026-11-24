@@ -1081,6 +1081,32 @@ class TestLLMDispatcher < Minitest::Test
     old.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old
   end
 
+  def test_false_free_only_value_keeps_the_hosted_key_at_send_time
+    old = ENV["MASTER_FREE_ONLY"]
+    ENV["MASTER_FREE_ONLY"] = "0"
+    dispatcher, = build_dispatcher
+    sent = []
+    router = Object.new
+    router.define_singleton_method(:hosted_endpoint_for) do |_model|
+      { base: "https://provider.example/v1", key: "endpoint-secret", posture: :unknown }
+    end
+    dispatcher.instance_variable_set(:@model_router, router)
+    dispatcher.define_singleton_method(:refuses_sensitive?) { |_endpoint, _sensitivity| false }
+    dispatcher.define_singleton_method(:fit_to_window) { |_model, messages| messages }
+    dispatcher.define_singleton_method(:openai_chat) do |base, model, messages, **kwargs|
+      sent << { base:, model:, headers: kwargs.fetch(:headers) }
+      Master::Result.ok("ok")
+    end
+
+    Master::Io::KeyRotator.stub(:active_key_for, "rotated-secret") do
+      dispatcher.send(:send_hosted, "test-provider:model-a", [{ role: "user", content: "hi" }], sys: nil)
+    end
+
+    assert_equal "Authorization: Bearer rotated-secret", sent.fetch(0).fetch(:headers).fetch("Authorization")
+  ensure
+    old.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old
+  end
+
   # A hosted lane answers as a stream: deltas arrive as SSE events and the
   # reader assembles them into one answer, skipping role-only and framing
   # events on the way.
