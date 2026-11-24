@@ -9,7 +9,8 @@ class StylesheetTapTargetsTest < ActiveSupport::TestCase
 
   test "sort and category chips meet the tap floor" do
     [ "nav.sort-order a", ".category-list .chip" ].each do |selector|
-      block = SOURCE[/^#{Regexp.escape(selector)} \{\n(.*?)\n\}/m, 1]
+      # The rules sit inside @layer components, so they are indented.
+      block = SOURCE[/^([ \t]*)#{Regexp.escape(selector)} \{\n(.*?)\n\1\}/m, 2]
       assert block, "no #{selector} rule"
       assert_includes block, "min-height: var(--tap-min);", selector
     end
