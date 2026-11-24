@@ -1,36 +1,37 @@
 {
-  "engine": "dilla 4.2.0",
+  "engine": "dilla 4.3.0",
+  "seed": 304501763,
   "progression": {
-    "id": "blue_hour",
-    "title": "Blue Hour - Dilla Minor Dub Cut",
-    "key": "Fm",
-    "bpm": 86,
+    "id": "minor11_ballad_drift",
+    "title": "Minor-11 ballad drift (engine study)",
+    "key": "D minor",
+    "bpm": 64,
     "loop_bars": 4,
     "chords": [
-      "Fm9",
-      "Ab13",
-      "Dbmaj9#11",
-      "C7b9"
+      "Dm11",
+      "Gm11",
+      "Dm11",
+      "Gm11"
     ],
-    "source": "engine"
+    "source": "engine_study"
   },
   "arrangement": null,
   "drums": "dilla_shadow_full",
-  "groove_profile": "dilla_shadow",
-  "groove_scale": 1,
+  "groove_profile": "los_angeles",
+  "groove_scale": 1.0,
   "kit": "kit_dust",
   "voice": "rhodes_mark1",
   "rig": "dilla_night",
-  "bars": 16,
+  "bars": 8,
   "performer": {
-    "id": "vinyl_tap",
-    "name": "Vinyl Tap"
+    "id": "break_biscuit",
+    "name": "Break Biscuit"
   },
   "event_counts": {
-    "drum": 444,
-    "chord": 23,
-    "bass": 50,
-    "melody": 68,
+    "drum": 218,
+    "chord": 12,
+    "bass": 27,
+    "melody": 35,
     "foley": 0
   },
   "sample_flip": null

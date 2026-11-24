@@ -1,6 +1,10 @@
 # The engine renders beside dilla.rb unless DILLA_OUTPUT_DIR says otherwise.
 # Audio is reproducible from a seed and the repo is not where takes belong;
 # provenance, quality and session sidecars ARE the record worth keeping.
+#
+# dilla.wav is the one exception, on the operator's instruction: the reference
+# take stays in the repository beside its sidecars, so a checkout can audition
+# the engine without rendering anything first. Re-render it with --overwrite.
 out/
 samples/
 crate/
@@ -9,6 +13,7 @@ scratch/
 analysis/
 *.wav
 *.mp3
+!dilla.wav
 *.pre.raw
 demo*
 !demo_manifest.tsv

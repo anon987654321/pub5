@@ -178,6 +178,15 @@ under `$XDG_DATA_HOME/dilla-renders/`, falling back to `~/Downloads/dilla-render
 reference-root` answer the same policy for MASTER. `out/`, `samples/` and
 `crate/` inside this directory are yours; none of it is tracked.
 
+One take is the exception: `dilla.wav` sits beside `dilla.rb` with its
+`.provenance.json`, `.quality.json` and `.session.json` sidecars, so a fresh
+checkout can audition the engine before rendering anything. It is the only
+audio file tracked in the repository. Rebuild it deliberately with
+`--overwrite`; the seed in its provenance reproduces it byte for byte:
+
+    ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --seed 304501763 \
+      --out STUDIO/dilla/dilla.wav --overwrite
+
 ## RG-69 browser renderer
 
 `rg69/rg69.html` (one self-contained page: markup, styles and engine) reads the `tonejs_profiles.rg69` adapter in this catalogue. The adapter reuses `kit_break`, `prophet_5` and the dry `basement` rig, then maps their kit tuning, voice brightness and room sends into the browser's Tone.js instruments. The adapter is a translation layer: it does not claim that a Tone.js synth is the same instrument or circuit as Dilla's Ruby renderer.

@@ -296,10 +296,9 @@ STUDIO/lora/*_film_*.mov
 STUDIO/lora/selfies/manifest.js
 
 # The dilla bed the gallery plays, rendered with:
-#   ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --out STUDIO/lora/selfies/dilla.wav
-# The wav bed is committed on purpose so a fresh checkout can play it and so a
-# sound change can be auditioned from the repository alone; the mp3 the page
-# loads is rebuilt from it. The names are specific, never a bare *.wav/*.mp3.
+#   ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --out STUDIO/lora/selfies/dilla.mp3
+# Generated audio is not tracked here (see STUDIO/dilla/.gitignore), so the bed
+# is rebuilt rather than committed. The name is specific, never a bare *.mp3.
 STUDIO/lora/selfies/dilla.mp3
 
 # Legacy MASTER/tools/lora data: the tool now lives at STUDIO/lora.
@@ -338,9 +337,6 @@ STUDIO/lora/*/*.safetensors
 STUDIO/lora/*/*.ckpt
 STUDIO/lora/*/*.pt
 
-# The one audio file the repository keeps: the dilla bed above, so a checkout
-# can play the gallery and audition a change in the engine.
-!STUDIO/lora/selfies/dilla.wav
 STUDIO/lora/*/*.pth
 
 # Subject datasets, source captures, retouched media, outputs and weights live

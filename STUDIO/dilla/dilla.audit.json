@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-24T18:44:05Z",
+  "technical_state": "PASS",
+  "state": "INCONCLUSIVE",
+  "audio": {
+    "path": "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
+    "sha256": "aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423",
+    "bytes": 5750688,
+    "sample_rate": 44100,
+    "channels": 2,
+    "bits_per_sample": 16,
+    "duration_s": 32.6
+  },
+  "session": {
+    "seed": 304501763,
+    "progression": "minor11_ballad_drift",
+    "bpm": 64,
+    "bars": 8,
+    "arrangement": null,
+    "performer": "break_biscuit",
+    "drums": "dilla_shadow_full",
+    "groove_profile": "los_angeles"
+  },
+  "quality": {
+    "peak_dbfs": -1.03,
+    "rms_dbfs": -11.61,
+    "crest_db": 10.58,
+    "lufs_estimate": -9.5,
+    "stem_energy_share": {
+      "drums": 0.248,
+      "sub": 0.023,
+      "bass": 0.338,
+      "chords": 0.281,
+      "melody": 0.11,
+      "foley": 0.0,
+      "sample": 0.0
+    }
+  },
+  "files": {
+    "quality": {
+      "path": "/workspace/project/pub5/STUDIO/dilla/dilla.quality.json",
+      "bytes": 345,
+      "sha256": "27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6"
+    },
+    "session": {
+      "path": "/workspace/project/pub5/STUDIO/dilla/dilla.session.json",
+      "bytes": 731,
+      "sha256": "116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6"
+    }
+  },
+  "file_properties": {
+  },
+  "checks": [
+    {
+      "name": "quality_sidecar",
+      "state": "PASS",
+      "detail": "dilla.quality.json parsed"
+    },
+    {
+      "name": "session_sidecar",
+      "state": "PASS",
+      "detail": "dilla.session.json parsed"
+    },
+    {
+      "name": "provenance_sidecar",
+      "state": "PASS",
+      "detail": "dilla.provenance.json parsed"
+    },
+    {
+      "name": "wav_structure",
+      "state": "PASS",
+      "detail": "RIFF/WAVE PCM 2ch 44100Hz 16-bit; 32.6s"
+    },
+    {
+      "name": "wav_delivery_format",
+      "state": "PASS",
+      "detail": "expected stereo 44.1 kHz 16-bit PCM"
+    },
+    {
+      "name": "wav_sha256",
+      "state": "PASS",
+      "detail": "actual aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423; recorded aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423"
+    },
+    {
+      "name": "wav_bytes",
+      "state": "PASS",
+      "detail": "actual 5750688; recorded 5750688"
+    },
+    {
+      "name": "wav_path",
+      "state": "PASS",
+      "detail": "recorded /workspace/project/pub5/STUDIO/dilla/dilla.wav; inspected /workspace/project/pub5/STUDIO/dilla/dilla.wav"
+    },
+    {
+      "name": "quality_file",
+      "state": "PASS",
+      "detail": "/workspace/project/pub5/STUDIO/dilla/dilla.quality.json"
+    },
+    {
+      "name": "quality_bytes",
+      "state": "PASS",
+      "detail": "actual 345; recorded 345"
+    },
+    {
+      "name": "quality_sha256",
+      "state": "PASS",
+      "detail": "actual 27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6; recorded 27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6"
+    },
+    {
+      "name": "session_file",
+      "state": "PASS",
+      "detail": "/workspace/project/pub5/STUDIO/dilla/dilla.session.json"
+    },
+    {
+      "name": "session_bytes",
+      "state": "PASS",
+      "detail": "actual 731; recorded 731"
+    },
+    {
+      "name": "session_sha256",
+      "state": "PASS",
+      "detail": "actual 116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6; recorded 116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6"
+    },
+    {
+      "name": "seed",
+      "state": "PASS",
+      "detail": "session seed 304501763; provenance seed 304501763"
+    },
+    {
+      "name": "arrangement",
+      "state": "PASS",
+      "detail": "progression \"minor11_ballad_drift\"; bars 8"
+    },
+    {
+      "name": "quality_metrics",
+      "state": "PASS",
+      "detail": "measured duration_s, peak_dbfs, rms_dbfs, crest_db, lufs_estimate"
+    },
+    {
+      "name": "quality_duration",
+      "state": "PASS",
+      "detail": "WAV 32.6s; quality report 32.6s"
+    }
+  ],
+  "manual_audition": {
+    "status": "NOT_PERFORMED",
+    "note": "Technical checks do not establish that the render sounds good.",
+    "checklist": [
+      "Groove and microtiming feel intentional across the full arrangement",
+      "Harmony, bass and melody work together; no unwanted clashes",
+      "Kick, sub and bass translate without masking or uncontrolled peaks",
+      "Transitions, fills and section changes feel deliberate rather than abrupt",
+      "No clicks, clipping, dropouts, harsh artefacts or unintended silence",
+      "Stereo image and tonal balance remain acceptable at normal and low playback levels"
+    ]
+  }
+}
