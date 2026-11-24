@@ -54,7 +54,7 @@ real money. Production Vipps requires `VIPPS_MOCK=0` and the merchant
 subscription key, MSN, client ID, client secret and webhook secret. Stripe
 requires `STRIPE_MOCK=0`, `STRIPE_SECRET_KEY` and
 `STRIPE_WEBHOOK_SECRET`. Keep credentials in the private environment file;
-never put them in this repository. APP_SPEC describes the exact payment
+never put them in this repository. The Product specification section below describes the exact payment
 protocols, callback verification, idempotency and failure behavior.
 
 Local setup:
@@ -131,7 +131,7 @@ in Git history; they are not an operational checklist or a second specification.
 
 The following specification is part of the Mr. Damascy project contract. Implementation and deployed behavior remain the source of truth; update this section with material product changes.
 
-Single source of truth for the **Mr. Damascy** app. Every contributor/agent implements exactly against this document. The app lives at `RAILS/mrdamascy` — a standalone Rails 8 app (same pattern as `RAILS/amber`), a first-class RAILS app path since 2026-11-02 (promoted out of the retired `__other/` junk drawer).
+Single source of truth for the **Mr. Damascy** app. Every contributor/agent implements exactly against this document. The app lives at `RAILS/mrdamascy` — a standalone Rails 8 app (same pattern as `RAILS/amber`), a first-class RAILS app path since 2026-11-02 (moved out of the retired legacy holding area).
 
 **What it is:** a mobile-first PWA for ordering shawarma & kebab from one Bergen kitchen (Solheimsgaten 60, 5054 Bergen at **Danmarksplass** — the real restaurant), built to make ordering+paying (Vipps Express, plus card via Stripe) **fewer steps than Foodora**, wrapped in Damascus/Syrian warmth and Bergen street-kebab culture.
 

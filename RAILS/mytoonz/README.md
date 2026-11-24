@@ -14,7 +14,7 @@ Replicate credentials are read only from `REPLICATE_API_TOKEN`. They do not belo
 
 The fuller Rails application was restored on 2026-11-13 from `anon987654321/pub4` parent commit `c11f9e7d91258044658e1320c3030a1d51f9fd5d` (2026-07-12), immediately before its removal by `3b25201f7e44ad253c7c86c38f7e0287432f95b5`.
 
-The earlier generator prototype and standalone demo are retained in the history of `anon987654321/pub3`: `rails/mytoonz.sh` and `rails/mytoonz_demo.html` at commit `09663f79041452c48c5925998725d44719f59e67`.
+The earlier generator prototype and standalone demo remain in the historical pub3 snapshot at commit `09663f79041452c48c5925998725d44719f59e67`; neither file is part of this repository.
 
 ## Operational boundary
 
