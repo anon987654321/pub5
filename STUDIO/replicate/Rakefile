@@ -11,9 +11,9 @@ RUBY = RbConfig.ruby
 desc "Load every STUDIO entrypoint and prove the contracts answer"
 task :check do
   expected_owners = %w[dilla lora postpro replicate].sort
-  # These two root-level files are compatibility proof entrypoints; the
-  # canonical suite is under replicate/test. They are not a fifth code owner.
-  allowed_entries = (expected_owners + ["test"]).sort
+  # README.md documents the tree; test/ holds compatibility proof entrypoints.
+  # Neither is a fifth code owner.
+  allowed_entries = (expected_owners + %w[README.md test]).sort
   actual_entries = Dir.children(STUDIO_ROOT).sort
   invalid_owners = expected_owners.reject do |owner|
     path = File.join(STUDIO_ROOT, owner)
