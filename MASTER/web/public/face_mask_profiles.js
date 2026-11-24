@@ -137,17 +137,9 @@
     }
 
     const canvas = document.getElementById?.("face");
-    if (canvas && source) {
-      const credit = String(source.image_credit || source.collection || "");
-      const characterPrefix = characterName ? `${characterName}. ` : "";
-      canvas.title = `${characterPrefix}${profile.name} — original particle study. Reference: ${source.title || "collection object"}; ${source.collection || "collection"}; ${credit}.`;
-      canvas.setAttribute?.(
-        "aria-label",
-        `${characterPrefix}${profile.name}, an original monochrome particle-face study. Reference object: ${source.title || "collection object"}, ${source.collection || "collection"}. ${credit}.`
-      );
-    } else if (canvas) {
+    if (canvas) {
       canvas.removeAttribute?.("title");
-      canvas.setAttribute?.("aria-label", "MASTER original monochrome particle face");
+      canvas.setAttribute?.("aria-label", "MASTER monochrome particle mask");
     }
 
     window.dispatchEvent(new CustomEvent("master:mask-profile", {
