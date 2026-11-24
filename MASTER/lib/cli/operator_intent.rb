@@ -72,6 +72,7 @@ module Master
       # pass through the normal work path first; they are not deployment consent.
       def self.direct_full_stack_confirmation?(text)
         request = text.to_s
+        return false if strict_confirm?
         return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
         return false if request.match?(NON_PRODUCTION_ENV_RE)
         return false if request.match?(EXCLUSION_RE)
@@ -91,6 +92,30 @@ module Master
           complete_stack_components?(request) &&
           destination_of(request).to_s.downcase == "vm23"
       end
+
+      # A full-stack request that names STUDIO is deployed without it, since
+      # STUDIO owns no vm23 service. Say so in the reply instead of dropping it
+      # silently (F8, 2026-11-23). The result is returned unchanged for any
+      # other request or shape.
+      STUDIO_SCOPE_NOTE = "STUDIO is source-only on vm23 (no service of its own); it rides in the pinned checkout. " \
+                          "Deploying the registered surfaces."
+
+      def self.with_studio_note(result, text)
+        request = text.to_s
+        return result unless request.match?(NON_DEPLOYABLE_TREE_RE)
+        return result unless full_inventory_scope?(request) || complete_stack_components?(request)
+        return result unless result.respond_to?(:ok?) && result.ok? && result.value!.is_a?(Hash)
+
+        value = result.value!.dup
+        %i[rendered output].each do |key|
+          value[key] = "#{STUDIO_SCOPE_NOTE}\n\n#{value[key]}" if value[key].is_a?(String) && !value[key].include?(STUDIO_SCOPE_NOTE)
+        end
+        Master::Result.ok(value)
+      end
+
+      # MASTER_DEPLOY_STRICT_CONFIRM=1 turns off the polite-question shortcut:
+      # only a literal --confirm authorizes production (F7, opt-in).
+      def self.strict_confirm?(env = ENV) = env["MASTER_DEPLOY_STRICT_CONFIRM"] == "1"
 
       def self.destination_of(request)
         captures = request.to_s.scan(DESTINATION_RE).flatten

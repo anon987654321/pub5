@@ -74,7 +74,7 @@ end
 
 parser = OptionParser.new do |opts|
   opts.banner = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [options]"
-  opts.on("--dry", "Check tree, disk and model only; the parse sweep and lane probe run on the real run") { options[:dry] = true }
+  opts.on("--dry", "Check tree, disk, model and the parse sweep; the lane probe runs on the real run") { options[:dry] = true }
   opts.on("--no-probe", "Skip the bounded in-process /fix lane request") { options[:probe] = false }
   opts.on("--no-publish", "Keep verified commits local") { options[:no_publish] = true }
   opts.on("--resume", "Resume the existing run budget") { options[:resume] = true }
@@ -172,8 +172,18 @@ log = File.join(MasterPaths.fix_state(root: MASTER), "fix-#{File.basename(tree)}
 
 puts "fix0 at fix-here: tree=#{tree} disk=#{format('%.1f', free)} GiB model=#{model || 'pool (none forced)'} " \
      "mode=#{options[:mode] || 'repair (default)'} access=#{write_authorized ? 'write-authorized' : 'read-only'}"
+# The parse sweep is read-only and takes seconds, so --dry runs it: a tree that
+# cannot parse must not read "ready" and then fail the real run (F6, 2026-11-23).
+$LOAD_PATH.unshift(File.join(MASTER, "lib")) unless $LOAD_PATH.include?(File.join(MASTER, "lib"))
+require "operator/parse_sweep"
+broken = Operator::ParseSweep.failures(ROOT)
+unless broken.empty?
+  warn Operator::ParseSweep.render(broken.first(10))
+  abort "fix-here: #{broken.size} tracked Ruby file(s) do not parse; fix them before a run that takes hours."
+end
+
 if dry
-  puts "fix0 at fix-here: --dry, would run MASTER/bin/master /fix #{tree}"
+  puts "fix0 at fix-here: --dry, tree, disk, model and parse sweep are ready; would run MASTER/bin/master /fix #{tree}"
   exit 0
 end
 
@@ -187,14 +197,7 @@ FileUtils.mkdir_p(File.dirname(log), mode: 0o700)
 
 # 3b. A file that does not parse stops the runtime before any model is asked, and the lane
 # check below then fails for a reason that looks like a lane. Say the real one, in seconds.
-$LOAD_PATH.unshift(File.join(MASTER, "lib"))
-require "operator/parse_sweep"
 require "operator/stall_watch"
-broken = Operator::ParseSweep.failures(ROOT)
-unless broken.empty?
-  warn Operator::ParseSweep.render(broken.first(10))
-  abort "fix-here: #{broken.size} tracked Ruby file(s) do not parse; fix them before a run that takes hours."
-end
 
 # 4. /fix owns the one bounded request through LanePreflight and LaneProbe.
 # The wrapper used to boot a second full MASTER process and ask a generic chat
