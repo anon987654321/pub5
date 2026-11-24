@@ -14,6 +14,25 @@ module Studio
       STANDARDS_PATH = File.join(ROOT, "training_standards.yml").freeze
       TRAINING_STANDARD = YAML.safe_load_file(STANDARDS_PATH, permitted_classes: [], permitted_symbols: [], aliases: false).freeze
       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
+      SUBJECT_MARKERS = %w[train.yaml subject.env subject.env.example prepare.rb].freeze
+
+      def self.subject_directory?(path)
+        return false unless File.directory?(path) && !File.symlink?(path)
+
+        SUBJECT_MARKERS.any? do |name|
+          marker = File.join(path, name)
+          File.file?(marker) && !File.symlink?(marker)
+        end
+      end
+
+      def self.subject_names(root: ROOT)
+        return [] unless File.directory?(root) && !File.symlink?(root)
+
+        Dir.children(root).select do |name|
+          SUBJECT_NAME.match?(name) && subject_directory?(File.join(root, name))
+        end.sort
+      end
+
       ENV_KEYS = %w[SUBJECT MODEL TRIGGER DESCRIPTOR REPLICATE_DESTINATION REPLICATE_MODEL LIKELINESS_REVIEWED_VERSION].freeze
       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
       MINIMUM_IMAGES = TRAINING_STANDARD.fetch("quality").fetch("min_images")
@@ -28,12 +47,7 @@ module Studio
       def validate_all
         raise ArgumentError, "LoRA root is not a readable directory: #{@root}" unless File.directory?(@root) && !File.symlink?(@root)
 
-        subjects = Dir.children(@root).sort.filter_map do |name|
-          next unless SUBJECT_NAME.match?(name)
-
-          path = File.join(@root, name)
-          next unless File.directory?(path) && !File.symlink?(path)
-
+        subjects = self.class.subject_names(root: @root).map do |name|
           validate_subject(name)
         end
 

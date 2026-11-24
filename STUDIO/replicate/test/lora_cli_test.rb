@@ -74,6 +74,17 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal false, captured
   end
 
+  def test_subject_menu_uses_the_validator_owned_subject_inventory
+    captured_root = nil
+    Studio::Lora::Validator.stub(:subject_names, lambda { |root:|
+      captured_root = root
+      %w[johann ragnhild]
+    }) do
+      assert_equal %w[johann ragnhild], CLI.subjects
+    end
+    assert_equal Studio::Lora::Validator::ROOT, captured_root
+  end
+
   def test_api_registry_exposes_readiness_and_existing_review
     assert_includes CLI.api_actions.keys, "readiness"
     assert_includes CLI.api_actions.keys, "review"

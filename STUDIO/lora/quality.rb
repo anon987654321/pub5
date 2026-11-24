@@ -185,9 +185,7 @@ module Studio
         names = if subject && !subject.to_s.empty?
                   [subject.to_s]
                 else
-                  Dir.children(ROOT).select do |entry|
-                    SUBJECT_NAME.match?(entry) && File.directory?(File.join(ROOT, entry)) && !File.symlink?(File.join(ROOT, entry))
-                  end.sort
+                  Validator.subject_names(root: ROOT)
                 end
         subjects = names.map do |name|
           subject_report(name)

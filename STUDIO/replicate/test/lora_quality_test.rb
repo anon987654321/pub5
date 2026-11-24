@@ -23,6 +23,17 @@ class TestStudioLoraQuality < Minitest::Test
     FileUtils.remove_entry(@root) if @root && File.directory?(@root)
   end
 
+  def test_subject_discovery_ignores_non_subject_support_directories
+    File.write(File.join(@subject, "train.yaml"), "schema: 1\n", mode: "w", perm: 0o600)
+    %w[receipts selfies vendor].each do |name|
+      FileUtils.mkdir_p(File.join(@root, name), mode: 0o700)
+    end
+    assert_equal ["probe"], Studio::Lora::Validator.subject_names(root: @root)
+
+    FileUtils.mkdir_p(File.join(@root, "empty-folder"), mode: 0o700)
+    refute Studio::Lora::Validator.subject_directory?(File.join(@root, "empty-folder"))
+  end
+
   def test_profile_catalogue_is_valid_and_never_claims_a_winner
     report = Quality.audit_configuration
     assert_equal "PASS", report.fetch("state")

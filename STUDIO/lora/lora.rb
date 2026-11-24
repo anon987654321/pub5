@@ -124,9 +124,7 @@ module Studio
       def subjects
         require_relative "validate"
         root = Studio::Lora::Validator::ROOT
-        Dir.children(root).select do |name|
-          Studio::Lora::Validator::SUBJECT_NAME.match?(name) && File.directory?(File.join(root, name))
-        end.sort
+        Studio::Lora::Validator.subject_names(root:)
       end
 
       # The subject craft vocabulary, so MASTER can describe what STUDIO renders.
