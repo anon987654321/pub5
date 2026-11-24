@@ -745,6 +745,8 @@ class TestKeylessRouting < Minitest::Test
   # Groq, Cerebras and NVIDIA wait in models.yml for a key; without one they
   # are not asked, so a boot does not spend a probe on each.
   def test_a_key_only_endpoint_is_not_asked_until_its_key_is_set
+    old_free_only = ENV["MASTER_FREE_ONLY"]
+    ENV["MASTER_FREE_ONLY"] = "0"
     ENV.delete("MASTER_NO_POOL_PROBES")
     asked = []
     router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
@@ -761,6 +763,7 @@ class TestKeylessRouting < Minitest::Test
     assert_equal ["keyonly:m"], router.hosted_models
     assert_equal ["https://keyonly.invalid/v1/models"], asked
   ensure
+    old_free_only.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old_free_only
     ENV.delete("KEYONLY_TEST_KEY")
     ENV["MASTER_NO_POOL_PROBES"] = "1"
   end
