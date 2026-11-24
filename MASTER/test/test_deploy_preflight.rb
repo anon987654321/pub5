@@ -212,6 +212,7 @@ class DeployPreflightTest < Minitest::Test
 
   def test_local_ci_uses_the_bounded_executor_and_clears_foreign_bundle_state
     dir = tree("RAILS/brgen/bin/ci" => "#!/bin/sh\nexit 0\n")
+    ENV["BUNDLER_ORIG_GEM_HOME"] = "/master/gems"
     captured = {}
     status = Object.new
     status.define_singleton_method(:success?) { true }
@@ -223,21 +224,29 @@ class DeployPreflightTest < Minitest::Test
     output = StringIO.new
 
     Operator::RubyRunner.stub(:ruby_cmd, "/opt/ruby/bin/ruby") do
-      Master::Io::Exec.stub(:capture2e, runner) do
-        assert Pre.local_ci(root: dir, app: "brgen", out: output, err: StringIO.new)
+      Operator::RubyRunner.stub(:bundle_cmd, "/opt/bundle/bin/bundle") do
+        Master::Io::Exec.stub(:capture2e, runner) do
+          assert Pre.local_ci(root: dir, app: "brgen", out: output, err: StringIO.new)
+        end
       end
     end
 
     env, ruby, script = captured.fetch(:argv)
     assert_equal "/opt/ruby/bin/ruby", ruby
     assert_equal "bin/ci", script
+    assert_equal %w[/opt/ruby/bin /opt/bundle/bin], env.fetch("PATH").split(":").first(2)
+    assert_includes env.fetch("PATH").split(":"), File.join(Gem.user_dir, "bin")
     assert_nil env.fetch("BUNDLE_GEMFILE")
+    assert_nil env.fetch("BUNDLE_LOCKFILE")
+    Pre::FOREIGN_BUNDLE_ENV.each { |key| assert_nil env.fetch(key), key }
+    assert_nil env.fetch("BUNDLER_ORIG_GEM_HOME")
     assert_equal "brgen", env.fetch("PUB5_CI_APP")
     assert_equal File.join(dir, "RAILS", "brgen"), captured.fetch(:options).fetch(:chdir)
     assert_equal Pre::LOCAL_CI_TIMEOUT, captured.fetch(:options).fetch(:timeout)
     assert_equal true, captured.fetch(:options).fetch(:raise_on_timeout)
     assert_equal "ci output\n", output.string
   ensure
+    ENV.delete("BUNDLER_ORIG_GEM_HOME")
     FileUtils.rm_rf(dir)
   end
 

@@ -272,6 +272,16 @@ module Operator
     # Keep the whole child process group under a real deadline.
     LOCAL_CI_TIMEOUT = 3_600
 
+    # Bundler exports BUNDLE_LOCKFILE for the bundle it activated. Clearing only
+    # BUNDLE_GEMFILE made each app compare its own Gemfile with MASTER's lock.
+    FOREIGN_BUNDLE_ENV = %w[
+      BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_BIN_PATH BUNDLE_DEPLOYMENT BUNDLE_DISABLE_SHARED_GEMS
+      BUNDLE_FROZEN BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
+      BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG BUNDLE_USER_HOME
+      BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT BUNDLER_SETUP BUNDLER_VERSION
+      GEM_HOME GEM_PATH MT_NO_PLUGINS RUBYOPT RUBYLIB
+    ].freeze
+
     module_function
 
     def main(argv, root: File.expand_path("../../..", __dir__), out: $stdout)
@@ -544,8 +554,14 @@ module Operator
     def local_ci(root:, app:, out: $stdout, err: $stderr)
       dir = File.join(root, "RAILS", app)
       ruby = RubyRunner.ruby_cmd(root:)
-      cleared = %w[BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH GEM_HOME GEM_PATH RUBYOPT RUBYLIB].to_h { [_1, nil] }
-      env = cleared.merge("PATH" => "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}", "PUB5_CI_APP" => app)
+      cleared = FOREIGN_BUNDLE_ENV.to_h { [_1, nil] }
+      # A parent that ran bundler/setup exports restore handles; the child's own
+      # bundler/setup would use them to put MASTER's GEM_HOME and BUNDLE_PATH back.
+      ENV.each_key { |key| cleared[key] = nil if key.start_with?("BUNDLER_ORIG_") }
+      bundle_dir = File.dirname(RubyRunner.bundle_cmd(root:))
+      path = [File.dirname(ruby), (bundle_dir unless bundle_dir == "."), File.join(Gem.user_dir, "bin")]
+             .compact.uniq.join(":")
+      env = cleared.merge("PATH" => "#{path}:#{ENV.fetch("PATH", "")}", "PUB5_CI_APP" => app)
       output, status = Master::Io::Exec.capture2e(
         env, ruby, "bin/ci", chdir: dir, timeout: LOCAL_CI_TIMEOUT, raise_on_timeout: true
       )
