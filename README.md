@@ -14,7 +14,7 @@ evidence does not establish an outcome; it is never a passing result.
 - [Brgen](RAILS/brgen/README.md) — the city-first social network and host for its verticals.
 - [Amber](RAILS/amber/README.md) — a private wardrobe and style companion.
 - [BSDPorts](RAILS/bsdports/README.md) — search and inspect the OpenBSD ports tree.
-- [Marketplace](RAILS/brgen/engines/marketplace/README.md) and [Takeaway](RAILS/brgen/engines/marketplace/engines/takeaway/README.md) — local commerce and food ordering.
+- [Marketplace, Takeaway and Brgen's other verticals](RAILS/brgen/README.md) — local commerce and food ordering.
 - [Dating](RAILS/brgen/engines/dating/README.md), [Messenger](RAILS/brgen/engines/messenger/README.md), [Maps](RAILS/brgen/engines/maps/README.md), [Radio](RAILS/brgen/engines/radio/playlist/README.md) and [TV](RAILS/brgen/engines/radio/tv/README.md) — Brgen's distinct city services.
 - [Mr. Damascy](RAILS/mrdamascy/README.md) — the standalone Bergen restaurant ordering app.
 - [BIZ](BIZ/README.md) — evidence-backed business, funding and professional documents.
