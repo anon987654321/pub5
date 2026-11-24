@@ -19,7 +19,7 @@
 # from it. Keep this list to models worth reaching for, not every row Replicate
 # has ever published.
 
-verified_on: "2026-11-20"
+verified_on: "2026-11-24"
 # The 2026-11-14 rows (the fofr/kontext edits, the levelsio film looks and
 # the kontext trainer) carry their schema as read from each model's own
 # Replicate page: the declared inputs plus the pinned API example.
@@ -32,6 +32,8 @@ verified_on: "2026-11-20"
 default_engine: google/nano-banana-2.1
 fallback_chain:
   - minimax/image-01
+  - bytedance/seedream-5-lite
+  - black-forest-labs/flux-kontext-max
   - bytedance/seedream-4.5
   - black-forest-labs/flux-2-flex
   - black-forest-labs/flux-2-klein-4b
@@ -57,6 +59,14 @@ text_to_image:
     likeness: reference
     inputs: [prompt, aspect_ratio, number_of_images, prompt_optimizer, subject_reference]
     note: "Single-face subject_reference input; current schema lists $0.01 per output image. Provider README says inputs are sent to MiniMax, so use only with approved provider-processing consent."
+  bytedance/seedream-5-lite:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, size, max_images, output_format, sequential_image_generation]
+    note: "Current ByteDance reference-image model; example-based editing and reasoning; accepts a list of reference images and 2K/4K output. Verified 2026-11-24."
+  black-forest-labs/flux-kontext-max:
+    likeness: reference
+    inputs: [prompt, input_image, aspect_ratio, output_format, prompt_upsampling, safety_tolerance, seed]
+    note: "FLUX Kontext Max editing model; one input_image. Strong prompt following for turning a real reference photograph into the scene. Verified 2026-11-24."
   black-forest-labs/flux-2-flex:
     likeness: reference
     inputs: [prompt, input_images, aspect_ratio, resolution, steps, guidance, seed, output_format, output_quality]

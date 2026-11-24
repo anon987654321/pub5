@@ -322,6 +322,49 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_seedream_5_lite_uses_the_multi_image_reference_schema
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      references = File.join(subject_root, "probe", "references")
+      FileUtils.mkdir_p(references)
+      File.write(File.join(references, "01.jpg"), "reference")
+      client = Object.new
+      client.define_singleton_method(:upload_file) do |path, subject:|
+        "https://files.replicate.delivery/#{File.basename(path)}?s=#{subject}"
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root
+      )
+
+      input = picture.send(:reference_input, "portrait", "bytedance/seedream-5-lite")
+
+      assert_equal ["https://files.replicate.delivery/01.jpg?s=probe"], input.fetch("image_input")
+      assert_equal "2K", input.fetch("size")
+      assert_equal 1, input.fetch("max_images")
+    end
+  end
+
+  def test_flux_kontext_max_uses_one_input_image
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      references = File.join(subject_root, "probe", "references")
+      FileUtils.mkdir_p(references)
+      File.write(File.join(references, "01.jpg"), "reference")
+      client = Object.new
+      client.define_singleton_method(:upload_file) do |path, subject:|
+        "https://files.replicate.delivery/#{File.basename(path)}?s=#{subject}"
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root
+      )
+
+      input = picture.send(:reference_input, "portrait", "black-forest-labs/flux-kontext-max")
+
+      assert_equal "https://files.replicate.delivery/01.jpg?s=probe", input.fetch("input_image")
+      refute input.key?("image_input")
+    end
+  end
+
   def test_minimax_image_reference_uploads_only_one_subject_reference
     Dir.mktmpdir do |dir|
       subject_root = File.join(dir, "subjects")

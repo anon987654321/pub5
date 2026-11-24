@@ -441,11 +441,13 @@ module Studio
         desired["image_input"] = reference_urls if allowed.include?("image_input")
         desired["images"] = reference_urls if allowed.include?("images")
         desired["input_images"] = reference_urls if allowed.include?("input_images")
+        desired["input_image"] = primary_reference_url if allowed.include?("input_image")
         desired["subject_reference"] = primary_reference_url if allowed.include?("subject_reference")
         desired["max_images"] = 1 if allowed.include?("max_images")
         desired["number_of_images"] = 1 if allowed.include?("number_of_images")
         desired["prompt_optimizer"] = true if allowed.include?("prompt_optimizer")
         desired["resolution"] = "2K" if allowed.include?("resolution")
+        desired["size"] = "2K" if allowed.include?("size")
         desired["output_format"] = "jpg" if allowed.include?("output_format")
         desired["output_quality"] = 95 if allowed.include?("output_quality")
         desired
