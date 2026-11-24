@@ -307,3 +307,208 @@ Never report an ALS set as fully restored from JSON or MIDI alone. The final
 recovery report must distinguish composition recovered, samples resolved,
 native device state recovered, rendered audio checked, and still-unavailable
 state.
+
+
+## Render and recovery notes
+
+The following material is retained here so Dilla has one project guide. The renderer, canonical composition data and recovery tools remain the implementation authorities.
+
+
+### UNDERSTANDING — the Dilla tree
+
+<sub>Consolidated from `STUDIO/dilla/UNDERSTANDING.md`.</sub>
+
+Rebuilt 2026-11-22 after a sandbox recycle (the previous copy was lost
+before push). This is the restored understanding from the archaeology of
+`pub`, `pub2`, `pub3` and `pub4`, plus the session record. It is the
+taste layer: what makes good music good here.
+
+## What the histories taught
+
+- **Chord material is never invented.** Loops come from tried-and-tested
+  artist material — the favourite artists and the artists they sampled.
+  This is the ORIGINAL AUTHENTICS law (2026-11-22) and it outranks
+  convenience.
+- **Honesty over decoration.** Every claim carries a published source.
+  When a claim cannot be verified it is labelled and kept visible
+  (`authentics_audit.still_unverified`), never silently dropped or
+  silently kept.
+- **Tiers protect the canon.** Sample-verified artist rows and published
+  charts are performance material. Engine studies and originals are
+  exercises — useful for motion and sound, never presented as the
+  artists' harmony. The menu order
+  (artist_verified → chart_reference → engine_study → engine →
+  recovered) makes the tiering visible to callers.
+- **The human feel is the point.** Dilla's drum feel sits behind the
+  grid (swing 54±1), melody is a heard layer, bass supports at -14 dB,
+  and the mix is judged by measured energy shares, not by ear alone.
+  Two masters were rejected as "horrible" before the mix protocol
+  existed; iterate-and-keep with sidecars is how we do not repeat that.
+
+## Engine facts
+
+- `Dilla::ChordParser` has no bare "C" or open-fifth quality; spell the
+  closing dominant as `Cmaj` and record the grid assumption in the row.
+- `evidence_policy` is version 2 (`published_form` timing status and
+  `source_refs` added). `dilla_test.rb` pins it; `rg69_defaults_test.rb`
+  pins RG-69 markup defaults to engine boot values.
+- RG-69 preset names (marvin, hathaway, wonder, tender) nod to artists;
+  the loops are generic genre studies, not claimed transcriptions.
+- RG-69's browser synth adapter lives in `data/dilla.json` and references
+  the existing `kit_break`, `prophet_5` and `basement` entries. Its Tone.js
+  mappings are an explicit translation, not a claim that WebAudio reproduces
+  the Ruby engine's analog-style instruments. Kit levels/pans, voice pan, room
+  sends and vinyl/crackle controls are mapped in both paths. Live play and WAV
+  export share one instrument builder; source parity still requires a browser
+  export and human audition before sound quality is accepted.
+
+## The reference lane (canon input)
+
+The operator's curated YouTube list — recovered verbatim from
+`pub/index.html` at `a3185f4` — is the measurement canon for Dilla's
+best work: J Dilla, Slum Village, Flying Lotus, Madlib, AFTA-1, Jay
+Electronica, Samiyam, Chase Swayze, kemt, A. Mochi. The narrowed picks
+(players, climax_girl_shit, microphone_master_remix, fantastic) go
+through `ruby dilla.rb reference <rights-cleared URL or local audio> --style j_dilla`.
+The Ruby standard-library analyzer measures the complete mix: tempo, swing,
+onset density, harmony, spectral bands and energy. It does not separate stems,
+so no isolated drum, bass or keyboard measurements are claimed. Mix-level
+evidence about pocket and balance feeds the protocol above.
+
+Sample identifications for the narrowed picks (WhoSampled, fetched
+2026-11-22): Players <- Singers Unlimited "Clair"; Climax (Girl Shit)
+<- Steve Miller Band "Space Intro" / "Fly Like an Eagle", Les McCann
+"The Pleading"; Microphone Master (Jay Dee Remix) <- Clare Fischer "You
+Call It Madness", Art of Noise "Opus 4", A Tribe Called Quest "Lyrics
+to Go"; Fantastic <- Herbie Hancock "You'll Know When You Get There".
+
+## Provenance note
+
+The original understanding document and the audit commit were written
+2026-11-22 but lost with the recycle before push. This copy was rebuilt
+from the surviving audit script (`scripts/authentics_audit.py`), the
+curated-picks script (`scripts/update_curated_picks.py`) and the
+measurement selftest record (`download/dilla_reference/analysis/
+pipeline_selftest.json`). The content matches the lost commit's
+described state; the git history of the rebuild starts fresh.
+
+
+### STUDIO/dilla/render_evidence — measured canon and render verdict
+
+<sub>Consolidated from `STUDIO/dilla/render_evidence/README.md`.</sub>
+
+This directory holds the measured evidence that binds the engine to the
+operator-curated Dilla canon. It follows `data/recovered_music.json`'s
+`evidence_policy`: measurements are evidence of their class, never authority
+over declared harmony; limits stay attached to the numbers.
+
+## Files
+
+- `measured_canon.json` — the full measured record: 13 rows measured from the
+  curated list (SoundCloud title-matched with honest match classes) + 8 honest
+  `no_match` rows. Per-stem band shares, onset grids, swing placement, tempo
+  locks, mix chroma/Krumhansl.
+- `render_vs_canon.json` — the closed-loop verdict: the rendered `dilla.wav`
+  take (players, Ebm, 93 BPM, los_angeles) measured with the same analyzer and
+  compared against the canon envelope. 6/6 bounded metrics inside the canon
+  range.
+- `RENDER_VS_CANON.md` — the human-readable verdict with the honest gaps.
+- `tools/` — the pipeline that produced the record:
+  - `dilla_stem_analyze.js` — pure Node analyzer (stdin: f32le mono 22050 Hz;
+    stdout: one JSON). Band shares, onset flux, tempo autocorrelation, 16-slot
+    best-phase grid, swing residuals, chroma + Krumhansl.
+  - `assemble_evidence.sh` — assembles per-track stem analyses into
+    `measured_canon.json` (was run against the sandbox analysis workdir).
+  - `render_analyze.sh` — demucs-separates a rendered WAV and runs the same
+    analyzer on its stems + mix.
+  - `compare_render_canon.js` — computes the canon aggregates and the
+    render-vs-canon verdict table.
+
+## Regeneration
+
+The SoundCloud harvest and demucs runs happened outside this checkout (datacenter
+IPs are bot-walled on YouTube; the curated ids are matched by title, never
+remixed). The tools above are reproducible against any working directory of
+downloaded audio; `dilla_stem_analyze.js` has no dependencies beyond Node.
+
+## Pointers
+
+- Compact per-track summary + players row evidence: `data/recovered_music.json`
+  (`measured_canon`, `progressions[].measured_evidence`).
+- Engine anchors derived from these measurements: `data/showcase.json`
+  (players_showcase, 93 BPM) and `data/dilla.json`
+  (`production_profiles.j_dilla`, groove_profile los_angeles).
+
+
+### RENDER vs CANON — dilla.wav (2026-11-22, take break_biscuit / players)
+
+<sub>Consolidated from `STUDIO/dilla/render_evidence/RENDER_VS_CANON.md`.</sub>
+
+Question: did the rendered `dilla.wav` get compared with actual Dilla beats?
+Answer: yes — same analyzer, same demucs, same metrics, measured on both sides.
+The render was demucs-separated (htdemucs) and analyzed with
+`STUDIO/dilla/render_evidence/tools/dilla_stem_analyze.js` (pure Node), exactly like the 13 curated
+reference tracks. Full machine-readable verdict: `STUDIO/dilla/render_evidence/render_vs_canon.json`.
+
+## Take identity (session sidecar)
+
+- progression `players` (recovered), Ebm, 93 BPM, 24 bars, 64.54 s
+- groove `los_angeles` (kick/snare 50, hat 53), kit `kit_dust`, rig `dilla_night`
+- voices rhodes_mark1 -> wurlitzer_200a drift; sonitex subtle; sample not used
+- declared swing nominal 54.0; **measured** swing placement 50.2 (see below)
+
+## Metric comparison (drums stem, n=13 canon rows)
+
+| metric | render | canon median | canon range | verdict |
+|---|---|---|---|---|
+| drum swing position (%) | 50.2 | 49.6 | 45.0 – 52.8 | PASS |
+| on-grid share (16-slot) | 0.37 | 0.66 | 0.35 – 1.00 | PASS (laid-back edge) |
+| off-8th residual (ms) | +1.9 | -1.5 | -47.7 – +19.8 | PASS |
+| kick low-band share (<130 Hz) | 0.727 | 0.672 | 0.375 – 0.807 | PASS |
+| snare mid-band share (bp@400) | 0.077 | 0.099 | 0.055 – 0.202 | PASS |
+| hat high-band share (>5 kHz) | 0.018 | 0.018 | 0.002 – 0.033 | PASS |
+
+6/6 bounded metrics inside the measured canon envelope. The hat share is the
+exact canon median; kick/snare sit inside the canonical dusty balance.
+
+## Tempo
+
+- drums stem autocorrelation locks 61.4 BPM raw; mirror 61.4 x 3/2 = **92.1**,
+  inside the canon window 85–95 and within 1 BPM of the declared 93.
+- mix autocorrelation locks **93.0 BPM directly**.
+- canon rows with an 85–95 mirror: 11/13 (the other two sit at half/double
+  mirrors, as documented in the measured_canon record).
+
+## Tonality
+
+- render mix Krumhansl estimate: **D# (=Eb) major, r=0.75** — matches the
+  declared Eb family of the `players` progression (Ebm9/Abm7/Fm9/Bbm7).
+- canon estimates are weak-to-moderate single-method (median r=0.56,
+  max r=0.77); per EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY no canon row
+  overrides the declared harmony, and the render's own measurement agrees.
+- chroma cosine similarity, render mix vs `players` reference mix: **0.734**
+  (same harmony space; not audio identity).
+
+## Honest gaps (kept, not hidden)
+
+- Levels not compared: SoundCloud transcodes decode >0 dBFS on canon rows;
+  levels are relative evidence only.
+- `centroid_hz` unit is broken in the shared analyzer (~1e8); omitted rather
+  than reported as Hz. Fix belongs to the analyzer, not to this report.
+- Canon rows are 30 s previews / fan uploads (mono-transcoded); the render is
+  a 64.5 s stereo mix. Window difference kept as-is.
+- `sample_flip=null`: the render contains **no** Dilla audio material
+  (`sample_rights_status: not_used`). The identity claim is measured groove +
+  harmony + timbre protocol, not sample identity. TRUTHFUL_STATUS.
+- Declared swing nominal 54.0 vs measured placement 50.2: the measurement is
+  the evidence; the nominal is the engine's input, not the result.
+
+## Method
+
+demucs htdemucs -> per-stem band shares (kick <130 Hz, snare bp@400, hats
+>5 kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation
+(55–200 BPM folded 60–180), 16-slot best-phase grid (+/-45 ms), swing from
+off-8th residuals; mix chroma (FFT 8192 @ 22.05 kHz, 55–2200 Hz) + Krumhansl.
+Canon: 13 measured rows from the operator-curated 22-track list recovered
+from pub git history (index.html a3185f4), SoundCloud title-matched with
+honest match classes.
