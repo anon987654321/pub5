@@ -6,8 +6,6 @@ This project owns subject-aware training, inference, evaluation and photography 
 
 ## What makes a photograph good
 
-<sub>Consolidated from `STUDIO/lora/PHOTOGRAPHY.md`.</sub>
-
 > Recovered provenance: this document was written against pub4 (2026-08-25,
 > preserved at pub4@5c1529710, read-only) and restored into pub5 because
 > `STUDIO/lora/guides.yml` cites it as its source. The body below is verbatim
@@ -271,8 +269,6 @@ than quietly resolved.
 
 
 ## Merethe identity LoRA
-
-<sub>Consolidated from `STUDIO/lora/merethe/README.md`.</sub>
 
 ## Subject identity
 

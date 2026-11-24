@@ -339,8 +339,6 @@ The following design and asset guidance is consolidated here so Amber has one pr
 
 ### Demo media
 
-<sub>Consolidated from `RAILS/amber/config/demo_media/README.md`.</sub>
-
 **The demo wardrobe should show the cloth as well as the cut, so a visitor sees both the shape a
 piece takes on the figure and the fabric it is made of.** Each photograph here is one garment or
 one outfit laid flat on a single warm backdrop, with no person in the frame, so the clothes are
@@ -371,8 +369,6 @@ the app keeps a small copy, and the full renders stay out of git on the machine 
 
 
 ### PROPOSALS — plur1bus plates: eleven directions for the amber® mark
-
-<sub>Consolidated from `RAILS/amber/__logo/PROPOSALS.md`.</sub>
 
 Open `all-plates.html` in a browser: all eleven plates render on one page with the
 canonical reference on top and the avatar cuts underneath. Regenerate with
@@ -491,8 +487,7 @@ the source partial.
 RAILS/amber/__logo/
   generate.mjs         generator — extracts glyphs/hairlines from the live partial
   all-plates.html      all eleven plates + reference + avatar cuts on one page
-  RESEARCH.md          online research with sources
-  PROPOSALS.md         this file
+  README sections      research and proposal notes
   plates/*.svg         11 plates + reference-original.svg
   plates/avatars/*.svg 3 alpha-transparent avatar cuts
 ```
@@ -501,8 +496,6 @@ Home rationale: the logo is owned by Amber, so its generator, previews and resea
 
 
 ### RESEARCH — plur1bus plates
-
-<sub>Consolidated from `RAILS/amber/__logo/RESEARCH.md`.</sub>
 
 Research for the ten-plate amber® mark sweep: what the plur1bus series
 refers to, how its canonical title treatment works, and which 2026

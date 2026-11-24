@@ -314,9 +314,7 @@ state.
 The following material is retained here so Dilla has one project guide. The renderer, canonical composition data and recovery tools remain the implementation authorities.
 
 
-### UNDERSTANDING — the Dilla tree
-
-<sub>Consolidated from `STUDIO/dilla/UNDERSTANDING.md`.</sub>
+### Dilla tree and workflow
 
 Rebuilt 2026-11-22 after a sandbox recycle (the previous copy was lost
 before push). This is the restored understanding from the archaeology of
@@ -392,9 +390,7 @@ the maintained source tree. The content matches the lost commit's described
 state; the git history of the rebuild starts fresh.
 
 
-### STUDIO/dilla/render_evidence — measured canon and render verdict
-
-<sub>Consolidated from `STUDIO/dilla/render_evidence/README.md`.</sub>
+### Measured canon and render verdict
 
 This directory holds the measured evidence that binds the engine to the
 operator-curated Dilla canon. It follows `data/recovered_music.json`'s
@@ -411,7 +407,7 @@ over declared harmony; limits stay attached to the numbers.
   take (players, Ebm, 93 BPM, los_angeles) measured with the same analyzer and
   compared against the canon envelope. 6/6 bounded metrics inside the canon
   range.
-- `RENDER_VS_CANON.md` — the human-readable verdict with the honest gaps.
+- The render-vs-canon section below gives the human-readable verdict and its honest gaps.
 - `tools/` — the pipeline that produced the record:
   - `dilla_stem_analyze.js` — pure Node analyzer (stdin: f32le mono 22050 Hz;
     stdout: one JSON). Band shares, onset flux, tempo autocorrelation, 16-slot
@@ -440,8 +436,6 @@ downloaded audio; `dilla_stem_analyze.js` has no dependencies beyond Node.
 
 
 ### RENDER vs CANON — dilla.wav (2026-11-22, take break_biscuit / players)
-
-<sub>Consolidated from `STUDIO/dilla/render_evidence/RENDER_VS_CANON.md`.</sub>
 
 Question: did the rendered `dilla.wav` get compared with actual Dilla beats?
 Answer: yes — same analyzer, same demucs, same metrics, measured on both sides.

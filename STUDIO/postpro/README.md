@@ -364,8 +364,6 @@ The following research preserves provenance and disposition for earlier Postpro 
 
 ### Postpro archaeological recovery record
 
-<sub>Consolidated from `STUDIO/postpro/Postpro archaeological recovery record`.</sub>
-
 Scope: source and history in `anon987654321/pub`, `pub2`, `pub3`, and `pub4`, searched under `postpro`, `Postpro`, and nearby Repligen/Replicate integration names. This is a preservation map, not a claim that old code can be pasted into the current engine unchanged.
 
 ## Decisions
@@ -535,8 +533,6 @@ This document is a historical map, not a test receipt. Current effect reachabili
 
 
 ### Legacy Postpro restore
-
-<sub>Consolidated from `STUDIO/postpro/Legacy Postpro restore section`.</sub>
 
 For the repository-by-repository lineage and the disposition of other historical behaviors, see [Postpro archaeological recovery record](#postpro-archaeological-recovery-record).
 

@@ -175,7 +175,7 @@ routes and tests as the authority for what is actually available.
 The Marketplace engine owns listings, stores, orders and its storefront; the Brgen host owns
 city identity and the webhook entry points shared with the other verticals. The host has no
 listing model. The engine's product and feature status lives in
-[the Marketplace README](#brgen-marketplace) and `RAILS/apps.yml`.
+[the Marketplace section](#brgen-marketplace) and `RAILS/apps.yml`.
 
 The host serves `/merchant-feed.xml` with up to 10,000 publicly visible, priced and photographed
 goods; affiliate inventory is excluded. Stripe and Vipps enter through host routes at
@@ -434,8 +434,6 @@ Brgen is one application with several mounted engines, not a fleet of separately
 
 ### Demo media
 
-<sub>Consolidated from `RAILS/brgen/config/demo_media/README.md`.</sub>
-
 **A city network should look lived in on its first night, so the Bergen seeds carry photographs
 made for them, and the app keeps those photographs inside its own tree.** A seed run on the
 production box finds its pictures on disk instead of asking the internet for them.
@@ -484,8 +482,6 @@ another source whose license permits the specific intended use.
 
 ### brgen dating
 
-<sub>Consolidated from `RAILS/brgen/engines/dating/README.md`.</sub>
-
 **Matchmaking for a city you already live in.** Dating shows you the people of your own town,
 asks them to prove they are who they look like, and leaves the rest to the two of you.
 
@@ -493,8 +489,7 @@ Dating is mounted at `dating.<city>`, for example `dating.brgen.no` and
 `dating.lsangeles.com`. It runs inside Brgen's Rails process and uses Brgen's
 users. The city is resolved from the apex host; Dating is not a separate app.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 Each person builds a profile of photos, a short bio and up to three prompt answers. The deck
 shows one candidate at a time, and the next one comes from `home#next`. A like or a dislike
@@ -561,8 +556,6 @@ Norwegian and English locale files, and Norwegian is the default.
 
 ### brgen maps
 
-<sub>Consolidated from `RAILS/brgen/engines/maps/README.md`.</sub>
-
 **Places and a live map, for whichever city you arrived through.** Maps puts the shops, cafes
 and corners of your town on one screen and lets you say that you were there.
 
@@ -570,8 +563,7 @@ Maps is mounted at `maps.<city>`, including `maps.brgen.no` and
 `maps.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's
 users and resolves the city from the apex host. It is not a separate app.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 The home page draws the map on a MapLibre canvas, with tiles from OpenFreeMap. Its GeoJSON
 source clusters nearby places, events and stories at city scale, expands a cluster on selection,
@@ -598,8 +590,6 @@ does. Its first controller tests run inside brgen's suite, under `test/controlle
 
 ### brgen marketplace
 
-<sub>Consolidated from `RAILS/brgen/engines/marketplace/README.md`.</sub>
-
 **Every listing in brgen lives here, the shop's product and the chair someone is selling alike.**
 Marketplace is one place for a city to buy, sell, rent, hire and order dinner, without asking
 anyone to learn a second site for each.
@@ -610,8 +600,7 @@ Germany and `mercato` in Italy. `Brgen::DomainRegistry::SUBAPP_ALIASES`
 maps each spelling to this engine. Marketplace runs inside Brgen's Rails
 process and uses Brgen's users; it is not a separate app.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 ## Restored marketplace intent
 
@@ -722,8 +711,6 @@ refund, duplicate delivery, seller approval and settlement events.
 
 ### brgen takeaway
 
-<sub>Consolidated from `RAILS/brgen/engines/marketplace/engines/takeaway/README.md`.</sub>
-
 **Good food from kitchens in your city, ordered without leaving the local network.** Takeaway
 connects restaurants, their menus, neighbours and delivery drivers. It is the food-ordering
 surface inside Brgen Marketplace, not a separate Rails application.
@@ -734,8 +721,7 @@ Takeaway is nested inside the Marketplace engine. Its canonical route is
 The historical `takeaway.<city>` host remains as a compatibility mount;
 new links should use Marketplace. Takeaway is not a separate Rails app.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 ## Recovered product promise
 
@@ -819,8 +805,6 @@ current stack is pinned in `RAILS/apps.yml` and the Brgen host's Gemfile/lockfil
 
 ### brgen messenger
 
-<sub>Consolidated from `RAILS/brgen/engines/messenger/README.md`.</sub>
-
 **The city's conversations, without losing the thread.** Messenger is the private and group
 conversation surface shared by people using Brgen. It should feel immediate, but its deeper
 promise is continuity: a conversation remains readable, searchable, safe to leave, and useful
@@ -832,8 +816,7 @@ its routes; the `brgen_messenger` engine supplies the vertical's autoloading
 and JavaScript assets. It shares the host app, database, identity system and
 deployment. It is not a separate application.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 ## Recovered product intent
 
@@ -910,8 +893,6 @@ stack is the one pinned in `RAILS/apps.yml` and the host Gemfile/lockfile.
 
 ### Brgen Radio and TV
 
-<sub>Consolidated from `RAILS/brgen/engines/radio/README.md`.</sub>
-
 Brgen's local media surfaces let a city publish and discover sound and moving images without
 splitting the community into unrelated networks. Both are mountable engines inside the Brgen
 Rails process.
@@ -920,9 +901,9 @@ Rails process.
   retain the `Playlist` namespace.
 - **TV** is the video and channel engine at `tv.<city>`.
 
-The city/host topology is defined by `RAILS/brgen/README.md` and
-`RAILS/brgen/AGENTS.md`. These engines share Brgen identity, tenancy, media processing and
-activity infrastructure.
+The city/host topology is defined in the Host and subdomain map above, with
+agent-specific constraints in `AGENTS.md`. These engines share Brgen identity, tenancy,
+media processing and activity infrastructure.
 
 ## Product briefs
 
@@ -934,7 +915,7 @@ activity infrastructure.
 The historical plans also mentioned a record label, creator donations, premium audio tiers,
 global music discovery and full live video. Those remain product opportunities, not claims that
 the corresponding workflows are already operating. Radio's curated Radio Bergen import has
-separate tenant and rights preconditions documented in the Playlist README.
+separate tenant and rights preconditions documented in the [Playlist section](#brgen-playlist).
 
 ## Architecture rule
 
@@ -945,8 +926,6 @@ listed in `RAILS/apps.yml`.
 
 ### brgen playlist
 
-<sub>Consolidated from `RAILS/brgen/engines/radio/playlist/README.md`.</sub>
-
 **Music is better when someone is listening with you.** Playlist lets a city build its soundtrack
 together, hear the same song at the same moment, and talk over it as it plays.
 
@@ -956,8 +935,7 @@ name Playlist; the host constraint is `RADIO_SUBDOMAINS`. The former
 `playlist.<city>` host no longer resolves, and no alias remains. The engine
 runs inside Brgen's process and uses Brgen's users; it is not a separate app.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 Users build playlists and sets, add tracks, and invite collaborators as owner, editor or viewer.
 Pasting URLs, one to a line, imports tracks into a playlist from YouTube, Spotify, SoundCloud,
@@ -1055,8 +1033,6 @@ is an operator attestation, not a legal determination.
 
 ### brgen tv
 
-<sub>Consolidated from `RAILS/brgen/engines/radio/tv/README.md`.</sub>
-
 **A television channel anyone in the city can start.** Tv gives every neighbourhood a screen of
 its own, for what the town makes, what it streams live and what it wants to watch next.
 
@@ -1064,8 +1040,7 @@ TV is mounted at `tv.<city>`, including `tv.brgen.no` and
 `tv.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's users
 and resolves the city from the apex host. It is not a separate app.
 
-Read [the Brgen guide](README.md) for the vertical pattern and
-[Brgen's agent contract](AGENTS.md) for the host topology.
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
 
 Channels publish uploaded videos and shows with numbered episodes. Viewers comment, take
 notes pinned to a moment in a video, and follow channels by subscribing. The data model also
