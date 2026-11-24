@@ -82,6 +82,7 @@ vec3 curlNoise(vec3 p){
   return vec3(cx,cy,cz);
 }
 uniform float uMorph;
+uniform float uSubjectActive;
 uniform float uSemanticStaged;
 uniform float uTime;
 uniform vec3 uColor;
@@ -160,7 +161,7 @@ void main(){
   float localMorph = mix(m, 1.0, 1.0 - semanticGate);
   vec2 cursorFace=uMouse*0.44;
   float cursorProx=1.0-smoothstep(0.0,0.22,length(position.xy-cursorFace));
-  float lm=max(localMorph,cursorProx*0.96);
+  float lm=mix(max(localMorph,cursorProx*0.96),localMorph,uSubjectActive);
   float curiousPull = uTilt * cursorProx * 0.045;
   float curlAmp=uCurl*0.28*(1.0-uRain*0.18);
   vec3 noise=curlNoise(position*0.5+uTime*0.1+seed)*(1.-lm)*curlAmp;
@@ -256,6 +257,7 @@ void main(){
   vec3 expressionTo = masterExpressionPoint(p, uExpressionTo);
   p = mix(p, mix(expressionFrom, expressionTo, uExpressionBlend),
     clamp(uExpressionStrength, 0.0, 1.0));
+  p = mix(p, mix(scatter, position, localMorph), uSubjectActive * (1.0-localMorph));
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
   // Treat the point cloud as a shallow physical surface instead of a flat depth gradient.
@@ -288,7 +290,7 @@ void main(){
   else if(zone<0.7) zoneAudio=uHighs*0.14;
   else zoneAudio=uMids*0.10;
   float eyeRgn = smoothstep(0.30,0.50,zone) * (1.0 - smoothstep(0.50,0.65,zone));
-  float eyeDim = 1.0 - uEyeClose * eyeRgn * 0.82;
+  float eyeDim = 1.0 - uEyeClose * eyeRgn * 0.82 * (1.0-uSubjectActive);
   vAlpha=(hc>0.0?hc:mix(0.28+uIdleDrift*0.08,0.48+depth*0.52,lm)+zoneAudio)*eyeDim;
   float flickerFreq=0.5+seed*1.5;
   float flicker=1.0+0.08*sin(seed*6.2831+uTime*flickerFreq);
@@ -349,7 +351,7 @@ if (_hasWebGL && THREE) {
   faceMat = new THREE.ShaderMaterial({
     vertexShader: VERT_SHADER, fragmentShader: FRAG_SHADER,
     uniforms: {
-      uMorph:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
+      uMorph:{value:0}, uSubjectActive:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
       uColor:{value:new Color(1,1,1)},
       uHc:{value: State.highContrast ? 1.0 : (State.contrastMore ? 0.9 : 0.0)},
       uCurl:{value:0}, uJaw:{value:0}, uMouse:{value:{x:0,y:0}},
