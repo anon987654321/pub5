@@ -624,10 +624,9 @@ recorded in `data/proposals.yml` (entry `master-voice-parallel-stack`).
   rewrite table. Hygiene applied on salvage: duplicate rows removed,
   identity mappings dropped, the contested `øya → øyen` and the approximate
   verb hints marked as such.
-- `engine_comparison.md` - open-engine landscape for nb, corrected to the
-  routing that actually exists in `data/tts.yml`.
-- `bergen_lora_data_checklist.md` - data-collection plan for a future
-  CosyVoice3 continued-LoRA attempt.
+- The [Norwegian TTS engine comparison](#norwegian-tts-engine-comparison) and
+  [Bergen voice-data collection plan](#bergen-voice-data-collection-plan) are
+  evaluation and research notes, not active runtime routes.
 
 ## Law statements
 
@@ -651,6 +650,128 @@ verdict = Master::Voice::Benchmark.tonem_eval("solen.wav", accent: "bergen")
 `tonem_eval` needs `aubionotes` on PATH (the same optional dependency the
 existing f0 summary uses) and answers nil, not an exception, when it is
 missing or the audio is unreadable.
+
+
+### Bergen high-tone LoRA data checklist
+
+<sub>Consolidated from `MASTER/data/voice/norwegian/bergen_lora_data_checklist.md`.</sub>
+
+Goal: continue from AlexKjes/cosy-norwegian (`model_720_lora_state.pt`)
+toward reliable Bergen high-tone + skarre-r. Provenance: salvaged from the
+reviewed external patch (now included in this project guide); this is a
+data-collection plan for the operator, not a wired route.
+
+## Priority data characteristics
+
+1. **Uvular r (skarre-r)** - speakers who consistently use the uvular
+   realisation, not alveolar r.
+2. **No retroflexes** - natural separation of r + t/d/n/l/s.
+3. **High-tone realisation** - tonem 1 with an early high peak then fall on
+   the stressed syllable (the target `bergen.yml` pins).
+4. **Two-gender morphology** - *boken, solen, jenten, døren* preferred in
+   spontaneous speech.
+5. **Local function words** - *eg, ikkje, ka, kæm, koffor, korleis, no*.
+
+## Suggested data sources (open / collectable)
+
+- NST / NPSC subsets with Vestland or confirmed Bergen speakers (filter if
+  the metadata allows).
+- Local radio / podcast / YouTube from Bergen, with permission or fair-use
+  grounding for research.
+- Read speech from native Bergen speakers: word lists and short paragraphs
+  containing the minimal pairs, the high-frequency -en forms, and the
+  clusters that would be retroflex in the East (barn, norsk, parti).
+- Existing dialect corpora that tag region or r-variant.
+
+## Minimum viable continued-training set
+
+| Category                | Target              | Notes |
+|-------------------------|---------------------|-------|
+| High-tone tonem-1 words | 200–500 utterances  | sola, boka, døra, armen, bilen, huset |
+| Skarre-r heavy sentences| 300+                | Multiple r's per utterance |
+| Gender -en forms        | 200+                | Avoid -a forms in target transcripts |
+| Everyday dialogue       | 1–2 h               | Natural prosody |
+| Total new data          | ~3–10 h             | Quality over quantity for LoRA |
+
+## Training notes
+
+- Start from `model_720_lora_state.pt`, not from base only.
+- Keep LoRA on the LLM frontend only (same stage-4 style).
+- Use Bergen style prompts in training examples where possible.
+- Evaluate with the fixtures in this directory:
+  - F0 peak timing on tonem-1 words - early high, via
+    `Voice::Benchmark.tonem_eval(path, accent: "bergen")`.
+  - Absence of retroflexes and presence of uvular r (listening plus simple
+    detectors).
+  - Preference for -en vs -a in generated definite forms.
+
+## Anti-targets (down-weight or avoid)
+
+- Clear Eastern low-tone speakers.
+- Heavy alveolar-r plus retroflex speakers.
+- Over-represented Oslo / Eastern studio speech without filtering.
+
+
+### Norwegian TTS engine landscape (evaluation notes)
+
+<sub>Consolidated from `MASTER/data/voice/norwegian/engine_comparison.md`.</sub>
+
+Focused comparison for Norwegian (Bokmål) accent work, status late 2026.
+Provenance: salvaged from the reviewed external patch (see README.md in
+this directory); ranks are proposals for future engine work, not wired
+routes, and are corrected to what MASTER actually runs today.
+
+## Ranking for future Norwegian engine work
+
+| Rank | Engine                  | Norwegian Quality | Fine-tune Ease | Pitch Accent Potential | License          | Notes |
+|------|-------------------------|-------------------|----------------|------------------------|------------------|-------|
+| 1    | CosyVoice3 + NB LoRA   | High              | Excellent (LLM LoRA) | High (continue training) | Apache 2.0 + LoRA check | Proposed primary for Bergen work. AlexKjes LoRA on ~680h. |
+| 2    | XTTS v2 (+ NB fine-tune)| Medium–High      | Good           | Medium–High            | CPML (non-commercial) | Best pure cloning. Community NB fine-tunes exist. License is the limiter. |
+| 3    | Qwen3-TTS + community  | Medium (improving)| Good           | Medium                 | Apache 2.0       | Modern base. Active Norwegian fine-tune experiments. |
+| 4    | Fish Speech / S2       | Medium            | Medium         | Medium                 | Restrictive      | High expressiveness. License friction for production. |
+| 5    | Kokoro 82M             | Low               | Limited        | Low                    | Apache 2.0       | Fast English fallback only. Unfit as a Norwegian primary. |
+
+## Detailed criteria
+
+**Norwegian quality**
+- CosyVoice3 + AlexKjes LoRA: the strongest currently available open path;
+  trained on NST + NPSC material.
+- XTTS v2: solid after a Norwegian fine-tune, still carries some foreign
+  accent without further work.
+- Qwen3-TTS: base is not Norwegian-native; community LoRAs are early.
+- Kokoro: noticeably weaker out of the box, and it is already demoted in
+  MASTER's chain for per-phrase latency, not only for quality.
+
+**Fine-tune / LoRA ease**
+- CosyVoice3: cleanest known path - LoRA on the Qwen2 LLM frontend is
+  proven and efficient.
+- XTTS v2: GPT encoder fine-tuning works but is more brittle.
+- Qwen3-TTS: standard PEFT path.
+- Kokoro: style presets rather than language adaptation.
+
+**Pitch accent (Bergen high-tone) potential**
+- Highest with CosyVoice3: the LLM stage carries prosody, and continued
+  LoRA on high-tone data is straightforward.
+- XTTS can improve with targeted data but has less explicit style control.
+- The others lack demonstrated Norwegian tone control.
+
+**License reality for MASTER**
+- Prefer Apache 2.0 / MIT for long-term freedom: CosyVoice3, Qwen3-TTS,
+  Kokoro.
+- XTTS v2 is technically attractive but CPML blocks many uses; verify the
+  specific LoRA's license separately.
+
+## MASTER routing today (the reality this doc must not contradict)
+
+- Chain (`data/tts.yml`): `mlx, chatterbox, glm_tts, edge_melodic, edge, say`
+  - hosted glm_tts sits behind the local engines for the same per-phrase
+    round-trip reason that demoted Kokoro.
+- Norwegian voice: Pernille via Edge, pinned by `data/voice.yml`
+  `language_voices` - the single voice truth. GLM serves no Norwegian voice,
+  so pernille is deliberately unmapped in `glm_voice_map`.
+- A CosyVoice3 / XTTS route would enter the same way every engine does: one
+  `available?` / `synth` case arm in `lib/voice/engines.rb`, one chain line,
+  stubbed contract tests, and the benchmark gates - not a second stack.
 
 
 ### Air Superiority
