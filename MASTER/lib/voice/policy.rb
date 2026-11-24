@@ -21,7 +21,7 @@ module Master
         "default_pitch" => "+6Hz",
         "operator_log" => { "voice" => "christopher", "rate" => "-10%", "pitch" => "+0Hz" },
         "rotation" => %w[christopher],
-        "language_voices" => { "en" => "christopher", "nb" => "pernille", "ms" => "yasmin" },
+        "language_voices" => { "en" => "christopher", "nb" => "pernille", "ms" => "osman" },
         "language_voice_families" => {
           "nb" => { "female" => "pernille", "male" => "finn" },
           "ms" => { "female" => "yasmin", "male" => "osman" },

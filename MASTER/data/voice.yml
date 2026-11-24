@@ -23,11 +23,11 @@ tts:
   rotation:
     - christopher
   # English stays Christopher regardless of gender preferences or stale caller input.
-  # Norwegian and Malay retain their own language routes.
+  # Norwegian is Pernille and Malay is Osman (operator order 2026-11-24).
   language_voices:
     en: christopher
     nb: pernille
-    ms: yasmin
+    ms: osman
     # Edge TTS has no English-Malaysia (en-MY) neural voice. Malay Malaysia
     # uses ms-MY-YasminNeural or ms-MY-OsmanNeural, mapped by the ms route.
   language_voice_families:

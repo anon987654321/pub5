@@ -556,8 +556,8 @@ class TestSpeech < Minitest::Test
     assert_equal :yasmin, Master::Voice::Policy.voice_for_language(:ms, gender: :female)
   end
 
-  def test_malay_text_resolves_to_yasmin
-    assert_equal :yasmin, Master::Voice::Speech.voice_for_text("Ini adalah sistem yang sudah siap.")
+  def test_malay_text_resolves_to_osman
+    assert_equal :osman, Master::Voice::Speech.voice_for_text("Ini adalah sistem yang sudah siap.")
   end
 
   def test_male_language_override_stays_inside_language_family
