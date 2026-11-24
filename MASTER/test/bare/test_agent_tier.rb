@@ -83,7 +83,7 @@ module Master
         end
         assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
                      "the kind registry is where the exemption is owned, not the detector source"
-        assert_match(/\\A[0-9a-f]{64}\\z/, LawIndex.input_fingerprint)
+        assert_match(/\A[0-9a-f]{64}\z/, LawIndex.input_fingerprint)
       end
 
       def test_law_index_projects_named_test_proofs_from_fixture_registry
