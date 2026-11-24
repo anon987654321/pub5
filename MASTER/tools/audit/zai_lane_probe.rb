@@ -2,7 +2,7 @@
 
 # One-off probe: exercise the exact CLI-lane send path the /fix model calls
 # use, against the session-scoped zai-cli lane. Run from MASTER/ with the
-# vendored ruby: .tools/ruby/bin/ruby scripts/probe_zai_lane.rb
+# vendored ruby: .tools/ruby/bin/ruby tools/audit/zai_lane_probe.rb
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 require "master"
 

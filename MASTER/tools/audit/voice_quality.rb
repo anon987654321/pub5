@@ -3,7 +3,7 @@
 # Measure rendered speech takes: duration, sample rate, channels, clipping
 # and loudness. The instrument over Master::Voice::Quality.
 #
-#   ruby MASTER/tools/voice/quality.rb take1.wav take2.mp3
+#   ruby MASTER/tools/audit/voice_quality.rb take1.wav take2.mp3
 #
 # One line per path, JSON, terse. A missing or unreadable file reports its
 # reason instead of failing the batch; exit 1 only when a measurement itself

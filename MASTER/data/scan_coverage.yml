@@ -66,12 +66,6 @@ scan_coverage:
       governs them. Scanning the instruments with the runtime constitution would
       mix the measuring apparatus into the subject and make every fixture-shaped
       assertion part of the measured corpus.
-    scripts: >-
-      One-off operator probes, not runtime source or application code. The
-      current probe_zai_lane.rb exercises the configured CLI provider lane
-      directly and is invoked manually from MASTER/; it does not participate
-      in application boot. Keep every future script here similarly explicit
-      and narrow rather than silently treating this directory as scanned.
     web: >-
       A separate application with its own dependency tree, not more of MASTER's
       source. web/ carries its own Gemfile and lockfile, and config/ci.rb runs the

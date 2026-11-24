@@ -218,13 +218,9 @@ ownership:
     risk: medium
     check: ruby -Ilib:test test/test_lifecycle_tools.rb
   tools/audit/:
-    purpose: repository audits for capability inventory, data reachability, duplication, Law metadata and design baseline measurements
+    purpose: repository and artifact audits, including capability, reachability, duplication, Law metadata, design baselines, voice quality and provider-lane probes
     risk: medium
     check: cd MASTER && ruby -Ilib:test test/test_capability_inventory.rb
-  tools/voice/:
-    purpose: voice measurement instruments over the lib/voice speech family (rendered-take quality, clipping and loudness)
-    risk: medium
-    check: rake voice_quality
   loop*.gif:
     purpose: the README films' posters, made by bin/loops
     risk: low
