@@ -121,7 +121,8 @@ class DeployPreflightTest < Minitest::Test
   end
 
   def remote(env: {}, runner: ->(*) { ["", true] }, app: "all",
-             ci_runner: ->(**) { true }, admission_check: ->(**) { [true, nil] }, git: nil, **git_state)
+             ci_runner: ->(**) { true }, admission_check: ->(**) { [true, nil] },
+             connection_check: nil, git: nil, **git_state)
     apps = {
       "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53_187,
                     "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
@@ -145,7 +146,7 @@ class DeployPreflightTest < Minitest::Test
     File.write(File.join(dir, "MASTER", "lib", "ok.rb"), "x = 1\n")
     File.write(File.join(dir, "RAILS", "apps.yml"), YAML.dump("apps" => apps))
     Pre.remote_command(root: dir, app:, env:, git: git || fake_git(**git_state), runner:, out: StringIO.new,
-                       ci_runner:, admission_check:)
+                       ci_runner:, admission_check:, connection_check:)
   ensure
     FileUtils.rm_rf(dir)
   end
@@ -322,6 +323,72 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "run /fix OPENBSD before the full release"
   ensure
     FileUtils.rm_rf(dir) if dir
+  end
+
+  def test_vm23_identity_requires_the_exact_receipt_hostname_release_and_architecture
+    dir = tree(
+      "OPENBSD/data/operator.yml" => "meta:\n  vps: dev@brgen.no\nhost_scope:\n  canonical_hosts: [vm23]\n"
+    )
+    expected = { "hostname" => "vm23", "os_release" => "7.8", "architecture" => "amd64" }
+    asked = []
+    probe = lambda do |command|
+      asked << command
+      {
+        "hostname" => ["vm23\n", true],
+        "uname -srm" => ["OpenBSD 7.8 amd64\n", true]
+      }.fetch(command)
+    end
+
+    ok, reason = Pre.verify_vm23_identity(root: dir, expected:, probe:)
+
+    assert ok, reason
+    assert_equal ["hostname", "uname -srm"], asked
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_vm23_identity_rejects_the_hypervisor_or_any_other_host
+    dir = tree(
+      "OPENBSD/data/operator.yml" => "meta:\n  vps: dev@brgen.no\nhost_scope:\n  canonical_hosts: [vm23]\n"
+    )
+    expected = { "hostname" => "vm23", "os_release" => "7.8", "architecture" => "amd64" }
+
+    ok, reason = Pre.verify_vm23_identity(
+      root: dir, expected:, probe: ->(command) { command == "hostname" ? ["server4\n", true] : flunk("OS probe must not follow a host mismatch") }
+    )
+
+    refute ok
+    assert_includes reason, "admitted production host is vm23"
+    assert_includes reason, "nothing was deployed"
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_vm23_identity_rejects_a_release_or_architecture_mismatch
+    dir = tree(
+      "OPENBSD/data/operator.yml" => "meta:\n  vps: dev@brgen.no\nhost_scope:\n  canonical_hosts: [vm23]\n"
+    )
+    expected = { "hostname" => "vm23", "os_release" => "7.8", "architecture" => "amd64" }
+    probe = ->(command) { command == "hostname" ? ["vm23\n", true] : ["OpenBSD 7.9 arm64\n", true] }
+
+    ok, reason = Pre.verify_vm23_identity(root: dir, expected:, probe:)
+
+    refute ok
+    assert_includes reason, "OS identity mismatch"
+    assert_includes reason, "nothing was deployed"
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
+  def test_ssh_connection_failure_blocks_before_boot_preflight_and_rails_ci
+    ok, reason = remote(
+      connection_check: ->(**) { [false, "SSH to vm23 failed: key unavailable"] },
+      runner: ->(*) { flunk "local preflight must not run without verified SSH access" },
+      ci_runner: ->(**) { flunk "Rails CI must not run without verified SSH access" }
+    )
+
+    refute ok
+    assert_equal "SSH to vm23 failed: key unavailable", reason
   end
 
   def test_remote_command_pins_the_sha_and_attests_preflight_and_all_rails_ci

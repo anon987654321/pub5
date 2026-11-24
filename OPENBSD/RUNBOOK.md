@@ -35,6 +35,15 @@ not stop the collector while the workstation remains running. vm23 writes no
 deploy transcript: only structured recovery receipts remain under
 `/var/db/pub5/deploy_runs`.
 
+Before the long local checks, MASTER reads the SSH target and identity-file path
+from `OPENBSD/data/operator.yml`. It checks that the local OpenSSH client and
+private key are usable, then probes only `hostname` and `uname -srm`. The live
+hostname, release and architecture must match the fresh OpenBSD preflight receipt.
+SSH uses the pinned known-hosts database, explicit identity and non-interactive
+authentication. A missing key, unknown host key or identity mismatch stops the
+release before Rails CI or any remote change; MASTER must not fall back to
+server4, accept a new host key, or guess another identity file.
+
 A direct natural-language instruction to deploy **OPENBSD + all RAILS apps + MASTER/web
 to vm23** is an explicit execution request; the equivalent shorthand **“redeploy
 everything on vm23”** resolves to every active registered deployment surface (the

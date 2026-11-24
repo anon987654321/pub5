@@ -327,11 +327,37 @@ FLOW_OUTPUT = <<~OUT
 
   def test_operator_remote_canary_goes_through_ssh_and_nothing_else
     bin = Dir.mktmpdir("fakessh")
+    key = File.join(bin, "identity")
+    File.write(File.join(bin, "ssh"), "#!/bin/sh\necho \"SSH $*\"\n")
+    File.write(key, "fixture identity")
+    File.chmod(0o755, File.join(bin, "ssh"))
+    File.chmod(0o600, key)
+    out, st = operator_run(
+      { "PATH" => "#{bin}:#{ENV['PATH']}", "PUB5_SSH_HOST" => "dev@example.invalid", "PUB5_SSH_KEY" => key },
+      "vps", "canary", "--remote", "--app", "amber"
+    )
+    assert st.success?, out
+    assert_match(%r{SSH .*StrictHostKeyChecking=yes .*dev@example\.invalid .*OPENBSD/bin/canary --local --app amber}, out)
+  ensure
+    FileUtils.rm_rf(bin)
+  end
+
+  def test_operator_refuses_remote_ssh_when_the_private_identity_is_missing
+    bin = Dir.mktmpdir("fakessh")
     File.write(File.join(bin, "ssh"), "#!/bin/sh\necho \"SSH $*\"\n")
     File.chmod(0o755, File.join(bin, "ssh"))
-    out, st = operator_run({ "PATH" => "#{bin}:#{ENV['PATH']}", "PUB5_SSH_HOST" => "dev@example.invalid" }, "vps", "canary", "--remote", "--app", "amber")
-    assert st.success?, out
-    assert_match(%r{SSH .*dev@example\.invalid .*OPENBSD/bin/canary --local --app amber}, out)
+    missing_key = File.join(bin, "missing-identity")
+
+    out, status = operator_run(
+      { "PATH" => "#{bin}:#{ENV['PATH']}", "PUB5_SSH_HOST" => "dev@example.invalid",
+        "PUB5_SSH_KEY" => missing_key },
+      "vps", "canary", "--remote", "--app", "amber"
+    )
+
+    refute status.success?
+    assert_includes out, "SSH identity not found at"
+    assert_includes out, missing_key
+    refute_includes out, "SSH -o"
   ensure
     FileUtils.rm_rf(bin)
   end

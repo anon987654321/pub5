@@ -7,6 +7,7 @@ Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
 require "optparse"
 require "rbconfig"
 require "open3"
+require "yaml"
 require_relative "../lib/io/exec"
 require_relative "../lib/operator/deploy_log"
 require "shellwords"
@@ -111,12 +112,62 @@ def usage
   HELP
 end
 
+def operator_runtime_config
+  @operator_runtime_config ||= begin
+    path = File.join(OPENBSD_OPS, "data", "operator.yml")
+    data = YAML.safe_load(File.read(path, encoding: "UTF-8"), aliases: false)
+    raise "OPENBSD/data/operator.yml must contain a mapping" unless data.is_a?(Hash)
+    meta = data.fetch("meta")
+    raise "OPENBSD/data/operator.yml meta must contain vps and ssh_identity_file" unless
+      meta.is_a?(Hash) && meta["vps"].is_a?(String) && meta["ssh_identity_file"].is_a?(String)
+    data
+  end
+end
+
 def ssh_host
-  ENV.fetch("PUB5_SSH_HOST", "dev@brgen.no")
+  ENV.fetch("PUB5_SSH_HOST") { operator_runtime_config.fetch("meta").fetch("vps") }
 end
 
 def ssh_key
-  File.expand_path(ENV.fetch("PUB5_SSH_KEY", "~/.ssh/id_ed25519_brgen"))
+  configured = operator_runtime_config.fetch("meta").fetch("ssh_identity_file")
+  File.expand_path(ENV.fetch("PUB5_SSH_KEY", configured))
+end
+
+# Fail locally and clearly before asking OpenSSH to connect. Never chmod or
+# replace an operator's identity automatically.
+def ssh_access_refusal
+  ssh_found = ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? do |directory|
+    path = File.join(directory, "ssh")
+    File.file?(path) && File.executable?(path)
+  end
+  return "OpenSSH client 'ssh' is not available on PATH" unless ssh_found
+
+  target = ssh_host
+  unless target.match?(/\A[A-Za-z0-9_.-]+@[A-Za-z0-9.-]+\z/)
+    return "invalid vm23 SSH target in OPENBSD/data/operator.yml: #{target.inspect}"
+  end
+  configured_user = operator_runtime_config.fetch("meta").fetch("vps").split("@", 2).first
+  target_user = target.split("@", 2).first
+  unless target_user == configured_user
+    return "vm23 SSH login must remain #{configured_user}; refusing target user #{target_user}"
+  end
+
+  key = ssh_key
+  stat = File.lstat(key)
+  return "SSH identity is not a regular file: #{key}" unless stat.file?
+  return "SSH identity must be owned by the current operator (uid #{Process.uid}): #{key}" unless stat.uid == Process.uid
+  if (stat.mode & 0o077) != 0
+    return format("SSH identity permissions are too open (%04o): run chmod 600 %s", stat.mode & 0o777, key)
+  end
+  return "SSH identity is not readable: #{key}" unless File.readable?(key)
+
+  nil
+rescue Errno::ENOENT
+  "SSH identity not found at #{ssh_key}; check OPENBSD/data/operator.yml or PUB5_SSH_KEY"
+rescue SystemCallError => error
+  "SSH identity cannot be checked (#{error.class}: #{error.message})"
+rescue StandardError => error
+  "vm23 SSH configuration cannot be read (#{error.class}: #{error.message})"
 end
 
 def ssh_log_path
@@ -146,6 +197,8 @@ def ssh_base_argv
   [
     "ssh",
     "-o", "BatchMode=yes",
+    "-o", "IdentitiesOnly=yes",
+    "-o", "StrictHostKeyChecking=yes",
     "-o", "ConnectTimeout=#{ENV.fetch("PUB5_SSH_CONNECT_TIMEOUT", "15")}",
     "-o", "ConnectionAttempts=#{ENV.fetch("PUB5_SSH_CONNECTION_ATTEMPTS", "3")}",
     "-o", "ServerAliveInterval=15",
@@ -176,6 +229,9 @@ end
 # handshake retries). Log intent before exec; the -E file records the session.
 def ssh_run(remote_cmd)
   require "fileutils"
+  if (reason = ssh_access_refusal)
+    die("vps", reason, 78)
+  end
   if (reason = ssh_manual_preflight_refusal(remote_cmd))
     die("vps", reason, 78)
   end
@@ -189,6 +245,9 @@ end
 def ssh_capture(remote_cmd, attempts: Integer(ENV.fetch("PUB5_SSH_RETRIES", "3")))
   require "fileutils"
   require "open3"
+  if (reason = ssh_access_refusal)
+    return ["SSH preflight blocked: #{reason}", false]
+  end
   if (reason = ssh_manual_preflight_refusal(remote_cmd))
     return ["RTFM_FIRST blocked: #{reason}", false]
   end
@@ -204,10 +263,14 @@ def ssh_capture(remote_cmd, attempts: Integer(ENV.fetch("PUB5_SSH_RETRIES", "3")
     end
     last_err = out.to_s.lines.last(5).join.strip
     ssh_log("fail", "n=#{i + 1} exit=#{status.exitstatus} err=#{last_err[0, 160].inspect}")
-    sleep delay
-    delay = [delay * 2, 30].min
+    if i < attempts - 1
+      sleep delay
+      delay = [delay * 2, 30].min
+    end
   end
   [last_err.to_s, false]
+rescue SystemCallError => error
+  ["SSH transport could not start (#{error.class}: #{error.message})", false]
 end
 
 # vps-deploy keeps its output in the remote tmux pane only. This workstation
@@ -1212,7 +1275,18 @@ when "vps"
     die("vps", "use only one of --follow or --detach", 64) if follow && detach
     if remote
       require "operator/canary"
-      ok, remote_command = Operator::DeployPreflight.remote_command(root: ROOT, app: Shellwords.escape(app))
+      connection_check = lambda do |root:|
+        expected, reason = Operator::DeployPreflight.openbsd_target_identity(root:)
+        next [false, reason] unless expected
+
+        Operator::DeployPreflight.verify_vm23_identity(
+          root:, expected:,
+          probe: ->(command) { ssh_capture(command, attempts: 1) }
+        )
+      end
+      ok, remote_command = Operator::DeployPreflight.remote_command(
+        root: ROOT, app: Shellwords.escape(app), connection_check:
+      )
       die("vps", "deploy refused, #{remote_command}", 1) unless ok
       sha = remote_command[/\bVPS_DEPLOY_SHA=([0-9a-f]{40})\b/, 1]
       die("vps", "preflight did not return a pinned SHA", 1) unless sha

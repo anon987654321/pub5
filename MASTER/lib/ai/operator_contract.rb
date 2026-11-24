@@ -3,7 +3,7 @@
 module Master
   module AI
     module OperatorContract
-      VERSION = 6
+      VERSION = 7
       STYLE = "openbsd"
       LANGUAGE = "ruby"
       SHELL = "zsh"
@@ -58,6 +58,7 @@ module Master
           "canonical remote deploy: www.openbsd.amsterdam/vm23; use MASTER/bin/operator vps deploy <target> --remote, never ad-hoc SSH or a guessed host alias.",
           "Reason through authority, topology, runtime, privilege, network, lifecycle, resources and recovery. RAILS follows its pinned source and lockfile; OpenBSD follows target man pages.",
           "VM23 is the production-serving OpenBSD guest, not a build host. Use OPENBSD/data/operator.yml for identity; deploy through the workstation operator. Keep /fix, scans, Rails CI, installs and asset builds off vm23; no server4 substitution or vmctl/reboot after SSH failure without approval and an out-of-band plan.",
+          "Before long release checks, validate the local OpenSSH identity owner/mode and strict known-hosts entry; probe only hostname and uname -srm, then match host, release and architecture to the fresh receipt. A mismatch stops before CI or remote mutation.",
           "Full release = OPENBSD mirror + active RAILS apps + MASTER/web. Require clean trees, HEAD=origin/main, fresh exact-HEAD OpenBSD source/manual and mirror-coverage receipt, workstation preflight, serial CI and asset attestations. If stale, run the governed workstation-side /fix OPENBSD preflight; continue only on PASS. vm23 does bounded sync, frozen bundle checks and health checks.",
           "Nov 22 2026 evidence: CPU idle 0%, memory available/no paging; Brgen Falcon children failed on /home/brgen/app/lib/shared/cross_origin_resource_policy after initializer overlay. Load it through Bundler/pub5-shared. cpu_pressure=0 cause unknown without cpu-watch.log/cron; do not invent why the monitor missed the signal.",
           "OpenBSD command work: establish release, PATH and tools; read target-release manuals; never assume GNU/Linux options or paths.",

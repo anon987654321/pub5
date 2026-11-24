@@ -355,7 +355,7 @@ module Operator
     # A full fleet release also needs the content-bearing OpenBSD receipt
     # and a current mirror-coverage report. Check it before the long local Rails
     # suites so a missing or stale receipt fails fast without contacting vm23.
-    def openbsd_release_admission(root:)
+    def saved_openbsd_preflight(root:)
       require_relative "../fix/task_contract"
       require_relative "../fix/openbsd_manual_preflight"
 
@@ -365,7 +365,29 @@ module Operator
       hydrated = Master::Fix::OpenBSDManualPreflight.contract_with_saved_preflight(
         contract:, repo_root: root
       )
-      preflight = hydrated.openbsd_preflight
+      [hydrated.openbsd_preflight, nil]
+    rescue Master::Fix::TaskContract::Invalid => error
+      [nil, "RTFM_FIRST blocked: #{error.message}"]
+    rescue SystemCallError => error
+      [nil, "RTFM_FIRST blocked: #{error.class} while checking the local receipt"]
+    rescue JSON::ParserError => error
+      [nil, "RTFM_FIRST blocked: invalid saved receipt JSON (#{error.class})"]
+    end
+
+    def openbsd_target_identity(root:)
+      preflight, reason = saved_openbsd_preflight(root:)
+      return [nil, reason] if reason
+      unless preflight
+        return [nil, "RTFM_FIRST requires a fresh, exact-HEAD receipt at " \
+                     "MASTER/.master/openbsd_preflight.json before contacting vm23"]
+      end
+
+      [preflight.slice("hostname", "os_release", "architecture"), nil]
+    end
+
+    def openbsd_release_admission(root:)
+      preflight, reason = saved_openbsd_preflight(root:)
+      return [false, reason] if reason
       unless preflight
         return [false, "RTFM_FIRST requires a fresh, exact-HEAD receipt at " \
                        "MASTER/.master/openbsd_preflight.json; run /fix OPENBSD before the full release"]
@@ -379,6 +401,44 @@ module Operator
       [false, "RTFM_FIRST blocked: #{error.message}"]
     rescue SystemCallError => error
       [false, "RTFM_FIRST blocked: #{error.class} while checking the local receipt"]
+    rescue JSON::ParserError => error
+      [false, "RTFM_FIRST blocked: invalid saved receipt JSON (#{error.class})"]
+    end
+
+    # SSH is not considered ready merely because a socket opened. Prove that
+    # the destination is the recorded vm23, running the exact OpenBSD release
+    # and architecture whose manuals/source were admitted.
+    def verify_vm23_identity(root:, expected:, probe:)
+      config_path = File.join(root, "OPENBSD", "data", "operator.yml")
+      config = YAML.safe_load(File.read(config_path, encoding: "UTF-8"), aliases: false)
+      canonical_hosts = config.dig("host_scope", "canonical_hosts")
+      unless canonical_hosts.is_a?(Array) && canonical_hosts.include?(expected.fetch("hostname"))
+        return [false, "vm23 identity receipt names a host outside OPENBSD/data/operator.yml"]
+      end
+
+      hostname, ok = probe.call("hostname")
+      return [false, "SSH to vm23 failed during read-only hostname probe: #{hostname}"] unless ok
+      actual_hostname = hostname.to_s.lines.map(&:strip).reject(&:empty?).first
+      unless actual_hostname == expected.fetch("hostname")
+        return [false, "SSH reached #{actual_hostname.inspect}, but the admitted production host is #{expected.fetch("hostname")}; nothing was deployed"]
+      end
+
+      uname, ok = probe.call("uname -srm")
+      return [false, "SSH to vm23 failed during read-only OS probe: #{uname}"] unless ok
+      os_name, release, architecture = uname.to_s.strip.split(/\s+/, 4)
+      unless [os_name, release, architecture] == [
+        "OpenBSD", expected.fetch("os_release"), expected.fetch("architecture")
+      ]
+        return [false, "vm23 OS identity mismatch: got #{uname.to_s.strip.inspect}; receipt expects OpenBSD #{expected.fetch("os_release")} #{expected.fetch("architecture")}; nothing was deployed"]
+      end
+
+      [true, nil]
+    rescue KeyError => error
+      [false, "vm23 identity receipt is incomplete: #{error.key}"]
+    rescue SystemCallError => error
+      [false, "vm23 identity preflight could not read its configuration (#{error.class})"]
+    rescue Psych::Exception => error
+      [false, "vm23 identity configuration is invalid (#{error.class})"]
     end
 
     # `bin/operator vps deploy <app> --remote`: judge the commit here, then hand the
@@ -393,7 +453,8 @@ module Operator
     # SSH. Group and all targets are included: no child deploy can run its suite
     # on vm23.
     def remote_command(root:, app:, env: ENV, git: method(:git_out), runner: method(:capture), out: $stdout,
-                       ci_runner: method(:local_ci), admission_check: method(:openbsd_release_admission))
+                       ci_runner: method(:local_ci), admission_check: method(:openbsd_release_admission),
+                       connection_check: nil)
       inventory = Deploy::Inventory.new(root:)
       return [false, "unknown deployment target #{app.inspect}; no inventory match"] if inventory.target_kind(app) == :unknown
 
@@ -408,6 +469,11 @@ module Operator
       if inventory.target_kind(app) == :all
         admitted, reason = admission_check.call(root:)
         return [false, reason] unless admitted
+      end
+
+      if connection_check
+        connected, reason = connection_check.call(root:)
+        return [false, reason] unless connected
       end
 
       lead = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{sha}"
