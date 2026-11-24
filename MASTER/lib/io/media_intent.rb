@@ -95,8 +95,7 @@ module Master
         return false if text.match?(ADVICE_RE) || text.match?(DISCUSSION_RE)
         return true if Mov.handles?(text)
 
-        lora_readiness_request?(text) || lora_profile_request?(text) || lora_existing_review_request?(text) ||
-          lora_selfie_request?(text) || text.match?(LORA_IMAGE_RE) || reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
+        handles_lora_workflow?(text) || lora_selfie_request?(text) || text.match?(LORA_IMAGE_RE) || reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
           text.match?(BACKGROUND_MUSIC_RE) || text.match?(LIVE_AUDIO_DIAGNOSTIC_RE) || text.match?(AUDIO_RE) || postpro_intent?(text) ||
           text.match?(VIDEO_RE) ||
           text.match?(IMAGE_RE) && text.match?(/\b(?:photo|portrait|image|picture)\b/i)
@@ -928,6 +927,13 @@ module Master
 
       def lora_selfie_request?(text)
         text.to_s.match?(LORA_SELFIE_RE) && !lora_subjects_in(text).empty?
+      end
+
+      def handles_lora_workflow?(text)
+        value = text.to_s
+        return false if value.match?(ADVICE_RE) || value.match?(DISCUSSION_RE)
+
+        lora_readiness_request?(value) || lora_profile_request?(value) || lora_existing_review_request?(value)
       end
 
       def lora_readiness_request?(text)
