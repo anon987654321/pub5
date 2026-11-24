@@ -661,6 +661,17 @@ class TestKeylessRouting < Minitest::Test
     server&.close
   end
 
+  def test_master_free_only_treats_false_values_as_disabled
+    previous = ENV["MASTER_FREE_ONLY"]
+    { nil => false, "" => false, "0" => false, "false" => false, "off" => false,
+      "1" => true, "true" => true, "yes" => true, "on" => true }.each do |value, expected|
+      value.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = value
+      assert_equal expected, Master.free_only?, "MASTER_FREE_ONLY=#{value.inspect}"
+    end
+  ensure
+    previous.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = previous
+  end
+
   # A local or explicitly trusted OpenAI-compatible gateway joins the
   # existing pool only after its URL is set. The URL's host and model ids are
   # discovered through the same endpoint catalogue used by other hosted lanes.
