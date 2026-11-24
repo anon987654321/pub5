@@ -310,7 +310,7 @@ The near horizon is self-maintenance: `/fix` holding this repository's suites an
 
 ## Source map
 
-- Execution contracts: `lib/execution/contract.rb` and its tests.
+- Execution contracts: `lib/execution.rb` and its tests.
 - Mobile support: `data/mobile.yml`, `bin/master-mobile-install` and `test/test_mobile.rb`.
 - Provider routing and quotas: `data/providers.yml`, `data/models.yml` and `lib/io/model_quota.rb`.
 - Native-tool fallback: `lib/review/llm_dispatcher/ruby_llm_sender.rb` retries unexecuted tool-call text through `ReactLoop` once, preserving the registry and subagent/elevation policies; it does not replay after a native action or stream partial output.

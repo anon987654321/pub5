@@ -2,7 +2,7 @@
 
 require "digest"
 require "fileutils"
-require_relative "../execution/contract"
+require_relative "../execution"
 require_relative "../ground/redactor"
 require "json"
 require "time"

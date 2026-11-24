@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require_relative "../lib/execution/contract"
+require_relative "../lib/execution"
 require_relative "../lib/proof"
 require_relative "../lib/trace/effect_observer"
 require_relative "../lib/fix/outcome_policy"

@@ -3,7 +3,7 @@
 require "json"
 require "time"
 
-require_relative "../../execution/contract"
+require_relative "../../execution"
 require_relative "../../trace/causal_trace"
 require_relative "../log_publication"
 

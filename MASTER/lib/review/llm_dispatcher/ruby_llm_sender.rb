@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../execution/contract"
+require_relative "../../execution"
 require "base64"
 require "securerandom"
 require "tempfile"

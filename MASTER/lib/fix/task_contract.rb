@@ -4,7 +4,7 @@ require "digest"
 require "json"
 require "yaml"
 require_relative "openbsd_manual_preflight"
-require_relative "../execution/contract"
+require_relative "../execution"
 
 module Master
   module Fix

@@ -2,7 +2,7 @@
 
 require "json"
 require_relative "log"
-require_relative "../execution/contract"
+require_relative "../execution"
 
 module Master
   module Trace

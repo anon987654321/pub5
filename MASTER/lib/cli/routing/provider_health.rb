@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
-require_relative "../../execution/contract"
+require_relative "../../execution"
 require "json"
 require "time"
 require_relative "../../trace/log"

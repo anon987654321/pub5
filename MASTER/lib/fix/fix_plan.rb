@@ -34,7 +34,7 @@ module Master
         lib/fix/repair_loop.rb
         lib/fix/fix_loop.rb
         lib/fix/outcome_policy.rb
-        lib/execution/contract.rb
+        lib/execution.rb
         lib/io/atomic_write.rb
       ].freeze
       # A plan binds the executable Law catalogue and the complete /fix

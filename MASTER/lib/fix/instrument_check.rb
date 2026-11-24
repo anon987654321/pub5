@@ -5,7 +5,7 @@ require "rbconfig"
 require "tmpdir"
 require_relative "../io/exec"
 require_relative "resource_budget"
-require_relative "../execution/contract"
+require_relative "../execution"
 
 module Master
   module Fix

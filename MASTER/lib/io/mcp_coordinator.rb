@@ -8,7 +8,7 @@ require "mcp"
 # McpToolWrapper subclasses RubyLLM::Tool; a caller that reached this file
 # before anything loaded the gem got no wrapper at all.
 require "ruby_llm"
-require_relative "../execution/contract"
+require_relative "../execution"
 require_relative "../trace/tool_observer"
 
 module Master

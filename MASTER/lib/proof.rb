@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "execution/contract"
+require_relative "execution"
 
 module Master
   # Immutable claim/evidence envelope shared by scan, review and check adapters.

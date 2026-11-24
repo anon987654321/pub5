@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "securerandom"
-require_relative "../execution/contract"
+require_relative "../execution"
 
 module Master
   module Trace

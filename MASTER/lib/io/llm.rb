@@ -4,7 +4,7 @@ require "json"
 require "ruby_llm"
 require "securerandom"
 require_relative "../result"
-require_relative "../execution/contract"
+require_relative "../execution"
 require_relative "../ground/redactor"
 require_relative "../trace/tool_observer"
 

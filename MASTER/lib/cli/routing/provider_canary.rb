@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "provider_health"
-require_relative "../../execution/contract"
+require_relative "../../execution"
 
 module Master
   module CLI

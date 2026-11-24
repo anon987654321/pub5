@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../execution/contract"
+require_relative "../../execution"
 require_relative "../../trace/tool_observer"
 
 module Master

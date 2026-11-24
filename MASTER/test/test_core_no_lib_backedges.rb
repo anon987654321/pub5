@@ -2,7 +2,7 @@
 
 require "minitest/autorun"
 require "pathname"
-require_relative "../lib/execution/contract"
+require_relative "../lib/execution"
 
 class NoLibBackedgesTest < Minitest::Test
   # Scoped to the class: three files in one test process defined a top-level
