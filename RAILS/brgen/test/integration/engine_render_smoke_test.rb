@@ -92,15 +92,11 @@ class EngineRenderSmokeTest < ActionDispatch::IntegrationTest
       )
     end
 
+    # The frontpage is the static tunnel (operator request 2026-11-17, playlist routes.rb).
     host! "radio.brgen.no"
     get "/"
-    assert_response :success
-    assert_select "div.radio-tunnel[data-controller='radio-tunnel']", 1
-    assert_select "canvas#radio-canvas[aria-label]", 1
-    assert_select ".radio-overlay:not([hidden])", 1
-    assert_select ".radio-now-playing [data-radio-tunnel-target='trackDisplay']", 1
-    assert_select "button[data-action='click->radio-tunnel#openLibrary']", 1
-    assert_select ".radio-nav a[href='/hosted_tracks']", 1
+    assert_redirected_to "http://radio.brgen.no/tunnel.html"
+    assert File.file?(Rails.root.join("public", "tunnel.html"))
 
     get "/hosted_tracks"
     assert_response :success

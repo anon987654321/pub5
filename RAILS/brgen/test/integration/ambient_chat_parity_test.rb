@@ -19,7 +19,6 @@ class AmbientChatParityTest < ActionDispatch::IntegrationTest
     markedsplass.brgen.no
     dating.brgen.no
     tv.brgen.no
-    radio.brgen.no
     takeaway.brgen.no
     maps.brgen.no
     messenger.brgen.no

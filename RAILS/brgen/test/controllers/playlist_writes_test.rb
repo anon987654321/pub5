@@ -209,7 +209,8 @@ class PlaylistWritesTest < ActionDispatch::IntegrationTest
     assert_select "input[type=file][name=?][accept=?]", "track[audio_file][]", "audio/*"
     assert_select "input[type=file][name=?][accept=?]", "track[artwork]", "image/*"
 
+    # The radio home is the static tunnel (operator request 2026-11-17).
     get playlist.root_path
-    assert_response :success
+    assert_redirected_to "/tunnel.html"
   end
 end
