@@ -83,7 +83,11 @@ voice of the creative work.
   and runtime policies; this one is STUDIO's.
 - `lora/` — subject descriptors and private training plans.
   `replicate/bin/studio lora` opens the subject-aware menu. A default selfie series uses
-  only that subject's pinned LoRA; it does not fall back to a generic face.
+  only that subject's pinned LoRA; it does not fall back to a generic face. MASTER
+  also accepts natural-language requests to check photographic readiness, compare
+  inference-profile settings, prepare a training preflight, and review the latest
+  existing portraits. It calls this CLI's typed API; no command chain or flags are
+  required from the operator.
   The exact version must also be recorded in private `subject.env` as
   `LIKELINESS_REVIEWED_VERSION` after full-size comparison with approved
   reference photographs. Retrained or changed versions are blocked until reviewed.
@@ -100,9 +104,10 @@ voice of the creative work.
   records the graded file as the final portrait. Review sheets use those
   per-image Postpro outputs, not the ungraded originals.
   The photographic quality gate is read-only:
-  `ruby STUDIO/lora/lora.rb quality --json`. It validates the inference
-  profile catalogue, training readiness, independent evaluation photographs
-  and their separate review permissions; it makes no provider calls.
+  `ruby STUDIO/lora/lora.rb quality --json`. MASTER's readiness request uses the
+  same gate through the `readiness` API action. It reports training blockers,
+  independent evaluation photographs and separate review permissions without
+  making provider calls, uploading media, training or rendering candidates.
   Every subject's private `lora/<subject>/evaluation/` directory must contain
   5–24 approved photographs that are not in `dataset/`. Keep this directory
   owner-only (0700), and each photograph owner-only (0600), singly-linked,
@@ -121,6 +126,9 @@ voice of the creative work.
   Candidate LoRA comparison accepts `--profile identity|balanced|detail|draft`,
   for example
   `ruby STUDIO/lora/review.rb --subject johann --candidate --profile identity`.
+  This command renders three private candidate images and can incur provider
+  charges. MASTER's "compare the LoRA inference profiles" request is deliberately
+  a settings/readiness report only; it does not start those candidate predictions.
   Profiles are controlled starting points, not quality rankings. Keep the
   scene, seed, approved model version and holdout set fixed when comparing
   them; inspect every finalist at full size and leave the model version
@@ -172,8 +180,11 @@ voice of the creative work.
   governs the trainer pin, `training_steps=1000`, `lora_type=subject`, seed and
   shared FLUX inference settings; there are no per-person rank/optimizer knobs.
   `ruby STUDIO/lora/review.rb --subject NAME --candidate` renders three private
-  candidate samples after training, next to three approved source photographs,
-  and writes a contact sheet plus Postpro measurements. Candidate renders stay
+  candidate samples after training, using the independent evaluation set for
+  comparison, and writes a contact sheet plus Postpro measurements. By contrast,
+  `ruby STUDIO/lora/lora.rb review --subject NAME` and MASTER's existing-series
+  review request inspect the latest completed series without candidate renders.
+  Candidate renders stay
   under the subject's ignored `.cache/likeness-review/` tree; they cannot enter
   the published selfie folder or approve a model.
   The candidate step still requires all training consent and source-rights

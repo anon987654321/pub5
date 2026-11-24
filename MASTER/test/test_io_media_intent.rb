@@ -31,6 +31,15 @@ class MediaIntentSpec < Minitest::Test
     klass.define_singleton_method(:run, orig)
   end
 
+  def with_api_stub(runner)
+    klass = Master::Io::ScriptDispatch
+    original = klass.method(:call)
+    klass.define_singleton_method(:call) { |**kwargs| runner.call(**kwargs) }
+    yield
+  ensure
+    klass.define_singleton_method(:call, original)
+  end
+
   LISTING = <<~TEXT
       Progressions:
          0  Cm9 Fm9 Bbm9 Ebmaj9
@@ -83,6 +92,91 @@ class MediaIntentSpec < Minitest::Test
   def test_recognizes_original_beat_requests_without_a_slash_command
     assert MediaIntent.handles?("make me a Flying Lotus beat")
     assert MediaIntent.handles?("create a Bach-inspired instrumental")
+  end
+
+  def test_recognizes_natural_language_lora_readiness_and_profile_questions
+    assert MediaIntent.handles?("check Johann's photographic readiness")
+    assert MediaIntent.handles?("prepare Johann's LoRA for retraining and tell me what's missing")
+    assert MediaIntent.handles?("compare the LoRA inference profiles for Johann")
+    refute MediaIntent.handles?("what makes a good photograph?")
+  end
+
+  def test_recognizes_review_of_existing_lora_portraits
+    assert MediaIntent.handles?("review Johann's latest portraits")
+    refute MediaIntent.handles?("review the latest photographs from Bergen")
+  end
+
+  def test_lora_readiness_uses_studio_api_and_never_starts_a_provider_call
+    calls = []
+    report = {
+      "state" => "BLOCKED",
+      "provider_calls" => 0,
+      "subjects" => [{
+        "subject" => "johann", "state" => "BLOCKED", "training_ready" => false,
+        "training_blockers" => ["private dataset is missing"], "holdout_detail" => "private evaluation directory is missing",
+        "review_consent_valid" => false, "review_consent_errors" => ["review consent is missing"],
+      }],
+      "configuration" => {
+        "profiles" => [
+          { "name" => "identity", "status" => "UNBENCHMARKED", "settings" => { "steps" => 45 } },
+          { "name" => "balanced", "status" => "UNBENCHMARKED", "settings" => { "steps" => 45 } },
+        ],
+      },
+    }
+    with_api_stub(lambda do |**kwargs|
+      calls << kwargs
+      Master::Result.ok({ "schema" => "studio.lora.readiness.v1", "provider_calls" => 0, "quality" => report })
+    end) do
+      result = MediaIntent.dispatch("check Johann's photographic readiness", root: "/tmp/pub5")
+      assert result.ok?, result.inspect
+      assert_equal :lora_readiness, result.value!.fetch(:media)
+      assert_match(/training blocker: private dataset is missing/, result.value!.fetch(:rendered))
+      assert_match(/holdout blocked:/, result.value!.fetch(:rendered))
+      assert_match(/UNBENCHMARKED/, result.value!.fetch(:rendered))
+      assert_match(/No provider calls/, result.value!.fetch(:rendered))
+    end
+    assert_equal 1, calls.length
+    assert_equal "lora", calls.first.fetch(:tool)
+    assert_equal "readiness", calls.first.fetch(:action)
+    assert_equal({ "subject" => "johann" }, calls.first.fetch(:params))
+  end
+
+  def test_lora_profile_comparison_is_explicitly_a_read_only_settings_report
+    calls = []
+    report = {
+      "state" => "BLOCKED", "subjects" => [],
+      "configuration" => { "profiles" => [{ "name" => "detail", "status" => "UNBENCHMARKED", "settings" => {} }] },
+    }
+    with_api_stub(lambda do |**kwargs|
+      calls << kwargs
+      Master::Result.ok({ "quality" => report, "provider_calls" => 0 })
+    end) do
+      result = MediaIntent.dispatch("compare the LoRA inference profiles for Johann", root: "/tmp/pub5")
+      assert result.ok?
+      assert_match(/settings only; no renders/, result.value!.fetch(:rendered))
+      assert_match(/remain UNBENCHMARKED/, result.value!.fetch(:rendered))
+    end
+    assert_equal "readiness", calls.first.fetch(:action)
+  end
+
+  def test_lora_existing_review_uses_read_only_review_action
+    calls = []
+    with_api_stub(lambda do |**kwargs|
+      calls << kwargs
+      Master::Result.ok({
+        "status" => "AWAITING_HUMAN_IDENTITY_REVIEW",
+        "review_report" => "/private/review.json", "html" => "/private/index.html",
+        "provider_calls" => 0, "candidate_generation" => false,
+      })
+    end) do
+      result = MediaIntent.dispatch("review Johann's latest portraits", root: "/tmp/pub5")
+      assert result.ok?, result.inspect
+      assert_equal :lora_existing_review, result.value!.fetch(:media)
+      assert_match(/no model was approved/, result.value!.fetch(:rendered))
+      assert_match(/Provider calls: 0/, result.value!.fetch(:rendered))
+    end
+    assert_equal "review", calls.first.fetch(:action)
+    assert_equal({ "subject" => "johann" }, calls.first.fetch(:params))
   end
 
   def test_recognizes_an_explicit_post_processing_request

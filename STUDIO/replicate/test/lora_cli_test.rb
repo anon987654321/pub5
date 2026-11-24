@@ -39,6 +39,46 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal ["--all", "--timeout", "7200"], seen
   end
 
+  def test_readiness_api_wraps_the_quality_gate_without_provider_calls
+    require_relative "../../lora/quality"
+    quality = { "state" => "BLOCKED", "provider_calls" => 0, "subjects" => [] }
+    Studio::Lora::Quality.stub(:report, ->(subject: nil) {
+      assert_equal "johann", subject
+      quality
+    }) do
+      report = CLI.readiness_report("subject" => "johann")
+      assert_equal "studio.lora.readiness.v1", report.fetch("schema")
+      assert_equal true, report.fetch("read_only")
+      assert_equal 0, report.fetch("provider_calls")
+      assert_equal false, report.fetch("training_started")
+      assert_equal quality, report.fetch("quality")
+    end
+  end
+
+  def test_review_api_builds_only_an_existing_series_and_never_candidates
+    require_relative "../../lora/review"
+    captured = nil
+    fake = Object.new
+    fake.define_singleton_method(:build) do |candidate:, **|
+      captured = candidate
+      { "status" => "AWAITING_HUMAN_IDENTITY_REVIEW", "provider_predictions" => 0 }
+    end
+    Studio::Lora::Review::Builder.stub(:new, ->(subject:) {
+      assert_equal "johann", subject
+      fake
+    }) do
+      report = CLI.review_report("subject" => "johann")
+      assert_equal "AWAITING_HUMAN_IDENTITY_REVIEW", report.fetch("status")
+      assert_equal 0, report.fetch("provider_calls")
+    end
+    assert_equal false, captured
+  end
+
+  def test_api_registry_exposes_readiness_and_existing_review
+    assert_includes CLI.api_actions.keys, "readiness"
+    assert_includes CLI.api_actions.keys, "review"
+  end
+
   def test_quality_api_is_read_only_and_calls_no_provider
     require_relative "../../lora/quality"
     report = {
@@ -73,6 +113,16 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal 2, captured.fetch(:count)
     assert_nil captured.fetch(:engine)
     assert_equal "detail", captured.fetch(:inference_profile)
+  end
+
+  def test_review_command_is_reachable_without_a_tty
+    seen = nil
+    status = CLI.stub(:review_command, ->(arguments) { seen = arguments; 0 }) do
+      CLI.run_flags(["review", "--subject", "johann"])
+    end
+
+    assert_equal 0, status
+    assert_equal ["--subject", "johann"], seen
   end
 
   def test_quality_command_is_reachable_without_a_tty

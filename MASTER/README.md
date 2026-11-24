@@ -94,6 +94,14 @@ lock acquisition, not by the read-only `bin/master --status` command.
 
 The ordinary CLI boot uses native workspace tools and does not start an npm MCP server or play a startup sound. The browser face retains its explicitly gesture-gated sound asset. Optional MCP servers stay in `data/mcp_servers.yml` and are disabled unless enabled there. Set `MASTER_BOOT_TIMING=1` for one launch to print timings for Ruby/dependency preparation, voice services, the builder and the remaining boot phases; ordinary startup stays quiet. Provider reachability and the wider YAML inventory run without holding the prompt.
 
+### STUDIO likeness workflow
+
+Ask MASTER in ordinary language to check a subject's photographic readiness, compare the available LoRA inference profiles, prepare a training preflight, or review the latest completed portraits. MASTER routes those requests through STUDIO's existing LoRA API; it does not duplicate the trainer, consent gate or photographic rubric.
+
+Readiness and profile comparison are read-only: they make no provider calls, upload no photographs, start no training and generate no images. Profile comparisons report the configured settings only. The four profiles remain `UNBENCHMARKED` until the same approved model, scenes, seeds and independent holdout set have been compared and a person has reviewed the full-size results.
+
+Reviewing an existing series creates private local HTML/JSON review artefacts from the latest recorded renders and independent holdout photographs. It does not generate candidates, upload images or approve a likeness. Missing holdout photographs, consent evidence or training prerequisites remain explicit blockers. Candidate generation and LoRA training are separate paid operations and must never be inferred from a readiness or comparison request; training requires an explicit spend ceiling and operator approval. Publication permission is separate again.
+
 The CLI lists canonical commands once. Compatibility spellings route to their owner: `/models` means `/model list`, `/tools` means `/capabilities`, and `/tts` means `/voice`. Use `/help <alias>` to open the owning page. `/doctor tools` is a separate diagnostic for unresolved tool outcomes.
 
 The core execution path is `lib/core/`: an admitted effect passes through Constitution before World dispatches it. Keep capabilities, validation and compensations at that boundary. Extend an existing owner before adding another wrapper, registry or helper.

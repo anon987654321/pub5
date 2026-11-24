@@ -46,6 +46,9 @@ module Master
       LORA_VIDEO_RE = /\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b/i.freeze
       LORA_IMAGE_RE = /\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b/i.freeze
       LORA_SELFIE_RE = /\b(?:make|create|generate|render|rerender|re-render)\b.*\b(?:selfies|selfie\s+series)\b/i.freeze
+      LORA_READINESS_RE = /\b(?:check|audit|inspect|assess|show|report|prepare)\b.{0,100}\b(?:lora|likeness|photographic|photography|holdout)\b/i.freeze
+      LORA_PROFILE_RE = /\b(?:compare|benchmark|list|show)\b.{0,100}\b(?:lora|inference)\b.{0,40}\bprofiles?\b|\b(?:compare|benchmark)\b.{0,100}\bprofiles?\b.{0,40}\b(?:lora|inference)\b/i.freeze
+      LORA_EXISTING_REVIEW_RE = /\b(?:review|inspect|assess)\b.{0,100}\b(?:lora|selfies?|portraits?|photographs?|renders?)\b/i.freeze
       LORA_VIDEO_SOURCE_RE = /\bfrom\s+["']?((?:~\/|\/|\.\/|\.\.\/|STUDIO\/)[^\s"']+)/i.freeze
       TECHNO_TRACK_RE = /\b(?:make|create|generate|compose|render|produce)\b.*\btechno\b|\btechno\b.*\b(?:track|music|beat|loop|instrumental)\b/i.freeze
       SYNTH_RE = /\b(?:play|generate|create|make|render)\b.*\b(?:sine|square|triangle|saw|white|brown)\b.*\b(?:wave|noise|tone)\b/i.freeze
@@ -92,7 +95,8 @@ module Master
         return false if text.match?(ADVICE_RE) || text.match?(DISCUSSION_RE)
         return true if Mov.handles?(text)
 
-        lora_selfie_request?(text) || text.match?(LORA_IMAGE_RE) || reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
+        lora_readiness_request?(text) || lora_profile_request?(text) || lora_existing_review_request?(text) ||
+          lora_selfie_request?(text) || text.match?(LORA_IMAGE_RE) || reference_audio_request?(text) || reference_followup_request?(text) || text.match?(LORA_VIDEO_RE) || text.match?(INDUSTRIAL_TECHNO_RE) || text.match?(TECHNO_TRACK_RE) || text.match?(KICK_RE) || text.match?(PLAY_LAST_RE) || text.match?(SYNTH_RE) || text.match?(LIVE_AUDIO_STOP_RE) || live_synth?(text) || POSTPRO_CAPABILITY_RE.match?(text) ||
           text.match?(BACKGROUND_MUSIC_RE) || text.match?(LIVE_AUDIO_DIAGNOSTIC_RE) || text.match?(AUDIO_RE) || postpro_intent?(text) ||
           text.match?(VIDEO_RE) ||
           text.match?(IMAGE_RE) && text.match?(/\b(?:photo|portrait|image|picture)\b/i)
@@ -100,6 +104,8 @@ module Master
 
       def dispatch(text, root: MasterPaths.root, bus: nil)
         return Mov.dispatch(text, bus:) if Mov.handles?(text)
+        return review_existing_lora(text, root:) if lora_existing_review_request?(text)
+        return inspect_lora_readiness(text, root:) if lora_readiness_request?(text) || lora_profile_request?(text)
         if reference_audio_request?(text)
           return analyze_and_generate_reference(text, root:) if reference_generation_request?(text)
           return analyze_reference(text, root:)
@@ -922,6 +928,94 @@ module Master
 
       def lora_selfie_request?(text)
         text.to_s.match?(LORA_SELFIE_RE) && !lora_subjects_in(text).empty?
+      end
+
+      def lora_readiness_request?(text)
+        text.to_s.match?(LORA_READINESS_RE)
+      end
+
+      def lora_profile_request?(text)
+        text.to_s.match?(LORA_PROFILE_RE)
+      end
+
+      def lora_existing_review_request?(text)
+        text.to_s.match?(LORA_EXISTING_REVIEW_RE) && !lora_subjects_in(text).empty?
+      end
+
+      # A single read-only API call reports profile settings, training blockers,
+      # holdout readiness and review permission. Comparing profiles here is a
+      # report only: no candidate renders or provider predictions are started.
+      def inspect_lora_readiness(text, root:)
+        subject = lora_subjects_in(text, root:).first
+        result = ScriptDispatch.call(
+          tool: "lora", action: "readiness", params: { "subject" => subject }.compact,
+          root:, timeout: 60
+        )
+        return result unless result.ok?
+
+        report = result.value!
+        quality = report["quality"].is_a?(Hash) ? report["quality"] : report
+        subjects = Array(quality["subjects"])
+        profiles = Array(quality.dig("configuration", "profiles"))
+        comparing = lora_profile_request?(text)
+        lines = ["LoRA photographic readiness: #{quality["state"] || "INCONCLUSIVE"}"]
+        lines << "Subject: #{subject}" if subject
+        subjects.each do |entry|
+          lines << "#{entry["subject"]}: #{entry["state"] || "INCONCLUSIVE"}"
+          lines << "  training ready: #{entry["training_ready"] ? "yes" : "no"}"
+          Array(entry["training_blockers"]).each { |item| lines << "  training blocker: #{item}" }
+          if entry["holdout_count"]
+            lines << "  independent holdout photographs: #{entry["holdout_count"]}"
+          elsif entry["holdout_detail"]
+            lines << "  holdout blocked: #{entry["holdout_detail"]}"
+          end
+          lines << "  review consent: #{entry["review_consent_valid"] ? "valid" : "not valid"}"
+          Array(entry["review_consent_errors"]).each { |item| lines << "  consent: #{item}" }
+        end
+        lines << (comparing ? "Inference profile comparison (settings only; no renders):" : "Available inference profiles:")
+        profiles.each do |profile|
+          lines << "  #{profile["name"]}: #{profile["status"] || "UNBENCHMARKED"} — #{profile["settings"].inspect}"
+        end
+        lines << "No provider calls, uploads, training or images were started."
+        if comparing
+          lines << "All profiles remain UNBENCHMARKED until rendered against the same approved model, scenes, seeds and independent holdout set, then reviewed at full size by a human."
+        end
+        rendered = lines.join("\n")
+        Master::Result.ok({
+          output: rendered, rendered:, media: :lora_readiness, report:,
+          provider_calls: 0, training_started: false, candidate_generation: false,
+        })
+      rescue StandardError => error
+        Master::Result.err("LoRA readiness: #{error.class}: #{error.message}", category: :infrastructure)
+      end
+
+      # Review only the most recent existing series. STUDIO creates a private
+      # contact sheet/report; it does not regenerate, upload or approve likeness.
+      def review_existing_lora(text, root:)
+        subject = lora_subjects_in(text, root:).first
+        return Master::Result.err("LoRA review needs a configured subject name", category: :validation) unless subject
+
+        result = ScriptDispatch.call(
+          tool: "lora", action: "review", params: { "subject" => subject },
+          root:, timeout: 120
+        )
+        return result unless result.ok?
+
+        report = result.value!
+        rendered = [
+          "LoRA review: #{report["status"] || "INCONCLUSIVE"}",
+          "Subject: #{subject}",
+          "Review report: #{report["review_report"]}",
+          "Full-size review page: #{report["html"]}",
+          "Provider calls: #{report["provider_calls"] || 0}",
+          "Human likeness review is still required; no model was approved.",
+        ].join("\n")
+        Master::Result.ok({
+          output: rendered, rendered:, media: :lora_existing_review,
+          report:, provider_calls: 0, candidate_generation: false,
+        })
+      rescue StandardError => error
+        Master::Result.err("LoRA review: #{error.class}: #{error.message}", category: :infrastructure)
       end
 
       def lora_count_for(text)

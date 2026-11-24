@@ -44,7 +44,8 @@ module Studio
 
         choice = wizard.choose("What would you like to do with a LoRA subject?", [
           ["Validate a subject's training plan", :validate],
-          ["Audit photographic quality standards", :quality],
+          ["Audit photographic quality and subject readiness", :quality],
+          ["Review an existing portrait series against holdout photographs", :review],
           ["Review or restore local private source material", :recover],
           ["Render a selfie series", :selfie],
           ["Produce finished selfie films", :film],
@@ -52,6 +53,9 @@ module Studio
         case choice
         when :validate then validate
         when :quality then quality_command([])
+        when :review
+          subject = wizard.ask("Subject", default: "ragnhild")
+          review_command(["--subject", subject])
         when :recover then puts JSON.pretty_generate(recovery_command([]))
         when :selfie then selfie(wizard)
         when :film then film_command([])
@@ -64,6 +68,8 @@ module Studio
         {
           "validate" => ->(request) { validate_report(request) },
           "quality" => ->(request) { quality_report(request) },
+          "readiness" => ->(request) { readiness_report(request) },
+          "review" => ->(request) { review_report(request) },
           "subjects" => ->(_request) { subjects },
           "craft" => ->(_request) { craft },
           "recover" => ->(request) { recovery_report(request) },
@@ -92,6 +98,27 @@ module Studio
       def quality_report(request)
         require_relative "quality"
         Studio::Lora::Quality.report(subject: request["subject"])
+      end
+
+      # MASTER's preflight entrypoint: training readiness, independent holdout
+      # inventory and review consent in one report. It never calls a provider.
+      def readiness_report(request)
+        report = quality_report(request || {})
+        report.merge(
+          "schema" => "studio.lora.readiness.v1",
+          "read_only" => true,
+          "provider_calls" => 0,
+          "training_started" => false,
+        )
+      end
+
+      # Review the latest completed series against the independent holdout set.
+      # This writes private HTML/JSON review artefacts but never renders or uploads.
+      def review_report(request)
+        require_relative "review"
+        subject = request.fetch("subject").to_s
+        result = Studio::Lora::Review::Builder.new(subject:).build(candidate: false)
+        result.merge("provider_calls" => 0, "candidate_generation" => false)
       end
 
       def subjects
@@ -164,6 +191,7 @@ module Studio
         case argv.first
         when "validate" then validate_with_flags(argv.drop(1))
         when "quality" then quality_command(argv.drop(1))
+        when "review" then review_command(argv.drop(1))
         when "recover"
           puts JSON.pretty_generate(recovery_command(argv.drop(1)))
           0
@@ -178,6 +206,11 @@ module Studio
 
       def quality_command(argv)
         success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("quality.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
+      end
+
+      def review_command(argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("review.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
       end
 
@@ -206,11 +239,14 @@ module Studio
           usage:
             ruby STUDIO/lora/lora.rb                 ask what to do (interactive)
             ruby STUDIO/lora/lora.rb validate        audit every subject's training plan
-            ruby STUDIO/lora/lora.rb train --all      preflight and train all three private LoRAs
+            ruby STUDIO/lora/lora.rb train --all --approve-spend-usd USD
+                                                       preflight and train within an explicit spend ceiling
             ruby STUDIO/lora/lora.rb recover         dry-run local source recovery from ../pub4
             ruby STUDIO/lora/lora.rb recover --apply  copy only after private rights preflight
             ruby STUDIO/lora/lora.rb validate --json  read-only training and consent audit
             ruby STUDIO/lora/lora.rb quality --json   read-only photography/profile/holdout audit
+            ruby STUDIO/lora/lora.rb review --subject NAME
+                                                       review the latest series against independent holdouts
             ruby STUDIO/lora/lora.rb selfie          render a selfie series after likeness approval
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
           The subject craft itself (scenes, prompting rules, grades) lives in

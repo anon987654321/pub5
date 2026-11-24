@@ -127,20 +127,38 @@ file supplies the Replicate request, dataset-size bounds and inference defaults.
 The validator checks the local plan, trigger, captions, filesystem permissions,
 consent and source-rights records before training is eligible.
 
-After the approved dataset is ready, run all three jobs together from the
-repository root:
+Before training, place 5–24 approved evaluation photographs in the local
+`evaluation/` directory. They must be separate from the training dataset,
+byte-distinct from every training photograph, and stored in a 0700 directory
+as singly-linked, non-empty 0600 files. The subject's consent record must
+separately authorise likeness review, and the evaluation photograph source
+rights must cover `review_use` with private evidence. Never add holdout images
+to the training archive.
+
+Run the read-only preflight first:
 
 ```sh
+ruby STUDIO/lora/lora.rb quality --json
 ruby STUDIO/lora/validate.rb --json
-ruby STUDIO/lora/train.rb --all
 ```
 
-The runner preflights all three subjects before the first upload, verifies every
-destination is private, and records each successful result as
+Only when the named subjects are ready, and after the operator has deliberately
+selected a total spend ceiling for this batch, training may be started. The
+required spend argument is an explicit ceiling, not a price estimate:
+
+```sh
+ruby STUDIO/lora/train.rb --all --approve-spend-usd 5.00
+```
+
+Replace `5.00` with the actual total USD ceiling explicitly approved for the
+batch. The runner preflights all three subjects before the first upload,
+verifies every destination is private, and records each successful result as
 `TRAINED_NEEDS_LIKENESS_REVIEW`. It does not mark the new model as approved.
 
 Generate three private candidate portraits for each subject and compare them
-against the original source photographs:
+against the separate evaluation/holdout photographs, never the training
+photographs. Candidate rendering makes provider predictions and may incur
+charges; it is not part of a read-only readiness or profile-settings check:
 
 ```sh
 ruby STUDIO/lora/review.rb --subject merethe --candidate

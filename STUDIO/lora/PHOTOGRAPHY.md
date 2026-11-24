@@ -155,11 +155,14 @@ The AI tell: [Imagera](https://imagera.ai/blog/fix-ai-skin-plastic-look-2026),
 
 ## MASTER's law, refitted
 
-None of the rules in `MASTER/data/rules.yml` (`ruby MASTER/tools/agent_context.rb`
-enumerates them) can see a photograph — they are evaluated over source text, and the only image reference
-in the whole scanner tree is a payload encoder attaching files to an LLM
-request. The single rule that mentions imagery, `ANALOG_WARMTH`, is a
-`detect_semantic` question asked of *code* at severity `info`.
+In pub5, `MASTER/data/laws.yml` is the canonical Law catalogue. Its executable
+Laws govern repository artefacts; they do not make an aesthetic or identity
+verdict on a private photograph. STUDIO therefore owns a separate photographic
+quality gate: it can measure technical image properties and check that a
+private, independent holdout set and review permissions exist, but identity,
+expression, composition and photographic judgement still require a human
+looking at the full-size images. A passing source-code audit is not a passing
+photographic review.
 
 But the rules are stated as principles rather than as syntax, and several of
 them arrived in software *from* visual design in the first place — Alexander's
