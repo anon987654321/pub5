@@ -15,6 +15,7 @@ require_relative "../../ground/assistant_tasks"
 require_relative "../../ground/capability_catalog"
 require_relative "../../io/mcp_coordinator"
 require_relative "../../../../OPENBSD/lib/deploy_inventory"
+require_relative "../../operator/deploy_log"
 
 module Master
   module CLI
@@ -873,17 +874,27 @@ module Master
       end
 
       # A zero exit is not enough. The canonical waiter must report the exact
-      # target's terminal receipt, its tmux exit marker and execution of the
-      # public canary. The waiter's exit status then records the canary result.
+      # target's terminal receipt, its exit marker and a passing public canary.
+      # vps-deploy's log() prefixes the exit line with a timestamp and host
+      # fields; the local collector writes the canary verdict (DeployLog).
+      DEPLOY_FINISHED = /(?:\A|\s)finished exit=(\d+)\z/
+      DEPLOY_CANARY_PASS = "#{::Operator::DeployLog::PUBLIC_CANARY} (PASS):".freeze
+
       def deploy_success_receipt?(output, status, target = "all")
         return false unless status.success?
 
-        escaped = Regexp.escape(target.to_s)
         lines = output.to_s.lines.map(&:strip)
-        target_receipt = lines.any? { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
-        terminal_exit = lines.include?("vps-deploy: finished exit=0")
-        public_canary = lines.include?("vps-deploy: post-check public canary")
-        target_receipt && terminal_exit && public_canary
+        deploy_target_line(lines, target) && deploy_exit(lines)&.zero? && lines.include?(DEPLOY_CANARY_PASS)
+      end
+
+      def deploy_target_line(lines, target)
+        escaped = Regexp.escape(target.to_s)
+        lines.reverse.find { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
+      end
+
+      def deploy_exit(lines)
+        finished = lines.reverse.find { |line| line.match?(DEPLOY_FINISHED) }
+        finished && Integer(finished[DEPLOY_FINISHED, 1], 10)
       end
 
       def deploy_preflight_blocked?(output)
@@ -905,12 +916,10 @@ module Master
           ].join("\n")
         end
 
-        escaped = Regexp.escape(target.to_s)
-        success_line = lines.reverse.find { |line| line.match?(/\Avps-deploy:\s+#{escaped}\s+ok(?:\s|\(|\z)/i) }
-        finished = lines.reverse.find { |line| line.match?(/\Avps-deploy: finished exit=\d+\z/i) }
-        public_canary = lines.include?("vps-deploy: post-check public canary")
-        if status.success? && success_line && finished == "vps-deploy: finished exit=0" && public_canary
-          return "remote: #{success_line}; tmux exit=0; public canary completed"
+        success_line = deploy_target_line(lines, target)
+        exit_code = deploy_exit(lines)
+        if deploy_success_receipt?(output, status, target)
+          return "remote: #{success_line}; exit 0; public canary passed"
         end
 
         # A local refusal happens before SSH. Keep the failed check and its
@@ -923,20 +932,23 @@ module Master
           return (["deployment blocked before SSH; nothing was sent to vm23:", *detail]).join("\n")
         end
 
-        if output.to_s.match?(/deploy refused,|RTFM_FIRST blocked/i)
-          return "deployment blocked before SSH: #{lines.last(3).join(" | ")[0, 150]}"
+        # The refusal names its own remedy; never cut it mid-word.
+        refusal = lines.reverse.find { |line| line.match?(/deploy refused,|RTFM_FIRST/i) }
+        if refusal
+          return "deployment blocked before SSH; nothing was sent to vm23:\n#{refusal.sub(/\A\w+0: failed, /, "")}"
         end
 
         started = lines.find { |line| line.match?(/\Avps-deploy: started in tmux session [\w.-]+/i) }
-        return deploy_interrupted_summary(output, "remote wait ended without a terminal deployment receipt") if started && !finished
+        if started && !exit_code
+          return deploy_interrupted_summary(output, "remote wait ended without a terminal deployment receipt")
+        end
 
         decisive = lines.reverse.find { |line| line.match?(/\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not|FAIL)\b/i) }
-        detail = decisive || finished || lines.last || "no remote output or terminal deploy receipt"
+        detail = decisive || lines.last || "no remote output or terminal deploy receipt"
         detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 120
-        detail = detail[0, 150]
-        exit = finished && finished[/exit=(\d+)/, 1]
+        detail = detail[0, 240]
         status.success? ? "remote exit 0 without complete success evidence: #{detail}" :
-          "remote exit #{exit || status.exitstatus || "signal"}: #{detail}"
+          "remote exit #{exit_code || status.exitstatus || "signal"}: #{detail}"
       end
 
       def deploy_interrupted_summary(output, reason)

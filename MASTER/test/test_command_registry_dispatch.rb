@@ -639,34 +639,28 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_match(/needs explicit confirmation/, command.call(Master::CLI::PipelineContext.new(user_message: "/deploy rails")))
   end
 
+  # vps-state as vm23 reports a healthy group at one SHA.
+  def healthy_group_state(group, sha)
+    apps = Deploy::Inventory.new(root: Master::REPO_ROOT).apps_for_group(group).map do |app|
+      {
+        "app" => app.name, "service" => "ok", "port_state" => "listening",
+        "deployed_sha" => sha, "drift" => false,
+        "last_deploy" => { "sha" => sha, "status" => "ok" }, "deploy_in_progress" => nil,
+      }
+    end
+    { "host" => "vm23", "dev_sha" => sha, "master" => {}, "apps" => apps,
+      "deploy_recovery" => { "state" => "none", "count" => 0, "pending" => [] } }
+  end
+
   def test_dispatch_deploy_passes_the_rails_group_to_the_operator
-    status = Struct.new(:exitstatus) do
-      def success? = true
-    end.new(0)
+    status = Struct.new(:exitstatus) { def success? = true }.new(0)
     calls = []
-    inventory = Deploy::Inventory.new(root: Master::ROOT)
-    remote_sha = "a1b2c3d"
-    state = {
-      "host" => "vm23",
-      "dev_sha" => remote_sha,
-      "master" => {},
-      "apps" => inventory.apps_for_group("rails").map do |app|
-        {
-          "app" => app.name, "service" => "ok", "port_state" => "listening",
-          "deployed_sha" => remote_sha, "drift" => false,
-          "last_deploy" => { "sha" => remote_sha, "status" => "ok" },
-          "deploy_in_progress" => nil,
-        }
-      end,
-      "deploy_recovery" => { "state" => "none", "count" => 0, "pending" => [] },
-    }
+    release = "vps-deploy: started in tmux session pub5-deploy (mode=wait)\n" \
+              "vps-deploy: rails ok (brgen mrdamascy amber bsdports)\n" \
+              "#{FINISHED_OK}\n#{CANARY_PASS}\ncanary: all checks passed\n"
     capture = lambda do |*argv, **options|
       calls << [argv, options]
-      if argv.include?("deploy")
-        ["vps-deploy: started in tmux session pub5-deploy (mode=wait)\nvps-deploy: rails ok (brgen mrdamascy amber bsdports)\nvps-deploy: finished exit=0\nvps-deploy: post-check public canary\ncanary: all checks passed\n", status]
-      else
-        [JSON.generate(state), status]
-      end
+      [argv.include?("deploy") ? release : JSON.generate(healthy_group_state("rails", "a1b2c3d")), status]
     end
 
     result = Master::Io::Exec.stub(:capture2e, capture) do
@@ -675,20 +669,21 @@ class TestCommandRegistryDispatch < Minitest::Test
 
     assert result.ok?
     assert_includes result.value, "verification: selected surfaces match"
-    assert_equal 2, calls.length
-    assert_equal "vps", calls.fetch(0).fetch(0).fetch(2)
-    assert_equal "deploy", calls.fetch(0).fetch(0).fetch(3)
-    assert_equal "rails", calls.fetch(0).fetch(0).fetch(4)
-    assert_equal "--remote", calls.fetch(0).fetch(0).fetch(5)
-    refute_includes calls.fetch(0).fetch(0), "--detach"
+    deploy_argv, deploy_options = calls.fetch(0)
+    assert_equal %w[vps deploy rails --remote], deploy_argv[2, 4]
+    refute_includes deploy_argv, "--detach"
     assert_equal 21_600, Master::CLI::CommandRegistry::DEPLOY_CAPTURE_TIMEOUT
-    assert_equal Master::CLI::CommandRegistry::DEPLOY_CAPTURE_TIMEOUT, calls.fetch(0).fetch(1).fetch(:timeout)
-    assert_equal true, calls.fetch(0).fetch(1).fetch(:raise_on_timeout)
-    assert_includes calls.fetch(1).fetch(0), "state"
-    assert_includes calls.fetch(1).fetch(0), "--json"
-    assert_includes calls.fetch(1).fetch(0), "--remote"
-    assert_equal 45, calls.fetch(1).fetch(1).fetch(:timeout)
+    assert_equal({ timeout: 21_600, raise_on_timeout: true }, deploy_options.slice(:timeout, :raise_on_timeout))
+    state_argv, state_options = calls.fetch(1)
+    assert_equal %w[state --json --remote], state_argv & %w[state --json --remote]
+    assert_equal 45, state_options.fetch(:timeout)
+    assert_equal 2, calls.length
   end
+
+  # vps-deploy log() and collector lines exactly as a release prints them.
+  FINISHED_PREFIX = "2026-11-24T18:00:00Z host=brgen pid=4242 app=all stage=done finished exit="
+  FINISHED_OK = "#{FINISHED_PREFIX}0"
+  CANARY_PASS = "post-deploy public canary (PASS):"
 
   def test_deploy_summary_treats_a_detached_start_without_a_terminal_receipt_as_pending
     status = Struct.new(:exitstatus) do
@@ -711,13 +706,13 @@ class TestCommandRegistryDispatch < Minitest::Test
     end.new(0)
     output = "vps-deploy: started in tmux session pub5-deploy (mode=wait)\n" \
              "vps-deploy: rails ok (brgen mrdamascy amber bsdports)\n" \
-             "vps-deploy: finished exit=0\n" \
-             "vps-deploy: post-check public canary\n"
+             "#{FINISHED_OK}\n" \
+             "post-deploy public canary (PASS):\n"
 
     result = Registry.send(:deploy_summary, output, status, "rails")
 
     assert_includes result, "vps-deploy: rails ok"
-    assert_includes result, "tmux exit=0"
+    assert_includes result, "exit 0; public canary passed"
     assert Registry.send(:deploy_success_receipt?, output, status, "rails")
     refute Registry.send(:deploy_success_receipt?, output, status, "all")
   end
@@ -726,11 +721,22 @@ class TestCommandRegistryDispatch < Minitest::Test
     status = Struct.new(:exitstatus) do
       def success? = true
     end.new(0)
-    base = "vps-deploy: rails ok (brgen amber)\nvps-deploy: finished exit=0\n"
+    base = "vps-deploy: rails ok (brgen amber)\n#{FINISHED_OK}\n"
 
     refute Registry.send(:deploy_success_receipt?, base, status, "rails")
-    refute Registry.send(:deploy_success_receipt?, base + "vps-deploy: post-check public canary\n", status, "all")
-    assert Registry.send(:deploy_success_receipt?, base + "vps-deploy: post-check public canary\n", status, "rails")
+    refute Registry.send(:deploy_success_receipt?, base + "post-deploy public canary (PASS):\n", status, "all")
+    assert Registry.send(:deploy_success_receipt?, base + "post-deploy public canary (PASS):\n", status, "rails")
+  end
+
+  # The first PTY run printed "... requires a fresh, exact-HEA" and lost the remedy.
+  def test_deploy_summary_keeps_a_pre_ssh_refusal_whole
+    status = Struct.new(:exitstatus) { def success? = false }.new(1)
+    refusal = "RTFM_FIRST receipt could not be built: target has no manual page tmux(1); nothing was deployed"
+    output = "deps0: bundle clean\nvps0: failed, deploy refused, #{refusal}\n"
+
+    result = Registry.send(:deploy_summary, output, status, "all")
+
+    assert_equal "deployment blocked before SSH; nothing was sent to vm23:\ndeploy refused, #{refusal}", result
   end
 
   def test_deploy_summary_preserves_the_existing_remote_session_and_prevents_a_second_start
@@ -766,8 +772,10 @@ class TestCommandRegistryDispatch < Minitest::Test
     end.new(0)
 
     assert_equal(
-      "remote: vps-deploy: all ok (master brgen amber bsdports); tmux exit=0; public canary completed",
-      Registry.send(:deploy_summary, "vps-deploy: all -> master\nvps-deploy: master ok\nvps-deploy: all ok (master brgen amber bsdports)\nvps-deploy: finished exit=0\nvps-deploy: post-check public canary\n", status, "all"),
+      "remote: vps-deploy: all ok (master brgen amber bsdports); exit 0; public canary passed",
+      Registry.send(:deploy_summary,
+        "vps-deploy: all -> master\nvps-deploy: master ok\nvps-deploy: all ok (master brgen amber bsdports)\n" \
+        "#{FINISHED_OK}\n#{CANARY_PASS}\n", status, "all"),
     )
   end
 
@@ -858,7 +866,7 @@ class TestCommandRegistryDispatch < Minitest::Test
   end
 
   def test_deploy_reconciliation_requires_healthy_sha_aligned_selected_apps
-    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    inventory = Deploy::Inventory.new(root: Master::REPO_ROOT)
     sha = "a1b2c3d"
     rows = inventory.apps_for_group("rails").map do |app|
       {
@@ -881,7 +889,7 @@ class TestCommandRegistryDispatch < Minitest::Test
   end
 
   def test_deploy_reconciliation_refuses_a_healthy_but_unapproved_host
-    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    inventory = Deploy::Inventory.new(root: Master::REPO_ROOT)
     payload = {
       "host" => "other-host",
       "dev_sha" => "a1b2c3d",
@@ -897,7 +905,7 @@ class TestCommandRegistryDispatch < Minitest::Test
   end
 
   def test_deploy_reconciliation_summary_exposes_pending_receipts_without_mutating
-    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    inventory = Deploy::Inventory.new(root: Master::REPO_ROOT)
     payload = {
       "host" => "vm23", "dev_sha" => "a1b2c3d", "apps" => [], "master" => {},
       "deploy_recovery" => {
@@ -923,7 +931,7 @@ class TestCommandRegistryDispatch < Minitest::Test
   end
 
   def test_full_stack_reconciliation_requires_the_master_web_stamp_too
-    inventory = Deploy::Inventory.new(root: Master::ROOT)
+    inventory = Deploy::Inventory.new(root: Master::REPO_ROOT)
     sha = "a1b2c3d"
     apps = inventory.ordered_apps.map do |app|
       {
@@ -996,11 +1004,11 @@ class TestCommandRegistryDispatch < Minitest::Test
       def success? = false
     end.new(1)
     output = "vps-deploy: all ok (master brgen amber bsdports)\n" \
-             "vps-deploy: finished exit=1\n"
+             "#{FINISHED_PREFIX}1\n"
     result = Registry.send(:deploy_summary, output, status, "all")
 
     assert_match(/remote exit 1:/, result)
-    refute Registry.send(:deploy_success_receipt?, output + "vps-deploy: post-check public canary\n", status, "all")
+    refute Registry.send(:deploy_success_receipt?, output + "post-deploy public canary (PASS):\n", status, "all")
   end
 
   def test_deploy_summary_keeps_the_decisive_remote_failure

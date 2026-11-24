@@ -385,10 +385,10 @@ def append_post_deploy_checks(log, remote_status)
         RUBY, File.join(OPENBSD_OPS, "bin", "canary"), "--public",
         timeout: 600, raise_on_timeout: true
       )
-      log.append("\npost-deploy public canary (#{status.success? ? 'PASS' : 'FAIL'}):\n#{output}\n")
+      log.append("\n#{Operator::DeployLog::PUBLIC_CANARY} (#{status.success? ? 'PASS' : 'FAIL'}):\n#{output}\n")
       code = 1 unless status.success?
     rescue StandardError => error
-      log.append("\npost-deploy public canary (ERROR): #{error.class}: #{error.message}\n")
+      log.append("\n#{Operator::DeployLog::PUBLIC_CANARY} (ERROR): #{error.class}: #{error.message}\n")
       code = 1
     end
   end
