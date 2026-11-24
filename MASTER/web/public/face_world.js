@@ -664,6 +664,9 @@
     if (next === semanticForm && signature === subjectSignature(semanticDescriptor) &&
         !pendingSubjectForm) return next;
 
+    if (window.MASTER_FACE?.faceMat?.uniforms?.uSubjectDirect) {
+      return setSubjectForm(next, descriptor);
+    }
     const currentMorph = Number(window.MASTER_FACE?.morphCurrent);
     const faceStillMorphing = semanticForm === "face" && nativeSubjectField &&
       Number.isFinite(currentMorph) && currentMorph < 0.995;
