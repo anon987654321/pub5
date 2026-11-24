@@ -41,6 +41,13 @@ end
 staged = paths("diff", "--cached", "--name-only")
 exit 0 if staged.empty?
 
+# A credential in an added line is refused before anything else: once it is in a
+# commit, rotating it is the only cure (2026-11-23, a PAT pasted into chat).
+guard = File.join(File.expand_path("..", __dir__), "MASTER", "tools", "token_guard.rb")
+if File.file?(guard)
+  system(RbConfig.ruby, guard) or abort("pre-commit: token-guard refused this commit")
+end
+
 staged_trees = staged.map { |path| tree_of(path) }.uniq.sort
 unstaged = paths("diff", "--name-only") + paths("ls-files", "--others", "--exclude-standard")
 left = (unstaged - staged).group_by { |path| tree_of(path) }

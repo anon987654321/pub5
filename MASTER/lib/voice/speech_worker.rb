@@ -13,6 +13,15 @@ module Master
     # keeps its name there (Speech.synthesize_edge_socket, Speech.worker_timeout);
     # what to say, in which voice and style, stays in speech.rb.
     module SpeechWorker
+      # The one-shot worker re-execs and boots MASTER, so its stderr opens with
+      # deps0: banner lines that bury the real cause (F5, 2026-11-23). Drop them
+      # when anything else was said; a bare deps0: failure is the cause, keep it.
+      def worker_failure_detail(err)
+        lines = err.to_s.lines.map(&:strip).reject(&:empty?)
+        said = lines.reject { |line| line.start_with?("deps0:") }
+        (said.empty? ? lines : said).join("\n")
+      end
+
       def synthesize_edge_oneshot(text:, voice_name:, style_config:, audio_path:, timeout: nil)
         timeout ||= worker_timeout(text.to_s.length)
         err, status = run_edge_worker(text, voice_name, style_config, audio_path, timeout)
@@ -26,7 +35,7 @@ module Master
                     else
                       "unknown process status"
                     end
-          detail = err.to_s.strip
+          detail = worker_failure_detail(err)
           message = detail.empty? ? "edge worker failed: #{outcome}; stderr empty" : "edge worker failed: #{detail} (#{outcome})"
           warn_tts(message)
           return cleanup_failed_audio(audio_path)

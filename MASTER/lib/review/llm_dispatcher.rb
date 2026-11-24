@@ -444,6 +444,12 @@ module Master
         outcome = Result.wrap(result)
         failure = outcome.ok? ? nil : outcome.message.to_s
         Io::LaneQuota.note(model, failure) if failure
+        # A permanent model-level refusal (a decision-only model asked to chat,
+        # an unknown model id) is not a lane fault: counting it silences every
+        # healthy sibling on the provider for five minutes, and the model stays
+        # in the catalogue to fail again. ollama_cloud:clef:27b, 2026-11-23.
+        return if failure && %i[invalid_request model_missing].include?(outcome.category)
+
         lane = Io::LaneSilence.lane_of(model)
         return silence_local_runtime(lane, failure) if failure && local_runtime_failure?(model, failure)
         return unless Io::LaneSilence.record(failure.nil?, lane, reason: failure)
@@ -666,7 +672,8 @@ module Master
           # again; clear only its credential hold, never vendor quota state.
           Io::LaneQuota.revive(Io::LaneQuota::OPENROUTER_AUTH_LANE) if Io::LaneQuota.openrouter_model?(model)
         else
-          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status)
+          park = Io::ModelSkipCache::INCAPABLE_PARK_MS if status == :invalid_request && Io::LaneReply.incapable?(error)
+          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status, for_ms: park)
         end
         # Process-local free-floor counting: the pass-0 child's outcomes never
         # reach the parent's RunPulse, so LaneSelection counts for itself.

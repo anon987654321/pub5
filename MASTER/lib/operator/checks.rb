@@ -553,7 +553,11 @@ module Deploy
         end
 
         content = File.read(path)
-        result.fail("#{relative_path} must precompile MASTER/web assets") unless content.include?("assets:precompile")
+        # The pinned master child consumes workstation-built, SHA-attested
+        # assets. Legacy install/recovery paths still build on the host.
+        build_free = relative_path == "OPENBSD/bin/vps_deploy_master.sh"
+        result.fail("#{relative_path} must precompile MASTER/web assets") if !build_free && !content.include?("assets:precompile")
+        result.fail("#{relative_path} must consume, not build, prebuilt MASTER/web assets") if build_free && content.include?("assets:precompile")
         # Matched on the check name, not on a script path: the per-check scripts at
         # the RAILS root were shims, and every caller now names the check for
         # checks/runner.rb instead.

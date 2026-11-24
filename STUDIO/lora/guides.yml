@@ -96,6 +96,12 @@ checks:
   lens: the prompt names a focal length between 50 and 85 mm and a distance
   grade: exposure and white balance first, skin on the vectorscope, one grade for the whole piece
   spend: one test frame, reviewed full size, before any batch
+  film: >-
+    a clip passes only when watched in full: identity stable across every
+    frame, no melt or morph in hair, clothing or background, physically
+    plausible blinks and small movements, one restrained camera move, and
+    coherent light and skin tone throughout. A beautiful first frame does
+    not make a beautiful film.
   review: >-
     Use a contact sheet for pairwise triage, then inspect every finalist at full
     size. A contact sheet cannot establish focus, texture, expression, likeness

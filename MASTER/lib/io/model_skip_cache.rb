@@ -15,6 +15,9 @@ module Master
         provider_error llm_call_failure model_missing invalid_request failure
       ].freeze
 
+      # How long a model that stated it cannot chat stays parked (this process).
+      INCAPABLE_PARK_MS = 6 * 3_600_000
+
       # Keep this list aligned with the router's failover_skip_categories:
       # otherwise a failed lane is skipped only for the current turn and the
       # cache silently refuses to park it for the next one.
@@ -73,13 +76,17 @@ module Master
 
       # A later deadline extends a park and an earlier one never shortens it, so
       # a 30s blip after a stated six-hour reset does not bring the lane back early.
-      def skip!(model, reason:, category: nil)
+      #
+      # for_ms: parks for exactly that long (a model that stated it cannot do the
+      # job); it still counts a strike, and a longer existing park still wins.
+      def skip!(model, reason:, category: nil, for_ms: nil)
         cat = category&.to_sym
         return if cat && !SKIP_CATEGORIES.include?(cat)
 
         now = now_ms
         parser_now = @clock ? now : Process.clock_gettime(Process::CLOCK_REALTIME) * 1000
-        ttl = ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes: strike!(model, now))
+        strikes = strike!(model, now)
+        ttl = for_ms || ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes:)
         return if ttl <= 0 || model.to_s.empty?
 
         @mutex.synchronize do

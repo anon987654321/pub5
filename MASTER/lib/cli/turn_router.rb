@@ -72,7 +72,8 @@ module Master
           confirmed = text.match?(/(?:^|\s)--confirm(?:\s|$)/i) ||
                       OperatorIntent.direct_full_stack_confirmation?(text)
           args = "#{args} --confirm" if confirmed
-          return dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:, cancellation:)
+          result = dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:, cancellation:)
+          return OperatorIntent.with_studio_note(result, text)
         when :ambiguous
           return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
         when :unavailable

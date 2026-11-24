@@ -332,6 +332,14 @@
   ],
   "drum_patterns": {
     "comment": "16 steps per bar, step 0 = downbeat. [step, velocity, optional lane]. Ghost notes ride low. Busts and fills are generated from bust_bars.",
+    "in_space_measured": {
+      "comment": "Measured transcription, not an authored groove: demucs htdemucs drums stem of the in_space canon row (render_evidence/measured_canon.json), 16-slot best-phase grid over 39 bars, velocities = measured onset strengths. The backbeat peaks at slots 2/3 and 10 rather than 4/12 - that drunk placement is what the analyzer measured, phase-locked per its own +/-45 ms window; pair with the in_space groove profile, which carries the +17.7 ms off-8th lateness the flat grid cannot.",
+      "kick": [[2, 0.52], [6, 1.0], [7, 0.63], [10, 0.67], [15, 0.52], [0, 0.26], [3, 0.33], [11, 0.44], [14, 0.33]],
+      "snare": [[2, 0.83], [3, 0.61], [6, 0.83], [10, 1.0], [11, 0.67], [14, 0.61], [15, 0.67]],
+      "ghost": [[1, 0.17], [5, 0.17], [7, 0.17]],
+      "hats": [[0, 0.87], [1, 0.93], [2, 1.0], [3, 0.73], [4, 0.87], [5, 0.87], [6, 0.6], [7, 0.6], [8, 0.87], [9, 0.93], [10, 1.0], [11, 0.73], [12, 0.87], [13, 0.93], [14, 0.87], [15, 0.93]],
+      "bust_bars": 8
+    },
     "boom_bap": {
       "kick": [
         [
@@ -1446,6 +1454,17 @@
   },
   "groove_profiles": {
     "comment": "spread_ms = per-hit timing jitter sigma; nudge = fixed offsets ms; drag = whole-loop lateness; velocity wobble is performer-owned.",
+    "in_space": {
+      "comment": "Measured from the in_space canon row: swing position 52.7%, off-8th residual +17.7 ms LATE (slots 2/6/10/14 drag), on-grid share 0.67. The step offsets carry the measured lateness the swing percent cannot express; keep them together.",
+      "spread_ms": 10,
+      "nudge": { "kick": 8, "snare": -6, "hat": -4, "ghost": 4 },
+      "drag_ms": 4,
+      "swing_by_lane": { "kick": 52.7, "snare": 52.7, "hat": 52.7, "ghost": 53 },
+      "step_offsets_ms": {
+        "hat": { "2": 18, "6": 18, "10": 18, "14": 18 },
+        "snare": { "2": 18, "10": 18 }
+      }
+    },
     "dilla_shadow": {
       "spread_ms": 9,
       "nudge": {

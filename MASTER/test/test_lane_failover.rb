@@ -373,6 +373,33 @@ class TestLaneFailover < Minitest::Test
     Silence.record(true, "ollama")
   end
 
+  # A model that refuses the request for good (decision-only model asked to
+  # chat) is not a lane fault: three of those must not silence its siblings.
+  # ollama_cloud:clef:27b sank the whole lane this way on 2026-11-23.
+  def test_permanent_model_refusals_are_not_lane_strikes
+    door = Master::Review::LLMDispatcher.allocate
+    door.instance_variable_set(:@bus, nil)
+    %i[invalid_request model_missing].each do |category|
+      (Silence::SILENT_AFTER + 2).times do
+        door.send(:note_lane_silence, Master::Result.err("400 decision model", category:), "ollama_cloud:clef:27b")
+      end
+      refute Silence.refuses?("ollama_cloud:healthy-sibling"), "#{category} silenced the lane"
+    end
+  ensure
+    Silence.record(true, "ollama_cloud")
+  end
+
+  def test_ordinary_provider_failures_still_silence_the_lane
+    door = Master::Review::LLMDispatcher.allocate
+    door.instance_variable_set(:@bus, nil)
+    Silence::SILENT_AFTER.times do
+      door.send(:note_lane_silence, Master::Result.err("upstream exploded", category: :provider_error), "ollama_cloud:clef:27b")
+    end
+    assert Silence.refuses?("ollama_cloud:healthy-sibling")
+  ensure
+    Silence.record(true, "ollama_cloud")
+  end
+
   def test_single_call_failover_skips_a_recently_failed_model
     skip_cache = Master::Io::ModelSkipCache
     skip_cache.clear!

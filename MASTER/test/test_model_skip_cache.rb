@@ -148,4 +148,40 @@ class TestModelSkipCache < Minitest::Test
   ensure
     cache.clock = nil
   end
+
+  CLEF = "400 Bad Request: clef:27b is a decision model, only supports /v1/systemone"
+
+  # ollama_cloud:clef:27b (2026-11-23) refused chat for good. A stated
+  # incapability parks that one model for hours; a bare 400 never does, because
+  # a 400 can be an oversized prompt that a healthy model would answer shortened.
+  def test_a_stated_incapability_is_recognised_and_ordinary_400s_are_not
+    reply = Master::Io::LaneReply
+    assert reply.incapable?(CLEF)
+    assert reply.incapable?("model rerank-v3 is an embedding model and only supports /v1/embeddings")
+    refute reply.incapable?("400 Bad Request: prompt is too long for this model")
+    refute reply.incapable?("400 invalid request body")
+    assert_nil reply.read(CLEF), "must not become a lane verdict: verdicts retire whole lanes"
+  end
+
+  def test_for_ms_parks_one_model_for_the_stated_time_and_not_its_siblings
+    cache = Master::Io::ModelSkipCache
+    cache.clock = -> { 1_000 }
+    cache.skip!("ollama_cloud:clef:27b", reason: CLEF, category: :invalid_request,
+                for_ms: cache::INCAPABLE_PARK_MS)
+
+    assert_equal 1_000 + cache::INCAPABLE_PARK_MS, cache.skipped_until_ms("ollama_cloud:clef:27b")
+    assert cache.skipped?("ollama_cloud:clef:27b")
+    refute cache.skipped?("ollama_cloud:gemma3:27b")
+  ensure
+    cache.clock = nil
+  end
+
+  def test_without_for_ms_an_invalid_request_keeps_the_ordinary_park
+    cache = Master::Io::ModelSkipCache
+    cache.clock = -> { 1_000 }
+    cache.skip!("m1", reason: "400 prompt too long", category: :invalid_request)
+    assert_equal 1_000 + 5000, cache.skipped_until_ms("m1")
+  ensure
+    cache.clock = nil
+  end
 end

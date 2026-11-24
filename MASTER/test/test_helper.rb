@@ -72,20 +72,28 @@ ENV["MASTER_SWALLOW_LOG_PATH"] = File.join(LIVE_STATE_DIR, "swallowed_errors.jso
 # Otherwise RubyGems can select a host-installed Minitest (or a native gem
 # built against another Ruby) before the suite has a chance to activate MASTER.
 $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
-require_relative "../lib/boot/dependency_manager"
-test_root = File.expand_path("..", __dir__)
-test_boot = Master::Boot::DependencyManager.new(root: test_root, env: ENV, out: $stderr)
-test_result = test_boot.ensure!
-unless test_result.ok
-  abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
+# MASTER_TEST_LIGHT=1 skips the dependency install and the bundler activation
+# below, for a host that already has the gems (or cannot reach the network) and
+# wants one pure-logic test file to run. The pinned private bundle stays the
+# default and the only mode CI and `rake test` use; light mode is a debugging
+# aid, never proof (2026-11-23: no agent could run a single test without it).
+MASTER_TEST_LIGHT = ENV["MASTER_TEST_LIGHT"] == "1"
+unless MASTER_TEST_LIGHT
+  require_relative "../lib/boot/dependency_manager"
+  test_root = File.expand_path("..", __dir__)
+  test_boot = Master::Boot::DependencyManager.new(root: test_root, env: ENV, out: $stderr)
+  test_result = test_boot.ensure!
+  unless test_result.ok
+    abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
+  end
+  # A test boot keeps the :test group even in deploy-bundle mode: this run IS
+  # the test, the law-file preflight needs minitest, and without the group the
+  # Kernel#gem activation below dies with "minitest is not part of the bundle"
+  # on the deploy host exactly once a deploy bundle exists (measured on vm23
+  # 2026-11-08, deploy refused at preflight-boot).
+  test_boot.activate_environment!(without: "development")
+  require "bundler/setup"
 end
-# A test boot keeps the :test group even in deploy-bundle mode: this run IS
-# the test, the law-file preflight needs minitest, and without the group the
-# Kernel#gem activation below dies with "minitest is not part of the bundle"
-# on the deploy host exactly once a deploy bundle exists (measured on vm23
-# 2026-11-08, deploy refused at preflight-boot).
-test_boot.activate_environment!(without: "development")
-require "bundler/setup"
 
 if ENV["COVERAGE"] == "1"
   require "simplecov"
@@ -100,7 +108,7 @@ if ENV["COVERAGE"] == "1"
   end
 end
 
-gem "minitest", "~> 5.25"
+gem "minitest", "~> 5.25" unless MASTER_TEST_LIGHT
 require "minitest/autorun"
 require "minitest/mock"
 require "tmpdir"

@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
-require "prism"
+# Prism ships with Ruby 3.3+. On an older Ruby the sweep falls back to the
+# interpreter's own parser instead of dying with a LoadError (2026-11-23: a
+# Ruby 3.2 host crashed `fix-here --dry` on this require).
+begin
+  require "prism"
+rescue LoadError
+  nil
+end
 
 module Operator
 
@@ -32,9 +39,28 @@ module Operator
         full = File.join(root, path)
         next unless File.file?(full)
 
-        error = Prism.parse_file(full).errors.first
-        Failure.new(path:, line: error.location.start_line, message: error.message) if error
+        error = parse_error(full)
+        Failure.new(path:, line: error[0], message: error[1]) if error
       end
+    end
+
+    # [line, message] of the first syntax error, or nil when the file parses.
+    def parse_error(full)
+      if defined?(Prism)
+        error = Prism.parse_file(full).errors.first
+        return error && [error.location.start_line, error.message]
+      end
+
+      parse_error_without_prism(full)
+    end
+
+    # compile only parses; nothing in the file is run.
+    def parse_error_without_prism(full)
+      RubyVM::InstructionSequence.compile(File.read(full, encoding: "UTF-8"), full)
+      nil
+    rescue SyntaxError => e
+      first = e.message.lines.first.to_s
+      [first[/#{Regexp.escape(full)}:(\d+)/, 1].to_i, first.sub(/\A.*?:\d+:\s*/, "").strip]
     end
 
     def render(failures)

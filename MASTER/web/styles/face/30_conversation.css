@@ -165,7 +165,7 @@ body[data-layout="face"].controls-hidden #ui-status,
 body[data-layout="face"][data-edge-hover="1"] .face-controls,
 body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
 
-#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+#shortcut-sheet { border: 1px solid var(--face-dim); background: var(--face-bg); color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
 #shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
 #shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
 .tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }

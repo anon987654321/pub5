@@ -127,7 +127,7 @@ body[data-focus-mode="1"] #prompt-form {
 
 /* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
 canvas#face {
-  background: #000;
+  background: var(--face-bg);
   z-index: 1;
   transform: translateZ(0);
 }

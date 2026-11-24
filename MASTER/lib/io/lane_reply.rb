@@ -31,12 +31,21 @@ module Master
       LIMIT_429_RE = /(?:\bHTTP\W{0,3}|\bstatus\W{0,3}|\bcode\W{0,3}|\berror\W{0,3})429\b|\b429\s+(?:too\s+many|rate|error)/i
       UNREACHABLE_RE = /ECONNREFUSED|connection\s+refused|(?:ollama|server|host)\s+unreachable|unreachable\s+at|Failed\s+to\s+open\s+TCP|could\s+not\s+resolve|getaddrinfo|network\s+is\s+unreachable|name\s+or\s+service\s+not\s+known/i
       AUTH_RE = /(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})40[13]\b|PERMISSION_DENIED|unauthori[sz]ed|invalid\s+api[\s_-]?key|not\s+logged\s+in|user\s+not\s+found|please\s+run\s+\/login|authentication\s+(?:failed|error|required)|token\s+(?:has\s+)?expired/i
+      # A model that answers "I am not a chat model" (ollama_cloud clef:27b, 2026-11-23:
+      # "decision model, only supports /v1/systemone") will answer it every time.
+      # Matching the stated incapability, not a bare 400, keeps an oversized prompt
+      # from parking a healthy model. Deliberately NOT a Verdict: verdicts retire
+      # whole lanes (LaneQuota), and this is a fact about one model.
+      INCAPABLE_RE = %r{\b(?:decision|embedding|rerank(?:er|ing)?|moderation|completion-only)\s+model\b[^.\n]{0,60}\bonly\s+supports?\b|\bonly\s+supports?\s+/v\d+/[a-z_-]+}i
+
       UNITS = { "d" => 86_400, "h" => 3600, "m" => 60, "s" => 1 }.freeze
       SPAN = /\d+\s*(?:days?|hours?|hrs?|minutes?|mins?|seconds?|secs?|[dhms])(?![a-z])/i
       AFTER_RE = /(?:resets?|try\s+again|retry)\s+(?:in|after)\s+((?:#{SPAN}[\s,]*(?:and\s+)?)+)/i
       RETRY_AFTER_RE = /retry-after\W+(\d+)/i
       CLOCK_RE = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b(?:\s*\(([A-Za-z]+(?:\/[A-Za-z_+\-0-9]+)*)\))?/i
       @zone_lock = Mutex.new
+
+      def incapable?(reply) = INCAPABLE_RE.match?(reply.to_s)
 
       def read(reply, now: Time.now.to_f)
         text = reply.to_s

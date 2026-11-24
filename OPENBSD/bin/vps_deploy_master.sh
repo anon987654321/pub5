@@ -128,14 +128,24 @@ asset_stamp="$asset_dir/.pub5-build-sha"
   exit 1
 }
 
+echo "==> verify prebuilt assets"
+# The asset check, through whichever door exists. MASTER/checks/runner.rb was
+# deleted on 2026-09-16 and every deploy script still named it, so `vps-deploy
+# master` died here under set -e with the box half deployed: new assets on disk,
+# the old process still serving them. The check itself lives in MASTER/checks and
+# runs either way. It stays ahead of the database step: assets that fail
+# attestation must stop the deploy before any migration runs.
+if [ -f "$ROOT/MASTER/checks/runner.rb" ]; then
+  BUNDLE_WITHOUT=development:test "$BUNDLE" exec ruby "$ROOT/MASTER/checks/runner.rb" master_web_assets
+else
+  BUNDLE_WITHOUT=development:test "$BUNDLE" exec ruby -e '
+    require ARGV[0]
+    Deploy::MasterWebAssetsCheck.run.report!("master web assets ok")
+  ' "$ROOT/MASTER/lib/operator/checks.rb"
+fi
+
 echo "==> db prepare"
 BUNDLE_GEMFILE="$WEB/Gemfile" BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
-
-echo "==> db prepare"
-BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
-
-echo "==> verify prebuilt assets"
-BUNDLE_WITHOUT=development:test BUNDLE_GEMFILE="$WEB/Gemfile" "$BUNDLE" exec ruby "$ROOT/MASTER/checks/runner.rb" master_web_assets
 
 echo "==> runtime dirs"
 doas /bin/ksh -c '
@@ -155,20 +165,6 @@ doas /bin/ksh -c '
     find "$path" -type d -exec chmod 2775 {} +
   done
 '
-# The asset check, through whichever door exists. MASTER/checks/runner.rb was
-# deleted on 2026-09-16 and every deploy script still named it, so `vps-deploy
-# master` died here under set -e with the box half deployed: new assets on disk,
-# the old process still serving them. The check itself lives in MASTER/checks and
-# runs either way.
-if [ -f "$ROOT/MASTER/checks/runner.rb" ]; then
-  BUNDLE_WITHOUT=development:test "$BUNDLE" exec ruby "$ROOT/MASTER/checks/runner.rb" master_web_assets
-else
-  BUNDLE_WITHOUT=development:test "$BUNDLE" exec ruby -e '
-    require ARGV[0]
-    Deploy::MasterWebAssetsCheck.run.report!("master web assets ok")
-  ' "$ROOT/MASTER/lib/operator/checks.rb"
-fi
-
 echo "==> sync rc.d master"
 if [ -f "$ROOT/OPENBSD/mirror/etc/rc.d/master" ]; then
   if ! cmp -s "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master; then

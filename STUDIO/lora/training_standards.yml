@@ -16,6 +16,10 @@ billing:
   source: "https://replicate.com/replicate/fast-flux-trainer/train"
   minimum_reservable_compute_seconds: 60
   cancellation_margin_seconds: 10
+  # Operator budget policy for STUDIO/lora/spend.rb. Deliberately unset here:
+  # the spend report works without it and states NOT_CONFIGURED rather than
+  # inventing a number that was never decided.
+  monthly_envelope_usd: null
 quality:
   min_images: 12
   max_images: 18
@@ -30,6 +34,11 @@ review:
   evaluation_directory: evaluation
   min_evaluation_images: 5
   max_evaluation_images: 24
+  # A likeness approval is a decision about a face at a point in time, not a
+  # permanent property of a model. Past this age the approval is STALE: not
+  # invalid, but honestly in need of a fresh look (exemption_without_expiry
+  # applies to approvals too).
+  approval_max_age_days: 90
 inference:
   model: dev
   profile: balanced

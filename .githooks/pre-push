@@ -74,6 +74,11 @@ $stdin.each_line do |line|
   next if local_sha.nil? || local_sha == ZERO # branch deletion
 
   range = remote_sha.nil? || remote_sha == ZERO ? local_sha : "#{remote_sha}..#{local_sha}"
+  # --no-verify skips pre-commit; this is the second door for a credential.
+  token_guard = File.join(snapshot_root, "MASTER", "tools", "token_guard.rb")
+  if File.file?(token_guard) && !system(RbConfig.ruby, token_guard, "--range", range)
+    abort("pre-push: token-guard refused this push")
+  end
   pushing.concat(commits(range))
   pushing.uniq!
   break if local_ref.nil?

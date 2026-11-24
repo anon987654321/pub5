@@ -83,6 +83,7 @@ module Studio
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
+        lint_prompt!(words)
         validate_model!
         if film
           validate_film_model!
@@ -100,6 +101,7 @@ module Studio
       # Animate an existing LoRA still; never regenerate or overwrite its source.
       def animate(still, words, duration: 5)
         authorize_subject!
+        lint_prompt!(words)
         source = File.expand_path(still.to_s)
         raise ArgumentError, "source still is missing" unless File.file?(source) && !File.symlink?(source)
         raise ArgumentError, "source still must be jpg, png or webp" unless %w[.jpg .jpeg .png .webp].include?(File.extname(source).downcase)
@@ -275,6 +277,21 @@ module Studio
         true
       rescue SystemCallError => error
         raise ArgumentError, "cannot verify private subject media: #{error.class}: #{error.message}"
+      end
+
+      # Prompt-optimiser vocabulary ("8k", "masterpiece", "flawless") pulls a
+      # render toward concept art and retouched, poreless skin - the exact
+      # failures the craft vocabulary exists to avoid. Refuse before any
+      # provider call: a paid render from a self-defeating prompt is waste,
+      # and silently rewriting the words would hide the mistake
+      # (FAIL_VISIBLY). The word list and its reasons live in
+      # Studio::Lora::Craft::BACKFIRING_WORDS.
+      def lint_prompt!(words)
+        hits = Studio::Lora::Craft.backfiring_words(words)
+        return if hits.empty?
+
+        reasons = hits.map { |word, why| "#{word} (#{why})" }.join("; ")
+        raise ArgumentError, "prompt works against itself: #{reasons}"
       end
 
       def render_still(words, stem, grade_seed: nil)
@@ -482,9 +499,20 @@ module Studio
             "actual_cost_usd" => nil,
             "actual_cost_status" => "NOT_REPORTED",
           },
+          # A film is judged in motion, watched in full: a beautiful first
+          # frame proves nothing about the last one. Every temporal axis stays
+          # NOT_REVIEWED until a person has watched the whole clip.
           "human_review" => {
             "visual" => "NOT_REVIEWED",
             "likeness" => "NOT_REVIEWED",
+            "temporal" => {
+              "watched_in_full" => "NOT_REVIEWED",
+              "identity_stability" => "NOT_REVIEWED",
+              "no_melt_or_morph" => "NOT_REVIEWED",
+              "motion_plausibility" => "NOT_REVIEWED",
+              "camera_restraint" => "NOT_REVIEWED",
+              "light_coherence" => "NOT_REVIEWED",
+            },
           }
         }
         Tempfile.create([".film-receipt-", ".json"], File.dirname(receipt_path), mode: 0o600) do |file|

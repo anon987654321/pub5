@@ -47,4 +47,18 @@ class TestParseSweep < Minitest::Test
     root = File.expand_path("../..", __dir__)
     assert_empty Operator::ParseSweep.failures(root), "tracked Ruby that does not parse"
   end
+
+  # Ruby before 3.3 has no Prism; the sweep must still answer, with the same
+  # file and line, instead of dying on the require.
+  def test_the_interpreter_fallback_reports_the_same_file_and_line
+    Dir.mktmpdir("parse-sweep") do |dir|
+      path = File.join(dir, "chat.rb")
+      File.write(path, MISSING_COMMA)
+      line, message = Operator::ParseSweep.parse_error_without_prism(path)
+      assert_equal 3, line
+      refute_empty message
+      File.write(path, "puts 1\n")
+      assert_nil Operator::ParseSweep.parse_error_without_prism(path)
+    end
+  end
 end

@@ -81,4 +81,29 @@ class TestLawInventory < Minitest::Test
     assert_operator matrix.size, :>, 5
     assert matrix.all? { |row| row[:persona] && row[:axes] && row[:rules] }
   end
+
+  # law_deps entries are { "after" => [...] } mappings. Array(hash) yields
+  # key-value pairs, so the previous transform returned stringified pairs
+  # and every law's dependencies read as Ruby syntax instead of Law ids.
+  def test_rule_dependencies_returns_the_after_list_not_stringified_pairs
+    document = {
+      "law_deps" => {
+        "MERGE" => { "after" => %w[HOIST FLATTEN] },
+        "DECOUPLE" => { "after" => ["FLATTEN"] },
+      },
+    }
+    Master.stub(:load_laws, ->(root:) { document }) do
+      deps = Operator::LawInventory.rule_dependencies
+      assert_equal %w[HOIST FLATTEN], deps.fetch("merge")
+      assert_equal ["FLATTEN"], deps.fetch("decouple")
+      assert deps.values.flatten.all? { |dep| dep.match?(/\A[A-Z_]+\z/) }
+    end
+  end
+
+  def test_rule_dependencies_tolerates_bare_array_entries
+    document = { "law_deps" => { "MERGE" => %w[HOIST] } }
+    Master.stub(:load_laws, ->(root:) { document }) do
+      assert_equal %w[HOIST], Operator::LawInventory.rule_dependencies.fetch("merge")
+    end
+  end
 end

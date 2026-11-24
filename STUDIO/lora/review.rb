@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
+require "digest"
 require "fileutils"
 require "json"
 require "optparse"
@@ -287,6 +288,9 @@ module Studio
               "role" => role,
               "file" => File.basename(path),
               "relative_path" => Pathname.new(path).relative_path_from(Pathname.new(output)).to_s,
+              # The bytes the verdict was made on. If this file differs later,
+              # the review no longer covers it (provenance drift).
+              "sha256" => Digest::SHA256.file(path).hexdigest,
             }
           end
         end

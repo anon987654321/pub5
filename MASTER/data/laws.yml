@@ -541,7 +541,7 @@ PROXIMITY_anti_divitis:
   parent: PROXIMITY
   statement: "A div that only wraps a div."
   resolution: automatic
-  proof: MASTER/test/test_web_laws.rb#test_anti_divitis
+  proof: MASTER/test/test_dogfood.rb#test_law_ANTI_DIVITIS_proves_itself
 
 NEGATIVE_SPACE_GROUPING:
   parent: PROXIMITY
@@ -590,7 +590,7 @@ DENSITY_comments_as_deodorant:
   parent: DENSITY
   statement: "A comment that restates the code."
   resolution: automatic
-  proof: MASTER/test/test_cosmetic_laws.rb#test_comments_as_deodorant
+  proof: MASTER/test/test_dogfood.rb#test_law_COMMENTS_AS_DEODORANT_proves_itself
 
 DENSITY_dead_code:
   parent: DENSITY
@@ -601,25 +601,25 @@ DENSITY_identical_branches:
   parent: DENSITY
   statement: "Two identical conditional branches."
   resolution: automatic
-  proof: MASTER/test/test_lexical_laws.rb#test_identical_branches
+  proof: MASTER/test/test_dogfood.rb#test_law_IDENTICAL_BRANCHES_proves_itself
 
 DENSITY_no_puts:
   parent: DENSITY
   statement: "Library code writing to stdout; a CLI's own output is not a finding."
   resolution: automatic
-  proof: MASTER/test/test_lexical_laws.rb#test_no_puts
+  proof: MASTER/test/test_scan_law_false_positives.rb#test_no_puts_still_catches_a_bare_puts_in_library_code
 
 DENSITY_no_debug:
   parent: DENSITY
   statement: "Debug output left in."
   resolution: automatic
-  proof: MASTER/test/test_lexical_laws.rb#test_no_debug
+  proof: MASTER/test/test_scan_law_false_positives.rb#test_debug_output_still_catches_real_debug_calls
 
 DENSITY_no_ascii_line_art:
   parent: DENSITY
   statement: "A line of asterisks is not a separator."
   resolution: automatic
-  proof: MASTER/test/test_lexical_laws.rb#test_no_ascii_line_art
+  proof: MASTER/test/test_scan_law_false_positives.rb#test_ascii_dividers_in_lib_prose_still_fire
 
 DENSITY_aesthetic_minimalism:
   parent: DENSITY
@@ -2540,7 +2540,10 @@ RATCHET_DEPS_UNGRAPHED:
   statement: "Dependency targets named by law_deps.<law_id>.after that do not resolve to a registered Law."
   severity: warning
   resolution: review
-  value: 132
+  # 2026-11-24 recount: every after-target resolves to a registered Law,
+  # a laws.yml entry, or a graph key — rubocop and reek are registered
+  # (law/linters.rb), and this holds with the interconnect node present.
+  value: 0
   may_only: fall
 
 RATCHET_DUALITY_MECHANICAL_GAP:
@@ -5811,10 +5814,13 @@ architecture:
       path: STUDIO
       # b5acc93bc flattened the photograph tree; the public entry it preserved
       # is the photograph loader, guarded by STUDIO/test/idea_picture_test.rb.
+      # The LoRA and postpro gates are pinned one assertion per file under
+      # STUDIO/replicate/test/: dataset diversity, approval decay, review
+      # provenance, grade replay and the spend envelope.
       entry: STUDIO/lora/photograph.rb
       owner: studio
       depends_on: []
-      check: cd STUDIO && ruby -Itest test/idea_picture_test.rb
+      check: cd STUDIO && ruby -Itest test/idea_picture_test.rb && ruby replicate/test/lora_dataset_diversity_test.rb && ruby replicate/test/lora_approval_decay_test.rb && ruby replicate/test/lora_provenance_test.rb && ruby replicate/test/postpro_verify_test.rb && ruby replicate/test/lora_spend_test.rb
 
 # Sole runtime scoring source for Master::CLI::Pipeline. A clean self-scan
 # contributes scan_clean automatically; test_pass and code_review come from
@@ -5837,9 +5843,9 @@ law_deps:
   DECOUPLE:
     after: [FLATTEN, LINEARITY]
 
-  # Hoist constants before merge — merged code references the hoisted constant.
+  # Hoist before merge — merged code references the hoisted constant.
   MERGE:
-    after: [HOIST_CONSTANTS, HOIST]
+    after: [HOIST]
 
   # Kill dead code before defrag — defragging dead code wastes effort.
   DEFRAG:
@@ -5855,24 +5861,21 @@ law_deps:
   PRIMITIVE_OBSESSION:
     after: [DATA_CLUMPS]
 
-  # Fix switch statements (type dispatch) after removing middle men —
-  # middle men often hide the type dispatch.
-  SWITCH_STATEMENTS:
-    after: [MIDDLE_MAN]
-
   # Comment drift after all structural changes — restructured code needs
   # comment review, not before.
   COMMENTS_AS_DEODORANT:
-    after: [DEFRAG, MERGE, FLATTEN, EXTRACT]
+    after: [DEFRAG, MERGE, FLATTEN]
 
   # Strunk Laws after all structural operations — prose quality is a
-  # final-pass concern.
-  OMIT_NEEDLESS:
+  # final-pass concern. Keys are the live Law ids (law/lexical.rb,
+  # law/universal.rb); the old short aliases (OMIT_NEEDLESS, ACTIVE_VOICE,
+  # PARALLEL_STRUCTURE) never registered and were dead nodes.
+  OMIT_NEEDLESS_WORDS:
     after: [DEFRAG, REFLOW]
-  ACTIVE_VOICE:
-    after: [OMIT_NEEDLESS]
-  PARALLEL_STRUCTURE:
-    after: [ACTIVE_VOICE]
+  PROSE_ACTIVE_VOICE:
+    after: [OMIT_NEEDLESS_WORDS]
+  PROSE_PARALLEL_FORM:
+    after: [PROSE_ACTIVE_VOICE]
 
   # Reflow after all density changes.
   REFLOW:
@@ -5884,20 +5887,20 @@ law_deps:
     after: [DEFRAG, MERGE, DECOUPLE, FLATTEN]
 
   # Scanner Law ordering — structural before style, security before polish.
-  bare_rescue:
-    after: [fail_visibly]
-  silent_rescue:
-    after: [bare_rescue]
-  god_class:
-    after: [small_functions, nesting_depth]
-  long_method:
-    after: [nesting_depth]
-  n_plus_one:
-    after: [find_each]
-  yaml_declarative:
-    after: [semantic]
+  # Keys and targets are live Law ids. bare_rescue, yaml_declarative and
+  # rule_coverage never registered as Laws; the chains that ran through them
+  # are collapsed onto their live neighbours (SILENT_RESCUE after
+  # FAIL_VISIBLY, veto_patterns after semantic).
+  SILENT_RESCUE:
+    after: [FAIL_VISIBLY]
+  NO_GOD_CLASS:
+    after: [SMALL_FUNCTIONS, NESTING_DEPTH]
+  SMALL_FUNCTIONS:
+    after: [NESTING_DEPTH]
+  N_PLUS_ONE:
+    after: [FIND_EACH]
   veto_patterns:
-    after: [yaml_declarative]
+    after: [semantic]
   semantic:
     after: [rubocop, reek]
   adversarial:
@@ -5908,14 +5911,17 @@ law_deps:
     after: [co_change_coupling]
   co_change_coupling:
     after: [interconnect]
+  # interconnect is a registered Law (law/graph.rb); dropping its node would
+  # raise the ungraphed ceiling. rule_coverage never registered, so the chain
+  # ends here instead of pointing at a scanner-stage name.
   interconnect:
-    after: [rule_coverage]
+    after: []
   DRY:
     after: [MERGE, DEFRAG]
   KISS:
-    after: [FLATTEN, long_method]
+    after: [FLATTEN, SMALL_FUNCTIONS]
   SRP:
-    after: [FEATURE_ENVY, god_class]
+    after: [FEATURE_ENVY, NO_GOD_CLASS]
   CQS:
     after: [SRP]
 
@@ -5925,15 +5931,15 @@ law_deps:
   OPEN_CLOSED:
     after: [SRP]
   LISKOV:
-    after: [SRP, god_class]
+    after: [SRP, NO_GOD_CLASS]
   INTERFACE_SEGREGATION:
     after: [SRP]
   DEPENDENCY_INVERSION:
     after: [FEATURE_ENVY, SRP]
-  html_lang:
-    after: [meta_charset]
-  no_inline_styles:
-    after: [magic_color]
+  HTML_LANG:
+    after: [META_CHARSET]
+  NO_INLINE_STYLES:
+    after: [MAGIC_COLOR]
 
 plugins:
   video_recordings:

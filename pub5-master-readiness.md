@@ -88,7 +88,7 @@ Lines 131–135 run `==> db prepare` twice back to back; the second call drops `
 
 ### Gaps to know before relying on it
 
-- **Provider dependency**: a real /fix run needs the model pool (HANDOFF.md pins `zai-cli:auto` for cron 541280). With no credentials, /fix can preview but council lanes cannot execute. **NOT_RUN** here.
+- **Provider dependency**: a real /fix run needs the model pool (cron 541280 pins `zai-cli:auto`). With no credentials, /fix can preview but council lanes cannot execute. **NOT_RUN** here.
 - **`/fix all` breadth**: resolution to repo root is supported, but a whole-checkout mutating run is bounded by `RunBudget`/`ABSOLUTE_MAX_PASSES` and the disk/stall guards; it is a marathon with receipts, not a single sweep.
 - The known-debt tag `agent-ignore` can fail `--profile=agent` checks unrelated to a given patch — expected, documented.
 

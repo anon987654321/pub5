@@ -191,6 +191,8 @@ hold this contract.
 
 Tests are run by the local Ruby toolchain in the checked-out repository, not by Vercel or another hosted CI service. Use `MASTER/bin/operator test <paths...>` for the smallest complete proof, then `cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test` for the full MASTER suite. Resolve local runtime and dependency blockers where possible; if a command cannot actually run, record the exact blocker as NOT_RUN or INCONCLUSIVE rather than treating a hosted status, authored test, or static inspection as a pass.
 
+`MASTER_TEST_LIGHT=1` skips the dependency install and bundler activation in `test/test_helper.rb`, so a single pure-logic test file can run on a host that already has the gems or has no network. It is a debugging aid, not proof: CI and `rake test` use the pinned private bundle. `MASTER/tools/token_guard.rb` runs from `.githooks/pre-commit` and `pre-push` and refuses added lines that look like a real credential (placeholders such as the scanner fixtures pass; `PUB5_ALLOW_TOKEN_SHAPE=1` overrides).
+
 Every `/fix` exit runs `Master::Fix::FinalCleanup`. It releases the current invocation's commit lease, stops its owned visual runtime, removes that invocation's temporary visual captures, prunes only exact-named assessment/architecture artifacts outside the retained journal window, and emits a cleanup receipt. Cleanup warnings must be observable and must not overwrite the repair result. Never treat cleanup as permission to delete source changes, user files, checkpoints, transaction/recovery evidence, the durable audit ledger, or test logs.
 
 ## The contract every agent gets
@@ -335,7 +337,7 @@ Task routing and minimum proof:
 
 **Repair versus verification commands:**
 - `/fix [path]` is the canonical repair command. Bare `/fix` is a read-only preview: it observes, critiques and proposes repairs but does not mutate. A write requires explicit `--mode=repair|elevate|all --apply` plus a named repository target; `--dry-run` and `--read-only` override `--apply`, and startup/retry/autonomous triggers never imply consent. After explicit authorization, `/fix` repairs, re-observes and runs proof selected for the changed scope: focused affected tests when reliable, otherwise the target tree's registered suite or Rails source/rendered proof. Do not require `bin/check --profile=full` after every /fix.
-- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` only checks readiness; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
+- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` checks tree, disk, model and the parse sweep; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
 - `MASTER/bin/check` is a separate profile-based verification runner, not a repair command. Its default is `operator`; `ci` is the local CI floor; `full` adds all probes and the full audit and is for broad/release verification, not every repair. `MASTER/bin/ci` is a compatibility entrypoint for `bin/check --profile=ci`.
 - `MASTER/bin/operator check` is the distinct repo-wide `Operator::CheckChain` maintenance ladder. It writes fixes by default; use `--scan-only` when only measuring. It is not an alias for `bin/check`.
 
@@ -1049,6 +1051,20 @@ because agents read the Law one identity at a time. Reopen with a duplicate body
   weights live under `STUDIO/lora/<subject>/`; generated stills land flat in
   `STUDIO/lora/`. MASTER routes requests through its adapters and owns no
   provider or media-generation implementation.
+- **STUDIO gates run before media work, not after.** Before training or after
+  changing a subject dataset, run `ruby STUDIO/lora/quality.rb` and read the
+  subject report: `dataset_diversity` WARN means the set photographs itself
+  twice; `approval` other than CURRENT — NEVER_REVIEWED, UNREVIEWED_VERSION,
+  STALE_PROFILE, or STALE_AGE past `approval_max_age_days` — means likeness
+  review is not in force; `provenance` PROVENANCE_DRIFT means a reviewed image
+  moved or changed. All three block until repaired or explicitly decided by the
+  operator. Before queuing training and monthly, run `ruby
+  STUDIO/lora/spend.rb`: EXCEEDED blocks, WARNING is reported to the operator,
+  and NOT_CONFIGURED is reported as-is, never given an invented number. Before
+  shipping graded output, run `ruby STUDIO/postpro/verify.rb` on the grade
+  sidecar and ship only VERIFIED; MISMATCH and VERSION_DRIFT block. Review
+  receipts carry NOT_REVIEWED axes because likeness is a human review; no tool
+  verdict replaces it.
 - **No unmeasured gem.** The ruby_llm satellites stay out: `-schema` is
   deprecated in favour of a Hash, and `-resilience`, `-top_secret`, `-agents`,
   `-team` and `-template` are thinner than what MASTER owns. `-test`,
