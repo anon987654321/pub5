@@ -34,4 +34,4 @@ targets:
 # removed the lines, never up. TestConstitutionalBudget holds the contract.
 constitution_lines:
   target: MASTER/data/laws.yml
-  ceiling: 6717
+  ceiling: 6542
