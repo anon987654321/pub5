@@ -209,7 +209,7 @@ class LogoContractTest < ActionView::TestCase
 
   test "avatar cuts render at 128, 64 and 32 px with a transparent ground" do
     %w[avatar-canon avatar-bit8 avatar-candy].each do |ink|
-      [128, 64, 32].each do |size|
+      [ 128, 64, 32 ].each do |size|
         path = Rails.root.join("app/assets/images/amber/cuts/#{ink}-#{size}.png")
         assert File.file?(path), "missing avatar cut: #{path}"
         assert File.size?(path).to_i.positive?, "empty avatar cut: #{path}"
