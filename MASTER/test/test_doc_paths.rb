@@ -223,8 +223,6 @@ class TestDocPaths < Minitest::Test
     MASTER/data/receipts/fix-session-2026-11-19-grok.md
     MASTER/data/receipts/fix-session-2026-11-22-glm.md
     MASTER/data/receipts/fix-session-2026-11-22-qoder.md
-    MASTER/data/voice/norwegian/bergen_lora_data_checklist.md
-    MASTER/data/voice/norwegian/engine_comparison.md
     MASTER/lib/cli/face/contract.md
     MIGRATION.md
     SECURITY.md
