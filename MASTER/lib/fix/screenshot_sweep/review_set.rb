@@ -6,7 +6,7 @@ module Master
   module Fix
     class ScreenshotSweep
       # The operator's review set: one phone-width shot per page, at
-      # RAILS/screenshot_<app>_<page>.png (ignored by git), replaced whole by
+      # RAILS/screenshot_<app>_<page>.png (tracked curated review set), replaced whole by
       # each sweep that captured something. Old sweep folders are pruned to the
       # newest KEEP_SWEEPS; renders are replaceable, and eleven of them had grown
       # to 414 MB by 2026-11-04.
@@ -62,6 +62,8 @@ module Master
         end
 
         def pick(row)
+          return unless row.note.nil?
+
           shot = row.shots[WIDTH.to_s] || row.shots[WIDTH]
           return unless shot
 

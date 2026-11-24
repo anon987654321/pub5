@@ -97,6 +97,28 @@ class TestScreenshotSweep < Minitest::Test
     end
   end
 
+  def test_failed_rows_never_replace_the_tracked_review_set
+    Dir.mktmpdir do |root|
+      rails = File.join(root, "RAILS")
+      sweep_dir = File.join(root, "sweep")
+      source = File.join(sweep_dir, "master", "root", "390.png")
+      FileUtils.mkdir_p(File.dirname(source))
+      FileUtils.mkdir_p(rails)
+      File.binwrite(source, "startup placeholder")
+      old = File.join(rails, "screenshot_master_previous.png")
+      File.binwrite(old, "previous review")
+
+      row = Struct.new(:app, :shots, :note).new(
+        "master", { "390" => "master/root/390.png" }, "startup placeholder"
+      )
+      review = Master::Fix::ScreenshotSweep::ReviewSet.new(root:, sweep_dir:)
+
+      assert_equal 0, review.publish!([row])
+      refute File.exist?(File.join(rails, "screenshot_master_root.png"))
+      refute File.exist?(old), "a failed sweep clears stale review evidence"
+    end
+  end
+
   def test_the_sweep_widths_are_declared_data
     widths = YAML.safe_load_file(File.join(ROOT, Master::Fix::ScreenshotSweep::GEOMETRY)).fetch("sweep_widths")
 
