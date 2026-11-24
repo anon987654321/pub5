@@ -782,9 +782,10 @@ replicate_chat_budget:
 
 # Tier-D is a dormant local Ollama fallback. It is disabled by default; when
 # explicitly enabled, the only eligible model is allowlisted Gemma 3 4B.
-# Remotely executed Ollama cloud models have no catalogue or route. Discovery
-# proves presence, not permission. keep_alive holds the model between turns;
-# max_num_ctx caps the request window (ollama_sender.rb).
+# Legacy cloud-suffixed ids in the local `ollama:` namespace have no local-daemon
+# route. Hosted Ollama Cloud is separately routed by openai_compatible.ollama_cloud.
+# Discovery proves local presence, not permission. keep_alive holds the model
+# between turns; max_num_ctx caps the request window (ollama_sender.rb).
 ollama:
   # Operator instruction 2026-11-11: keep Ollama out of the model pool while
   # the local account/quota constraint is active. Re-enable only deliberately.
