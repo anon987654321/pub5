@@ -119,16 +119,23 @@ module Master
 
       def aged_inconclusives(root:, now: Time.now.utc, window: REVIEW_WINDOW_DAYS)
         pending = {}
-        # Read the complete append-only receipt history. A fixed window can
-        # forget an unanswered INCONCLUSIVE after enough unrelated runs.
-        receipt_count = Dir.glob(File.join(root, ".master", "receipts", "convergence-*.json")).size
-        receipts = Receipt.recent(root:, limit: receipt_count)
-        # Oldest first, so a verdict clears only the windows opened before it.
-        receipts.reverse_each do |row|
+        # Read the complete append-only receipt history one file at a time. A
+        # fixed window can forget an unanswered INCONCLUSIVE after enough runs.
+        paths = Dir.glob(File.join(root, ".master", "receipts", "convergence-*.json")).sort
+        paths.each do |path|
+          row = begin
+            JSON.parse(File.read(path, encoding: "UTF-8"))
+          rescue JSON::ParserError, EncodingError
+            nil
+          end
+          next unless row.is_a?(Hash)
+
           at = safe_time(row["generated_at"])
           next unless at
 
           Array(row.dig("details", "checks")).each do |check|
+            next unless check.is_a?(Hash)
+
             name = check["name"]
             case check["state"]
             when "inconclusive"
