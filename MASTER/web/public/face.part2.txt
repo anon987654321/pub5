@@ -115,6 +115,8 @@ uniform float uExpressionBlend;
 uniform float uExpressionStrength;
 attribute vec3 scatter;
 attribute float semanticStage;
+attribute vec3 subjectFrom;
+uniform float uSubjectDirect;
 attribute float seed;
 attribute float curvature;
 attribute float boundary;
@@ -258,6 +260,7 @@ void main(){
   p = mix(p, mix(expressionFrom, expressionTo, uExpressionBlend),
     clamp(uExpressionStrength, 0.0, 1.0));
   p = mix(p, mix(scatter, position, localMorph), uSubjectActive * (1.0-localMorph));
+  p = mix(p, mix(scatter, subjectFrom, localMorph), uSubjectDirect);
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
   // Treat the point cloud as a shallow physical surface instead of a flat depth gradient.
@@ -343,6 +346,7 @@ if (_hasWebGL && THREE) {
   faceGeom = new THREE.BufferGeometry();
   faceGeom.setAttribute('position', new THREE.BufferAttribute(faceHome, 3));
   faceGeom.setAttribute('scatter',  new THREE.BufferAttribute(faceScatter, 3));
+  faceGeom.setAttribute('subjectFrom', new THREE.BufferAttribute(faceHome.slice(), 3));
   faceGeom.setAttribute('semanticStage', new THREE.BufferAttribute(new Float32Array(faceSeeds.length), 1));
   faceGeom.setAttribute('seed',     new THREE.BufferAttribute(faceSeeds, 1));
   faceGeom.setAttribute('curvature', new THREE.BufferAttribute(faceCurvature, 1));
@@ -351,7 +355,7 @@ if (_hasWebGL && THREE) {
   faceMat = new THREE.ShaderMaterial({
     vertexShader: VERT_SHADER, fragmentShader: FRAG_SHADER,
     uniforms: {
-      uMorph:{value:0}, uSubjectActive:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
+      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
       uColor:{value:new Color(1,1,1)},
       uHc:{value: State.highContrast ? 1.0 : (State.contrastMore ? 0.9 : 0.0)},
       uCurl:{value:0}, uJaw:{value:0}, uMouse:{value:{x:0,y:0}},
@@ -505,6 +509,7 @@ async function swapMask(imageUrl) {
     const ng = new THREE.BufferGeometry();
     ng.setAttribute('position',  new THREE.BufferAttribute(nd.home, 3));
     ng.setAttribute('scatter',   new THREE.BufferAttribute(nd.scatter, 3));
+    ng.setAttribute('subjectFrom', new THREE.BufferAttribute(nd.home.slice(), 3));
     ng.setAttribute('semanticStage', new THREE.BufferAttribute(new Float32Array(nd.seeds.length), 1));
     ng.setAttribute('seed',      new THREE.BufferAttribute(nd.seeds, 1));
     ng.setAttribute('curvature', new THREE.BufferAttribute(nd.curvature, 1));
