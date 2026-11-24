@@ -79,7 +79,8 @@ Local development uses `falcon serve`; production uses the tracked
 `bundle exec falcon host /home/mrdamascy/app/falcon.rb`. The app runs as a
 demo at `https://mrd.brgen.no`: one Falcon worker on
 `127.0.0.1:47314` behind relayd, with a three-connection Active Record pool
-and payments in mock mode. Puma is retained only for Capybara system tests. On vm23, as dev,
+and payments in mock mode. Capybara system tests are served by Falcon too; Puma
+is not used. On vm23, as dev,
 `VPS_DEPLOY_SHA=<sha> zsh OPENBSD/bin/vps-deploy mrdamascy` deploys it and
 `curl -fsS http://127.0.0.1:47314/up` answers once it is up. No deploy seeds:
 the menu was loaded once, and `db/seeds.rb` destroys every row before it

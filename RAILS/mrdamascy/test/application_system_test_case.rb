@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require_relative "../../__shared/test/capybara_falcon"
+require_relative "../../__shared/test/capybara_chrome_reset"
 require "axe/matchers/be_axe_clean"
 
 # Browser tests: headless Chrome through Selenium, as brgen runs them, at a
