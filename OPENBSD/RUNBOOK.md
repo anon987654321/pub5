@@ -1237,9 +1237,9 @@ on launch day:
 3. Move the primary aside (never delete): `mv
    /home/<app>/app/storage/production.sqlite3{,.pre-launch}`.
 4. As the app user: `bundle exec bin/rails db:prepare` — schema, no seeds.
-   brgen demo seeds are the DEMO; a launch database starts empty. If a curated
-   skeleton is wanted (cities, categories, admin), seed ONLY
-   `db/seeds/launch.rb` — write it that week, review it that week.
+   Brgen demo seeds are the DEMO; a launch database starts empty. If a curated
+   skeleton is wanted (cities, categories, admin), create a separate launch
+   seed for that release, review it that week, and never reuse demo data.
 5. Start the app with `doas /usr/sbin/rcctl start <app>` and, if configured, start its job worker with `doas /usr/sbin/rcctl start <app>_jobs`; then run the route-manifest probe.
 6. The .pre-launch file stays until the first week survives; dr-pull keeps
    pulling nightly either way.

@@ -120,7 +120,7 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 
 The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/review`, `/critique` and `/council` select audit; `/scan` selects the read-only repair preview (`--mode=repair --dry-run`); `/visual` and `/style` select visual; `/elevate` and `/map` select elevate; `/all`, `/workflow`, `/triad`, `/sweep`, `/through` and `/self` select all. Use `/fix --mode=repair|audit|visual|elevate|all` for explicit mode selection. New instructions and scripts should call `/fix` directly.
 
-The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The canonical execution owners are the Ruby implementations under `lib/core/`, `lib/fix/kernel/` and `lib/execution/`; tests pin the public ownership and recovery boundaries.
+The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The canonical execution owners are the Ruby implementations under `lib/core/`, `lib/fix/kernel/` and `lib/execution.rb`; tests pin the public ownership and recovery boundaries.
 
 The run footer includes a per-run file outcome docket for files that entered the repair adapter. The durable assessment artifact separately enumerates every eligible scanner path as scanned or unmeasured; that is scanner coverage, not a Law PASS or a census of rendered behaviour. The Law × stream × surface matrix remains the compliance record. Its quality projection reports engineering, editorial, visual, experience and operations separately. `compliance_status` must be PASS before repair can finish DONE; `overall_status` also records external evidence, which remains INCONCLUSIVE until document rendering, assistive technology, live-host, listening or qualified business/legal review is actually supplied.
 
@@ -654,7 +654,7 @@ missing or the audio is unreadable.
 
 ### Bergen high-tone LoRA data checklist
 
-<sub>Consolidated from `MASTER/data/voice/norwegian/bergen_lora_data_checklist.md`.</sub>
+<sub>Consolidated Bergen voice-data research.</sub>
 
 Goal: continue from AlexKjes/cosy-norwegian (`model_720_lora_state.pt`)
 toward reliable Bergen high-tone + skarre-r. Provenance: salvaged from the
@@ -714,7 +714,7 @@ data-collection plan for the operator, not a wired route.
 
 ### Norwegian TTS engine landscape (evaluation notes)
 
-<sub>Consolidated from `MASTER/data/voice/norwegian/engine_comparison.md`.</sub>
+<sub>Consolidated Norwegian TTS evaluation research.</sub>
 
 Focused comparison for Norwegian (Bokmål) accent work, status late 2026.
 Provenance: salvaged from the reviewed external patch (see the consolidated project reference below); ranks are proposals for future engine work, not wired
