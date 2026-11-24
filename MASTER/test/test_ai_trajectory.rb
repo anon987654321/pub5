@@ -42,8 +42,7 @@ class TestAiTrajectory < Minitest::Test
     assert_includes prompt, "read-only evidence first"
     assert_includes prompt, "preconditions, privilege, blast radius and recovery"
     refute_includes prompt, "shell execution: zsh only"
-    # The full execution contract carries the production SSH, RTFM and recovery boundary.
-    assert_operator prompt.bytesize, :<, 14_000
+    assert_operator prompt.bytesize, :<, 8_000
   end
 
   def test_operator_manifest_exposes_openbsd_shell_and_rollout_contract
