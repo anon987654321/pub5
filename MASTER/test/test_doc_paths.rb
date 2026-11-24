@@ -197,30 +197,41 @@ class TestDocPaths < Minitest::Test
   # tree-contract file, consolidated beside the rest of the normative corpus in
   # MASTER/data/law/; the per-tree CLAUDE.md contracts folded into it by
   # operator order, so the boundary rule below must admit it.
+  # Non-README Markdown is admitted only for a distinct contract, record,
+  # legal notice, research source or deliverable. Project instructions belong
+  # in the owning README; agent harness files remain separate entrypoints.
   MARKDOWN_REFERENCE_EXCEPTIONS = %w[
     MASTER/FACE_WORLD.md
     BIZ/RESTORATION_REPORT.md
-    BIZ/tools/fetat_proposal.md
-    STUDIO/replicate/agent-guidance/claude/agents/rails-layout-refiner.md
-    MASTER/data/law/TREE_CONTRACTS.md
-    MASTER/data/law/PUB5_PERMISSION_MATRIX.md
-    MASTER/data/law/ad_creative_governance.md
-    MASTER/data/law/bergen_brand_systems.md
+    BIZ/fetat/research.md
+    BIZ/research/aerospace-additive-manufacturing.md
     BIZ/research/bringhurst-strunk-research.md
     BIZ/research/business-plan-quality.md
-    BIZ/research/typographic-styles.md
-    BIZ/tools/future_healthcare_os_proposal.md
-    BIZ/tools/future_nato_weapons_proposal.md
-    MASTER/lib/cli/face/contract.md
-    MIGRATION.md
-    BIZ/fetat/research.md
     BIZ/research/husleieloven-2026.md
     BIZ/research/studio-replicate-growth-revenue-research.md
+    BIZ/research/typographic-styles.md
+    BIZ/tools/fetat_proposal.md
+    BIZ/tools/future_healthcare_os_proposal.md
+    BIZ/tools/future_nato_weapons_proposal.md
+    BIZ/tools/neolimb_proposal.md
     BIZ/tools/nordvakt_proposal.md
     BIZ/tools/norwegianfinancial_proposal.md
+    MASTER/data/law/PUB5_PERMISSION_MATRIX.md
+    MASTER/data/law/TREE_CONTRACTS.md
+    MASTER/data/law/ad_creative_governance.md
+    MASTER/data/law/bergen_brand_systems.md
     MASTER/data/receipts/fix-session-2026-11-19-grok.md
+    MASTER/data/receipts/fix-session-2026-11-22-glm.md
+    MASTER/data/receipts/fix-session-2026-11-22-qoder.md
+    MASTER/data/voice/norwegian/bergen_lora_data_checklist.md
+    MASTER/data/voice/norwegian/engine_comparison.md
+    MASTER/lib/cli/face/contract.md
+    MASTER/FACE_WORLD.md
+    MIGRATION.md
     SECURITY.md
     STUDIO/dilla/vendor/tone/LICENSE.md
+    STUDIO/lora/receipts/unblock-receipt-2026-11-22.md
+    STUDIO/replicate/agent-guidance/claude/agents/rails-layout-refiner.md
   ].freeze
 
   # README.md is the human entry point at each tree/project boundary. Other
