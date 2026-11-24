@@ -20,8 +20,7 @@ responsibility. The operator exposes the main entrypoints:
   Stable one-command endpoints whose implementations already live in
   `lib/` remain at this directory's top level. The former root paths for
   the audit family were removed; no compatibility entrypoints remain.
-- `repo/` contains tracked-tree inventory, entrypoint reachability and
-  structural migration planning. `snapshot.rb` remains a top-level
+- `repo/` contains tracked-tree inventory and entrypoint reachability. `snapshot.rb` remains a top-level
   operator command until its reader/writer contracts are verified
   independently.
 - `research/` contains cognition outcome benchmarks, mutation-oriented

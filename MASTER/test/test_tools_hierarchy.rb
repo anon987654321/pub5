@@ -12,7 +12,7 @@ class TestToolsHierarchy < Minitest::Test
   MASTER_ROOT = File.join(REPO_ROOT, "MASTER")
   TOOLS_ROOT = File.join(MASTER_ROOT, "tools")
   RESEARCH_TOOLS = %w[llm_challenges.rb llm_trajectory.rb].freeze
-  REPO_TOOLS = %w[repo_inventory.rb runs.rb sprawl_plan.rb].freeze
+  REPO_TOOLS = %w[repo_inventory.rb runs.rb].freeze
   AUDIT_TOOLS = %w[capability_inventory.rb data_reach.rb design_baseline.rb dup_census.rb law_hygiene.rb].freeze
 
   def test_master_test_discovery_is_recursive_for_both_test_naming_forms
@@ -87,11 +87,9 @@ class TestToolsHierarchy < Minitest::Test
   def test_repository_tools_keep_the_repo_root_when_moved
     inventory = File.read(File.join(TOOLS_ROOT, "repo", "repo_inventory.rb"))
     runs = File.read(File.join(TOOLS_ROOT, "repo", "runs.rb"))
-    plan = File.read(File.join(TOOLS_ROOT, "repo", "sprawl_plan.rb"))
-
     assert_includes inventory, 'INVENTORY_ROOT = File.expand_path("../../..", __dir__)'
     assert_includes runs, 'ROOT = File.expand_path("../../..", __dir__)'
-    assert_includes plan, 'ROOT = File.expand_path("../../..", __dir__)'
+    refute File.exist?(File.join(TOOLS_ROOT, "repo", "sprawl_plan.rb"))
   end
 
   def test_audit_implementations_live_in_their_canonical_family
