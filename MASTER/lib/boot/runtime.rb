@@ -170,7 +170,7 @@ module Master
     # MASTER_FREE_ONLY: no lane that needs a key is asked. Subscription CLI
     # lanes keep their own gate — this switch governs API keys, not sign-ins.
     def free_only?
-      ENV["MASTER_FREE_ONLY"].to_s != ""
+      %w[1 true yes on].include?(ENV["MASTER_FREE_ONLY"].to_s.strip.downcase)
     end
 
     def any_api_key_present?
