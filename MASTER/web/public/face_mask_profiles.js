@@ -182,7 +182,8 @@
   // Storage is only a fallback for standalone/offline face previews.
   if (serverProfileIndex < 0 && activeKey) {
     try {
-      const stored = Number(sessionStorage.getItem("master.mask." + activeKey));
+      const raw = sessionStorage.getItem("master.mask." + activeKey);
+      const stored = raw === null ? NaN : Number(raw);
       const storedProfile = Number.isInteger(stored) ? PROFILES[stored] : null;
       const storedRotation = storedProfile
         ? ROTATION_PROFILE_IDS.indexOf(storedProfile.id) : -1;
@@ -239,8 +240,7 @@
     newConversation: (id) => {
       const conversationId = String(id || "").trim();
       if (!conversationId) return false;
-      rotate({ detail: { conversationId } });
-      return true;
+      return rotate({ detail: { conversationId } });
     }
   });
 })();
