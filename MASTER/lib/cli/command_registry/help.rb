@@ -77,7 +77,7 @@ module Master
             "/deploy rails --confirm - the inventory group naming the RAILS apps (brgen mrdamascy amber bsdports).",
             "/deploy <app> --confirm - deploy one app registered in RAILS/apps.yml.",
             "/deploy all --confirm - deploy every active registered surface, including MASTER web.",
-            "Plain language works: redeploy OPENBSD, RAILS apps and MASTER web to vm23.",
+            "Plain language works: redeploy all our apps on vm23, or name OPENBSD, RAILS apps and MASTER web.",
             "App IDs, aliases, deployment groups and ordering are resolved from the live inventory, not router lists.",
             "Deployment is remote and review-gated. MASTER waits for the canonical tmux run,",
             "requires the exact target receipt and successful public canary, then checks live",

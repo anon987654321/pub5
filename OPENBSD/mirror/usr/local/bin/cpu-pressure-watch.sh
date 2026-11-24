@@ -40,6 +40,10 @@ while IFS= read -r line; do
   if (( user > 100 || system > 100 || idle > 100 )); then
     sample_failed "vmstat CPU percentage exceeded 100"
   fi
+  cpu_total=$((user + system + idle))
+  if (( cpu_total < 98 || cpu_total > 102 )); then
+    sample_failed "vmstat CPU percentages did not sum to 100 (got $cpu_total)"
+  fi
 
   sample_total=$((sample_total + 1))
   # vmstat's first row is the since-boot average, not a one-second interval.

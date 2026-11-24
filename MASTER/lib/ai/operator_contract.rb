@@ -3,7 +3,7 @@
 module Master
   module AI
     module OperatorContract
-      VERSION = 5
+      VERSION = 6
       STYLE = "openbsd"
       LANGUAGE = "ruby"
       SHELL = "zsh"
@@ -54,6 +54,9 @@ module Master
         [
           "execution: identify the next useful probe, form a grounded plan, then investigate, act and verify in bounded loops; ask only for inaccessible facts, material choices or authority that tools cannot supply; complete independent work while a blocker remains",
           "unattended deployment: use the canonical inventory-driven operator path; remain with the remote tmux run until its exact target receipt, terminal exit marker and public canary have completed; a start banner or accepted command is not completion",
+          "VM23 is the single production-serving OpenBSD guest, not a build host. Resolve identity and SSH access from OPENBSD/data/operator.yml; use MASTER/bin/operator vps deploy <target> --remote from the workstation, never assemble ad-hoc SSH or guess an alias. Keep /fix, scans, Rails CI, dependency installs and asset precompilation on the workstation; never substitute server4 or use vmctl/reboot after SSH failure without explicit approval and an out-of-band plan.",
+          "A full all-app release resolves RAILS/apps.yml and Deploy::Inventory, and includes the tracked OPENBSD mirror, every active RAILS app and MASTER/web. It requires clean governed trees, HEAD=origin/main, a fresh exact-HEAD OpenBSD source/manual and mirror-coverage receipt, workstation preflight, serial app CI and asset attestations before SSH; if that receipt is missing or stale, prepare it with the governed workstation-side /fix OPENBSD preflight and continue only after it passes. vm23 performs bounded sync, frozen bundle checks, service control and health checks only.",
+          "For the Nov 22 2026 incident evidence: the supplied vm23 snapshot showed a saturated CPU but normal available memory and no paging; Brgen Falcon children repeatedly failed to load /home/brgen/app/lib/shared/cross_origin_resource_policy after the shared initializer overlay. The code fix is a Bundler feature require through pub5-shared. The same snapshot recorded cpu_pressure=0, but did not include cpu-watch.log or cron evidence; do not invent why the monitor missed the signal.",
           "ambiguous deployment outcome: after timeout, cancelled wait, lost transport or an existing session, perform read-only vps-state reconciliation and inspect the durable run receipt; observe a live run, use recover --plan for stale receipts, and never start a duplicate deploy",
           "filesystem tools: Tree/ListDir/SearchFiles/ReadFile/GitContext inspect the repository; full operator sessions additionally receive HostFiles for read-only HOME and absolute host paths where OS/sandbox permissions allow",
           "tree is orientation, never proof of file understanding",

@@ -1077,6 +1077,18 @@ operator_playbook:
       action: "Keep one remote deployment at a time. Run repository scans, Rails bin/ci, dependency installation and asset builds on the workstation or isolated sandbox. Deploy through MASTER/bin/operator vps deploy <target> --remote; vm23 only performs bounded sync, attested frozen bundle checks, service control and health checks. Never run vps_master_scan.sh, kill SSH clients, restart services or use vmctl as an automated response."
       proof: "Workstation attestations match the deployed SHA; host admission passes; MASTER/bin/operator vps state --remote and the workstation public canary pass"
 
+    - id: brgen_shared_initializer_respawn_storm
+      area: deploy
+      signal: "Falcon children repeatedly exit with cannot load such file -- /home/brgen/app/lib/shared/cross_origin_resource_policy after shared initializers are overlaid"
+      action: "Trace the copy-tree layout before changing paths: Rails runs from /home/<app>/app while pub5-shared is a sibling at /home/<app>/__shared. Shared initializers load gem features through Bundler (require \"shared/<feature>\"), not require_relative into app/lib. Add a regression that loads the feature through the gem lib path, run workstation CI, then use the pinned canonical deploy; do not hot-edit production or restart blindly."
+      proof: "Shared feature require test and affected app CI pass on the pinned SHA; canonical deploy records a green target receipt, vps-state verifies service/port/deployed SHA, and the workstation public canary passes"
+
+    - id: vm23_cpu_monitor_signal_disagreement
+      area: deploy
+      signal: "A vmstat sample shows sustained 0% idle while resource_guard_history records cpu_pressure=0"
+      action: "Treat old snapshots as historical. On a live read-only diagnosis inspect /var/log/cpu-watch.log, /var/db/pub5/cpu-watch.seen, /var/db/pub5/cpu-pressure, /var/cron/log and pub5-alerts before attributing the miss. The watcher skips vmstat's since-boot row, reads the final user/system/idle triplet from five interval samples and rejects malformed percentages; do not tune thresholds or kill/restart core services from one capture."
+      proof: "Tests use the OpenBSD vmstat column shape and reject invalid triples; live monitor log, heartbeat, pressure signal and resource_guard history agree during a measured sustained-CPU sample"
+
     - id: vps_ci_shared_tree_path
       area: deploy
       signal: "Importmap/RuboCop still run on VPS despite ci.rb fix; postpro resolves to /home/postpro"

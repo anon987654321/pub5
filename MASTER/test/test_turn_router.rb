@@ -256,6 +256,7 @@ class TurnRouterTest < Minitest::Test
       "Okay, so please redeploy OPENBSD and RAILS to vm23.",
       "Alright, you have to deploy OPENBSD and RAILS onto vm23",
       "Hey, I need you to redeploy OPENBSD and RAILS on vm23",
+      "Can you redeploy all our apps on vm23?",
     ]
 
     messages.each do |message|

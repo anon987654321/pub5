@@ -19,11 +19,15 @@ class CpuPressureWatchTest < Minitest::Test
     File.write(@script, source)
     File.chmod(0o755, @script)
     fake("vmstat", <<~SH)
-      printf 'procs memory page disks traps cpu\\n'
-      printf '0 0 0 0 0 99\\n'
+      printf ' procs memory page disks traps cpu\\n'
+      printf ' r s avm fre flt re pi po fr sr sd0 int sys cs us sy id\\n'
+      printf '3 75 503M 327M 4566 0 0 0 0 1 14 17 3794 93 67 33 0\\n'
       i=1
       while [ "$i" -le "${FAKE_INTERVALS:-5}" ]; do
-        printf '0 0 0 0 0 %s\\n' "${FAKE_IDLE:-15}"
+        idle=${FAKE_IDLE:-15}
+        system=${FAKE_SYSTEM:-15}
+        user=${FAKE_USER:-$((100 - idle - system))}
+        printf '2 76 517M 313M 3661 0 0 0 0 0 0 9 8594 41 %s %s %s\\n' "$user" "$system" "$idle"
         i=$((i + 1))
       done
     SH
@@ -68,7 +72,7 @@ class CpuPressureWatchTest < Minitest::Test
 
   def test_quiet_samples_clear_the_pressure_signal
     File.write(File.join(@state, "cpu-pressure"), "#{Time.now.to_i} 88\n")
-    _, _, status = run_monitor("FAKE_IDLE" => "99")
+    _, _, status = run_monitor("FAKE_IDLE" => "99", "FAKE_SYSTEM" => "0")
 
     assert status.success?
     refute File.exist?(File.join(@state, "cpu-pressure"))
@@ -77,6 +81,14 @@ class CpuPressureWatchTest < Minitest::Test
 
   def test_incomplete_vmstat_sample_fails_without_claiming_a_heartbeat
     _, _, status = run_monitor("FAKE_INTERVALS" => "2")
+
+    refute status.success?
+    refute File.exist?(File.join(@state, "cpu-watch.seen"))
+    assert_includes File.read(@alerts), "cpu-monitor-sample-failed"
+  end
+
+  def test_invalid_cpu_column_triplet_fails_without_claiming_a_heartbeat
+    _, _, status = run_monitor("FAKE_IDLE" => "80", "FAKE_SYSTEM" => "30", "FAKE_USER" => "70")
 
     refute status.success?
     refute File.exist?(File.join(@state, "cpu-watch.seen"))

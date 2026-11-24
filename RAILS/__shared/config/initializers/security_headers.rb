@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "../../lib/shared/cross_origin_resource_policy"
+require "shared/cross_origin_resource_policy"
 
 # GitHub/Shopify-style baseline security headers for all pub4 Rails apps.
 Rails.application.config.action_dispatch.default_headers.merge!(

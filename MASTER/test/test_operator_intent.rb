@@ -143,6 +143,8 @@ class OperatorIntentTest < Minitest::Test
       requests = [
         "you need to deploy pub5 onto vm23",
         "i want you to deploy OPENBSD and MASTER and RAILS to vm23 (ssh dev@brgen.no, wheel group)",
+        "Can you redeploy all our apps on vm23?",
+        "Please redeploy all of our apps on vm23.",
       ]
 
       requests.each do |message|

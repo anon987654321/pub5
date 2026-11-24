@@ -94,7 +94,7 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
   end
 
   def test_operator_contract_teaches_unattended_deploy_completion_and_recovery
-    assert_equal 5, Master::AI::OperatorContract::VERSION
+    assert_equal 6, Master::AI::OperatorContract::VERSION
     prompt = Master::AI::OperatorContract.prompt
 
     assert_includes prompt, "exact target receipt, terminal exit marker and public canary"
@@ -103,6 +103,11 @@ class TestIdentityAndRuntimeSurface < Minitest::Test
     assert_includes prompt, "retry only bounded, idempotent observations"
     assert_includes prompt, "never rerun a whole deploy or roll back on guesswork"
     assert_includes prompt, "OpenBSD diagnosis ladder"
+    assert_includes prompt, "production-serving OpenBSD guest, not a build host"
+    assert_includes prompt, "MASTER/bin/operator vps deploy <target> --remote"
+    assert_includes prompt, "fresh exact-HEAD OpenBSD source/manual and mirror-coverage receipt"
+    assert_includes prompt, "governed workstation-side /fix OPENBSD preflight"
+    assert_includes prompt, "do not invent why the monitor missed the signal"
   end
 
   def test_operator_contract_allows_explicit_self_maintenance_without_self_authorization
