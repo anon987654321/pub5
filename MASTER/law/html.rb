@@ -120,7 +120,8 @@ Law.define(:AUTOCOMPLETE_TOKENS) do
     fields = %w[
       on off email name honorific-prefix given-name additional-name family-name honorific-suffix nickname
       username new-password current-password one-time-code organization organization-title
-      street-address address-line1 address-line2 address-line3 country country-name postal-code
+      street-address address-line1 address-line2 address-line3 address-level1 address-level2
+      address-level3 address-level4 country country-name postal-code
       cc-name cc-given-name cc-additional-name cc-family-name cc-number cc-exp cc-exp-month
       cc-exp-year cc-csc cc-type transaction-currency transaction-amount language birthday
       birthday-day birthday-month birthday-year sex url photo tel tel-country-code tel-national
@@ -141,7 +142,7 @@ Law.define(:AUTOCOMPLETE_TOKENS) do
   end
   fix "Set autocomplete to the HTML autofill token that names the field's purpose (given-name, postal-code, one-time-code) so fill tools and password managers can do their work (WCAG 1.3.5)."
   bad  "<input type=\"text\" name=\"full-name\" autocomplete=\"fullname\">"
-  good "<input type=\"text\" name=\"given-name\" autocomplete=\"given-name\">\n<input type=\"text\" name=\"postcode\" autocomplete=\"section-shipping postal-code\">"
+  good "<input type=\"text\" name=\"given-name\" autocomplete=\"given-name\">\n<input type=\"text\" name=\"postcode\" autocomplete=\"section-shipping postal-code\">\n<input type=\"text\" name=\"city\" autocomplete=\"address-level2\">"
 end
 
 # A class that restates its own tag adds a second name that only the

@@ -66,13 +66,15 @@ class Takeaway::Restaurant < ApplicationRecord
   # The storefront may sort by facts the kitchen has actually supplied.
   # Unknown fees/minimums stay last; they are not zero-cost offers.
   def self.sorted(key)
+    # Qualified: live search joins other tables that also carry updated_at and id.
+    t = quoted_table_name
     case key.to_s
     when "delivery_fee"
-      order(Arel.sql("CASE WHEN delivery_fee_cents IS NULL THEN 1 ELSE 0 END ASC, " \
-                     "delivery_fee_cents ASC, rating DESC, updated_at DESC, id DESC"))
+      order(Arel.sql("CASE WHEN #{t}.delivery_fee_cents IS NULL THEN 1 ELSE 0 END ASC, " \
+                     "#{t}.delivery_fee_cents ASC, #{t}.rating DESC, #{t}.updated_at DESC, #{t}.id DESC"))
     when "minimum_order"
-      order(Arel.sql("CASE WHEN min_order_cents IS NULL THEN 1 ELSE 0 END ASC, " \
-                     "min_order_cents ASC, rating DESC, updated_at DESC, id DESC"))
+      order(Arel.sql("CASE WHEN #{t}.min_order_cents IS NULL THEN 1 ELSE 0 END ASC, " \
+                     "#{t}.min_order_cents ASC, #{t}.rating DESC, #{t}.updated_at DESC, #{t}.id DESC"))
     else
       popular
     end
@@ -140,6 +142,10 @@ class Takeaway::Restaurant < ApplicationRecord
   def owner?(account)
     user_id == account&.id
   end
+
+  # The owning user without a lazy read: a restaurant preloaded under strict
+  # loading raised on `.user` from order and menu-item callbacks.
+  def owner = strict_safe(:user)
 
   def setup_checklist
     {

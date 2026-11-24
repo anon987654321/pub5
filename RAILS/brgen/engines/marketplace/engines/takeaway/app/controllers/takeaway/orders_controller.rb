@@ -136,7 +136,7 @@ class Takeaway::OrdersController < Takeaway::BaseController
       return redirect_to(order_path(@order), alert: t("flash.takeaway.cancel_unavailable"))
     end
 
-    @order.deliver_notification(@order.restaurant.user,
+    @order.deliver_notification(@order.restaurant.owner,
                                 title: t("takeaway.diner_cancelled_title", id: @order.id),
                                 body: t("takeaway.diner_cancelled_body", id: @order.id),
                                 source: @order, kind: "order")

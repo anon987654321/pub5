@@ -47,7 +47,7 @@ class Takeaway::Order
           kind: "order")
         broadcast_status_change
         record_activity!("TakeawayOrderUpdated",
-          actor: restaurant_record&.user,
+          actor: restaurant_record&.owner,
           source_vertical: "takeaway",
           locality: restaurant_record&.[](:city),
           visibility: "private")

@@ -30,7 +30,7 @@ module Shared
     private
 
     def strict_safe(name)
-      return public_send(name) if association(name).loaded?
+      return public_send(name) if loaded_fresh?(name)
 
       reflection = self.class.reflect_on_association(name)
       unless reflection&.belongs_to?
@@ -43,10 +43,18 @@ module Shared
       reflection.klass.strict_loading(false).find_by(id: foreign_key)
     end
 
+    # A loaded association whose foreign key has since changed is stale: reading
+    # it reloads lazily and raises under strict loading (an order whose courier
+    # dispatch! just assigned).
+    def loaded_fresh?(name)
+      target = association(name)
+      target.loaded? && !target.stale_target?
+    end
+
     # Single column off a belongs_to, without instantiating the record at all.
     # For notification bodies that only need e.g. a title or a name.
     def strict_safe_attribute(name, column)
-      return public_send(name)&.public_send(column) if association(name).loaded?
+      return public_send(name)&.public_send(column) if loaded_fresh?(name)
 
       reflection = self.class.reflect_on_association(name)
       unless reflection&.belongs_to?
