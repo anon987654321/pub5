@@ -8,7 +8,7 @@ customer base; this is not a multi-tenant delivery marketplace. Customers order
 directly from the kitchen and pay through Vipps Express or Stripe Checkout.
 The product's shorter checkout, brand, routes, schema, service contracts,
 views, menu, seed catalogue and tests are specified in
-[APP_SPEC.md](APP_SPEC.md). That document is the implementation source of truth;
+[product specification](#product-specification). That document is the implementation source of truth;
 this README is the product and operator entrypoint.
 
 ## The product
@@ -24,7 +24,7 @@ One Bergen kitchen owns the order and customer relationship. It operates the
 menu, kitchen board, courier run list, customer tracking and loyalty card.
 The PWA can be installed from the browser; it is not a separate app-store
 application. The exact screen, offline and service-worker behavior is in
-APP_SPEC.md sections 7 and 10–12.
+the product specification sections 7 and 10–12.
 
 ## Foodora and Wolt
 
@@ -383,7 +383,7 @@ Users: admin "Hassan" 90000001, staff "Umm Yusuf" 90000002, courier "Kader" 9000
 
 ## 15. README.md & AGENTS.md (repo docs inside app root)
 
-README: brand story (Damaskus→Bergen), feature list, **comparison table Foodora vs Mr. Damascy steps**, Vipps Express sequence diagram (ASCII), Foodora/Wolt API decision table, world-tour menu w/ research credits (§13 table + shop names), run instructions (`bundle install && rails db:prepare && rails db:seed && rails s`), test instructions, PWA install note, Vipps real-mode env vars. AGENTS.md: app contract — file map, conventions (øre, locales keys, no gems), "read APP_SPEC.md first", don't touch MASTER/contract-tested apps.
+README: brand story (Damaskus→Bergen), feature list, **comparison table Foodora vs Mr. Damascy steps**, Vipps Express sequence diagram (ASCII), Foodora/Wolt API decision table, world-tour menu w/ research credits (§13 table + shop names), run instructions (`bundle install && rails db:prepare && rails db:seed && rails s`), test instructions, PWA install note, Vipps real-mode env vars. AGENTS.md: app contract — file map, conventions (øre, locales keys, no gems), "read this README's Product specification section first", don't touch MASTER/contract-tested apps.
 
 ## 16. Cross-check rules (validator will enforce)
 
