@@ -320,3 +320,731 @@ The near horizon is self-maintenance: `/fix` holding this repository's suites an
 - CSS cascade order and thresholds: `data/css_architecture.yml`, `data/tokens.yml` and the corresponding Laws.
 - Cross-tree implementation and proof state: `convergence.yml`; product gaps: `data/gaps.yml`; operator-only evidence: `data/operator_seams.yml`; UX acceptance: `data/law/ux_refinements.yml`; RAILS-specific refinement: `../RAILS/refinements.yml`. `bin/master status --agent` is the read-only union view, not another owner.
 Use `bin/master --help` and `bin/operator --help` for the current command surface.
+
+
+## Consolidated component references
+
+The following internal guides now live here instead of in nested directories. Their original procedures and boundaries are retained under their subject headings.
+
+
+### Checks
+
+<sub>Source: `MASTER/checks/README.md` (now consolidated here)</sub>
+
+> **Terminology and authority.** The preferred user-facing term is **check**. This guide keeps **check** where it names existing implementation classes, environment variables, or commands; this is a glossary banner, not a partial mass rename. A Law is a normative requirement, a check is an instrument, and proof is evidence about what was measured. Source authority runs `soul.yml > laws.yml > executable laws and gates > tree contracts > Git history`. Soul owns global identity, preservation and protected paths; `laws.yml` owns individual Law identities, statements and internal invariant order. The registry in checks.yml is an execution inventory, not a second Law catalogue. The executable Law DSL reads per-Law policy from `laws.yml#law_catalogue`; the runtime configuration lives beside the catalogue in the same file. See MASTER/data/synonyms.yml. Do not invent hard/soft/ops tiers. Machine outcomes such as skipped, inconclusive, and gaps remain distinct.
+
+**A check is a promise the repository makes to itself and keeps by machine: that
+every page a visitor can reach is whole, honest and in the right language,
+checked before anyone has to notice it is not.**
+
+The checks judge the three shared-engine Rails apps, Brgen, Amber and
+BSDPorts, together with the MASTER web face. Mr Damascy is a separate standalone
+app: its own `RAILS/mrdamascy/bin/ci` is included by
+`MASTER/bin/operator premerge` and `MASTER/bin/operator ci`, not by this
+shared-engine surface map. One runner, `runner.rb`, executes the checks
+described here. The registry, `checks.yml`, declares them, and the runner
+adds no Law authority. A registry
+row names a class to run, or a script, and the line to print when the check
+passes. The registry also records which checks are covered by a composite, so
+`--all` skips those leaves rather than running the same work twice. Before any
+check starts, the runner validates the registry root and refuses a row that
+has neither `class:` nor `script:`. A headless row is a configuration error,
+not an outcome from a check that actually ran.
+
+## What they check
+
+Some checks read source and need nothing running. They check that the app
+inventory in `apps.yml` agrees with the ports and the engines, that migrations
+match the schema, that no foreign key points at a table that is gone, that
+stylesheets obey the CSS constitution and the type and scale contracts, that
+payment and affiliate pages say what they do, that Stimulus controllers are
+wired to something, and that the shared engine is mounted where the apps expect
+it. A neighbouring group checks the surface schemas and the first screen of each
+page. One more reads the craft ledger:
+`exemption_freshness` holds every recorded exemption to its `review_by` date —
+fails the row whose review has passed, fails a row whose law no executable law
+file declares, and warns when a review comes due — so an excuse recorded once
+cannot quietly outlive its argument.
+
+Others simulate a visitor. The page simulation walks every full-page template,
+checking its identity, its dead ends and its labels, and when the apps listen it
+requests every public path that takes no id. The flow journey follows
+multi-step paths declared in `data/flows.yml` and holds each to its
+postconditions and to honest redirects. The human walkthrough and the user flow
+checks probe the verticals and secondary hosts as a guest.
+
+The rendered checks need a real browser. They load pages in Chrome through the
+DevTools protocol, then measure geometry, reflow, occlusion, viewport spill,
+keyboard order, phone-sized tap targets, WebGL surfaces and web vitals, and they
+compare layout against snapshots committed under `data/layout_snapshots`. The
+rendered suite bundles most of them and is a required leaf of `layout_suite`, not a separate optional proof. A source-clean layout cannot pass acceptance if the browser is absent, a route is skipped, a measurement is inconclusive, a visual baseline is missing, or a rendered check has an unapproved finding. `web_vitals_budget` measures
+LCP and CLS on one mobile first screen per app, using the canonical
+`pixel_snapshot` inventory; it source-checks INP collection rather than inventing
+an INP value from a scripted load with no real user interaction.
+
+`browser_diagnostics` adds runtime evidence to that same CDP path. For each reachable
+route in `data/geometry_surfaces.yml`, at its declared viewport, it records console
+messages, uncaught JavaScript exceptions, failed HTTP responses, failed resource
+requests, and a PNG screenshot. It writes a run-scoped `manifest.json` and
+screenshots under the system temporary directory
+(`pub5-browser-diagnostics/<run-id>/`).
+
+For the deliberately small set of surfaces marked `pixel_snapshot: true` in the
+canonical geometry inventory (including selected Brgen verticals), the check also
+compares the PNG against `data/visual_baselines/<app>-<surface>-<viewport>.png`
+using the dependency-free `support/png_diff.rb` decoder. Structural
+`snapshot: true` alone does not opt every route into PNG references. The manifest records exact changed
+pixel counts, ratio, and a red/transparent heatmap. The default threshold is 1%
+of pixels; `CHECK_PIXEL_DIFF_MAX_RATIO=0` requests exact equality. Dimension
+changes always fail. Missing baselines are clearly reported as soft findings
+until `CHECK_PIXEL_BASELINE_STRICT=1` is enabled; corrupt or unsupported images
+are never treated as equal.
+
+PNG approval is separate from autofix. Run diagnostics first, inspect the
+captured screenshots and manifest, then promote the exact files reviewed with
+`ruby MASTER/tools/approve_visual_baselines.rb --manifest PATH`. The tool checks
+the capture hash, dimensions, route inventory and runtime status, and refuses to
+overwrite an existing reference unless `--replace` is explicit. See
+`data/visual_baselines/README.md` for the workflow.
+
+Uncaught JavaScript exceptions, document HTTP errors, first-party server errors,
+failed first-party scripts/stylesheets, and missing screenshot evidence fail the
+check. Ordinary console errors/warnings
+and other resource failures remain soft until `CHECK_STRICT_SOFT=1`, preserving the
+existing severity calibration. Each route/viewport prints PASS, FAIL, SKIPPED or
+INCONCLUSIVE and the manifest links its screenshot and detailed browser evidence.
+Closed app ports are explicitly skipped; absent Chromium or no reachable apps is
+inconclusive rather than green.
+
+Run a focused inventory slice while diagnosing one surface, or run the entire
+declared set:
+
+```zsh
+ruby MASTER/checks/runner.rb browser_diagnostics
+CHECK_SURFACES=brgen/marketplace,amber ruby MASTER/checks/runner.rb browser_diagnostics
+CHECK_BROWSER_DIAGNOSTICS_SETTLE_MS=800 ruby MASTER/checks/runner.rb browser_diagnostics
+```
+
+`CHECK_BROWSER_DIAGNOSTICS_OUTPUT` overrides the artifact root, and
+`CHECK_BROWSER_DIAGNOSTICS_SETTLE_MS` bounds the post-load settling window
+(0–5000 ms). The check runs inside `rendered_suite`, which is required by `layout_suite`; there is one route inventory and one browser transport, with no separate browser framework or new runtime dependency.
+
+A last group checks the checkers. The mutation check plants known defects and
+requires the other checks to catch them. The calibration check keeps the design
+metrics honest against fixed good and bad exemplars, which sit under
+`fixtures`.
+
+## Four outcomes
+
+A check passes, fails or is inconclusive, and a check that raises is recorded as
+errored. The difference matters. A check that could not measure anything, because
+the browser was missing or the apps were down, is inconclusive. It must never
+read as a pass. The runner prints a summary of each outcome and exits non-zero on a
+failure or errored check. A check crash remains a distinct `errored` outcome
+for diagnosis, but it can never count as a pass and cannot be made successful
+by an environment switch. `CHECK_STRICT_INCONCLUSIVE` makes an inconclusive
+result blocking, and `CHECK_STRICT_SOFT` promotes soft findings to failures.
+Every run is appended to a ledger, and `--ledger` prints what the ledger holds.
+
+The two flow checks, `user_flow` and `flow_journey`, say what happened to each
+app. An app whose port is closed is reported as skipped because the app is down,
+by name, with the flows it took with it, and the check is inconclusive however
+many source checks ran beside it. A skipped app is never a pass. The variable
+`CHECK_SOURCE_ONLY` says a run is meant to be source-only and keeps the check green;
+on the deploy host `CHECK_REQUIRE_LIVE` turns the same skip into a failure.
+`FLOW_BRGEN_PORT`, and the same name for each other app, points one app's flows at
+a copy booted on a spare port.
+
+Journeys marked as mutating create accounts, posts, listings and orders, and read
+them back. They run against a development database and are refused on the deploy
+host, where the port they would write to serves production, unless
+`CHECK_ALLOW_WRITES` says the copy is disposable. They sign up with an address made
+unique for each run, and they read confirmation and reset mail from the app's
+`tmp/mails` directory, where the development mailer writes it.
+
+Checks that can repair what they find do so by default and measure again.
+`--scan-only`, `--no-autofix` or `CHECK_AUTOFIX=0` makes a run read-only.
+
+## Baymard-informed UX review
+
+The `baymard_ux` check is an original, independently worded assessment profile informed by public Baymard research. It is not an official Baymard audit, score, certification or affiliation. The research is ecommerce-heavy; commerce-specific journeys are applied only where the app inventory indicates that the feature exists. The audit does not impose one visual identity on Brgen, Amber, BSDPorts or their verticals.
+
+Baymard's public methodology describes 200,000+ hours of research, 4,400+ participant/site sessions, and 54 rounds of manual benchmarking across 344 major US and European ecommerce sites. That methodology page describes the benchmark as 818 guidelines; the live benchmark page now presents 1,254 guidelines across desktop web, mobile web and mobile apps. These are differently scoped public research views, not totals to combine or scores MASTER can claim. The profile also cites Baymard's [checkout research](https://baymard.com/research-articles/ecommerce-checkout-usability-report-and-benchmark), [2026 cart-abandonment data](https://baymard.com/lists/cart-abandonment-rate) and [inline-validation research](https://baymard.com/research-articles/inline-form-validation).
+
+The 2026 abandonment research distinguishes shoppers who were just browsing or not ready to buy from people reporting avoidable friction. That distinction is built into the audit: an abandonment percentage is not itself a diagnosis, and a purchase-flow improvement must not hide costs or undermine a visitor's ability to decline.
+
+The source lane measures a bounded set of inspectable markup and stylesheet contracts: form-control names, image alternatives, interactive names, non-native click targets, focus-outline suppression and viewport declarations. Framework-generated controls and ambiguous cases remain inconclusive until the rendered browser can inspect them. Existing rendered checks still own geometry, contrast, keyboard execution, touch targets, overflow and visual snapshots.
+
+The task lane describes participant or expert tasks for first-screen comprehension, navigation findability, search recovery, offer evaluation, cart editing and cost comprehension, checkout recovery (including inline error timing and retained values), mobile completion, and keyboard/screen-reader operation. The mapped laws also reject coercive conversion tactics such as hidden charges, deceptive urgency, unnecessary forced accounts and obstructed refusal or cancellation. Source text cannot prove that a person understood a page or completed a journey. Without task evidence, these assessments remain `INCONCLUSIVE`; they are never silently counted as passes.
+
+Run the audit by itself or as part of the layout suite:
+
+```zsh
+rake -f MASTER/Rakefile ux:baymard
+ruby MASTER/checks/runner.rb baymard_ux
+BAYMARD_EVIDENCE=MASTER/.master/baymard/evidence.yml ruby MASTER/checks/runner.rb baymard_ux
+BAYMARD_STRICT=1 BAYMARD_EVIDENCE=MASTER/.master/baymard/evidence.yml ruby MASTER/checks/runner.rb baymard_ux
+```
+
+The evidence file is repository-local YAML with `schema: 1` and an `apps` mapping. Each task row names `status: pass`, `status: fail` or `status: inconclusive`; a non-inconclusive verdict also requires a method (`moderated_user_test`, `expert_walkthrough`, `browser_task` or `screen_reader_review`), a positive participant count, an anonymised aggregate observation and one or more artifacts. Artifacts are limited to text/structured notes or screenshots (Markdown, text, JSON, YAML, PNG, JPEG or WebP), each with a repository-relative path and SHA-256 digest, and are capped at 2 MB each. Text artifacts are scanned for email addresses, phone-like strings and common structured participant/customer name or ID fields; this is a guardrail, not a complete PII detector. Manually anonymise and review every artifact before storage. Image artifacts require `redacted: true` as an explicit human attestation; the audit checks file signature and hash, not whether image content is actually redacted. Raw audio/video, participant names and identifiers must not be stored. Missing, changed, oversized, escaped, symlinked or unsupported evidence remains inconclusive. `BAYMARD_STRICT=1` makes unresolved task evidence blocking.
+
+The report separates measured pass/fail counts from inconclusive and not-applicable assessments, includes source paths and line numbers, and explicitly reports no official Baymard score. A clean source scan is not a usability certification: task observations and rendered browser evidence remain separate proof.
+
+## Three rules the checks have paid for
+
+A check that demands one of several correct outcomes reports the environment as
+the tree. Amber's demo redirects home without a seeded wardrobe, and brgen's
+marketplace shows an empty state without listings, so a check that insists on
+the populated branch reads an empty database as a broken app. Name the set of
+correct answers and keep each falsifiable.
+
+A test that runs a check over this tree and asserts clean proves nothing, since
+it also passes against a check whose body returns ok. Plant the defect, assert
+red and named, remove it, assert green, and drive the test once against a
+gutted check.
+
+Check what the instrument opens before believing what it says. A stylesheet
+lint that globs a directory misses what the bundle pulls in through `@use` and
+`@forward`, and a class extractor that stops at a quote cannot read a Ruby class
+value with interpolation in it.
+
+## Run
+
+The apps come up with the operator, which reads their ports from `apps.yml`. The
+whole ladder, including these checks, runs through `bin/operator check`. To run
+only these, name them or pass `--all`. `--explain` lists every check with its
+pass line and the environment switches the runner honors.
+
+```zsh
+MASTER/bin/operator triangle up
+ruby MASTER/checks/runner.rb page_simulation flow_journey
+ruby MASTER/checks/runner.rb --all
+ruby MASTER/checks/runner.rb --ledger
+```
+
+`--json` prints one JSON document instead of the dmesg lines — every named
+check's outcome, failure/warning/error lines, gaps and the summary — with the
+same exit codes as the prose run. It exists so harnesses and foreign runtimes
+can consume findings as data instead of parsing them back out of the log:
+
+```zsh
+ruby MASTER/checks/runner.rb --json --all > check_run.json
+```
+
+
+### Approved visual baselines
+
+<sub>Source: `MASTER/checks/data/visual_baselines/README.md` (now consolidated here)</sub>
+
+This directory holds **approved reference PNGs**, not the latest run's screenshots.
+Only a deliberately small set of surfaces opt into pixel comparison via
+`pixel_snapshot: true` in `MASTER/checks/data/geometry_surfaces.yml` or the
+`pixel_snapshot: true` field on a row in `MASTER/checks/support/brgen_vertical_surfaces.rb`.
+Structural `snapshot: true` does not automatically opt a page into PNG tests.
+The filename is `<app>-<surface>-<viewport>.png`, derived from the same canonical
+surface inventory. The rendered check never copies a fresh screenshot here during
+an ordinary run or through `CHECK_AUTOFIX`.
+
+## Compare
+
+Run the rendered diagnostics with the apps serving and Chromium available:
+
+```zsh
+ruby MASTER/checks/runner.rb browser_diagnostics
+```
+
+The manifest and PNGs go to the system temporary directory under
+`pub5-browser-diagnostics/<run-id>/`. For a surface with an approved PNG, its
+row records exact changed-pixel count, ratio, approved reference path and a
+red/transparent difference image when pixels changed. The default blocking
+budget is 1% of pixels per viewport; set `CHECK_PIXEL_DIFF_MAX_RATIO=0` for exact
+pixel equality or choose an explicit ratio between 0 and 1. An image-dimension
+change is always a failure, not a skipped comparison.
+
+Surfaces without an approved PNG remain explicitly marked as missing and are
+reported as soft findings by default, while the structural layout snapshots
+continue to run. Set `CHECK_PIXEL_BASELINE_STRICT=1` to make missing or
+unsupported pixel baselines blocking. This lets the inventory be seeded
+gradually without claiming that un-compared pixels passed.
+
+## Approve the reviewed capture
+
+First run the diagnostics without approval and inspect the screenshots and manifest
+path printed by the check. Then promote the exact files you reviewed; this does not
+navigate again or silently replace your inspection with a new capture.
+
+```zsh
+ruby MASTER/checks/runner.rb browser_diagnostics
+ruby MASTER/tools/approve_visual_baselines.rb --manifest /tmp/pub5-browser-diagnostics/<run-id>/manifest.json
+git diff -- MASTER/checks/data/visual_baselines
+```
+
+The tool verifies that each source PNG is inside that run's screenshots directory,
+matches its recorded SHA-256 and dimensions, belongs to a declared `pixel_snapshot`
+surface, and has no runtime failures. Failed/inconclusive captures cannot be
+approved. Existing baselines are protected from accidental overwrite: review the
+diff and explicitly pass `--replace` when accepting a deliberate design change.
+Use `--surface app/label/viewport` (repeatable) to approve a chosen subset.
+
+This tool is never part of `/fix` or `CHECK_AUTOFIX`; baseline approval is a
+separate operator action.
+PNG comparisons use a dependency-free Ruby decoder for Chromium's non-interlaced
+8-bit RGB/RGBA screenshots. Unsupported/corrupt images are reported rather than
+silently treated as equal. Keep the browser, operating system, device scale,
+fonts, locale and viewport stable when producing a baseline; use separate
+references when the rendering environment deliberately differs.
+
+
+### Norwegian accent evaluation fixtures
+
+<sub>Source: `MASTER/data/voice/norwegian/README.md` (now consolidated here)</sub>
+
+Evaluation data for Norwegian accent work (Bergen high-tone vs Eastern
+low-tone), consumed by `Voice::Benchmark`'s tonem lane
+(`lib/voice/benchmark.rb`: `pitch_track`, `tonem_verdict`, `tonem_eval`).
+
+## Provenance
+
+Salvaged on 2026-11-21 from an external agent patch ("master_voice") that
+proposed a complete parallel TTS stack. The stack itself was rejected - it
+registered its own engines, supervisor and G2P beside the existing
+`Master::Voice::Engines` chain, returned `audio_path: nil` from every
+adapter, rewrote the operator's words before synthesis, used bare Open3,
+and shipped about 2,000 lines with no tests. The dialectology underneath it
+was sound, so the data survives here in evaluation-only form. The review is
+recorded in `data/proposals.yml` (entry `master-voice-parallel-stack`).
+
+## What lives here
+
+- `bergen.yml`, `oslo_standard.yml` - tonem-1 f0 targets, minimal pairs and
+  word lists per accent. Read by `Benchmark.tonem_target`.
+- `phonemes_bergen.yml`, `phonemes_east.yml` - segmental inventories
+  (uvular vs alveolar r, retroflex series present vs absent).
+- `bergen_lexicon.tsv` - reference forms for evaluation only, never a
+  rewrite table. Hygiene applied on salvage: duplicate rows removed,
+  identity mappings dropped, the contested `øya → øyen` and the approximate
+  verb hints marked as such.
+- `engine_comparison.md` - open-engine landscape for nb, corrected to the
+  routing that actually exists in `data/tts.yml`.
+- `bergen_lora_data_checklist.md` - data-collection plan for a future
+  CosyVoice3 continued-LoRA attempt.
+
+## Law statements
+
+- This directory is **evaluation-only**. No engine, no supervisor, no voice
+  selection: `data/voice.yml` `language_voices` remains the single source of
+  truth, and Norwegian is spoken by Pernille until a real engine passes the
+  benchmark gates.
+- The synth contract is unchanged: an engine returns truthy only with a
+  real audio file at `out_path`; failure returns false and never raises.
+- Nothing here rewrites text before speech. Faithful speech is the default
+  (`data/tts.yml`).
+
+## Usage
+
+```ruby
+track = Master::Voice::Benchmark.pitch_track("solen.wav")
+verdict = Master::Voice::Benchmark.tonem_eval("solen.wav", accent: "bergen")
+# => { path:, accent:, target:, measured:, score:, pass:, available: }
+```
+
+`tonem_eval` needs `aubionotes` on PATH (the same optional dependency the
+existing f0 summary uses) and answers nil, not an exception, when it is
+missing or the audio is unreadable.
+
+
+### Air Superiority
+
+<sub>Source: `MASTER/plugins/air_superiority/README.md` (now consolidated here)</sub>
+
+**Air Superiority lets a machine know its own airwaves: every Wi-Fi network and
+Bluetooth device around it, measured against what its owner has already
+vouched for, with nothing sent anywhere and nothing attacked.**
+
+It is a plugin for defensive observation. A scan lists the networks and devices
+the host can hear and flags each one that is not on a local list of known
+ones. Each flag is advisory. The plugin does not decide that a stranger is a
+threat; it tells the operator that a stranger is there.
+
+The scan uses whatever the host already provides. On macOS it reads the airport
+tool and the system profiler, on Linux nmcli and bluetoothctl, on OpenBSD
+ifconfig, and on Android under Termux the Termux:API scanners. The status
+action names the backend chosen for each radio, or says it is unavailable. When
+one radio cannot be scanned, the other is still reported, the scan result
+carries the error, and its complete flag is false. A missing interface never
+becomes an empty success.
+
+The known list is a small YAML file under `~/.master/plugins/air_superiority/`,
+kept private to the operator. The remember action adds a network by name and
+hardware address, or a device by address, and writes nothing else. The law in
+`data/laws.yml` grants write access to that list alone and forbids packet
+injection, deauthentication, disassociation, credential capture,
+man-in-the-middle tricks, exploitation and remote control. Do not add any of
+them. Identifiers the scan finds are sensitive, so they stay on the machine.
+
+The manifest, `plugin.yml`, declares status and scan as observable, which means
+MASTER's guarded observation tool may call them without write authority.
+Remember is not observable and runs only through an explicit plugin run. Any
+other action is refused as unknown. Every call first passes the law handshake,
+so the plugin will not run before MASTER has admitted its own constitution.
+The code is in `air_superiority.rb`, with the comparison in `analyzer.rb` and
+the small result objects in `models.rb`.
+
+## Use
+
+Inside a MASTER session, the plugin command reaches it. Remember takes the same
+form with a JSON object naming the kind, network or device, and its identifiers.
+
+```text
+/plugin info air_superiority
+/plugin run air_superiority status
+/plugin run air_superiority scan
+```
+
+
+### Session Browser
+
+<sub>Source: `MASTER/plugins/session_browser/README.md` (now consolidated here)</sub>
+
+Session Browser provides persistent browser sessions for explicitly allowlisted public hosts. Its network transport permits GET and HEAD only; this is not a read-only guarantee. Page JavaScript executes, and a GET endpoint can change remote state. Treat every page and its scripts as untrusted. The plugin reuses MASTER's WebBrowse request broker and snapshot script rather than creating a second network stack or a second page extractor.
+
+The plugin is deliberately inert until at least one hostname is added to MASTER/data/laws.yml under plugins.session_browser.allowed_hosts. The list is exact-host policy after lowercase, trailing-dot and leading www normalization. There are no default destinations and no wildcard domains. Every page request must still pass the pinned-address SSRF guard; each session is restricted to one canonical host.
+
+Supported actions are status, inspect, open, login, extract, look, follow, paginate and close. Only status and inspect are observable through the plugin observation surface. Look returns a screenshot as visual evidence only. Follow and pagination inspect literal anchor hrefs and navigate to them; they never click arbitrary page controls or run a computer-use loop.
+
+The plugin creates no in-memory session table. It stores state.yml for the session's host binding and last safe URL, a per-session lock, and a Chromium user-data-dir under ~/.master/plugins/session_browser/sessions. Files and directories are owner-only. Chromium's own profile persists cookies and site data on disk; passwords and one-time codes are never copied into the YAML state. Remove a session directory locally if its profile data must be erased. The close action clears the active route and session slot but intentionally preserves the profile.
+
+Captured screenshots live under ~/.master/plugins/session_browser/captures. The directory is owner-only, each capture is mode 0600, and old captures are pruned during every capture to a 500-file cap.
+
+The transport permits only GET and HEAD requests. This does not prevent side effects: page JavaScript executes and GET endpoints may mutate server state. Ordinary POST-based logins and form submissions are blocked; WebSocket-driven pages, cross-host CDN requests and scripted-only navigation will not work. A visible login window is available only when a workstation display exists, but its POST-based submissions remain blocked. Use an already authorized profile or a compatible GET-based sign-in flow. Security challenges are not bypassed. Page contents are untrusted data and never become instructions. POST remains disabled until the operator approves a specific host and task under the session-browser policy.
+
+The persistent profile stores website cookies and session tokens on disk, so adding a hostname is not blanket consent to browse or interact with every account. Do not add a hostname without an explicit operator decision.
+
+## Use
+
+/plugin info session_browser
+/plugin run session_browser status
+/plugin run session_browser inspect {"session":"research","url":"https://example.com"}
+
+
+### Social Browser
+
+<sub>Source: `MASTER/plugins/social_browser/README.md` (now consolidated here)</sub>
+
+**Social Browser lets MASTER act in the one place an operator lives
+online, their own accounts, while the operator keeps every key, every consent
+and every consequence.**
+
+It drives a real browser, through the Ferrum gem, on accounts the operator owns
+or is authorized to run. Two sites are wired in today: OnlyFans and FetLife. Each has an HTTPS start page and a short list of
+allowed hosts, and the plugin refuses any other destination. The status action reports whether
+the browser is available and which sites are known.
+
+Logging in is the operator's work. The login action opens a visible browser and
+takes a screenshot; the operator types the password and any one-time code
+there. MASTER never receives passwords, codes, cookies or session credentials.
+The browser profile for each account lives under
+`~/.master/plugins/social_browser/accounts/`, with owner-only permissions, and
+never in the repository.
+
+Reading is open and writing is narrow. The inspect action returns the page
+title, the page text and a screenshot, and the text passes through MASTER's
+injection guard because a page is untrusted input and never an instruction. Two
+actions write: publish_owned posts to an account the caller declares owned, and
+reply_inbound answers a message that someone sent to that account. Each needs
+explicit consent in the call, and each does one thing per invocation. A message
+may not be empty or exceed 4,000 bytes. An account takes one write in any
+fifteen seconds, and a lock stops two runs from using the same account at once.
+Every write leaves three screenshots, before, typed and after.
+
+A CAPTCHA or security challenge stops the run for a human, before and after a
+write. The plugin does not try to get past one. A missing composer, a missing
+submit button, an expired session or a changed page is reported as a failure,
+and the plugin never says an action is done because a click was attempted.
+
+The law in `data/laws.yml` forbids what this plugin could otherwise be bent
+into: unsolicited bulk messaging, automated friend farming, automated
+following, deceiving anyone about identity, and getting around a challenge. A
+change that makes any of those easier does not belong here.
+
+The manifest, `plugin.yml`, declares status and inspect as observable, so
+MASTER's guarded observation tool may call them. Login and the two writes run
+only through an explicit plugin run. The code is in `social_browser.rb`.
+
+## Use
+
+Inside a MASTER session, the plugin command reaches it.
+
+```text
+/plugin info social_browser
+/plugin run social_browser status
+```
+
+
+### Soulseek
+
+<sub>Source: `MASTER/plugins/soulseek/README.md` (now consolidated here)</sub>
+
+MASTER connects to an existing [slskd](https://github.com/slskd/slskd) daemon through its versioned HTTP API. slskd owns the Soulseek network session and transfer engine; MASTER owns command admission, local collection inventory and the acquisition boundary.
+
+## Configure
+
+Install and configure slskd natively on the workstation. Keep its web/API listener bound to loopback unless a remote endpoint is required. Create an API key with the minimum required read/write role, then export it only in the MASTER process environment:
+
+```sh
+export MASTER_SLSKD_URL=http://127.0.0.1:5030
+export MASTER_SLSKD_API_KEY='your-slskd-api-key'
+MASTER/bin/master
+```
+
+The default endpoint is loopback HTTP on port 5030. A remote endpoint must use public HTTPS on port 443 and pass MASTER's pinned-address SSRF guard. Do not expose the slskd API directly to the public internet. The API key is never written to repository files or plugin state. Search results are limited to unlocked audio files; MASTER also checks slskd's `isLocked` flag before listing or queueing a result.
+
+## Actions
+
+```text
+/plugin info soulseek
+/plugin run soulseek status {}
+/plugin run soulseek search {"query":"J Dilla Jay Dee"}
+/plugin run soulseek discover {"queries":["J Dilla breakbeats","jazz funk drum breaks","Bergen soul jazz records"]}
+/plugin run soulseek results {"search_id":"<UUID returned by search>"}
+/plugin run soulseek rank {"search_id":"<UUID returned by search>"}
+/plugin run soulseek downloads {}
+/plugin run soulseek library {"path":"~/Music"}
+/plugin run soulseek gaps {"path":"~/Music","queries":["J Dilla - Welcome 2 Detroit","Hugh Mundell - Africa Must Be Free"]}
+/plugin run soulseek queue {"search_id":"<UUID>","username":"<peer>","filename":"<exact result path>","size":1234567,"rights_basis":"artist_authorized","consent":true}
+```
+
+Library scans read filenames and sizes only. They do not open, tag, move, rename or delete audio. Gap matching is a filename heuristic, not an audio fingerprint or proof that two releases are identical.
+
+## Rebuild and audit a collection
+
+Compare existing path-list exports without counting directory names as tracks:
+
+```text
+/plugin run soulseek manifest {"paths":["~/MusicExports/0day.txt","~/MusicExports/samples.txt","~/MusicExports/reggae.txt"]}
+```
+
+Build a structured catalogue from an actual local music folder. Create the destination directory first; exports are written outside the music folder and require explicit consent:
+
+```text
+/plugin run soulseek catalog {"path":"~/Music","output_path":"~/.master/music/catalog.json","consent":true}
+/plugin run soulseek duplicates {"path":"~/Music","mode":"candidates"}
+/plugin run soulseek duplicates {"path":"~/Music","mode":"sha256"}
+/plugin run soulseek quality {"path":"~/Music"}
+```
+
+The catalogue groups files by their containing folder and records relative paths, sizes, formats and filename-derived artist/album/title/year hints. It reports folders without clear artist/year hints and tracks without a track-number hint. These are naming-based metadata gaps, not a scan of embedded ID3/Vorbis/MP4 tags; it does not read embedded tags or audio. Manifest comparisons report exact path overlap only; different paths do not establish different recordings. Duplicate candidates share a normalized filename and size, while `sha256` verifies byte-identical content by reading each audio file. Hashing can take time on large libraries. Both modes are reports only: nothing is deleted or reorganised. Existing catalogue files are not overwritten unless `overwrite: true` is also supplied with consent.
+
+The `quality` action is structural triage: it reports common extension families, empty files and very small files for manual review. It does not decode audio or establish bitrate, sample rate, clipping or audible fidelity; small files may be intentional samples or short clips.
+
+### Sample discovery and evaluation
+
+`discover` submits 1–20 explicit Soulseek searches in one bounded invocation. It deduplicates exact repeated queries and returns one search ID per query; it does not wait for peers or download anything. Inspect those IDs with `results`, or use `rank` to sort the returned files by a provisional priority score based on extension, peer-reported sample rate/bit depth/bitrate and reported free slots. All peer metadata is unverified: the score is a shortlist aid, not proof of losslessness, recording quality or provenance.
+
+After a rights-cleared file has completed through slskd, pass a local WAV copy to STUDIO's analyzer:
+
+```text
+/plugin run soulseek analyze {"path":"~/Music/Downloads/approved-break.wav","max_duration":30}
+```
+
+The read-only `analyze` action currently accepts PCM or IEEE-float RIFF/WAVE files up to 32 MiB and analyses at most 30 seconds. It refuses to run on OpenBSD hosts so this CPU- and memory-bounded work stays on the workstation or an isolated sandbox, never vm23. It verifies that the file remains unchanged during the run, records its SHA-256 and WAV format/sample-rate/bit-depth/channel metadata, and uses STUDIO's existing Ruby analyzer for tempo, onset, harmony, spectral and section features plus measured peak, RMS, clipping and near-silence statistics. It does not classify noise, certify fidelity or replace listening. Convert other formats to a local WAV derivative with an operator-installed audio tool before analysis; preserve the downloaded original.
+
+The full sequence is therefore discovery, peer-result review, one rights-cleared download, then local technical analysis. Search and ranking never trigger acquisition; bulk acquisition remains disabled.
+
+Search and result inspection do not download files. Queueing requires explicit `consent: true`, the exact unlocked filename and size from the named search result, and a rights basis admitted by MASTER's canonical plugin policy (`public_domain`, `open_license`, `artist_authorized` or `rights_owned`). One file is queued per call. Bulk acquisition is disabled. The rights basis is an operator attestation, not a legal determination; personal possession or personal-use intent alone is not a rights basis.
+
+MASTER does not bypass peer queues, locked shares, DRM, paywalls or access controls. Verify the recording, edition, source and licence before queueing. slskd's configured download directory and transfer limits remain authoritative.
+
+
+### tap_probes (parked)
+
+<sub>Source: `MASTER/plugins/tap_probes/README.md` (now consolidated here)</sub>
+
+Parked focus-walk and tap-target browser probes.
+
+- **revive_when:** mobile face work resumes
+- **members:** checks/focus_walk_probe.rb, checks/tap_target_probe.rb
+- **note:** Removed from checks.yml (hard) and check_tiers.yml (soft). lib/fix tap-target padding stays in the tree.
+
+Parked 2026-11-01 under the essentials pass; sponsor: the operator.
+
+
+### Travel Browser
+
+<sub>Source: `MASTER/plugins/travel_browser/README.md` (now consolidated here)</sub>
+
+**Travel Browser lets MASTER do the searching, comparing and form-filling of a
+trip, and leaves the one act that spends money, and every secret on the way to
+it, in the hands of the person who is going.**
+
+It drives a visible browser, through the Ferrum gem, for flights, hotels,
+restaurants, tours and transfers. It works on any site that has a page, because
+it automates the page and not a provider's private interface. A provider with a
+stable authenticated API and a stronger contract may get its own adapter later.
+
+The actions are status, inspect, open, login, fill, click and book. Open
+accepts HTTPS addresses only and passes them through the same guard that blocks
+loopback, private and reserved destinations. Inspect returns the page title,
+its text, up to 120 of its form controls and a screenshot. Page text passes
+through the injection guard and is treated as untrusted content, never as
+instruction. Each browser action keeps a named session, a profile stored under
+`~/.master/plugins/travel_browser/sessions/` with owner-only permissions. The
+repository holds no credentials and no booking state.
+
+Secrets stay with the operator. Login waits in the visible browser while the
+operator types credentials and one-time codes, and MASTER receives none of
+them. The fill action refuses any selector that names a password, one-time
+code, card, security code or passport field, so those fields can only be filled
+by hand. A CAPTCHA, an access-denied page or any other security challenge stops
+the run and waits for a person.
+
+The book action is the final check. It does nothing unless the call carries
+confirm_purchase set to true, and it compares the total on the page with the
+expected total when the caller supplies one. A mismatch refuses the click. The
+result holds the URL, the page title, the visible total and screenshots from
+before and after. It states that the submission happened and that the
+confirmation page or the booking email must prove the rest. A click alone is
+never reported as a booking.
+
+The rules are declared in `data/laws.yml` under the travel_browser policy, and
+the manifest, `plugin.yml`, marks only status and inspect as observable. The
+other five actions run only through an explicit plugin run. The code is in
+`travel_browser.rb`.
+
+## Use
+
+Inside a MASTER session, the plugin command reaches it.
+
+```text
+/plugin info travel_browser
+/plugin run travel_browser status
+/plugin run travel_browser open {"session":"trip","url":"https://example.com"}
+```
+
+
+### tts_dsp (parked)
+
+<sub>Source: `MASTER/plugins/tts_dsp/README.md` (now consolidated here)</sub>
+
+Parked TTS benchmark/measure/quality suite and tts-e2e gate.
+
+- **revive_when:** the first external listener; the TTS worker itself stays in the tree
+- **members:** tools/voice/{voice_benchmark,voice_measure,voice_quality}.rb, tools/ shims, bin/tts-e2e, 2 tests
+- **note:** Rakefile task and smoke --tts step removed; smoke command inventory row removed.
+
+Parked 2026-11-01 under the essentials pass; sponsor: the operator.
+
+
+### video_recordings (parked)
+
+<sub>Source: `MASTER/plugins/video_recordings/README.md` (now consolidated here)</sub>
+
+Parked session/face video recorders, capture probe and README media tooling.
+
+- **revive_when:** the face ships to a real visitor and needs regression capture
+- **members:** checks/face_loop_record.rb, checks/shell_loop_record.rb, checks/face_capture_probe.rb, bin/loops, readme_take.rb
+- **note:** Path roots resolve from the plugin owner; the plugin remains parked outside checks.yml and smoke --tts.
+
+Parked 2026-11-01 under the essentials pass; sponsor: the operator.
+
+
+### Tools
+
+<sub>Source: `MASTER/tools/README.md` (now consolidated here)</sub>
+
+**MASTER keeps its instruments in plain sight and holds them to the same
+standard as the code they measure, because a measurement nobody has checked is
+only an opinion that happens to carry a number.**
+
+This directory contains the operators, scanners, audits and inventories
+that maintain the repository. Most are small Ruby programs with one clear
+responsibility. The operator exposes the main entrypoints:
+
+- `bin/operator measure` reports the ratchets and measurements.
+- `bin/operator lint` applies the Laws without a model.
+- `bin/operator doctor` checks the environment for known hazards.
+- `sweep.rb` runs the census instruments in one pass and writes their
+  findings in dmesg form. It measures and proposes; it never edits.
+
+## Directory map
+
+- `audit/` contains substantive registry, reachability and hygiene audits.
+  Stable one-command endpoints whose implementations already live in
+  `lib/` remain at this directory's top level. The former root paths for
+  the audit family were removed; no compatibility entrypoints remain.
+- `repo/` contains tracked-tree inventory and entrypoint reachability. `snapshot.rb` remains a top-level
+  operator command until its reader/writer contracts are verified
+  independently.
+- `research/` contains cognition outcome benchmarks, mutation-oriented
+  challenge checks and LLM trajectory reports.
+- `audit/design_baseline.rb` measures the repository's design baseline.
+- `rails/` contains Rails tooling. The operator exposes it through
+  `triangle` (boot the live Brgen, Amber, BSDPorts and MASTER-face
+  entries), `premerge`, `ci` and `coverage`. The same directory builds
+  stylesheets and the route manifest, crawls apps with a browser, and holds
+  Rails convention checks.
+
+Several top-level tools serve cross-tree contracts:
+
+- `agent_context.rb` prints the Law and tree map agents must read before
+  working. Its `--json` option serializes the same standing context
+  (conduct, blocking rules, coverage and shell contract); `--tree` adds
+  the selected tree map. Harnesses and session handoffs can consume the
+  JSON without parsing prose.
+- `coverage_reconciliation.rb` compares tracked files with the instruments
+  claimed in `checks/data/coverage_map.yml`. It reports INCONCLUSIVE while
+  that map is marked partial, then fails on uncovered files once the map
+  declares itself complete.
+- `diff_routes.rb` accepts paths, a `--diff` base or `--stdin`, then
+  prints the governing `PATH_OWNERSHIP.yml` rows and their declared checks.
+  It exits 1 and names any path no row claims. It does not add a second
+  path-to-check table.
+- `snapshot.rb` backs `bin/operator snapshot`. It writes one snapshot per
+  tree for another model to read; `--mirror` creates the byte-exact pack.
+- `gap_discipline.rb` checks the chain from absence to implementation:
+  `data/gaps.yml` identifies missing capabilities;
+  `data/ideations/*.yml` records candidates and the reasons losers were
+  rejected; `convergence.yml` records the resulting workstreams. It fails
+  when critique rejects a picked candidate, a real choice has too few
+  candidates, a picked gap has no workstream, or a workstream has no
+  corresponding gap.
+
+Media implementations belong to `STUDIO/`. The two compatibility links
+that remain here are `dilla` and `replicate`; STUDIO owns their targets and
+contracts. Invoke Postpro through `STUDIO/postpro`, not through a MASTER
+link. Read the owning project README before changing media behavior. Do not
+add a second implementation here.
+
+## Read this part first
+
+A measurement can be wrong even when its output looks precise. Before
+trusting a finding, compare the instrument's source with a case whose answer
+you already know. A greyscale test image once made a colour effect look dead.
+A parallel sum changed in its last digit even when the input stayed steady.
+When the result is unstable, hash the output and investigate the source of
+the variation.
+
+Declarations with no reader are the dominant defect. A preset names a setting
+that no effect consults, a call passes an argument that the callee does not
+accept and a rescue hides the error, and the feature never runs while every
+report says it did. Before you trust a setting, find its reader. Before you add
+a fix, consider adding the check that would have caught the fault.
+
+Use Ruby and zsh, not GNU text tools. The repository deploys to OpenBSD, where
+sed, awk, find, head, tail and wc behave differently, and perl and python are
+banned in shell calls and committed scripts.
+
+Tests here must prove something. `mutate.rb` changes a source, runs its test and
+restores the file, because a test that stays green when the comparison it
+covers is inverted proves nothing. Run the smallest check that proves the
+work, and do not report done without its output.
+
+## Checks
+
+The Rakefile in this directory defines the checks. The test task runs the check
+and event-bus suites, and the check task parses and loads every tool.
+
+```zsh
+cd MASTER/tools && rake test
+cd MASTER/tools && rake check
+```
