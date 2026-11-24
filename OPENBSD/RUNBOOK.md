@@ -871,7 +871,6 @@ deliberately:
 |--------|----|-------|------|
 | `ruby OPENBSD/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
 | `MASTER/bin/operator vps deploy <app|group|all> --remote` | **Yes** — workstation preflight and serial `bin/ci` for every selected Rails app; assets must be built and SHA-attested before SSH | Selected app, group or full fleet | Normal code release; vm23 only syncs, verifies, migrates and restarts |
-| `zsh OPENBSD/bin/vps_ci_all.sh` | **Retired refusal stub** | None | Do not use; bulk production sync is owned by the pinned `vps-deploy` parent |
 | `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
 | `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Starts every inventory app with native `rcctl`; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 

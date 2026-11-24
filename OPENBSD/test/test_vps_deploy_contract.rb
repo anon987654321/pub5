@@ -562,15 +562,6 @@ class VpsDeployContractTest < Minitest::Test
     refute_source SOURCE, 'canary.rb" --no-rehearse'
   end
 
-  def test_bulk_ci_wrapper_refuses_standalone_production_sync
-    wrapper = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci_all.sh"), encoding: "UTF-8")
-
-    assert_includes wrapper, "standalone bulk sync/bundle path is retired"
-    assert_includes wrapper, "exit 69"
-    refute_includes wrapper, 'zsh "$script"'
-    refute_includes wrapper, "ruby_select.sh"
-  end
-
   def test_the_ci_stamp_only_records_a_workstation_attestation
     assert_source CI_SOURCE, "ci_stamp=ci_attested"
     refute_source CI_SOURCE, "ci_stamp=ci_ok"
@@ -1263,13 +1254,12 @@ class VpsDeployContractTest < Minitest::Test
   end
 
 
-  def test_legacy_master_scan_entrypoint_refuses_on_production_host
-    scan = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_master_scan.sh"), encoding: "UTF-8")
-
-    assert_includes scan, "vm23 is production-only"
-    assert_includes scan, "exit 69"
-    refute_includes scan, "ruby_select.sh"
-    refute_includes scan, "with-ci-lock"
+  # Retired bulk-sync and repository-scan doors are deleted, not stubbed: a
+  # command that does not exist cannot run on vm23 or be revived by a typo fix.
+  def test_retired_bulk_sync_and_scan_entrypoints_are_absent
+    %w[vps_ci_all.sh vps_master_scan.sh].each do |name|
+      refute File.exist?(File.join(ROOT, "OPENBSD", "bin", name)), "#{name} must stay deleted"
+    end
   end
 
 end
