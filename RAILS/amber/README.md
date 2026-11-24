@@ -330,3 +330,316 @@ MASTER/bin/operator triangle up amber
 curl -fsS http://127.0.0.1:61352/up
 doas zsh RAILS/amber/amber.sh
 ```
+
+
+## Brand and demo-media references
+
+The following design and asset guidance is consolidated here so Amber has one project entry point.
+
+
+### Demo media
+
+<sub>Consolidated from `RAILS/amber/config/demo_media/README.md`.</sub>
+
+**The demo wardrobe should show the cloth as well as the cut, so a visitor sees both the shape a
+piece takes on the figure and the fabric it is made of.** Each photograph here is one garment or
+one outfit laid flat on a single warm backdrop, with no person in the frame, so the clothes are
+the only thing that changes from one picture to the next.
+
+The catalogue is default.yml, and it maps a seed key to a file in the images folder beside it.
+Today it holds one row, the camel wrap coat. The prompts for seventeen garments and three
+outfits are written in STUDIO/lora/seed_media.yml and the other nineteen are not yet
+rendered and filed, so most demo items still show only the drawn cut-out. Filing a frame is
+enough: the next seed attaches it, and no code changes.
+
+The seeder attaches the drawn cut-out first and the photograph second. The dressing room lays
+its zones over the first photo, and the cut-out is drawn for that. The item page shows every
+photo, which is where the flat lay earns its place. A key the catalogue does not hold attaches
+nothing, and a row whose file is missing is skipped with a warning rather than raised, since one
+failed seed blocks every deploy. Setting SKIP_DEMO_MEDIA turns attachment off, and the test
+environment never attaches.
+
+The frames are rendered on Replicate and graded by postpro before they arrive here.
+install_seed_media.rb in STUDIO/lora/_toolkit files them, and the prompt, model, seed
+and preset of each render are recorded in STUDIO/lora/seed_media_manifest.yml.
+
+These graded copies are tracked in git, which is a deliberate exception to the rule against
+committing generated assets. That rule keeps build output and renders out of history because
+they can be made again from source. These cannot: a render costs money and never comes out the
+same twice, and the deploy copies only tracked files to the box, where the seeds read them. So
+the app keeps a small copy, and the full renders stay out of git on the machine that made them.
+
+
+### PROPOSALS — plur1bus plates: eleven directions for the amber® mark
+
+<sub>Consolidated from `RAILS/amber/__logo/PROPOSALS.md`.</sub>
+
+Open `all-plates.html` in a browser: all eleven plates render on one page with the
+canonical reference on top and the avatar cuts underneath. Regenerate with
+`node generate.mjs` (deterministic, seeded; the glyph outlines and the nine
+hairlines are extracted live from `RAILS/amber/app/views/shared/_logo.html.erb`,
+so the wordmark and the swoosh geometry cannot drift from the shipped mark).
+
+The brief: eleven radically different plates — bit-reduction, motion graphics,
+color grading, sparkle pizzazz — with the operator's constraint that the
+**original font (outlined Caprasimo glyphs) and the swoosh style and lines
+(nine-hairline family + carrier curve) stay on every plate**, and every
+embellishment is built around them. Second pass added the sprite-sheet
+reference workflow: strict palette discipline, palette cycling, frame
+language, avatar-size cuts with the ground removed.
+
+## The crop law
+
+The production partial clips its animated ink to the six glyphs, then paints
+the nine white swoosh hairlines over the full logo canvas. The reference SVG
+keeps that production order and full-width swoosh. Each study plate preserves
+the exact same glyph paths and the nine original white hairline paths,
+widths and opacity; it applies one additional glyph clip to the swoosh so its
+visible area stays inside the letters. No path is re-drawn or restyled.
+
+- Ink is first, clipped to the original glyph interiors.
+- The original nine white hairlines follow, unchanged; only their visible
+  region is clipped in the study plates.
+- Pixel treatments, stars, frame treatments and misregistration live inside
+  the same glyph clip.
+- The ground belongs to the study presentation, not the production mark.
+  The production partial and live assets are not modified.
+
+## What every plate keeps
+
+- The six source Caprasimo glyph placements for `amber®`, extracted from
+  the live partial. No replacement font or live text.
+- The nine original white hairline elements, identical in path data,
+  stroke width and opacity to the source partial.
+- The original stacking order: ink below, swoosh above. Study plates add
+  only the glyph clip that limits where the swoosh is visible.
+
+## The eleven plates
+
+| # | Plate | Direction | Inside the letters | Law/token mapping |
+|---|---|---|---|---|
+| 01 | `unum_stipple` | Identity-native stipple | White ink perforated by seeded holes, dissolving left-to-right into solid; sparse signal-green carriers inside the glyphs; canonical white swoosh | `tokens.visual_identity.material` = `greyscale_particle_stipple`; lineage "e pluribus unum"; signal `#C8F55F` far under `max_highlight_area_fraction` 0.08 |
+| 02 | `bit8_pixel` | 8-bit bit-reduction | Radial ink quantized to a 7-unit grid in five ramp pastels (16-colour discipline); CRT scanlines fall on the ink; canonical white swoosh | 2026 pixel-logo trend (RESEARCH §4); operator sprite constraints (limited palette, no AA); `motion.default: still` honored |
+| 03 | `dither4_press` | 4-bit Bayer dither on paper | One-bit halftone: dark ink on paper, Bayer 4×4 steering a density ramp from sparse dots at the `a` to solid at the `r`; canonical white swoosh | Bit-reduction brief; `composition.surfaces` "flat and structured"; no gradients — dither only |
+| 04 | `signal_orbit` | Motion graphics | The radial ink's focus roams (18 s loop); wordmark, hairlines and ground frozen | `motion.default: still` honored at the mark level; the *ink* is the only mover |
+| 05 | `hue_flow` | Motion graphics — **palette cycling** | The shipped 4-stop ramp cycles through the wordmark (10 s, offset begins) | 16-bit palette-cycling technique (RESEARCH §6) applied to the brand's own ramp; no new colours |
+| 06 | `zoetrope_frames` | Sprite-sheet frames, frozen | The ink holds three exposure frames split inside the letters — ghost, ghost, live — separated by slivers of ground, like a filmstrip; canonical white swoosh | Aseprite frame-strip workflow depicted (RESEARCH §6); animation depicted, not played |
+| 07 | `starlight` | Night-sky star field | Night-sky ink (moonlight vertical ramp) and tiny stars, kept only where they fall inside glyphs; canonical white swoosh | Sparkle ask; original hairline geometry and stroke remain unchanged |
+| 08 | `prism_rainbow` | Sparkle pizzazz | The candy rainbow poured into the letters — prism ink, canonical white swoosh | Rainbow ask, cropped to the law: the prism ramp lives in the ink and nowhere else |
+| 09 | `grade_teal_amber` | Explicit cinematic grade | Amber ink (warm vertical ramp) on a deep teal ground; canonical white swoosh | Color-grading brief; the grade is the ground/ink pair, documented in the plate title |
+| 10 | `duotone_riso` | Riso misregistration | Two ink passes a hair out of register — orange beneath, navy above — both clipped to the glyphs (navy double-clipped, inner clip shifted −3,−2), so the orange rims only the right/bottom edges *inside* the letter silhouettes; canonical white swoosh; signal-green registration dots | Print-grit trend; the mark stays in fixed values; misregistration without bleeding |
+| 11 | `intro_condense` | **Animated intro** — many become one | A field of ~3 000 monochrome carriers drifts in and condenses into the wordmark (2.9 s), a deterministic ~16 % keeping a dimmer identity as residual individuality; the nine hairlines fade up once the mark has formed; a dozen lime carriers are the sole signal accent; canonical white swoosh clipped inside the glyphs | MASTER `face_interface.stipple` — the `face_dotfield` prototype and `stipple_vocabulary` in `tokens.yml`: density is belonging, luminosity is attention, residual individuality survives, motion is a state change not decoration; `motion.reduced_motion_must_preserve_meaning` pins the assembled mark under `prefers-reduced-motion`; the assembled mark is the base state, so a still frame reads |
+
+## Avatar cuts (sprite-workflow deliverable)
+
+`plates/avatars/` — three alpha-transparent SVGs with **no ground plate**,
+cropped tight to the letterforms (visible content = glyph interiors only):
+
+| File | Ink | Sizes shown |
+|---|---|---|
+| `amber-canon.svg` | canonical radial ramp, white swoosh on top | 128 / 64 / 32 px on a checker |
+| `amber-bit8.svg` | bit8 quantized cells, original white swoosh on top | 128 / 64 / 32 px |
+| `amber-candy.svg` | candy prism linear ramp, white swoosh on top | 128 / 64 / 32 px |
+
+Same locked font and hairline family; drop-in ready for favicon and avatar
+slots. The checker in `all-plates.html` proves the alpha channel.
+
+## Constraints honored (audited against the live sources)
+
+- **Original font**: Caprasimo outlines extracted from the partial at run
+  time; every layer clips through the same six glyph placements. No
+  `<text>`, no `font-family`, no webfont anywhere in the plates.
+- **Original swoosh geometry and style**: all nine source path strings,
+  white strokes, widths and opacity are preserved exactly. The study clip
+  changes visibility only; no path is sampled, stepped, dotted or recoloured.
+- **Crop law**: candidate ink and swoosh visibility stay inside the glyph
+  interiors. The production reference is the deliberate exception: it keeps
+  the shipped full-width hairlines so it can be compared honestly.
+- **No copied brand expression**: all artwork is generated original; the
+  operator's Grok session and online research informed technique only.
+- **No glow/lens-flare/ornamental gradient**: no blur or filter primitives
+  in any plate; gradients are the mark's own ink or trail fills.
+- **One focal point per plate** (`composition.hierarchy`): the wordmark on
+  all ten — with no ground furniture left, the mark is the plate.
+- **Reproducible**: every random layer seeded (`rng(57xx)`); a rerun of
+  `node generate.mjs` is stable.
+
+## Engineering notes — regressions caught by rendering
+
+1. **clipPath content model.** The first `.mjs` build wrapped the clipPath
+   children in `<g>`: `<clipPath><g><use …/></g></clipPath>`. Chromium
+   discards invalid clipPath children per the SVG 1.1 content model — the
+   clip resolved **empty** and the wordmark vanished from every plate. The
+   fix is bare shape children: `<clipPath><use …/><use …/></clipPath>` —
+   the same structure the shipped partial already uses.
+2. **Stacking order.** A later build drew the hairlines *below* the ink
+   rect. Because both layers clip to the same glyphs, the opaque ink hid the
+   swoosh inside the letters while the lines kept bleeding across the
+   ground outside them — exactly inverted from the shipped mark. The fix is
+   the canonical `mark()` helper: ink pass first, hairline pass second,
+   both clipped to `#plN-text`; every plate, the reference and the avatars
+   go through it.
+
+Review `all-plates.html` to compare the production reference with all ten
+candidate plates and the three transparent avatar cuts. The Amber logo
+contract tests compare every exported hairline path, width and opacity with
+the source partial.
+
+## Files
+
+```
+RAILS/amber/__logo/
+  generate.mjs         generator — extracts glyphs/hairlines from the live partial
+  all-plates.html      all eleven plates + reference + avatar cuts on one page
+  RESEARCH.md          online research with sources
+  PROPOSALS.md         this file
+  plates/*.svg         11 plates + reference-original.svg
+  plates/avatars/*.svg 3 alpha-transparent avatar cuts
+```
+
+Home rationale: the logo is owned by Amber, so its generator, previews and research live beside the app. No candidate replaces the production logo until it is selected. The plates are brand documentation, not production assets; rendered PNGs stay out of the repo and the SVGs remain the source of truth.
+
+
+### RESEARCH — plur1bus plates
+
+<sub>Consolidated from `RAILS/amber/__logo/RESEARCH.md`.</sub>
+
+Research for the ten-plate amber® mark sweep: what the plur1bus series
+refers to, how its canonical title treatment works, and which 2026
+logo/motion/grading directions the plates draw on. Sources were read online
+in November 2026; repo sources were read live in this checkout.
+
+## 1. What "plur1bus" refers to
+
+- *Pluribus* is the Apple TV series created by Vince Gilligan (premiered
+  2025-11-07, set in Albuquerque; a hive-mind premise built on "e pluribus
+  unum"). Source: <https://en.wikipedia.org/wiki/Pluribus_(TV_series)>.
+- The show stylizes the title as **PLUR1BUS** — the "I" written as "1",
+  originally Carol's purple-sharpie hand lettering. Sources:
+  <https://www.reddit.com/r/pluribustv/comments/1rwdqc8/plur_1_bus_thoughts_on_the_title_and_its>
+  and <https://dirt.fyi/article/2025/11/it-was-all-yellow> ("Pluribus
+  (styled PLUR1BUS) in purple sharpie").
+- The show's color language is deliberate and rule-bound: the 60:30:10
+  palette discipline and yellow as the hive's happiness color.
+  Sources: <https://www.reddit.com/r/pluribustv/comments/1pc30o9/why_is_pluribus_shot_in_3_colors_video_by>
+  and the dirt.fyi color-theory piece above.
+
+**Repo tie-in.** The pub5 identity already speaks this language:
+`MASTER/data/tokens.yml#tokens.visual_identity` names the material
+`greyscale_particle_stipple`, the lineage line "e pluribus unum — out of
+many, one readable form", and the series name in this sweep borrows the
+show's "1" stylization. The amber mark is the "one readable form" that the
+many carriers resolve into.
+
+## 2. The canonical title treatment: particle stipple
+
+- The *Pluribus* main titles were created by editor Joey Reinisch using a
+  particle simulation (RowByte's Stipple): thousands of carriers that
+  assemble and dissolve the lettering. Interview:
+  <https://www.rowbyte.com/blog/pluribus-stipple>.
+- Trade coverage frames the sequence as "The Many Become One in 'Pluribus'
+  Main Titles", with Dave Porter's theme. Source:
+  <https://www.gema.org/news/the-many-become-one-in-pluribus-main-titles>.
+
+**Repo tie-in.** This is the same material the repo already mandates
+(`tokens.visual_identity.material`, law-family `VISUAL_PARTICLE_STIPPLE_*`):
+a face/mark that is a field of carriers, never a solid skin. Plate 01 is the
+direct homage; plate 07 is a separate seeded star field, not a motion-frame treatment.
+
+## 3. The canonical amber mark (what every plate must keep)
+
+`RAILS/amber/app/views/shared/_logo.html.erb` (amber-057) is the source of
+truth, verified pixel-equivalent against the browser's own text rendering:
+
+- Wordmark: the real Caprasimo glyph outlines for "amber®" in font units
+  (2048/em), six placements at 120 viewBox units riding descending rotated
+  baselines (−9.882° → −0.641°).
+- Swoosh: nine white hairline elements in one curve family
+  (`M50,180 C200,100 400,200 600,100 S850,160 950,130` translated down),
+  stroke widths 0.5 → 4 top to bottom. In production they sit over the ink
+  and run across the full canvas; study plates preserve the exact paths,
+  widths and opacity but clip their visible region to the glyph interiors.
+- The original textPath carrier curve `M50,220 C250,180 750,180 950,220`
+  (dropped as dead code from the partial in 8544e23b, still the canonical
+  carrier the letters ride).
+- Ink: an animated radial gradient (#ffb999 → #e6cce6 → #cce6cc → #99e6e6)
+  clipped by the glyph mask; the brand-mark exception to the theme palette
+  ("a brand mark is painted in its own fixed values", `scan:
+  intentional-colors` in the partial).
+- Contract test: `RAILS/amber/test/logo_contract_test.rb` — viewBox
+  0 0 1000 500, hairline widths, outlined glyphs, no `<text>`/webfont.
+
+The generator (`generate.mjs`) extracts the glyph outlines and the nine
+hairlines from the live partial at run time, so the plates cannot drift from
+the shipped mark.
+
+## 4. 2026 directions the plates draw on
+
+| Direction | Source read | Plate |
+|---|---|---|
+| Ultra-crisp pixelated logos: sharp edges, high-contrast grids, mathematical rhythm | <https://www.zekagraphic.com/10-logo-design-trends-2026> | 02 |
+| Retro 8-bit/Y2K pixel logo comeback | <https://www.brandcrowd.com/blog/logo-design-trend-the-retro-pixel-logos> | 02, 03 |
+| Pixel art as 2026 motion-graphics style (loops, icons, transitions) | <https://din-studio.com/pixel-art-style-nostalgic-and-modern-digital-design-trend-of-2026> | 02 |
+| SVG mask + animated gradient text (CodePen staple) | <https://codepen.io/horsted/details/ZKQbKK>, <https://codepen.io/tag/svg%20text> | 04, 05, reference |
+| 2026 trend surveys (motion, minimalism, emerging systems) | <https://digitalsynopsis.com/design/graphic-design-trends-2026>, <https://panze.co/blog/logo-design-trends> | sweep framing |
+
+## 5. Sparkle pizzazz
+
+The rainbow direction uses the candy prism ramp as the ink (08). The
+night-sky direction adds seeded stars that survive only where they fall
+inside the glyphs (07). Both preserve the original nine white swoosh paths,
+stroke widths and opacity; the study clip changes only their visible region.
+No pony, character or external campaign art was imported.
+
+## 6. Sprite-sheet craft (second pass)
+
+The operator's reference session (a Grok chat log supplied 2026-11-11: strict
+8-bit constraints — blocky pixels, limited 16-color palette, no
+anti-aliasing — then 16-bit technique notes, then avatar-size exports with
+transparent backgrounds) mapped onto the plates as follows. Sources opened to
+back the techniques:
+
+- **Palette discipline / empty palette slots.** Sprite sheets ship indexed
+  palettes; Aseprite's palette control ("Palette Control — copy & paste,
+  resize") is the workflow anchor. Source: <https://www.aseprite.org>.
+  → Plate 02 quantizes its ink to the five-ramp palette on a strict grid —
+  the discipline is the palette itself, not a rail drawn on the ground
+  (an earlier rail was removed under the crop law).
+- **Color cycling (palette animation).** "Color cycling animates a picture
+  without touching a single pixel — you rotate the palette underneath it"
+  (Mark Ferrari technique). Sources:
+  <https://the-pixel.art/articles/color-cycling>,
+  <https://blog.prototypr.io/color-cycling-in-pixel-art-c8f20e61b4c4>.
+  → Plate 05 cycles the brand's own 4-stop ramp through the wordmark — the
+  cycle is the ink itself (an earlier chip rail was removed under the crop
+  law).
+- **Frame tags, onion skinning, sprite-sheet export.** Aseprite: "Tag
+  Frames — include several animations in the same file tagging sections";
+  "Onion Skin — see other frames as reference". Source:
+  <https://www.aseprite.org>.
+  → Plate 06 lays the ink out as a sprite-sheet strip: three exposure
+  frames split inside the letters — ghost, ghost, live — separated by
+  slivers of ground, the sheet furniture cropped away.
+- **Sub-pixel animation.** "'Sub-pixel animation' means animating your
+  anti-aliasing … shifting individual pixels frame-to-frame" — depth and
+  motion without extra frames. Source:
+  <https://2dwillneverdie.com/tutorial/give-your-sprites-depth-with-sub-pixel-animation>.
+  → Plate 06's frame strip reads left-to-right across the letters, the
+  stepping depicted statically inside the glyph mask.
+- **Avatar-size cuts with transparent ground.** The reference workflow's
+  final deliverable was avatar-sized icons on alpha-transparent ground.
+  → `plates/avatars/*.svg`: the same locked font and hairlines, no ground
+  rect, shown at 128 / 64 / 32 px on a checker in `all-plates.html`.
+
+The log's content (a pixel-cat mascot brief for a personal brand) is the
+operator's separate project — only its *techniques* transferred here; no
+subject matter, imagery or copy was imported.
+
+## 7. Provenance statement
+
+- Online sources were opened via web search on 2026-11-11; quotes and
+  stylization claims above come from those pages. The sprite-technique
+  sources (§6) were opened the same day.
+- Repo claims come from live files in this checkout.
+- The plates themselves are original generated artwork (seeded, reproducible
+  via `node generate.mjs`); no external imagery was embedded.
