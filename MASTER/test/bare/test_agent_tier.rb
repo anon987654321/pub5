@@ -75,14 +75,31 @@ module Master
       end
 
       def test_law_index_answers_a_full_dictionary_row
-        LawIndex.instance_variable_set(:@index, nil)
-        LawIndex.write_index! unless File.file?(LawIndex.index_path)
-        row = LawIndex.index.fetch("laws").fetch("NO_PUTS")
-        %w[id severity mode lifecycle languages exemptions definition_sources].each do |field|
-          assert row.key?(field), "the dictionary row for NO_PUTS is missing #{field}"
+        previous_path = LawIndex.instance_variable_get(:@index_path)
+        previous_index = LawIndex.instance_variable_get(:@index)
+
+        Dir.mktmpdir do |dir|
+          output = File.join(dir, "laws_index.json")
+          LawIndex.instance_variable_set(:@index_path, output)
+          LawIndex.instance_variable_set(:@index, nil)
+          File.write(output, JSON.generate("schema" => 1, "input_fingerprint" => "stale", "laws" => {}))
+
+          index = LawIndex.index
+          row = index.fetch("laws").fetch("NO_PUTS")
+          %w[id severity mode lifecycle languages exemptions definition_sources].each do |field|
+            assert row.key?(field), "the dictionary row for NO_PUTS is missing #{field}"
+          end
+          assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
+                       "the kind registry is where the exemption is owned, not the detector source"
+
+          proof = index.fetch("laws").fetch("adversarial")
+          assert_equal "test", proof.dig("fixtures", "status")
+          assert_equal proof.dig("fixtures", "proof"), proof["proved_by"]
+          assert_equal LawIndex.input_fingerprint, index.fetch("input_fingerprint")
+        ensure
+          LawIndex.instance_variable_set(:@index_path, previous_path)
+          LawIndex.instance_variable_set(:@index, previous_index)
         end
-        assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
-                     "the kind registry is where the exemption is owned, not the detector source"
       end
 
       def test_law_index_writer_emits_a_final_newline

@@ -4,6 +4,8 @@ require_relative "test_helper"
 require "yaml"
 require "tmpdir"
 require "fileutils"
+require "open3"
+require "rbconfig"
 
 class TestToolsHierarchy < Minitest::Test
   REPO_ROOT = File.expand_path("../..", __dir__)
@@ -33,6 +35,27 @@ class TestToolsHierarchy < Minitest::Test
       found.reject! { |path| path.start_with?(fixtures) }
 
       assert_equal [first, second].sort, found.sort
+    end
+  end
+
+  def test_test_naming_audit_checks_nested_tests_and_ignores_fixtures
+    Dir.mktmpdir do |root|
+      test_root = File.join(root, "test")
+      FileUtils.mkdir_p(File.join(test_root, "voice"))
+      FileUtils.mkdir_p(File.join(test_root, "fixtures"))
+      File.write(File.join(test_root, "voice", "test_voice_quality.rb"), "# canonical\\n")
+      File.write(File.join(test_root, "voice", "voice_quality_test.rb"), "# non-canonical\\n")
+      File.write(File.join(test_root, "fixtures", "fixture_test.rb"), "# fixture\\n")
+
+      output, status = Open3.capture2e(
+        { "MASTER_TEST_ROOT" => test_root },
+        RbConfig.ruby, File.join(TOOLS_ROOT, "test_naming.rb")
+      )
+
+      refute status.success?, "a nested non-canonical test name must fail"
+      assert_includes output, "voice/voice_quality_test.rb"
+      refute_includes output, "fixtures/fixture_test.rb"
+      refute_includes output, "test_voice_quality.rb"
     end
   end
 

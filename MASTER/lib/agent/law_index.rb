@@ -12,6 +12,7 @@
 # without running anything.
 
 require "yaml"
+require "digest"
 
 module Master
   module Agent
@@ -41,13 +42,34 @@ module Master
         end
 
         def index
-          unless File.file?(index_path)
-            # A missing artifact is generated, not refused: the dictionary
-            # should be readable in seconds even on a checkout that never
-            # ran the rake task.
-            write_index!
+          current = @index
+          current ||= JSON.parse(File.read(index_path)) if File.file?(index_path)
+          return @index = current if current && current["input_fingerprint"] == input_fingerprint
+
+          # The index is a projection of its inputs, not of the surrounding
+          # checkout revision. Refresh only when a source that actually shapes
+          # the dictionary has changed.
+          write_index!
+          @index
+        end
+
+        def input_paths
+          [
+            File.expand_path("../../law/lexical.rb", __dir__),
+            File.expand_path("../../checks/data/law_fixtures.yml", __dir__),
+            data_path("law_kinds.yml"),
+            data_path("incidents.yml"),
+            data_path("laws.yml"),
+          ]
+        end
+
+        def input_fingerprint
+          material = input_paths.sort.map do |path|
+            relative = path.delete_prefix("#{master_root}/")
+            digest = File.file?(path) ? Digest::SHA256.file(path).hexdigest : "missing"
+            "#{relative}\\0#{digest}"
           end
-          @index ||= JSON.parse(File.read(index_path))
+          Digest::SHA256.hexdigest(material.join("\\n"))
         end
 
         def one(id)
@@ -104,10 +126,10 @@ module Master
         end
 
         def law_index_inputs
-          corpus = Master::Agent::BareCorpus.new([File.expand_path("../../law/lexical.rb", __dir__)])
-          fixtures = load_yaml(File.expand_path("../../checks/data/law_fixtures.yml", __dir__)).fetch("laws", {})
-          kind_path = data_path("law_kinds.yml")
-          incident_path = data_path("incidents.yml")
+          corpus = Master::Agent::BareCorpus.new([input_paths.fetch(0)])
+          fixtures = load_yaml(input_paths.fetch(1)).fetch("laws", {})
+          kind_path = input_paths.fetch(2)
+          incident_path = input_paths.fetch(3)
           kinds = File.file?(kind_path) ? load_yaml(kind_path).fetch("kinds", []) : []
           incidents = File.file?(incident_path) ? load_yaml(incident_path).fetch("incidents", []) : []
           {
@@ -150,7 +172,7 @@ module Master
             "path_scope" => entry["path_scope"],
             "exemptions" => law_index_exemptions(id, entry, inputs[:kinds]),
             "fixtures" => inputs[:fixtures][id],
-            "proved_by" => statement["proved_by"] || entry["proved_by"],
+            "proved_by" => statement["proved_by"] || entry["proved_by"] || inputs[:fixtures].dig(id, "proof"),
             "definition_sources" => Array(entry["definition_sources"]),
             "bare_detector" => inputs[:corpus].laws.key?(id),
             "incidents" => inputs[:incident_by_law][id],
@@ -171,6 +193,7 @@ module Master
             "schema" => 1,
             "generated_at" => Time.now.utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
             "revision" => revision,
+            "input_fingerprint" => input_fingerprint,
             "law_count" => rows.size,
             "laws" => rows,
           }

@@ -2,10 +2,10 @@
 
 # What MASTER knows, in a form an agent can be handed before every message.
 #
-# MASTER keeps 17 memory classes, 830 files under knowledge/ and 1,251 under
-# .master/. Claude Code keeps its own memory directory. Nothing in lib/, tools/
-# or bin/ reads ~/.claude, and nothing writes MASTER's learnings back to it —
-# two memories in one repo with no path between them.
+# Context is a bounded projection of canonical stores and registries. Do not
+# duplicate their current populations or external-agent paths in this file:
+# adapters and inventories change, while the authoritative records remain in
+# their owning sources.
 #
 #   ruby MASTER/tools/agent_context.rb                 # the standing context
 #   ruby MASTER/tools/agent_context.rb "<prompt>"      # plus what matches it
@@ -13,10 +13,10 @@
 #   ruby MASTER/tools/agent_context.rb --json --checks # plus the claim-to-check map
 #   ruby MASTER/tools/agent_context.rb --json --tree   # plus the tree map
 #
-# Designed for a UserPromptSubmit hook, so it has to be small: data/laws.yml is
-# 2,170 lines and injecting it every turn would drown the turn. Six kilobytes
-# go out — the binding half: the conduct rules that govern how to work, what the
-# check can actually block on, and how much of the law is unmeasured right now.
+# Designed for a UserPromptSubmit hook, so it stays bounded: retrieve the
+# relevant Law rows and current check map instead of injecting the full
+# catalogue on every turn. The projection carries governing conduct, the
+# checks that can block the task and the gaps that remain unmeasured.
 
 require "yaml"
 require_relative "../lib/fix/protocol"

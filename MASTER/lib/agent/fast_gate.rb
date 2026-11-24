@@ -225,23 +225,22 @@ module Master
         end
 
         def index_freshness
-          index_file = data_path("laws_index.json")
-          unless File.file?(index_file)
-            require_relative "law_index"
-            LawIndex.write_index!
-            return check("laws_index", "PASS", "index generated fresh at #{head_revision}")
-          end
-
-          idx = JSON.parse(File.read(index_file))
-          return check("laws_index", "PASS", "index is current at #{idx['revision']}") if idx["revision"] == head_revision
-
-          # The index can never be fresh at the commit that carries it, so the
-          # gate regenerates it here instead of teaching every landing to run
-          # laws --reindex by hand. Self-healing, cheap, and the artifact an
-          # outside agent fetches is never older than the tree it describes.
           require_relative "law_index"
-          LawIndex.write_index!
-          check("laws_index", "PASS", "index regenerated from #{idx['revision']} to #{head_revision}")
+          before = if File.file?(data_path("laws_index.json"))
+                     JSON.parse(File.read(data_path("laws_index.json")))
+                   else
+                     {}
+                   end
+          index = LawIndex.index
+          expected = LawIndex.input_fingerprint
+          return check("laws_index", "PASS", "source fingerprint #{expected[0, 12]} is current") if index["input_fingerprint"] == expected
+
+          check(
+            "laws_index", "FAIL",
+            "index fingerprint does not match its current inputs (previous: #{before['input_fingerprint'] || 'missing'})"
+          )
+        rescue JSON::ParserError => e
+          check("laws_index", "FAIL", "laws_index.json is not valid JSON: #{e.message}")
         end
       end
     end
