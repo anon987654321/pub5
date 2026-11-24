@@ -1,0 +1,514 @@
+diff --git a/.githooks/pre-commit b/.githooks/pre-commit
+index 2d029b3..8388cb2 100755
+--- a/.githooks/pre-commit
++++ b/.githooks/pre-commit
+@@ -41,6 +41,13 @@ end
+ staged = paths("diff", "--cached", "--name-only")
+ exit 0 if staged.empty?
+ 
++# A credential in an added line is refused before anything else: once it is in a
++# commit, rotating it is the only cure (2026-11-23, a PAT pasted into chat).
++guard = File.join(File.expand_path("..", __dir__), "MASTER", "tools", "token_guard.rb")
++if File.file?(guard)
++  system(RbConfig.ruby, guard) or abort("pre-commit: token-guard refused this commit")
++end
++
+ staged_trees = staged.map { |path| tree_of(path) }.uniq.sort
+ unstaged = paths("diff", "--name-only") + paths("ls-files", "--others", "--exclude-standard")
+ left = (unstaged - staged).group_by { |path| tree_of(path) }
+diff --git a/.githooks/pre-push b/.githooks/pre-push
+index 9f90c95..4aa4463 100755
+--- a/.githooks/pre-push
++++ b/.githooks/pre-push
+@@ -74,6 +74,11 @@ $stdin.each_line do |line|
+   next if local_sha.nil? || local_sha == ZERO # branch deletion
+ 
+   range = remote_sha.nil? || remote_sha == ZERO ? local_sha : "#{remote_sha}..#{local_sha}"
++  # --no-verify skips pre-commit; this is the second door for a credential.
++  token_guard = File.join(snapshot_root, "MASTER", "tools", "token_guard.rb")
++  if File.file?(token_guard) && !system(RbConfig.ruby, token_guard, "--range", range)
++    abort("pre-push: token-guard refused this push")
++  end
+   pushing.concat(commits(range))
+   pushing.uniq!
+   break if local_ref.nil?
+diff --git a/MASTER/AGENTS.md b/MASTER/AGENTS.md
+index a055907..e86c6e3 100644
+--- a/MASTER/AGENTS.md
++++ b/MASTER/AGENTS.md
+@@ -191,6 +191,8 @@ hold this contract.
+ 
+ Tests are run by the local Ruby toolchain in the checked-out repository, not by Vercel or another hosted CI service. Use `MASTER/bin/operator test <paths...>` for the smallest complete proof, then `cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test` for the full MASTER suite. Resolve local runtime and dependency blockers where possible; if a command cannot actually run, record the exact blocker as NOT_RUN or INCONCLUSIVE rather than treating a hosted status, authored test, or static inspection as a pass.
+ 
++`MASTER_TEST_LIGHT=1` skips the dependency install and bundler activation in `test/test_helper.rb`, so a single pure-logic test file can run on a host that already has the gems or has no network. It is a debugging aid, not proof: CI and `rake test` use the pinned private bundle. `MASTER/tools/token_guard.rb` runs from `.githooks/pre-commit` and `pre-push` and refuses added lines that look like a real credential (placeholders such as the scanner fixtures pass; `PUB5_ALLOW_TOKEN_SHAPE=1` overrides).
++
+ Every `/fix` exit runs `Master::Fix::FinalCleanup`. It releases the current invocation's commit lease, stops its owned visual runtime, removes that invocation's temporary visual captures, prunes only exact-named assessment/architecture artifacts outside the retained journal window, and emits a cleanup receipt. Cleanup warnings must be observable and must not overwrite the repair result. Never treat cleanup as permission to delete source changes, user files, checkpoints, transaction/recovery evidence, the durable audit ledger, or test logs.
+ 
+ ## The contract every agent gets
+diff --git a/MASTER/lib/io/lane_reply.rb b/MASTER/lib/io/lane_reply.rb
+index 269b574..3ceea67 100644
+--- a/MASTER/lib/io/lane_reply.rb
++++ b/MASTER/lib/io/lane_reply.rb
+@@ -31,6 +31,13 @@ module Master
+       LIMIT_429_RE = /(?:\bHTTP\W{0,3}|\bstatus\W{0,3}|\bcode\W{0,3}|\berror\W{0,3})429\b|\b429\s+(?:too\s+many|rate|error)/i
+       UNREACHABLE_RE = /ECONNREFUSED|connection\s+refused|(?:ollama|server|host)\s+unreachable|unreachable\s+at|Failed\s+to\s+open\s+TCP|could\s+not\s+resolve|getaddrinfo|network\s+is\s+unreachable|name\s+or\s+service\s+not\s+known/i
+       AUTH_RE = /(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})40[13]\b|PERMISSION_DENIED|unauthori[sz]ed|invalid\s+api[\s_-]?key|not\s+logged\s+in|user\s+not\s+found|please\s+run\s+\/login|authentication\s+(?:failed|error|required)|token\s+(?:has\s+)?expired/i
++      # A model that answers "I am not a chat model" (ollama_cloud clef:27b, 2026-11-23:
++      # "decision model, only supports /v1/systemone") will answer it every time.
++      # Matching the stated incapability, not a bare 400, keeps an oversized prompt
++      # from parking a healthy model. Deliberately NOT a Verdict: verdicts retire
++      # whole lanes (LaneQuota), and this is a fact about one model.
++      INCAPABLE_RE = %r{\b(?:decision|embedding|rerank(?:er|ing)?|moderation|completion-only)\s+model\b[^.\n]{0,60}\bonly\s+supports?\b|\bonly\s+supports?\s+/v\d+/[a-z_-]+}i
++
+       UNITS = { "d" => 86_400, "h" => 3600, "m" => 60, "s" => 1 }.freeze
+       SPAN = /\d+\s*(?:days?|hours?|hrs?|minutes?|mins?|seconds?|secs?|[dhms])(?![a-z])/i
+       AFTER_RE = /(?:resets?|try\s+again|retry)\s+(?:in|after)\s+((?:#{SPAN}[\s,]*(?:and\s+)?)+)/i
+@@ -38,6 +45,8 @@ module Master
+       CLOCK_RE = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b(?:\s*\(([A-Za-z]+(?:\/[A-Za-z_+\-0-9]+)*)\))?/i
+       @zone_lock = Mutex.new
+ 
++      def incapable?(reply) = INCAPABLE_RE.match?(reply.to_s)
++
+       def read(reply, now: Time.now.to_f)
+         text = reply.to_s
+         return Verdict.new(:billing, BILLING_WAIT_S, false) if
+diff --git a/MASTER/lib/io/model_skip_cache.rb b/MASTER/lib/io/model_skip_cache.rb
+index dd4c3e0..f64b2df 100644
+--- a/MASTER/lib/io/model_skip_cache.rb
++++ b/MASTER/lib/io/model_skip_cache.rb
+@@ -15,6 +15,9 @@ module Master
+         provider_error llm_call_failure model_missing invalid_request failure
+       ].freeze
+ 
++      # How long a model that stated it cannot chat stays parked (this process).
++      INCAPABLE_PARK_MS = 6 * 3_600_000
++
+       # Keep this list aligned with the router's failover_skip_categories:
+       # otherwise a failed lane is skipped only for the current turn and the
+       # cache silently refuses to park it for the next one.
+@@ -73,13 +76,17 @@ module Master
+ 
+       # A later deadline extends a park and an earlier one never shortens it, so
+       # a 30s blip after a stated six-hour reset does not bring the lane back early.
+-      def skip!(model, reason:, category: nil)
++      #
++      # for_ms: parks for exactly that long (a model that stated it cannot do the
++      # job); it still counts a strike, and a longer existing park still wins.
++      def skip!(model, reason:, category: nil, for_ms: nil)
+         cat = category&.to_sym
+         return if cat && !SKIP_CATEGORIES.include?(cat)
+ 
+         now = now_ms
+         parser_now = @clock ? now : Process.clock_gettime(Process::CLOCK_REALTIME) * 1000
+-        ttl = ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes: strike!(model, now))
++        strikes = strike!(model, now)
++        ttl = for_ms || ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes:)
+         return if ttl <= 0 || model.to_s.empty?
+ 
+         @mutex.synchronize do
+diff --git a/MASTER/lib/operator/parse_sweep.rb b/MASTER/lib/operator/parse_sweep.rb
+index 5186ad7..f6722c9 100644
+--- a/MASTER/lib/operator/parse_sweep.rb
++++ b/MASTER/lib/operator/parse_sweep.rb
+@@ -1,6 +1,13 @@
+ # frozen_string_literal: true
+ 
+-require "prism"
++# Prism ships with Ruby 3.3+. On an older Ruby the sweep falls back to the
++# interpreter's own parser instead of dying with a LoadError (2026-11-23: a
++# Ruby 3.2 host crashed `fix-here --dry` on this require).
++begin
++  require "prism"
++rescue LoadError
++  nil
++end
+ 
+ module Operator
+ 
+@@ -32,9 +39,28 @@ module Operator
+         full = File.join(root, path)
+         next unless File.file?(full)
+ 
++        error = parse_error(full)
++        Failure.new(path:, line: error[0], message: error[1]) if error
++      end
++    end
++
++    # [line, message] of the first syntax error, or nil when the file parses.
++    def parse_error(full)
++      if defined?(Prism)
+         error = Prism.parse_file(full).errors.first
+-        Failure.new(path:, line: error.location.start_line, message: error.message) if error
++        return error && [error.location.start_line, error.message]
+       end
++
++      parse_error_without_prism(full)
++    end
++
++    # compile only parses; nothing in the file is run.
++    def parse_error_without_prism(full)
++      RubyVM::InstructionSequence.compile(File.read(full, encoding: "UTF-8"), full)
++      nil
++    rescue SyntaxError => e
++      first = e.message.lines.first.to_s
++      [first[/#{Regexp.escape(full)}:(\d+)/, 1].to_i, first.sub(/\A.*?:\d+:\s*/, "").strip]
+     end
+ 
+     def render(failures)
+diff --git a/MASTER/lib/review/llm_dispatcher.rb b/MASTER/lib/review/llm_dispatcher.rb
+index 20b5618..9f78b7d 100644
+--- a/MASTER/lib/review/llm_dispatcher.rb
++++ b/MASTER/lib/review/llm_dispatcher.rb
+@@ -672,7 +672,8 @@ module Master
+           # again; clear only its credential hold, never vendor quota state.
+           Io::LaneQuota.revive(Io::LaneQuota::OPENROUTER_AUTH_LANE) if Io::LaneQuota.openrouter_model?(model)
+         else
+-          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status)
++          park = Io::ModelSkipCache::INCAPABLE_PARK_MS if status == :invalid_request && Io::LaneReply.incapable?(error)
++          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status, for_ms: park)
+         end
+         # Process-local free-floor counting: the pass-0 child's outcomes never
+         # reach the parent's RunPulse, so LaneSelection counts for itself.
+diff --git a/MASTER/test/test_helper.rb b/MASTER/test/test_helper.rb
+index c77a80f..1e6d497 100644
+--- a/MASTER/test/test_helper.rb
++++ b/MASTER/test/test_helper.rb
+@@ -72,20 +72,28 @@ ENV["MASTER_SWALLOW_LOG_PATH"] = File.join(LIVE_STATE_DIR, "swallowed_errors.jso
+ # Otherwise RubyGems can select a host-installed Minitest (or a native gem
+ # built against another Ruby) before the suite has a chance to activate MASTER.
+ $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+-require_relative "../lib/boot/dependency_manager"
+-test_root = File.expand_path("..", __dir__)
+-test_boot = Master::Boot::DependencyManager.new(root: test_root, env: ENV, out: $stderr)
+-test_result = test_boot.ensure!
+-unless test_result.ok
+-  abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
++# MASTER_TEST_LIGHT=1 skips the dependency install and the bundler activation
++# below, for a host that already has the gems (or cannot reach the network) and
++# wants one pure-logic test file to run. The pinned private bundle stays the
++# default and the only mode CI and `rake test` use; light mode is a debugging
++# aid, never proof (2026-11-23: no agent could run a single test without it).
++MASTER_TEST_LIGHT = ENV["MASTER_TEST_LIGHT"] == "1"
++unless MASTER_TEST_LIGHT
++  require_relative "../lib/boot/dependency_manager"
++  test_root = File.expand_path("..", __dir__)
++  test_boot = Master::Boot::DependencyManager.new(root: test_root, env: ENV, out: $stderr)
++  test_result = test_boot.ensure!
++  unless test_result.ok
++    abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
++  end
++  # A test boot keeps the :test group even in deploy-bundle mode: this run IS
++  # the test, the law-file preflight needs minitest, and without the group the
++  # Kernel#gem activation below dies with "minitest is not part of the bundle"
++  # on the deploy host exactly once a deploy bundle exists (measured on vm23
++  # 2026-11-08, deploy refused at preflight-boot).
++  test_boot.activate_environment!(without: "development")
++  require "bundler/setup"
+ end
+-# A test boot keeps the :test group even in deploy-bundle mode: this run IS
+-# the test, the law-file preflight needs minitest, and without the group the
+-# Kernel#gem activation below dies with "minitest is not part of the bundle"
+-# on the deploy host exactly once a deploy bundle exists (measured on vm23
+-# 2026-11-08, deploy refused at preflight-boot).
+-test_boot.activate_environment!(without: "development")
+-require "bundler/setup"
+ 
+ if ENV["COVERAGE"] == "1"
+   require "simplecov"
+@@ -100,7 +108,7 @@ if ENV["COVERAGE"] == "1"
+   end
+ end
+ 
+-gem "minitest", "~> 5.25"
++gem "minitest", "~> 5.25" unless MASTER_TEST_LIGHT
+ require "minitest/autorun"
+ require "minitest/mock"
+ require "tmpdir"
+diff --git a/MASTER/test/test_model_skip_cache.rb b/MASTER/test/test_model_skip_cache.rb
+index c6c0574..37a598d 100644
+--- a/MASTER/test/test_model_skip_cache.rb
++++ b/MASTER/test/test_model_skip_cache.rb
+@@ -147,4 +147,40 @@ class TestModelSkipCache < Minitest::Test
+   ensure
+     cache.clock = nil
+   end
++
++  CLEF = "400 Bad Request: clef:27b is a decision model, only supports /v1/systemone"
++
++  # ollama_cloud:clef:27b (2026-11-23) refused chat for good. A stated
++  # incapability parks that one model for hours; a bare 400 never does, because
++  # a 400 can be an oversized prompt that a healthy model would answer shortened.
++  def test_a_stated_incapability_is_recognised_and_ordinary_400s_are_not
++    reply = Master::Io::LaneReply
++    assert reply.incapable?(CLEF)
++    assert reply.incapable?("model rerank-v3 is an embedding model and only supports /v1/embeddings")
++    refute reply.incapable?("400 Bad Request: prompt is too long for this model")
++    refute reply.incapable?("400 invalid request body")
++    assert_nil reply.read(CLEF), "must not become a lane verdict: verdicts retire whole lanes"
++  end
++
++  def test_for_ms_parks_one_model_for_the_stated_time_and_not_its_siblings
++    cache = Master::Io::ModelSkipCache
++    cache.clock = -> { 1_000 }
++    cache.skip!("ollama_cloud:clef:27b", reason: CLEF, category: :invalid_request,
++                for_ms: cache::INCAPABLE_PARK_MS)
++
++    assert_equal 1_000 + cache::INCAPABLE_PARK_MS, cache.skipped_until_ms("ollama_cloud:clef:27b")
++    assert cache.skipped?("ollama_cloud:clef:27b")
++    refute cache.skipped?("ollama_cloud:gemma3:27b")
++  ensure
++    cache.clock = nil
++  end
++
++  def test_without_for_ms_an_invalid_request_keeps_the_ordinary_park
++    cache = Master::Io::ModelSkipCache
++    cache.clock = -> { 1_000 }
++    cache.skip!("m1", reason: "400 prompt too long", category: :invalid_request)
++    assert_equal 1_000 + 5000, cache.skipped_until_ms("m1")
++  ensure
++    cache.clock = nil
++  end
+ end
+diff --git a/MASTER/test/test_parse_sweep.rb b/MASTER/test/test_parse_sweep.rb
+index 27ab9dd..7f1ddcf 100644
+--- a/MASTER/test/test_parse_sweep.rb
++++ b/MASTER/test/test_parse_sweep.rb
+@@ -47,4 +47,18 @@ class TestParseSweep < Minitest::Test
+     root = File.expand_path("../..", __dir__)
+     assert_empty Operator::ParseSweep.failures(root), "tracked Ruby that does not parse"
+   end
++
++  # Ruby before 3.3 has no Prism; the sweep must still answer, with the same
++  # file and line, instead of dying on the require.
++  def test_the_interpreter_fallback_reports_the_same_file_and_line
++    Dir.mktmpdir("parse-sweep") do |dir|
++      path = File.join(dir, "chat.rb")
++      File.write(path, MISSING_COMMA)
++      line, message = Operator::ParseSweep.parse_error_without_prism(path)
++      assert_equal 3, line
++      refute_empty message
++      File.write(path, "puts 1\n")
++      assert_nil Operator::ParseSweep.parse_error_without_prism(path)
++    end
++  end
+ end
+diff --git a/MASTER/test/test_token_guard.rb b/MASTER/test/test_token_guard.rb
+new file mode 100644
+index 0000000..294195a
+--- /dev/null
++++ b/MASTER/test/test_token_guard.rb
+@@ -0,0 +1,59 @@
++# frozen_string_literal: true
++
++require_relative "test_helper"
++require_relative "../tools/token_guard"
++require "open3"
++require "tmpdir"
++
++# A PAT pasted into chat on 2026-11-23 had nothing between it and a commit. The
++# fake credentials below are assembled at run time so this file never carries a
++# token-shaped literal of its own.
++class TestTokenGuard < Minitest::Test
++  TOKEN = ("ghp_" + ("Qx7Lm2Vz" * 5)).freeze
++  GUARD = File.expand_path("../tools/token_guard.rb", __dir__)
++
++  def diff_adding(line, path: "scripts/deploy.sh", start: 10)
++    "diff --git a/#{path} b/#{path}\n--- a/#{path}\n+++ b/#{path}\n@@ -1,0 +#{start},1 @@\n+#{line}\n"
++  end
++
++  def test_an_added_token_is_found_with_its_file_and_line
++    found = TokenGuard.scan(diff_adding("export GH=#{TOKEN}"))
++    assert_equal [["scripts/deploy.sh", 10, "GitHub token"]], found.map { |f| [f.path, f.line, f.kind] }
++  end
++
++  def test_the_report_never_repeats_the_secret
++    found = TokenGuard.scan(diff_adding("export GH=#{TOKEN}"))
++    refute_includes TokenGuard.report(found), TOKEN
++  end
++
++  def test_removed_and_context_lines_are_not_read
++    diff = "+++ b/a.rb\n@@ -1,2 +1,1 @@\n-token #{TOKEN}\n #{TOKEN}\n"
++    assert_empty TokenGuard.scan(diff)
++  end
++
++  def test_obvious_placeholders_pass_like_the_scanner_fixtures
++    ["ghp_abcdefghijklmnopqrstuvwxyz123456", "ghp_#{'a' * 36}", "ghp_EXAMPLE#{'Z9' * 10}"].each do |fake|
++      assert_empty TokenGuard.scan(diff_adding(fake)), fake
++    end
++  end
++
++  def test_other_credential_shapes_are_found
++    assert_equal ["private key block"], TokenGuard.scan(diff_adding("-----BEGIN RSA " + "PRIVATE KEY-----")).map(&:kind)
++    assert_equal ["Anthropic key"], TokenGuard.scan(diff_adding("k=sk-ant-#{'Rt4Yp8Ks' * 5}")).map(&:kind)
++  end
++
++  def test_the_cli_refuses_a_staged_token_and_the_override_allows_it
++    Dir.mktmpdir do |dir|
++      run = ->(*cmd, env: {}) { Open3.capture3(env, *cmd, chdir: dir) }
++      run.call("git", "init", "-q")
++      File.write(File.join(dir, "env.sh"), "GH=#{TOKEN}\n")
++      run.call("git", "add", "env.sh")
++      _o, err, status = run.call(RbConfig.ruby, GUARD)
++      refute status.success?
++      assert_match(/env\.sh:1/, err)
++      refute_includes err, TOKEN
++      _o, _e, status = run.call(RbConfig.ruby, GUARD, env: { "PUB5_ALLOW_TOKEN_SHAPE" => "1" })
++      assert status.success?
++    end
++  end
++end
+diff --git a/MASTER/test/test_visual_register.rb b/MASTER/test/test_visual_register.rb
+index 9eff6a7..3fd29af 100644
+--- a/MASTER/test/test_visual_register.rb
++++ b/MASTER/test/test_visual_register.rb
+@@ -2,6 +2,7 @@
+ 
+ require_relative "test_helper"
+ require "tmpdir"
++require "open3"
+ require "fileutils"
+ require_relative "../checks/support/visual_register"
+ 
+@@ -132,4 +133,52 @@ class TestVisualRegister < Minitest::Test
+       assert_equal on_line[1], on_line[2]
+     end
+   end
++
++  # The shipped bug lived in the command line, not the library: flags were never
++  # captured (--out "required" on every call) and a private PngDiff method was
++  # called. These run the real executable so both stay caught.
++  BIN = File.expand_path("../bin/visual-register", __dir__)
++
++  def cli(*args)
++    Open3.capture3(RbConfig.ruby, BIN, *args)
++  end
++
++  def test_cli_writes_the_composite_to_out_and_honors_amplify
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [10, 10, 10])
++      b = solid(dir, "b.png", [12, 10, 10])
++      weak = File.join(dir, "weak.png")
++      strong = File.join(dir, "strong.png")
++      _o, err, status = cli(a, b, "--mode", "difference", "--amplify", "1", "--out", weak)
++      assert status.success?, err
++      _o, err, status = cli(a, b, "--mode", "difference", "--amplify", "4", "--out", strong)
++      assert status.success?, err
++      assert_equal [2, 0, 0], pixel(weak, 0, 0)
++      assert_equal [8, 0, 0], pixel(strong, 0, 0)
++    end
++  end
++
++  def test_cli_grid_flag_reaches_the_grid_path
++    Dir.mktmpdir do |dir|
++      shot = solid(dir, "shot.png", [200, 10, 10], width: 8, height: 8)
++      out = File.join(dir, "grid.png")
++      _o, err, status = cli(shot, "--grid", "--spacing", "4", "--out", out)
++      assert status.success?, err
++      refute_equal [200, 10, 10], pixel(out, 0, 0), "grid line should tint the corner"
++      assert_equal [200, 10, 10], pixel(out, 1, 1)
++    end
++  end
++
++  def test_cli_exit_codes_for_missing_out_unknown_mode_and_mismatch
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [1, 2, 3])
++      big = solid(dir, "big.png", [1, 2, 3], width: 4, height: 4)
++      out = File.join(dir, "o.png")
++      refute cli(a, a)[2].success?
++      refute cli(a, a, "--mode", "nope", "--out", out)[2].success?
++      _o, err, status = cli(a, big, "--out", out)
++      assert_equal 1, status.exitstatus
++      assert_match(/dimensions differ/, err)
++    end
++  end
+ end
+diff --git a/MASTER/tools/token_guard.rb b/MASTER/tools/token_guard.rb
+new file mode 100644
+index 0000000..c8bf232
+--- /dev/null
++++ b/MASTER/tools/token_guard.rb
+@@ -0,0 +1,84 @@
++#!/usr/bin/env ruby
++# frozen_string_literal: true
++
++# Refuse a commit or push whose ADDED lines carry a real-looking credential.
++#
++# A GitHub PAT was pasted into a chat on 2026-11-23, and the handoff notes record
++# the same thing happening before. The runtime redactor scrubs logs; nothing
++# stopped a token from being committed. This reads only what a change adds, so
++# an old fixture is never re-flagged, and it never prints the token it found.
++#
++#   token_guard.rb              scan the staged diff        (pre-commit)
++#   token_guard.rb --range A..B scan the commits in a range (pre-push)
++#
++# Obvious placeholders (alphabet runs, repeated characters, EXAMPLE/FAKE) pass,
++# which is what the scanner fixtures in this repo use. PUB5_ALLOW_TOKEN_SHAPE=1
++# says "I looked, it is not a credential" for the one case this misjudges.
++
++module TokenGuard
++  Finding = Data.define(:path, :line, :kind)
++
++  PATTERNS = {
++    "GitHub token" => /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}\b/,
++    "GitHub fine-grained token" => /\bgithub_pat_[A-Za-z0-9_]{30,}\b/,
++    "Anthropic key" => /\bsk-ant-[A-Za-z0-9_-]{30,}/,
++    "API key" => /\bsk-[A-Za-z0-9]{32,}\b/,
++    "AWS access key" => /\bAKIA[0-9A-Z]{16}\b/,
++    "private key block" => /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
++  }.freeze
++
++  PLACEHOLDER = /abcdefghijklm|0123456789|(.)\1{7,}|example|fake|dummy|redacted|your[_-]?(?:token|key)|<[^>]+>/i
++
++  module_function
++
++  def placeholder?(text) = text.match?(PLACEHOLDER)
++
++  # diff is unified-diff text; only lines it adds are read.
++  def scan(diff)
++    path = nil
++    line_no = 0
++    findings = []
++    diff.each_line do |raw|
++      case raw
++      when /\A\+\+\+ b\/(.*)/ then path = Regexp.last_match(1).strip
++      when /\A@@ -\S+ \+(\d+)/ then line_no = Regexp.last_match(1).to_i - 1
++      when /\A\+(?!\+\+)/
++        line_no += 1
++        text = raw[1..]
++        PATTERNS.each do |kind, pattern|
++          hit = text[pattern]
++          findings << Finding.new(path: path.to_s, line: line_no, kind:) if hit && !placeholder?(hit)
++        end
++      when /\A[ ]/ then line_no += 1
++      end
++    end
++    findings
++  end
++
++  def report(findings)
++    findings.map { |f| "  #{f.path}:#{f.line}  #{f.kind}" }.join("\n")
++  end
++end
++
++if $PROGRAM_NAME == __FILE__
++  exit 0 if ENV["PUB5_ALLOW_TOKEN_SHAPE"] == "1"
++
++  diff =
++    if ARGV.first == "--range"
++      IO.popen(["git", "log", "-p", "--format=", "-U0", ARGV.fetch(1)], err: File::NULL, &:read)
++    else
++      IO.popen(%w[git diff --cached -U0 --no-color], &:read)
++    end
++  findings = TokenGuard.scan(diff.to_s.dup.force_encoding(Encoding::UTF_8).scrub)
++  exit 0 if findings.empty?
++
++  warn ""
++  warn "token-guard: REFUSED - #{findings.size} added line(s) look like a real credential:"
++  warn TokenGuard.report(findings)
++  warn ""
++  warn "  Remove it and rotate it if it was ever pasted anywhere. Revoke on GitHub first;"
++  warn "  history rewrites do not un-leak a token. If it is a placeholder this misjudged:"
++  warn "  PUB5_ALLOW_TOKEN_SHAPE=1 git commit ..."
++  warn ""
++  exit 1
++end

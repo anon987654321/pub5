@@ -1,0 +1,503 @@
+diff --git a/MASTER/data/laws.yml b/MASTER/data/laws.yml
+index 624ab9e..f06739e 100644
+--- a/MASTER/data/laws.yml
++++ b/MASTER/data/laws.yml
+@@ -2534,7 +2534,7 @@ RATCHET_DEPS_UNGRAPHED:
+   statement: "Dependency targets named by law_deps.<law_id>.after that do not resolve to a registered Law."
+   severity: warning
+   resolution: review
+-  value: 132
++  value: 0
+   may_only: fall
+ 
+ RATCHET_DUALITY_MECHANICAL_GAP:
+@@ -5831,9 +5831,9 @@ law_deps:
+   DECOUPLE:
+     after: [FLATTEN, LINEARITY]
+ 
+-  # Hoist constants before merge — merged code references the hoisted constant.
++  # Hoist before merge — merged code references the hoisted constant.
+   MERGE:
+-    after: [HOIST_CONSTANTS, HOIST]
++    after: [HOIST]
+ 
+   # Kill dead code before defrag — defragging dead code wastes effort.
+   DEFRAG:
+@@ -5849,24 +5849,21 @@ law_deps:
+   PRIMITIVE_OBSESSION:
+     after: [DATA_CLUMPS]
+ 
+-  # Fix switch statements (type dispatch) after removing middle men —
+-  # middle men often hide the type dispatch.
+-  SWITCH_STATEMENTS:
+-    after: [MIDDLE_MAN]
+-
+   # Comment drift after all structural changes — restructured code needs
+   # comment review, not before.
+   COMMENTS_AS_DEODORANT:
+-    after: [DEFRAG, MERGE, FLATTEN, EXTRACT]
++    after: [DEFRAG, MERGE, FLATTEN]
+ 
+   # Strunk Laws after all structural operations — prose quality is a
+-  # final-pass concern.
+-  OMIT_NEEDLESS:
++  # final-pass concern. Keys are the live Law ids (law/lexical.rb,
++  # law/universal.rb); the old short aliases (OMIT_NEEDLESS, ACTIVE_VOICE,
++  # PARALLEL_STRUCTURE) never registered and were dead nodes.
++  OMIT_NEEDLESS_WORDS:
+     after: [DEFRAG, REFLOW]
+-  ACTIVE_VOICE:
+-    after: [OMIT_NEEDLESS]
+-  PARALLEL_STRUCTURE:
+-    after: [ACTIVE_VOICE]
++  PROSE_ACTIVE_VOICE:
++    after: [OMIT_NEEDLESS_WORDS]
++  PROSE_PARALLEL_FORM:
++    after: [PROSE_ACTIVE_VOICE]
+ 
+   # Reflow after all density changes.
+   REFLOW:
+@@ -5878,20 +5875,20 @@ law_deps:
+     after: [DEFRAG, MERGE, DECOUPLE, FLATTEN]
+ 
+   # Scanner Law ordering — structural before style, security before polish.
+-  bare_rescue:
+-    after: [fail_visibly]
+-  silent_rescue:
+-    after: [bare_rescue]
+-  god_class:
+-    after: [small_functions, nesting_depth]
+-  long_method:
+-    after: [nesting_depth]
+-  n_plus_one:
+-    after: [find_each]
+-  yaml_declarative:
+-    after: [semantic]
++  # Keys and targets are live Law ids. bare_rescue, yaml_declarative and
++  # rule_coverage never registered as Laws; the chains that ran through them
++  # are collapsed onto their live neighbours (SILENT_RESCUE after
++  # FAIL_VISIBLY, veto_patterns after semantic).
++  SILENT_RESCUE:
++    after: [FAIL_VISIBLY]
++  NO_GOD_CLASS:
++    after: [SMALL_FUNCTIONS, NESTING_DEPTH]
++  SMALL_FUNCTIONS:
++    after: [NESTING_DEPTH]
++  N_PLUS_ONE:
++    after: [FIND_EACH]
+   veto_patterns:
+-    after: [yaml_declarative]
++    after: [semantic]
+   semantic:
+     after: [rubocop, reek]
+   adversarial:
+@@ -5902,14 +5899,12 @@ law_deps:
+     after: [co_change_coupling]
+   co_change_coupling:
+     after: [interconnect]
+-  interconnect:
+-    after: [rule_coverage]
+   DRY:
+     after: [MERGE, DEFRAG]
+   KISS:
+-    after: [FLATTEN, long_method]
++    after: [FLATTEN, SMALL_FUNCTIONS]
+   SRP:
+-    after: [FEATURE_ENVY, god_class]
++    after: [FEATURE_ENVY, NO_GOD_CLASS]
+   CQS:
+     after: [SRP]
+ 
+@@ -5919,15 +5914,15 @@ law_deps:
+   OPEN_CLOSED:
+     after: [SRP]
+   LISKOV:
+-    after: [SRP, god_class]
++    after: [SRP, NO_GOD_CLASS]
+   INTERFACE_SEGREGATION:
+     after: [SRP]
+   DEPENDENCY_INVERSION:
+     after: [FEATURE_ENVY, SRP]
+-  html_lang:
+-    after: [meta_charset]
+-  no_inline_styles:
+-    after: [magic_color]
++  HTML_LANG:
++    after: [META_CHARSET]
++  NO_INLINE_STYLES:
++    after: [MAGIC_COLOR]
+ 
+ plugins:
+   video_recordings:
+diff --git a/MASTER/lib/operator/law_inventory.rb b/MASTER/lib/operator/law_inventory.rb
+index a9f6aab..7a84161 100644
+--- a/MASTER/lib/operator/law_inventory.rb
++++ b/MASTER/lib/operator/law_inventory.rb
+@@ -221,7 +221,14 @@ module Operator
+     def rule_dependencies
+       raw = Master.load_laws(root: MASTER)
+       deps = raw["law_deps"] || {}
+-      return deps.transform_keys { |key| key.to_s.downcase }.transform_values { |value| Array(value).map(&:to_s) } if deps.is_a?(Hash)
++      if deps.is_a?(Hash)
++        return deps.transform_keys { |key| key.to_s.downcase }.transform_values do |value|
++          # Entries are { "after" => [...] }; Array(hash) would yield key-value
++          # pairs, so the old Array(value) rendered every dependency list as
++          # stringified Ruby pairs in `laws --card`. Bare arrays pass through.
++          Array(value.is_a?(Hash) ? value["after"] : value).map(&:to_s)
++        end
++      end
+ 
+       {}
+     rescue StandardError
+diff --git a/MASTER/test/test_law_inventory.rb b/MASTER/test/test_law_inventory.rb
+index 7a4b7f9..006e264 100644
+--- a/MASTER/test/test_law_inventory.rb
++++ b/MASTER/test/test_law_inventory.rb
+@@ -81,4 +81,29 @@ class TestLawInventory < Minitest::Test
+     assert_operator matrix.size, :>, 5
+     assert matrix.all? { |row| row[:persona] && row[:axes] && row[:rules] }
+   end
++
++  # law_deps entries are { "after" => [...] } mappings. Array(hash) yields
++  # key-value pairs, so the previous transform returned stringified pairs
++  # and every law's dependencies read as Ruby syntax instead of Law ids.
++  def test_rule_dependencies_returns_the_after_list_not_stringified_pairs
++    document = {
++      "law_deps" => {
++        "MERGE" => { "after" => %w[HOIST FLATTEN] },
++        "DECOUPLE" => { "after" => ["FLATTEN"] },
++      },
++    }
++    Master.stub(:load_laws, ->(root:) { document }) do
++      deps = Operator::LawInventory.rule_dependencies
++      assert_equal %w[HOIST FLATTEN], deps.fetch("merge")
++      assert_equal ["FLATTEN"], deps.fetch("decouple")
++      assert deps.values.flatten.all? { |dep| dep.match?(/\A[A-Z_]+\z/) }
++    end
++  end
++
++  def test_rule_dependencies_tolerates_bare_array_entries
++    document = { "law_deps" => { "MERGE" => %w[HOIST] } }
++    Master.stub(:load_laws, ->(root:) { document }) do
++      assert_equal %w[HOIST], Operator::LawInventory.rule_dependencies.fetch("merge")
++    end
++  end
+ end
+diff --git a/MASTER/web/public/face.css b/MASTER/web/public/face.css
+index d024b5b..50c704a 100644
+--- a/MASTER/web/public/face.css
++++ b/MASTER/web/public/face.css
+@@ -259,7 +259,7 @@ body[data-focus-mode="1"] #prompt-form {
+ 
+ /* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
+ canvas#face {
+-  background: #000;
++  background: var(--face-bg);
+   z-index: 1;
+   transform: translateZ(0);
+ }
+@@ -612,7 +612,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-large);
+-  background: #000;
++  background: var(--face-bg);
+   contain: layout style paint;
+ }
+ 
+@@ -624,7 +624,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+@@ -652,7 +652,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+@@ -936,7 +936,7 @@ body[data-layout="face"].controls-hidden #ui-status,
+ body[data-layout="face"][data-edge-hover="1"] .face-controls,
+ body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
+ 
+-#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
++#shortcut-sheet { border: 1px solid var(--face-dim); background: var(--face-bg); color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+ #shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
+ #shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
+ .tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }
+@@ -1392,7 +1392,7 @@ body[data-history-open="1"] #chat-log {
+   min-height: var(--tap-min, 44px);
+   display: inline-flex;
+   align-items: center;
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-fg);
+   border: 1px solid var(--border-strong);
+   border-radius: 0;
+@@ -1430,7 +1430,7 @@ body[data-history-open="1"] #chat-log {
+   bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
+   z-index: var(--z-ui);
+   padding: 8px 8px;
+-  background: color-mix(in srgb, #000 88%, transparent);
++  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
+   border: 1px solid var(--border-soft);
+   font: var(--text-meta)/1.4 var(--font-mono);
+   color: var(--face-muted);
+@@ -1468,7 +1468,7 @@ body.face-loading::before {
+   content: '';
+   position: fixed;
+   inset: 0;
+-  background: #000;
++  background: var(--face-bg);
+   opacity: 0.35;
+   pointer-events: none;
+   z-index: 2;
+@@ -1512,7 +1512,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
+   padding: 4px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .12em;
+diff --git a/MASTER/web/styles/face/10_foundation.css b/MASTER/web/styles/face/10_foundation.css
+index 8937753..037f52e 100644
+--- a/MASTER/web/styles/face/10_foundation.css
++++ b/MASTER/web/styles/face/10_foundation.css
+@@ -127,7 +127,7 @@ body[data-focus-mode="1"] #prompt-form {
+ 
+ /* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
+ canvas#face {
+-  background: #000;
++  background: var(--face-bg);
+   z-index: 1;
+   transform: translateZ(0);
+ }
+diff --git a/MASTER/web/styles/face/20_chrome.css b/MASTER/web/styles/face/20_chrome.css
+index ccff5ca..5624edd 100644
+--- a/MASTER/web/styles/face/20_chrome.css
++++ b/MASTER/web/styles/face/20_chrome.css
+@@ -179,7 +179,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-large);
+-  background: #000;
++  background: var(--face-bg);
+   contain: layout style paint;
+ }
+ 
+@@ -191,7 +191,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+@@ -219,7 +219,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+diff --git a/MASTER/web/styles/face/30_conversation.css b/MASTER/web/styles/face/30_conversation.css
+index 358677e..cefaa72 100644
+--- a/MASTER/web/styles/face/30_conversation.css
++++ b/MASTER/web/styles/face/30_conversation.css
+@@ -165,7 +165,7 @@ body[data-layout="face"].controls-hidden #ui-status,
+ body[data-layout="face"][data-edge-hover="1"] .face-controls,
+ body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
+ 
+-#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
++#shortcut-sheet { border: 1px solid var(--face-dim); background: var(--face-bg); color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+ #shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
+ #shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
+ .tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }
+diff --git a/MASTER/web/styles/face/40_accessibility_motion.css b/MASTER/web/styles/face/40_accessibility_motion.css
+index e1dcd2d..4e86844 100644
+--- a/MASTER/web/styles/face/40_accessibility_motion.css
++++ b/MASTER/web/styles/face/40_accessibility_motion.css
+@@ -8,7 +8,7 @@
+   min-height: var(--tap-min, 44px);
+   display: inline-flex;
+   align-items: center;
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-fg);
+   border: 1px solid var(--border-strong);
+   border-radius: 0;
+@@ -46,7 +46,7 @@
+   bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
+   z-index: var(--z-ui);
+   padding: 8px 8px;
+-  background: color-mix(in srgb, #000 88%, transparent);
++  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
+   border: 1px solid var(--border-soft);
+   font: var(--text-meta)/1.4 var(--font-mono);
+   color: var(--face-muted);
+@@ -84,7 +84,7 @@ body.face-loading::before {
+   content: '';
+   position: fixed;
+   inset: 0;
+-  background: #000;
++  background: var(--face-bg);
+   opacity: 0.35;
+   pointer-events: none;
+   z-index: 2;
+@@ -128,7 +128,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
+   padding: 4px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .12em;
+diff --git a/OPENBSD/bin/vps_ci.sh b/OPENBSD/bin/vps_ci.sh
+index 46b64d6..6c34ea7 100755
+--- a/OPENBSD/bin/vps_ci.sh
++++ b/OPENBSD/bin/vps_ci.sh
+@@ -123,7 +123,7 @@ app_dir=/home/${app}/app
+ [[ -f ${repo}/RAILS/_core.sh ]] && . "${repo}/RAILS/_core.sh"
+ command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
+ 
+-export PUB4_CI_GUARD=1
++export PUB5_CI_GUARD=1
+ export PUB5_RAILS_ROOT=${PUB5_RAILS_ROOT:-$repo/RAILS}
+ 
+ # Path and safe creation live in OPENBSD/lib/ci_lock.sh — the lock moved out of
+diff --git a/OPENBSD/bin/vps_console.exp b/OPENBSD/bin/vps_console.exp
+index 4a6cdc5..07cbe13 100755
+--- a/OPENBSD/bin/vps_console.exp
++++ b/OPENBSD/bin/vps_console.exp
+@@ -85,7 +85,7 @@ switch -- $mode {
+     set timeout 20
+     console_open
+     at_prompt_loose
+-    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub4_install_latest.log; pgrep -lf bundle\r"
++    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub5_install_latest.log; pgrep -lf bundle\r"
+     at_prompt_loose
+     send "doas rcctl check master brgen amber bsdports 2>/dev/null\r"
+     at_prompt_loose
+diff --git a/OPENBSD/bin/vps_install_all.sh b/OPENBSD/bin/vps_install_all.sh
+index 14c0ffe..a82ef10 100755
+--- a/OPENBSD/bin/vps_install_all.sh
++++ b/OPENBSD/bin/vps_install_all.sh
+@@ -9,9 +9,9 @@ if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+   exit 0
+ fi
+ 
+-PUB4=${PUB4:-/home/dev/pub5}
+-. "${PUB4}/OPENBSD/lib/ruby_select.sh"
+-LOG=${LOG:-/tmp/pub4_install_$(date +%Y%m%d_%H%M%S).log}
++PUB5=${PUB5:-/home/dev/pub5}
++. "${PUB5}/OPENBSD/lib/ruby_select.sh"
++LOG=${LOG:-/tmp/pub5_install_$(date +%Y%m%d_%H%M%S).log}
+ 
+ exec > >(tee -a "$LOG") 2>&1
+ 
+@@ -26,7 +26,7 @@ admin_service() {
+   doas /usr/sbin/rcctl "$action" "$service"
+ }
+ 
+-log "pub4 install - log: $LOG"
++log "pub5 install - log: $LOG"
+ # ruby, not awk, and the pattern changed with it: OpenBSD vmstat -s writes
+ # "53853 pages free" and has no line matching /free memory/ at all, so the awk
+ # this replaces printed an empty figure on every run it ever made.
+@@ -37,30 +37,30 @@ log "free memory: $(vmstat -s | "$RUBY" -e 'puts $stdin.read[/^\s*(\d+)\s+pages
+ # The failures are counted from here and the exit status carries them.
+ failed=0
+ 
+-if [[ -d ${PUB4}/.git ]]; then
++if [[ -d ${PUB5}/.git ]]; then
+   log "git pull"
+   # --ff-only and never a stash: a stashed Gemfile.lock on this box once took
+   # master down, and a stash hides local edits where nobody looks for them.
+-  git -C "$PUB4" pull --ff-only origin main || log "WARN: git pull failed (continuing with tree on disk)"
+-  git -C "$PUB4" log -1 --oneline
++  git -C "$PUB5" pull --ff-only origin main || log "WARN: git pull failed (continuing with tree on disk)"
++  git -C "$PUB5" log -1 --oneline
+ fi
+ 
+ log "=== MASTER CLI + web ==="
+-[[ -d ${PUB4}/MASTER ]] || { log "ERR: MASTER missing"; exit 1 }
+-cd "${PUB4}/MASTER"
++[[ -d ${PUB5}/MASTER ]] || { log "ERR: MASTER missing"; exit 1 }
++cd "${PUB5}/MASTER"
+ bundle install
+-cd "${PUB4}/MASTER/web"
++cd "${PUB5}/MASTER/web"
+ bundle config set --local path vendor/bundle
+ bundle install
+ RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile
+-bundle exec ruby "${PUB4}/MASTER/checks/runner.rb" master_web_assets
++bundle exec ruby "${PUB5}/MASTER/checks/runner.rb" master_web_assets
+ admin_service restart master 2>/dev/null || admin_service start master
+ admin_service check master || { log "WARN: master not ok"; failed=$((failed + 1)); }
+ 
+ typeset -a APPS
+-APPS=(${(f)"$("$RUBY" -r"${PUB4}/OPENBSD/lib/deploy_inventory" \
+-  -e 'puts Deploy::Inventory.new(root: ARGV[0]).app_names' "$PUB4")"})
+-(( ${#APPS} )) || { log "ERR: no apps read from ${PUB4}/RAILS/apps.yml"; exit 1 }
++APPS=(${(f)"$("$RUBY" -r"${PUB5}/OPENBSD/lib/deploy_inventory" \
++  -e 'puts Deploy::Inventory.new(root: ARGV[0]).app_names' "$PUB5")"})
++(( ${#APPS} )) || { log "ERR: no apps read from ${PUB5}/RAILS/apps.yml"; exit 1 }
+ 
+ # master is in apps.yml but was installed above: it runs in place under
+ # MASTER/web, and it has no <app>.sh copy-tree script to run here.
+@@ -70,7 +70,7 @@ for app in $APPS; do
+     brgen|amber|bsdports|mrdamascy) ;;
+     *) log "ERR: refused app from apps.yml: $app"; failed=$((failed + 1)); continue ;;
+   esac
+-  typeset script="${PUB4}/RAILS/${app}/${app}.sh"
++  typeset script="${PUB5}/RAILS/${app}/${app}.sh"
+   log "=== Rails: ${app} ==="
+   if [[ ! -f $script ]]; then
+     log "WARN: missing $script"
+diff --git a/OPENBSD/bin/vps_run_remote.sh b/OPENBSD/bin/vps_run_remote.sh
+index 84528ff..08e11d6 100755
+--- a/OPENBSD/bin/vps_run_remote.sh
++++ b/OPENBSD/bin/vps_run_remote.sh
+@@ -21,7 +21,7 @@ KEY=$SSH_KEY
+ VM=${SSH_USER}@${SSH_HOST}
+ HYP=${HYPERVISOR:-dev@server4.openbsd.amsterdam}
+ HYP_PORT=${HYP_PORT:-31415}
+-REMOTE_LOG=/tmp/pub4_install_latest.log
++REMOTE_LOG=/tmp/pub5_install_latest.log
+ quoted_vm=${(q)VM}
+ quoted_log=${(q)REMOTE_LOG}
+ 
+diff --git a/RAILS/_assets.sh b/RAILS/_assets.sh
+index 2a0653e..bf71d41 100755
+--- a/RAILS/_assets.sh
++++ b/RAILS/_assets.sh
+@@ -5,14 +5,14 @@ set -euo pipefail
+ 
+ # master_web_assets_precompile — Propshaft digest manifest + digested files for production face UI.
+ master_web_assets_precompile() {
+-  local web_root=${1:-${PUB4:-/home/dev/pub5}/MASTER/web}
++  local web_root=${1:-${PUB5:-/home/dev/pub5}/MASTER/web}
+   [[ -d $web_root ]] || { log_warn "master_web_assets_precompile: missing ${web_root}"; return 0; }
+   log "MASTER web assets:precompile"
+   (
+     cd "$web_root"
+     rm -rf public/assets
+     RAILS_ENV=production SECRET_KEY_BASE="${SECRET_KEY_BASE:-dummy}" bundle_exec exec rails assets:precompile
+-    bundle_exec exec ruby "${PUB4:-/home/dev/pub5}/MASTER/checks/runner.rb" master_web_assets
++    bundle_exec exec ruby "${PUB5:-/home/dev/pub5}/MASTER/checks/runner.rb" master_web_assets
+   ) || { log_err "MASTER web assets precompile failed"; return 1; }
+   log_ok "MASTER web assets ready"
+ }

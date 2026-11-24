@@ -1,0 +1,134 @@
+diff --git a/STUDIO/dilla/data/dilla.json b/STUDIO/dilla/data/dilla.json
+index 2f120e5..5fda1c2 100644
+--- a/STUDIO/dilla/data/dilla.json
++++ b/STUDIO/dilla/data/dilla.json
+@@ -309,6 +309,14 @@
+   ],
+   "drum_patterns": {
+     "comment": "16 steps per bar, step 0 = downbeat. [step, velocity, optional lane]. Ghost notes ride low. Busts and fills are generated from bust_bars.",
++    "in_space_measured": {
++      "comment": "Measured transcription, not an authored groove: demucs htdemucs drums stem of the in_space canon row (render_evidence/measured_canon.json), 16-slot best-phase grid over 39 bars, velocities = measured onset strengths. The backbeat peaks at slots 2/3 and 10 rather than 4/12 - that drunk placement is what the analyzer measured, phase-locked per its own +/-45 ms window; pair with the in_space groove profile, which carries the +17.7 ms off-8th lateness the flat grid cannot.",
++      "kick": [[2, 0.52], [6, 1.0], [7, 0.63], [10, 0.67], [15, 0.52], [0, 0.26], [3, 0.33], [11, 0.44], [14, 0.33]],
++      "snare": [[2, 0.83], [3, 0.61], [6, 0.83], [10, 1.0], [11, 0.67], [14, 0.61], [15, 0.67]],
++      "ghost": [[1, 0.17], [5, 0.17], [7, 0.17]],
++      "hats": [[0, 0.87], [1, 0.93], [2, 1.0], [3, 0.73], [4, 0.87], [5, 0.87], [6, 0.6], [7, 0.6], [8, 0.87], [9, 0.93], [10, 1.0], [11, 0.73], [12, 0.87], [13, 0.93], [14, 0.87], [15, 0.93]],
++      "bust_bars": 8
++    },
+     "boom_bap": {
+       "kick": [
+         [
+@@ -1328,6 +1336,17 @@
+   },
+   "groove_profiles": {
+     "comment": "spread_ms = per-hit timing jitter sigma; nudge = fixed offsets ms; drag = whole-loop lateness; velocity wobble is performer-owned.",
++    "in_space": {
++      "comment": "Measured from the in_space canon row: swing position 52.7%, off-8th residual +17.7 ms LATE (slots 2/6/10/14 drag), on-grid share 0.67. The step offsets carry the measured lateness the swing percent cannot express; keep them together.",
++      "spread_ms": 10,
++      "nudge": { "kick": 8, "snare": -6, "hat": -4, "ghost": 4 },
++      "drag_ms": 4,
++      "swing_by_lane": { "kick": 52.7, "snare": 52.7, "hat": 52.7, "ghost": 53 },
++      "step_offsets_ms": {
++        "hat": { "2": 18, "6": 18, "10": 18, "14": 18 },
++        "snare": { "2": 18, "10": 18 }
++      }
++    },
+     "dilla_shadow": {
+       "spread_ms": 9,
+       "nudge": {
+diff --git a/STUDIO/dilla/data/recovered_music.json b/STUDIO/dilla/data/recovered_music.json
+index b8039e5..6022044 100644
+--- a/STUDIO/dilla/data/recovered_music.json
++++ b/STUDIO/dilla/data/recovered_music.json
+@@ -1326,6 +1326,40 @@
+     }
+   ],
+   "engine_modules": [
++    {
++      "id": "in_space",
++      "title": "In Space (measured-canon study)",
++      "key": "C",
++      "bpm": 92,
++      "loop_bars": 4,
++      "bars_per_chord": 1,
++      "chords": [
++        "Fmaj9",
++        "Em9",
++        "Dm9",
++        "Cmaj9"
++      ],
++      "melody_midi": [
++        76,
++        77,
++        79,
++        76,
++        74,
++        72
++      ],
++      "feel": {
++        "bass": "dub",
++        "melody": "sweet_soul",
++        "swing": 52.7,
++        "grit": 0.7
++      },
++      "source_status": "engine_study",
++      "sources": [
++        "render_evidence/measured_canon.json row slug=in_space (demucs htdemucs + node spectral analysis, 2026-11-22): 91.7 BPM, 52.7% swing, +17.7 ms off-8th residual, C major (Krumhansl r=0.51)",
++        "Ableton remake tutorial (youtube O3Ha5xkLjbA) - arrangement reference only, not source audio"
++      ],
++      "note": "NOT a transcription. Drums and groove are measured from the canon row (patterns in_space_measured, groove in_space); harmony is engine-authored from the measured mix chroma (peaks E/F/G/A) and the motif is an engine hook on those peaks, descending to resolve like the Time chop contour. The record's sample identity is unverified, so no artist harmony is claimed (ORIGINAL AUTHENTICS)."
++    },
+     {
+       "id": "gospel_69_ballad_walk",
+       "title": "Gospel 6/9 ballad walk (engine study)",
+diff --git a/STUDIO/dilla/data/reference_measurements/in_space.json b/STUDIO/dilla/data/reference_measurements/in_space.json
+new file mode 100644
+index 0000000..9230a6b
+--- /dev/null
++++ b/STUDIO/dilla/data/reference_measurements/in_space.json
+@@ -0,0 +1,46 @@
++{
++  "slug": "in_space",
++  "artist": "J Dilla",
++  "title": "In Space",
++  "assembled": "2026-11-23",
++  "acquisition": {
++    "requested": "https://www.youtube.com/watch?v=O3Ha5xkLjbA (Ableton remake tutorial - arrangement reference, not source audio)",
++    "youtube_status": "media CDN returned 403 to the datacenter host; direct acquisition refused",
++    "source": "SoundCloud full upload (uploader Incognotion), title-matched; match_class full_fan_upload per measured_canon.json",
++    "audio": "202.9 s, 44.1 kHz (analysis-session copy, kept outside the repo per the samples/ policy)",
++    "stems": "demucs htdemucs: drums / bass / other / vocals"
++  },
++  "method": "per stem: band energy shares (kick<130Hz, snare 150-1200Hz bp@400, hats>5kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation 55-200bpm folded to 60-180, 16-slot grid via best-phase quantization (+-45ms), swing from off-8th residuals; mix: chroma (FFT 8192 @22050, 55-2200Hz) + Krumhansl key correlation - identical to the measured_canon pipeline",
++  "measured": {
++    "drums": {
++      "tempo": { "bpm": 91.7, "confidence": 2.52 },
++      "grid16": {
++        "kick": [0.26, 0.11, 0.52, 0.33, 0, 0.11, 1, 0.63, 0.04, 0.04, 0.67, 0.44, 0.04, 0.07, 0.33, 0.52],
++        "snare": [0.11, 0.17, 0.83, 0.61, 0, 0.17, 0.83, 0.17, 0, 0.06, 1, 0.67, 0, 0, 0.61, 0.67],
++        "hat": [0.87, 0.93, 1, 0.73, 0.87, 0.87, 0.6, 0.6, 0.87, 0.93, 1, 0.73, 0.87, 0.93, 0.87, 0.93]
++      },
++      "swing_position_pct": 52.7,
++      "off8_residual_ms": 17.7,
++      "on_grid_share": 0.67,
++      "bars_spanned": 39,
++      "band_energy_share": { "kick_low": 0.628, "snare_mid": 0.099, "hat_high": 0.021 },
++      "onsets": { "kick": 209, "snare": 168, "hat": 291 }
++    },
++    "mix": {
++      "key_estimate": { "key": "C", "mode": "major", "r": 0.51 },
++      "chroma": [0.569, 0.492, 0.617, 0.478, 0.964, 1, 0.459, 0.83, 0.717, 0.692, 0.303, 0.335],
++      "levels": { "rms_dbfs": -18.39, "peak_dbfs": 1.8, "crest_db": 20.18 }
++    }
++  },
++  "renderable_counterparts": {
++    "drum_pattern": "in_space_measured (data/dilla.json)",
++    "groove_profile": "in_space (data/dilla.json)",
++    "progression": "in_space (data/recovered_music.json, engine_study tier - harmony is chroma-derived, NOT a transcription)"
++  },
++  "limits": [
++    "SoundCloud transcodes can decode above 0 dBFS; levels are relative evidence only",
++    "key estimate is single-method (Krumhansl, r=0.51 is weak); chroma peaks E/F/G/A guided the study voicings",
++    "swing assumes off-8th placement; the 16-slot grid is best-phase within +-45 ms, so slot placement is the analyzer's phase, not a score",
++    "sample identity of the record is unverified; no artist harmony is claimed"
++  ]
++}

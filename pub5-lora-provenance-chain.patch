@@ -1,0 +1,194 @@
+diff --git a/STUDIO/lora/quality.rb b/STUDIO/lora/quality.rb
+index defce87..5f926dd 100644
+--- a/STUDIO/lora/quality.rb
++++ b/STUDIO/lora/quality.rb
+@@ -277,6 +277,7 @@ module Studio
+               "inference_profile" => data["inference_profile"].to_s,
+               "reviewed_at" => reviewed_at.to_date,
+               "stamp" => stamp,
++              "receipt_path" => receipt,
+             }
+           rescue JSON::ParserError, SystemCallError
+             nil
+@@ -285,6 +286,50 @@ module Studio
+         candidates.max_by { |entry| entry.fetch("stamp") }
+       end
+ 
++      # Pure verdict over per-image hash comparisons: INTACT when every
++      # reviewed image still holds the bytes the verdict was made on, DRIFT
++      # when any changed or vanished, UNKNOWN when there is nothing to check
++      # (no receipt yet, or a receipt from before hashes were recorded).
++      def provenance_verdict(rows)
++        return "UNKNOWN" if rows.nil?
++
++        return "PROVENANCE_DRIFT" if rows.any? { |row| row["status"] != "MATCH" }
++
++        "PROVENANCE_INTACT"
++      end
++
++      # Verify the newest review receipt against the files it judged. A render
++      # edited or replaced after review silently voids the verdict; this makes
++      # the void visible.
++      def provenance_check(receipt)
++        return { "state" => "UNKNOWN", "detail" => "no review receipt" } unless receipt
++
++        data = JSON.parse(File.read(receipt.fetch("receipt_path"), encoding: "UTF-8"))
++        entries = Array(data["images"])
++        return { "state" => "UNKNOWN", "detail" => "receipt predates provenance hashes" } if
++          entries.empty? || entries.any? { |entry| entry["sha256"].to_s.empty? }
++
++        receipt_dir = File.dirname(receipt.fetch("receipt_path"))
++        rows = entries.map do |entry|
++          path = File.expand_path(entry.fetch("relative_path"), receipt_dir)
++          status = if !File.file?(path) || File.symlink?(path)
++                     "MISSING"
++                   elsif Digest::SHA256.file(path).hexdigest == entry.fetch("sha256")
++                     "MATCH"
++                   else
++                     "CHANGED"
++                   end
++          { "file" => entry.fetch("file"), "role" => entry["role"], "status" => status }
++        end
++        {
++          "state" => provenance_verdict(rows),
++          "receipt" => File.basename(receipt.fetch("receipt_path")),
++          "images" => rows,
++        }
++      rescue JSON::ParserError, SystemCallError, IOError => error
++        { "state" => "UNKNOWN", "detail" => error.message }
++      end
++
+       def subject_report(subject)
+         name = subject.to_s
+         raise Error, "subject must be a simple directory name" unless SUBJECT_NAME.match?(name)
+@@ -301,6 +346,7 @@ module Studio
+         )
+         diversity = dataset_diversity(subject: name)
+         approval = approval_status(subject: name)
++        provenance = provenance_check(latest_review_receipt(File.join(ROOT, name)))
+         ready = training["training_ready"] == true &&
+                 holdout_count.is_a?(Integer) && review_consent["valid"] == true
+         {
+@@ -312,6 +358,7 @@ module Studio
+           "holdout_state" => holdout_count.is_a?(Integer) ? "PASS" : "BLOCKED",
+           "dataset_diversity" => diversity,
+           "approval" => approval,
++          "provenance" => provenance,
+           "holdout_detail" => holdout_count.is_a?(String) ? holdout_count : nil,
+           "review_consent_valid" => review_consent["valid"] == true,
+           "review_consent_errors" => Array(review_consent["errors"]),
+diff --git a/STUDIO/lora/review.rb b/STUDIO/lora/review.rb
+index bad748e..3b016e2 100644
+--- a/STUDIO/lora/review.rb
++++ b/STUDIO/lora/review.rb
+@@ -1,6 +1,7 @@
+ #!/usr/bin/env ruby
+ # frozen_string_literal: true
+ 
++require "digest"
+ require "fileutils"
+ require "json"
+ require "optparse"
+@@ -287,6 +288,9 @@ module Studio
+               "role" => role,
+               "file" => File.basename(path),
+               "relative_path" => Pathname.new(path).relative_path_from(Pathname.new(output)).to_s,
++              # The bytes the verdict was made on. If this file differs later,
++              # the review no longer covers it (provenance drift).
++              "sha256" => Digest::SHA256.file(path).hexdigest,
+             }
+           end
+         end
+diff --git a/STUDIO/replicate/test/lora_provenance_test.rb b/STUDIO/replicate/test/lora_provenance_test.rb
+new file mode 100644
+index 0000000..8d90d10
+--- /dev/null
++++ b/STUDIO/replicate/test/lora_provenance_test.rb
+@@ -0,0 +1,87 @@
++# frozen_string_literal: true
++
++require_relative "minitest_helper"
++require "digest"
++require "json"
++require "tmpdir"
++
++begin
++  require_relative "../../lora/quality"
++rescue LoadError => error
++  warn "skipping provenance tests: #{error.message}"
++  return
++end
++
++# A likeness verdict covers the exact bytes it was made on. If a reviewed
++# render is edited afterwards, the receipt must stop vouching for it - this
++# pins the drift detection.
++class TestStudioLoraProvenance < Minitest::Test
++  Quality = Studio::Lora::Quality
++
++  def test_verdict_mapping
++    assert_equal "UNKNOWN", Quality.provenance_verdict(nil)
++    assert_equal "PROVENANCE_INTACT", Quality.provenance_verdict([{ "status" => "MATCH" }])
++    assert_equal "PROVENANCE_DRIFT", Quality.provenance_verdict([{ "status" => "MATCH" }, { "status" => "CHANGED" }])
++    assert_equal "PROVENANCE_DRIFT", Quality.provenance_verdict([{ "status" => "MISSING" }])
++  end
++
++  def test_intact_when_files_match_the_receipt
++    Dir.mktmpdir do |dir|
++      receipt_path, = write_review_fixture(dir)
++      state = Quality.provenance_check({ "receipt_path" => receipt_path })
++      assert_equal "PROVENANCE_INTACT", state.fetch("state")
++      assert_equal %w[MATCH MATCH], state.fetch("images").map { |row| row["status"] }
++    end
++  end
++
++  def test_drift_when_a_reviewed_file_changes_afterwards
++    Dir.mktmpdir do |dir|
++      receipt_path, render = write_review_fixture(dir)
++      File.binwrite(render, "edited after review")
++      File.chmod(0o600, render)
++      state = Quality.provenance_check({ "receipt_path" => receipt_path })
++      assert_equal "PROVENANCE_DRIFT", state.fetch("state")
++      assert_equal "CHANGED", state.fetch("images").last.fetch("status")
++    end
++  end
++
++  def test_drift_when_a_reviewed_file_disappears
++    Dir.mktmpdir do |dir|
++      receipt_path, render = write_review_fixture(dir)
++      File.delete(render)
++      state = Quality.provenance_check({ "receipt_path" => receipt_path })
++      assert_equal "PROVENANCE_DRIFT", state.fetch("state")
++      assert_equal "MISSING", state.fetch("images").last.fetch("status")
++    end
++  end
++
++  def test_unknown_for_legacy_receipts_without_hashes
++    Dir.mktmpdir do |dir|
++      receipt_path = File.join(dir, "review.json")
++      File.write(receipt_path, JSON.pretty_generate({ "images" => [{ "file" => "a.jpg" }] }))
++      state = Quality.provenance_check({ "receipt_path" => receipt_path })
++      assert_equal "UNKNOWN", state.fetch("state")
++    end
++  end
++
++  private
++
++  def write_review_fixture(dir)
++    holdout = File.join(dir, "holdout.jpg")
++    render = File.join(dir, "render.jpg")
++    File.binwrite(holdout, "holdout bytes")
++    File.binwrite(render, "render bytes")
++    [holdout, render].each { |path| File.chmod(0o600, path) }
++    receipt = {
++      "images" => [
++        { "role" => "HOLDOUT_REFERENCE", "file" => "holdout.jpg", "relative_path" => "holdout.jpg",
++          "sha256" => Digest::SHA256.file(holdout).hexdigest },
++        { "role" => "FINAL", "file" => "render.jpg", "relative_path" => "render.jpg",
++          "sha256" => Digest::SHA256.file(render).hexdigest },
++      ],
++    }
++    receipt_path = File.join(dir, "review.json")
++    File.write(receipt_path, JSON.pretty_generate(receipt))
++    [receipt_path, render]
++  end
++end

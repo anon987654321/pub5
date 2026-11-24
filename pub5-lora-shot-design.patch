@@ -1,0 +1,252 @@
+diff --git a/STUDIO/lora/lora.rb b/STUDIO/lora/lora.rb
+index d049970..be8877a 100644
+--- a/STUDIO/lora/lora.rb
++++ b/STUDIO/lora/lora.rb
+@@ -353,7 +353,9 @@ module Studio
+       # Each scene is the body of the prompt: environment, what is happening,
+       # crop, lens, light and moment. The subject's trigger, descriptor and the
+       # shared Craft tail are added by IdeaPicture, which is the one place that
+-      # knows them.
++      # knows them. Every sitting declares five shot-design axes - framing,
++      # lens or distance, light, moment and eye-line - and
++      # Quality.audit_scene_design refuses a sitting that leaves one to chance.
+       SCENES = [
+         # 1 — a white-sand beach with limestone islands on the horizon
+         "a barefoot selfie on a white-sand beach in Langkawi looking out over the " \
+@@ -367,7 +369,7 @@ module Studio
+         # 3 — night market, colour
+         "a night-market selfie in George Town, Penang, surrounded by hanging " \
+         "lanterns and steaming food stalls, saturated neon and tungsten mixing on " \
+-        "the skin, the crowd softly blurred behind, 50mm lens, chin lowered eyes up, " \
++        "the skin, the crowd softly blurred behind, chest-up framing, 50mm lens, chin lowered eyes up, " \
+         "amused and about to laugh",
+         # 4 — rainforest canopy, dappled green
+         "a selfie on a rainforest canopy walkway in Taman Negara, dappled green " \
+@@ -381,22 +383,22 @@ module Studio
+         # 6 — snow cabin at dusk, blue hour
+         "a selfie outside a snow-covered mountain cabin at dusk, the last blue light " \
+         "in the sky and a single warm lamp behind her, a wool jumper and breath " \
+-        "visible in the cold, 85mm lens, eyes on the lens, cheeks lifted eyes bright",
++        "visible in the cold, head-and-shoulders framing, 85mm lens, eyes on the lens, cheeks lifted eyes bright",
+         # 7 — midnight kitchen, one lamp
+         "a selfie in a dim kitchen at midnight making tea, lit by one lamp under the " \
+-        "cabinets, steam rising from the cup, one hand resting at the jaw, 50mm " \
++        "cabinets, steam rising from the cup, one hand resting at the jaw, waist-up framing, eyes lowered to the cup, 50mm " \
+         "lens, a tired unguarded expression, nothing arranged for the camera",
+         # 8 — car window, golden hour
+         "a selfie through the open window of a parked car at a coastal overlook at " \
+-        "golden hour, warm low sun raking across her face, 35mm lens, eyes just past " \
++        "golden hour, warm low sun raking across her face, chest-up framing, 35mm lens, eyes just past " \
+         "the lens, laughing at something off frame",
+         # 9 — rainy old town, umbrella
+         "a selfie on a cobbled old-town street in the rain, holding an umbrella, wet " \
+-        "stone reflecting the shop lights, cool overcast light, 50mm lens, eyes on " \
++        "stone reflecting the shop lights, cool overcast light, waist-up framing, 50mm lens, eyes on " \
+         "the lens, biting back a grin",
+         # 10 — rooftop pool, blue hour city
+         "a selfie on a rooftop pool deck at blue hour with a lit city skyline " \
+-        "behind, cool ambient light on her face against warm city bokeh, 35mm lens, " \
++        "behind, cool ambient light on her face against warm city bokeh, chest-up framing, 35mm lens, " \
+         "eyes on the lens, a wide real grin",
+       ].freeze
+ 
+@@ -411,27 +413,27 @@ module Studio
+       SUBJECT_SCENES = {
+         "johann" => [
+           "a candid mid-torso selfie beside a rain-streaked café window in central Bergen, wearing a long charcoal herringbone wool chore coat over an oatmeal Fair Isle lambswool crewneck, the coat's broad collar and knit texture clearly visible, wet cobblestones and a soft harbour blur outside, cool north daylight, rectangular window catchlights, a quiet expression just after a laugh, portrait-distance facial proportions with intimate direct-to-lens framing, 85mm",
+-          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wearing a forest-green Fair Isle wool crewneck over a clean white waffle-knit Henley, relaxed dark denim, the patterned knit visible across the chest, wind moving the hair and coat collar, broad overcast sky as a softbox, relaxed half-smile, natural eye contact, 50mm",
+-          "a late-night record-shop selfie between listening shelves, wearing a dark espresso suede leather blouson over a cream cashmere zip cardigan and charcoal merino crewneck, the suede nap and simple collar clearly visible, one warm tungsten practical and a cool street-window fill, mixed warm and cool catchlights, amused mid-conversation expression, 50mm",
+-          "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow and dark pine outside, one warm lamp behind and cold sky fill across the face, visible breath, unguarded eyes, 85mm",
+-          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight, a real small grin, documentary colour-negative photography, 50mm",
+-          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, rich Tri-X silver tones, direct gaze and natural facial texture, 85mm",
++          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wearing a forest-green Fair Isle wool crewneck over a clean white waffle-knit Henley, relaxed dark denim, the patterned knit visible across the chest, waist-up framing, wind moving the hair and coat collar, broad overcast sky as a softbox, relaxed half-smile, natural eye contact, 50mm",
++          "a late-night record-shop selfie between listening shelves, wearing a dark espresso suede leather blouson over a cream cashmere zip cardigan and charcoal merino crewneck, the suede nap and simple collar clearly visible, one warm tungsten practical and a cool street-window fill, waist-up framing, mixed warm and cool catchlights, amused mid-conversation expression, eyes finding the lens, 50mm",
++          "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow and dark pine outside, one warm lamp behind and cold sky fill across the face, head-and-shoulders framing, visible breath, unguarded eyes, 85mm",
++          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight, chest-up framing, a real small grin, eyes on the lens, documentary colour-negative photography, 50mm",
++          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, chest-up framing, rich Tri-X silver tones, direct gaze and natural facial texture, an unhurried calm, 85mm",
+         ].freeze,
+         "ragnhild" => [
+-          "a painter's-studio selfie beside a large unfinished canvas, wearing a sharply tailored oxblood wool jacket with matching high-waisted trousers and an ivory silk-charmeuse blouse, the clean lapel and fluid blouse visible in a waist-up crop, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, soft rectangular catchlights, restrained editorial framing, 85mm",
+-          "a gallery-evening selfie after the visitors have left, wearing a rich-purple velvet blazer over a dark plum satin blouse and fluid tailored black trousers, the velvet and silk textures visible under warm track lights, paintings behind and gentle cool fill from the windows, thoughtful expression, honest skin texture, 50mm",
+-          "a waterfront selfie on a windy Bergen afternoon, wearing a dark chestnut suede coat with a soft shearling collar over a pale cashmere knit, the collar and knit clearly framed against the grey sea and distant mountains, soft overcast light, hair moving naturally, the moment just after a laugh, 50mm",
+-          "a small old-town café selfie on a rainy afternoon, wearing a structured black leather blazer over a vivid chartreuse fine-gauge merino sweater and dark tailored trousers, the clean leather shoulders and bright knit visible in the crop, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, 85mm",
+-          "a monochrome studio portrait selfie in front of a charcoal drawing, one Rembrandt key light and a clear shadow side, direct calm gaze, tactile HP5 documentary grain, 85mm",
+-          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, a reflective unposed expression, muted Fuji colour, 50mm",
++          "a painter's-studio selfie beside a large unfinished canvas, wearing a sharply tailored oxblood wool jacket with matching high-waisted trousers and an ivory silk-charmeuse blouse, the clean lapel and fluid blouse visible in a waist-up crop, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, eyes returning to the lens, soft rectangular catchlights, restrained editorial framing, 85mm",
++          "a gallery-evening selfie after the visitors have left, wearing a rich-purple velvet blazer over a dark plum satin blouse and fluid tailored black trousers, the velvet and silk textures visible under warm track lights, paintings behind and gentle cool fill from the windows, waist-up framing, thoughtful expression, eyes drifting past the lens, honest skin texture, 50mm",
++          "a waterfront selfie on a windy Bergen afternoon, wearing a dark chestnut suede coat with a soft shearling collar over a pale cashmere knit, the collar and knit clearly framed against the grey sea and distant mountains, soft overcast light, hair moving naturally, the moment just after a laugh, eyes bright at the lens, 50mm",
++          "a small old-town café selfie on a rainy afternoon, wearing a structured black leather blazer over a vivid chartreuse fine-gauge merino sweater and dark tailored trousers, the clean leather shoulders and bright knit visible in the crop, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, eyes on the lens, 85mm",
++          "a monochrome studio portrait selfie in front of a charcoal drawing, head-and-shoulders framing, one Rembrandt key light and a clear shadow side, direct calm gaze, nothing performed, tactile HP5 documentary grain, 85mm",
++          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, chest-up framing, a reflective unposed expression, eyes past the lens, muted Fuji colour, 50mm",
+         ].freeze,
+         "merethe" => [
+-          "a coastal-cliff selfie in western Norway, wearing a warm camel suede coat with a neat shearling collar over an ivory ribbed cashmere turtleneck, the soft pile and knit clearly visible in the chest-up frame, sea and pale sky behind, low warm sunlight, a genuine half-smile, 85mm",
+-          "a quiet minimalist studio selfie against warm white, wearing a tailored deep-plum velvet suit with a champagne silk-charmeuse blouse, clean single-breasted lines and rich fabric texture visible in the frame, one large softbox above and to camera-left, visible natural skin texture, composed direct gaze, 85mm",
+-          "a candlelit kitchen selfie late in the evening, wearing a clean black leather jacket over a deep burgundy charmeuse blouse and dark straight-leg trousers, open jacket framing the blouse, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, 50mm",
+-          "a backlit-window selfie on a grey morning, wearing a long deep-olive brushed-wool coat over an ivory cable-knit sweater with a restrained aubergine scarf, the coat's structured shoulder and knit pattern clearly visible, soft daylight outlining the subject, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
+-          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, restrained amber and blue mixed light, an amused expression, 50mm",
+-          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, practical wool outerwear, open unguarded expression, natural colour-negative film, 50mm",
++          "a coastal-cliff selfie in western Norway, wearing a warm camel suede coat with a neat shearling collar over an ivory ribbed cashmere turtleneck, the soft pile and knit clearly visible in the chest-up frame, sea and pale sky behind, low warm sunlight, a genuine half-smile, eyes on the lens, 85mm",
++          "a quiet minimalist studio selfie against warm white, wearing a tailored deep-plum velvet suit with a champagne silk-charmeuse blouse, clean single-breasted lines and rich fabric texture visible in the frame, one large softbox above and to camera-left, visible natural skin texture, composed direct gaze, a settled post-laugh composure, 85mm",
++          "a candlelit kitchen selfie late in the evening, wearing a clean black leather jacket over a deep burgundy charmeuse blouse and dark straight-leg trousers, open jacket framing the blouse, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, eyes lowered in thought, 50mm",
++          "a backlit-window selfie on a grey morning, wearing a long deep-olive brushed-wool coat over an ivory cable-knit sweater with a restrained aubergine scarf, the coat's structured shoulder and knit pattern clearly visible, waist-up framing, soft daylight outlining the subject, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
++          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, chest-up framing, restrained amber and blue mixed light, an amused expression, eyes on the lens, 50mm",
++          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, waist-up framing, practical wool outerwear, open unguarded expression, eyes on the lens, natural colour-negative film, 50mm",
+         ].freeze
+       }.freeze
+ 
+diff --git a/STUDIO/lora/quality.rb b/STUDIO/lora/quality.rb
+index 05ef1ce..3833a2f 100644
+--- a/STUDIO/lora/quality.rb
++++ b/STUDIO/lora/quality.rb
+@@ -21,6 +21,21 @@ module Studio
+       IMAGE_EXTENSIONS = %w[.jpg .jpeg .png .webp].freeze
+       SUBJECT_NAME = /\A[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}\z/.freeze
+ 
++      # A deliberate sitting declares its shot design in the prompt itself:
++      # framing (the crop), lens or distance (the projection), light (the one
++      # thing a grade can only deepen), moment (an observed, not performed,
++      # expression) and eye-line (where the subject looks). A scene missing an
++      # axis asks the model to guess it, and the guess is always the average.
++      # The matchers are deliberately lexical: they gate the presence of the
++      # decision, not its poetry.
++      SCENE_AXES = {
++        "framing" => /crop|fram|head[ -]and[ -]shoulders|waist[ -]up|mid[ -]torso|chest[ -]up/i,
++        "lens_or_distance" => /\b\d+\s?mm\b|\bdistance\b|metre|meter|arm's length/i,
++        "light" => /sun|light|lamp|haze|neon|tungsten|overcast|golden|dusk|dawn|blue hour|daylight|catchlight|candle|flame|softbox|shade|backlit|window/i,
++        "moment" => /laugh|grin|smile|expression|amused|unguarded|tired|breath|mid[ -]word|concentration|thoughtful|mid[ -]thought|calm|composed|contemplat|reflective|candid|composure|performed/i,
++        "eye_line" => /eye|gaze|to[ -](the[ -])?lens|on the lens|past the lens/i,
++      }.freeze
++
+       class Error < StandardError; end
+ 
+       module_function
+@@ -91,6 +106,29 @@ module Studio
+         }
+       end
+ 
++      # Every sitting in the shared and per-subject scene sets must declare all
++      # five shot-design axes. Read-only: this audits the prompt bodies, never
++      # a provider.
++      def audit_scene_design(scenes: nil, subject_scenes: nil)
++        scenes ||= Selfie::SCENES
++        subject_scenes ||= Selfie::SUBJECT_SCENES
++        rows = []
++        scenes.each_with_index do |body, index|
++          rows << scene_row("scene #{index + 1}", body)
++        end
++        subject_scenes.each do |subject, list|
++          list.each_with_index do |body, index|
++            rows << scene_row("#{subject} scene #{index + 1}", body)
++          end
++        end
++        {
++          "state" => rows.all? { |row| row["state"] == "PASS" } ? "PASS" : "FAIL",
++          "axes" => SCENE_AXES.keys,
++          "scene_count" => rows.length,
++          "scenes" => rows,
++        }
++      end
++
+       def evaluation_files(subject:, root: ROOT)
+         name = subject.to_s
+         raise Error, "subject must be a simple directory name" unless SUBJECT_NAME.match?(name)
+@@ -194,7 +232,8 @@ module Studio
+         rescue Error => error
+           { "subject" => name, "state" => "BLOCKED", "detail" => error.message, "provider_calls" => 0 }
+         end
+-        state = configuration["state"] == "PASS" && !subjects.empty? &&
++        scene_design = audit_scene_design
++        state = configuration["state"] == "PASS" && scene_design["state"] == "PASS" && !subjects.empty? &&
+                 subjects.all? { |entry| entry["state"] == "READY_FOR_CANDIDATE_REVIEW" } ? "PASS" : "BLOCKED"
+         {
+           "schema" => "studio.lora.quality.v1",
+@@ -202,6 +241,7 @@ module Studio
+           "read_only" => true,
+           "provider_calls" => 0,
+           "configuration" => configuration,
++          "scene_design" => scene_design,
+           "comparison_status" => "UNBENCHMARKED",
+           "subjects" => subjects,
+           "film_review" => {
+@@ -219,6 +259,16 @@ module Studio
+       end
+       private_class_method :check
+ 
++      def scene_row(id, body)
++        missing = SCENE_AXES.reject { |_axis, matcher| body.match?(matcher) }.keys
++        {
++          "id" => id,
++          "state" => missing.empty? ? "PASS" : "FAIL",
++          "missing" => missing,
++        }
++      end
++      private_class_method :scene_row
++
+       def run_cli(argv)
+         options = { subject: nil, json: false }
+         OptionParser.new do |parser|
+@@ -232,6 +282,11 @@ module Studio
+           puts JSON.pretty_generate(result)
+         else
+           puts "Photographic configuration: #{result.dig("configuration", "state")}"
++          design = result.fetch("scene_design")
++          puts "Scene shot design: #{design.fetch("state")} (#{design.fetch("scene_count")} sittings, axes: #{design.fetch("axes").join(", ")})"
++          design.fetch("scenes").select { |row| row["state"] == "FAIL" }.each do |row|
++            puts "  #{row.fetch("id")}: missing #{row.fetch("missing").join(", ")}"
++          end
+           result.fetch("configuration").fetch("profiles", []).each do |profile|
+             puts "  #{profile.fetch("name")}: UNBENCHMARKED — #{profile.fetch("settings").inspect}"
+           end
+diff --git a/STUDIO/replicate/test/lora_scene_design_test.rb b/STUDIO/replicate/test/lora_scene_design_test.rb
+new file mode 100644
+index 0000000..44e068e
+--- /dev/null
++++ b/STUDIO/replicate/test/lora_scene_design_test.rb
+@@ -0,0 +1,46 @@
++# frozen_string_literal: true
++
++require_relative "minitest_helper"
++require_relative "../../lora/quality"
++
++# A sitting is a deliberate photograph: it must declare its framing, lens or
++# distance, light, moment and eye-line, because an axis left unnamed is an
++# axis the model fills with the average of its training data. This gate keeps
++# every current and future sitting honest.
++class TestStudioLoraSceneDesign < Minitest::Test
++  Quality = Studio::Lora::Quality
++
++  def test_every_shipped_sitting_declares_all_five_axes
++    report = Quality.audit_scene_design
++    assert_equal "PASS", report.fetch("state")
++    assert_equal 28, report.fetch("scene_count")
++    failures = report.fetch("scenes").select { |row| row["state"] == "FAIL" }
++    assert_empty failures, failures.map { |row| "#{row["id"]}: #{row["missing"].join(", ")}" }.join("; ")
++  end
++
++  def test_a_sitting_missing_axes_fails_with_the_axes_named
++    body = "a portrait of the subject in a room, 50mm"
++    report = Quality.audit_scene_design(scenes: [body], subject_scenes: {})
++    assert_equal "FAIL", report.fetch("state")
++    missing = report.fetch("scenes").first.fetch("missing")
++    assert_includes missing, "framing"
++    assert_includes missing, "light"
++    assert_includes missing, "moment"
++    assert_includes missing, "eye_line"
++    refute_includes missing, "lens_or_distance"
++  end
++
++  def test_distance_satisfies_the_projection_axis_without_a_lens_label
++    body = "a head-and-shoulders portrait from three metres, soft window light, " \
++           "a quiet smile, eyes on the lens"
++    report = Quality.audit_scene_design(scenes: [body], subject_scenes: {})
++    assert_equal "PASS", report.fetch("state")
++  end
++
++  def test_eye_line_accepts_direct_to_lens_phrasing
++    body = "a waist-up portrait, 85mm, hard daylight, an amused expression, " \
++           "intimate direct-to-lens framing"
++    report = Quality.audit_scene_design(scenes: [body], subject_scenes: {})
++    assert_equal "PASS", report.fetch("state")
++  end
++end

@@ -1,0 +1,139 @@
+diff --git a/STUDIO/lora/quality.rb b/STUDIO/lora/quality.rb
+index ecc9628..27e45b1 100644
+--- a/STUDIO/lora/quality.rb
++++ b/STUDIO/lora/quality.rb
+@@ -4,6 +4,7 @@
+ require "digest"
+ require "json"
+ require "optparse"
++require "vips"
+ require "yaml"
+ require_relative "consent"
+ require_relative "validate"
+@@ -150,6 +151,59 @@ module Studio
+       end
+       private_class_method :secure_directory!
+ 
++      # 9x8 greyscale thumbnails reduced to a 64-bit difference hash. Two
++      # photographs of the same subject in different clothes and light still
++      # differ in most bits; two crops of one frame barely differ at all.
++      def dhash(path)
++        image = Vips::Image.new_from_file(path, access: :random).colourspace("b-w")
++        image = image.resize(9.0 / image.width, vscale: 8.0 / image.height)
++        pixels = image.to_a.flatten
++        hash = 0
++        8.times do |row|
++          8.times do |column|
++            hash = (hash << 1) | (pixels[row * 9 + column] > pixels[row * 9 + column + 1] ? 1 : 0)
++          end
++        end
++        hash
++      end
++
++      def hamming(a, b) = (a ^ b).to_s(2).count("1")
++
++      # Pure: pair every hash, keep the pairs too close to be different
++      # photographs. Threshold is bits out of 64.
++      def near_duplicate_pairs(hashes, threshold: 5)
++        hashes.combination(2).filter_map do |(name_a, hash_a), (name_b, hash_b)|
++          distance = hamming(hash_a, hash_b)
++          { "pair" => [name_a, name_b], "distance" => distance } if distance <= threshold
++        end
++      end
++
++      # A training set should be many distinct photographs of one person, not a
++      # few frames in disguise: near-duplicates teach the model a smaller set
++      # than the image count claims. WARN, not BLOCK - a deliberate burst can
++      # be legitimate, but it must be a decision, not an accident.
++      def dataset_diversity(subject:, root: ROOT)
++        name = subject.to_s
++        dataset = File.join(File.expand_path(root), name, STANDARD.fetch("dataset").fetch("path"))
++        return { "state" => "UNKNOWN", "detail" => "no dataset" } unless File.directory?(dataset) && !File.symlink?(dataset)
++
++        images = Dir.children(dataset).sort.select { |entry| IMAGE_EXTENSIONS.include?(File.extname(entry).downcase) }
++        return { "state" => "UNKNOWN", "detail" => "no images" } if images.empty?
++
++        hashes = images.map { |entry| [entry, dhash(File.join(dataset, entry))] }
++        duplicates = near_duplicate_pairs(hashes)
++        state = duplicates.empty? ? "PASS" : "WARN"
++        {
++          "state" => state,
++          "image_count" => images.length,
++          "near_duplicate_pairs" => duplicates,
++          "detail" => duplicates.empty? ? "all #{images.length} images are perceptually distinct" :
++            "#{duplicates.length} near-duplicate pair(s) - the dataset trains as smaller than it looks",
++        }
++      rescue SystemCallError, IOError => error
++        { "state" => "UNKNOWN", "detail" => error.message }
++      end
++
+       def subject_report(subject)
+         name = subject.to_s
+         raise Error, "subject must be a simple directory name" unless SUBJECT_NAME.match?(name)
+@@ -164,6 +218,7 @@ module Studio
+           subject: name, subject_directory: File.join(ROOT, name),
+           action: :likeness_review, required_sources: ["evaluation_photographs"]
+         )
++        diversity = dataset_diversity(subject: name)
+         ready = training["training_ready"] == true &&
+                 holdout_count.is_a?(Integer) && review_consent["valid"] == true
+         {
+@@ -173,6 +228,7 @@ module Studio
+           "training_blockers" => Array(training["blockers"]).map { |item| item["detail"] || item["id"] },
+           "holdout_count" => holdout_count.is_a?(Integer) ? holdout_count : nil,
+           "holdout_state" => holdout_count.is_a?(Integer) ? "PASS" : "BLOCKED",
++          "dataset_diversity" => diversity,
+           "holdout_detail" => holdout_count.is_a?(String) ? holdout_count : nil,
+           "review_consent_valid" => review_consent["valid"] == true,
+           "review_consent_errors" => Array(review_consent["errors"]),
+diff --git a/STUDIO/replicate/test/lora_dataset_diversity_test.rb b/STUDIO/replicate/test/lora_dataset_diversity_test.rb
+new file mode 100644
+index 0000000..4b9b2bf
+--- /dev/null
++++ b/STUDIO/replicate/test/lora_dataset_diversity_test.rb
+@@ -0,0 +1,45 @@
++# frozen_string_literal: true
++
++require_relative "minitest_helper"
++
++begin
++  require_relative "../../lora/quality"
++rescue LoadError => error
++  # quality.rb pulls in vips for the perceptual hashing; a machine without
++  # the gem still runs the rest of the suite.
++  warn "skipping dataset diversity tests: #{error.message}"
++  return
++end
++
++# A training set of twelve photographs that are really four frames in
++# disguise trains a smaller model than the count promises. The diversity
++# audit's pure logic - Hamming distance and near-duplicate pairing - is
++# pinned here without images.
++class TestStudioLoraDatasetDiversity < Minitest::Test
++  Quality = Studio::Lora::Quality
++
++  def test_hamming_counts_differing_bits
++    assert_equal 0, Quality.hamming(0b1010, 0b1010)
++    assert_equal 1, Quality.hamming(0b1010, 0b1011)
++    assert_equal 4, Quality.hamming(0b0000, 0b1111)
++  end
++
++  def test_distinct_hashes_produce_no_pairs
++    hashes = [["a.jpg", 0x0000], ["b.jpg", 0xFFFF], ["c.jpg", 0x5A5A]]
++    assert_empty Quality.near_duplicate_pairs(hashes)
++  end
++
++  def test_close_hashes_are_flagged_with_their_distance
++    hashes = [["a.jpg", 0b11110000], ["b.jpg", 0b11110001], ["c.jpg", 0xABCDEF]]
++    pairs = Quality.near_duplicate_pairs(hashes, threshold: 5)
++    assert_equal 1, pairs.length
++    assert_equal %w[a.jpg b.jpg], pairs.first.fetch("pair")
++    assert_equal 1, pairs.first.fetch("distance")
++  end
++
++  def test_threshold_boundary_is_inclusive
++    hashes = [["a.jpg", 0b100000], ["b.jpg", 0b000000]]
++    assert_empty Quality.near_duplicate_pairs(hashes, threshold: 0)
++    assert_equal 1, Quality.near_duplicate_pairs(hashes, threshold: 1).length
++  end
++end

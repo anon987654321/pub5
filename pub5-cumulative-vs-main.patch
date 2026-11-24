@@ -1,0 +1,1812 @@
+diff --git a/.githooks/pre-commit b/.githooks/pre-commit
+index 2d029b3..8388cb2 100755
+--- a/.githooks/pre-commit
++++ b/.githooks/pre-commit
+@@ -41,6 +41,13 @@ end
+ staged = paths("diff", "--cached", "--name-only")
+ exit 0 if staged.empty?
+ 
++# A credential in an added line is refused before anything else: once it is in a
++# commit, rotating it is the only cure (2026-11-23, a PAT pasted into chat).
++guard = File.join(File.expand_path("..", __dir__), "MASTER", "tools", "token_guard.rb")
++if File.file?(guard)
++  system(RbConfig.ruby, guard) or abort("pre-commit: token-guard refused this commit")
++end
++
+ staged_trees = staged.map { |path| tree_of(path) }.uniq.sort
+ unstaged = paths("diff", "--name-only") + paths("ls-files", "--others", "--exclude-standard")
+ left = (unstaged - staged).group_by { |path| tree_of(path) }
+diff --git a/.githooks/pre-push b/.githooks/pre-push
+index 9f90c95..4aa4463 100755
+--- a/.githooks/pre-push
++++ b/.githooks/pre-push
+@@ -74,6 +74,11 @@ $stdin.each_line do |line|
+   next if local_sha.nil? || local_sha == ZERO # branch deletion
+ 
+   range = remote_sha.nil? || remote_sha == ZERO ? local_sha : "#{remote_sha}..#{local_sha}"
++  # --no-verify skips pre-commit; this is the second door for a credential.
++  token_guard = File.join(snapshot_root, "MASTER", "tools", "token_guard.rb")
++  if File.file?(token_guard) && !system(RbConfig.ruby, token_guard, "--range", range)
++    abort("pre-push: token-guard refused this push")
++  end
+   pushing.concat(commits(range))
+   pushing.uniq!
+   break if local_ref.nil?
+diff --git a/AGENTS.md b/AGENTS.md
+index ba9b905..0589092 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -141,7 +141,7 @@ Task routing and minimum proof:
+ 
+ **Repair versus verification commands:**
+ - `/fix [path]` is the canonical repair command. Bare `/fix` is a read-only preview: it observes, critiques and proposes repairs but does not mutate. A write requires explicit `--mode=repair|elevate|all --apply` plus a named repository target; `--dry-run` and `--read-only` override `--apply`, and startup/retry/autonomous triggers never imply consent. After explicit authorization, `/fix` repairs, re-observes and runs proof selected for the changed scope: focused affected tests when reliable, otherwise the target tree's registered suite or Rails source/rendered proof. Do not require `bin/check --profile=full` after every /fix.
+-- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` only checks readiness; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
++- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` checks tree, disk, model and the parse sweep; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
+ - `MASTER/bin/check` is a separate profile-based verification runner, not a repair command. Its default is `operator`; `ci` is the local CI floor; `full` adds all probes and the full audit and is for broad/release verification, not every repair. `MASTER/bin/ci` is a compatibility entrypoint for `bin/check --profile=ci`.
+ - `MASTER/bin/operator check` is the distinct repo-wide `Operator::CheckChain` maintenance ladder. It writes fixes by default; use `--scan-only` when only measuring. It is not an alias for `bin/check`.
+ 
+diff --git a/MASTER/AGENTS.md b/MASTER/AGENTS.md
+index c8f820a..e86c6e3 100644
+--- a/MASTER/AGENTS.md
++++ b/MASTER/AGENTS.md
+@@ -191,6 +191,8 @@ hold this contract.
+ 
+ Tests are run by the local Ruby toolchain in the checked-out repository, not by Vercel or another hosted CI service. Use `MASTER/bin/operator test <paths...>` for the smallest complete proof, then `cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test` for the full MASTER suite. Resolve local runtime and dependency blockers where possible; if a command cannot actually run, record the exact blocker as NOT_RUN or INCONCLUSIVE rather than treating a hosted status, authored test, or static inspection as a pass.
+ 
++`MASTER_TEST_LIGHT=1` skips the dependency install and bundler activation in `test/test_helper.rb`, so a single pure-logic test file can run on a host that already has the gems or has no network. It is a debugging aid, not proof: CI and `rake test` use the pinned private bundle. `MASTER/tools/token_guard.rb` runs from `.githooks/pre-commit` and `pre-push` and refuses added lines that look like a real credential (placeholders such as the scanner fixtures pass; `PUB5_ALLOW_TOKEN_SHAPE=1` overrides).
++
+ Every `/fix` exit runs `Master::Fix::FinalCleanup`. It releases the current invocation's commit lease, stops its owned visual runtime, removes that invocation's temporary visual captures, prunes only exact-named assessment/architecture artifacts outside the retained journal window, and emits a cleanup receipt. Cleanup warnings must be observable and must not overwrite the repair result. Never treat cleanup as permission to delete source changes, user files, checkpoints, transaction/recovery evidence, the durable audit ledger, or test logs.
+ 
+ ## The contract every agent gets
+@@ -335,7 +337,7 @@ Task routing and minimum proof:
+ 
+ **Repair versus verification commands:**
+ - `/fix [path]` is the canonical repair command. Bare `/fix` is a read-only preview: it observes, critiques and proposes repairs but does not mutate. A write requires explicit `--mode=repair|elevate|all --apply` plus a named repository target; `--dry-run` and `--read-only` override `--apply`, and startup/retry/autonomous triggers never imply consent. After explicit authorization, `/fix` repairs, re-observes and runs proof selected for the changed scope: focused affected tests when reliable, otherwise the target tree's registered suite or Rails source/rendered proof. Do not require `bin/check --profile=full` after every /fix.
+-- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` only checks readiness; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
++- `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` checks tree, disk, model and the parse sweep; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
+ - `MASTER/bin/check` is a separate profile-based verification runner, not a repair command. Its default is `operator`; `ci` is the local CI floor; `full` adds all probes and the full audit and is for broad/release verification, not every repair. `MASTER/bin/ci` is a compatibility entrypoint for `bin/check --profile=ci`.
+ - `MASTER/bin/operator check` is the distinct repo-wide `Operator::CheckChain` maintenance ladder. It writes fixes by default; use `--scan-only` when only measuring. It is not an alias for `bin/check`.
+ 
+diff --git a/MASTER/bin/fix-here b/MASTER/bin/fix-here
+index 5b008ea..23e7220 100755
+--- a/MASTER/bin/fix-here
++++ b/MASTER/bin/fix-here
+@@ -74,7 +74,7 @@ end
+ 
+ parser = OptionParser.new do |opts|
+   opts.banner = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [options]"
+-  opts.on("--dry", "Check readiness without starting /fix") { options[:dry] = true }
++  opts.on("--dry", "Check tree, disk, model and the parse sweep; the lane probe runs on the real run") { options[:dry] = true }
+   opts.on("--no-probe", "Skip the bounded in-process /fix lane request") { options[:probe] = false }
+   opts.on("--no-publish", "Keep verified commits local") { options[:no_publish] = true }
+   opts.on("--resume", "Resume the existing run budget") { options[:resume] = true }
+@@ -172,8 +172,18 @@ log = File.join(MasterPaths.fix_state(root: MASTER), "fix-#{File.basename(tree)}
+ 
+ puts "fix0 at fix-here: tree=#{tree} disk=#{format('%.1f', free)} GiB model=#{model || 'pool (none forced)'} " \
+      "mode=#{options[:mode] || 'repair (default)'} access=#{write_authorized ? 'write-authorized' : 'read-only'}"
++# The parse sweep is read-only and takes seconds, so --dry runs it: a tree that
++# cannot parse must not read "ready" and then fail the real run (F6, 2026-11-23).
++$LOAD_PATH.unshift(File.join(MASTER, "lib")) unless $LOAD_PATH.include?(File.join(MASTER, "lib"))
++require "operator/parse_sweep"
++broken = Operator::ParseSweep.failures(ROOT)
++unless broken.empty?
++  warn Operator::ParseSweep.render(broken.first(10))
++  abort "fix-here: #{broken.size} tracked Ruby file(s) do not parse; fix them before a run that takes hours."
++end
++
+ if dry
+-  puts "fix0 at fix-here: --dry, would run MASTER/bin/master /fix #{tree}"
++  puts "fix0 at fix-here: --dry, tree, disk, model and parse sweep are ready; would run MASTER/bin/master /fix #{tree}"
+   exit 0
+ end
+ 
+@@ -187,14 +197,7 @@ FileUtils.mkdir_p(File.dirname(log), mode: 0o700)
+ 
+ # 3b. A file that does not parse stops the runtime before any model is asked, and the lane
+ # check below then fails for a reason that looks like a lane. Say the real one, in seconds.
+-$LOAD_PATH.unshift(File.join(MASTER, "lib"))
+-require "operator/parse_sweep"
+ require "operator/stall_watch"
+-broken = Operator::ParseSweep.failures(ROOT)
+-unless broken.empty?
+-  warn Operator::ParseSweep.render(broken.first(10))
+-  abort "fix-here: #{broken.size} tracked Ruby file(s) do not parse; fix them before a run that takes hours."
+-end
+ 
+ # 4. /fix owns the one bounded request through LanePreflight and LaneProbe.
+ # The wrapper used to boot a second full MASTER process and ask a generic chat
+diff --git a/MASTER/bin/visual-register b/MASTER/bin/visual-register
+new file mode 100755
+index 0000000..b6fb952
+--- /dev/null
++++ b/MASTER/bin/visual-register
+@@ -0,0 +1,51 @@
++#!/usr/bin/env ruby
++# frozen_string_literal: true
++
++# Composite two captures into review evidence, or lay the rhythm grid over
++# one. No browser, no gems beyond zlib - PngDiff owns the codec.
++#
++#   visual-register A.png B.png --mode anaglyph --out drift.png
++#   visual-register A.png B.png --mode difference --amplify 4 --out diff.png
++#   visual-register shot.png --grid --spacing 4 --out gridded.png
++#
++# Modes are documented on Deploy::VisualRegister. Captures come from the
++# existing machinery (cdp_session / capture_engine); this tool never opens a
++# page itself, so its output is reproducible from stored PNGs.
++
++require "optparse"
++require_relative "../checks/support/visual_register"
++
++options = { mode: "anaglyph", amplify: Deploy::VisualRegister::DEFAULT_AMPLIFY,
++            tile: Deploy::VisualRegister::DEFAULT_TILE, spacing: 4 }
++parser = OptionParser.new do |o|
++  o.banner = "usage: visual-register A.png [B.png] [--mode M | --grid] --out OUT.png"
++  o.on("--mode M", Deploy::VisualRegister::MODES, "composite mode (#{Deploy::VisualRegister::MODES.join(', ')})")
++  o.on("--grid", "rhythm-grid overlay over A.png (B not used)")
++  o.on("--out PATH", "output PNG (required)")
++  o.on("--amplify N", Integer, "difference amplification (default #{options[:amplify]})")
++  o.on("--tile N", Integer, "checkerboard tile px (default #{options[:tile]})")
++  o.on("--spacing N", Integer, "grid spacing px (default #{options[:spacing]})")
++end
++parser.parse!(ARGV, into: options)
++
++out = options.delete(:out)
++grid = options.delete(:grid)
++parser.abort("the --out PATH is required") unless out
++
++result =
++  if grid
++    parser.abort("--grid takes exactly one capture") unless ARGV.one?
++    Deploy::VisualRegister.grid_overlay(capture_path: ARGV.fetch(0), out_path: out, spacing: options[:spacing])
++  else
++    parser.abort("composite modes take A.png and B.png") unless ARGV.size == 2
++    Deploy::VisualRegister.composite(a_path: ARGV.fetch(0), b_path: ARGV.fetch(1),
++                                     mode: options[:mode], out_path: out,
++                                     amplify: options[:amplify], tile: options[:tile])
++  end
++
++if result[:status] == :dimension_mismatch
++  warn "visual-register: dimensions differ - A #{result[:a_dimensions].join('x')} vs B #{result[:b_dimensions].join('x')}"
++  exit 1
++end
++
++puts "visual-register: #{result[:status]} #{result[:mode] || "grid"} -> #{result[:composite_image]} (#{result[:width]}x#{result[:height]})"
+diff --git a/MASTER/checks/support/visual_register.rb b/MASTER/checks/support/visual_register.rb
+new file mode 100644
+index 0000000..a468c63
+--- /dev/null
++++ b/MASTER/checks/support/visual_register.rb
+@@ -0,0 +1,144 @@
++# frozen_string_literal: true
++
++require_relative "png_diff"
++
++module Deploy
++  # Composite evidence for a pair of captures. PngDiff answers "how much
++  # changed" with a number and a red heatmap; VisualRegister answers "where do
++  # the two captures sit relative to each other" with an image a reviewer reads
++  # at a glance. Every mode is a pure pixel function over two same-size PNGs,
++  # so the instrument needs no browser and no gems beyond PngDiff's own zlib.
++  #
++  #   difference    |A-B| per channel, amplified. Identical pixels are black;
++  #                 drift lights up. Amplification makes sub-perceptual drift
++  #                 visible; the count and ratio still come from PngDiff.
++  #   anaglyph      A into the red channel, B into green+blue. Registered
++  #                 pixels read gray; drift shows as red/cyan fringes whose
++  #                 direction tells you which way B moved.
++  #   overlay       50/50 blend. Double edges mark misalignment - the onion
++  #                 skin. Fast to read, not measurable; pair with a ratio.
++  #   checkerboard  Alternating tiles of A and B. No blending, so tonal drift
++  #                 (one surface token off from another) stays visible.
++  #
++  # grid_overlay is the one-capture cousin: the rhythm grid laid over a single
++  # capture so off-rhythm edges read as lines floating between grid lines.
++  module VisualRegister
++    MODES = %w[difference anaglyph overlay checkerboard].freeze
++    MAX_PIXELS = PngDiff::MAX_PIXELS
++    DEFAULT_AMPLIFY = 4
++    DEFAULT_TILE = 32
++    # The grid reads as an instrument, not as content: hairlines at ~15%
++    # strength, every eighth line doubled so the 32px cadence is countable.
++    GRID_MINOR_ALPHA = 38
++    GRID_MAJOR_ALPHA = 76
++    GRID_COLOR = [0, 255, 255].freeze
++
++    module_function
++
++    def composite(a_path:, b_path:, mode:, out_path:, amplify: DEFAULT_AMPLIFY, tile: DEFAULT_TILE)
++      raise ArgumentError, "unknown mode #{mode.inspect} (expected one of #{MODES.join(', ')})" unless MODES.include?(mode.to_s)
++
++      a = PngDiff.decode(File.binread(a_path))
++      b = PngDiff.decode(File.binread(b_path))
++      unless a[:width] == b[:width] && a[:height] == b[:height]
++        return {
++          status: :dimension_mismatch,
++          a_dimensions: [a[:width], a[:height]],
++          b_dimensions: [b[:width], b[:height]],
++          composite_image: nil,
++        }
++      end
++
++      rgba = map_rows(a, b) do |a_px, b_px, x, y|
++        case mode.to_s
++        when "difference"   then difference_pixel(a_px, b_px, amplify)
++        when "anaglyph"     then [a_px[0], b_px[1], b_px[2], 255]
++        when "overlay"      then overlay_pixel(a_px, b_px)
++        else                     (x / tile + y / tile).even? ? opaque(a_px) : opaque(b_px)
++        end
++      end
++
++      File.binwrite(out_path, PngDiff.encode_rgba(a[:width], a[:height], rgba))
++      { status: :composited, mode: mode.to_s, width: a[:width], height: a[:height], composite_image: out_path }
++    end
++
++    # One capture under the rhythm grid. spacing is the law's unit (4px);
++    # every major_every-th line is drawn stronger so the eye can count.
++    def grid_overlay(capture_path:, out_path:, spacing: 4, major_every: 8)
++      img = PngDiff.decode(File.binread(capture_path))
++      a_ch = img[:channels]
++      a_row_bytes = img[:width] * a_ch
++      previous = Array.new(a_row_bytes, 0)
++      rgba = String.new(encoding: Encoding::BINARY)
++
++      img[:height].times do |y|
++        scanline = img[:raw].byteslice(y * (a_row_bytes + 1), a_row_bytes + 1)
++        row = PngDiff.unfilter_row(scanline, previous: previous, channels: a_ch)
++        img[:width].times do |x|
++          i = x * a_ch
++          line = (x % spacing).zero? || (y % spacing).zero?
++          major = (x % (spacing * major_every)).zero? || (y % (spacing * major_every)).zero?
++          alpha = line ? (major ? GRID_MAJOR_ALPHA : GRID_MINOR_ALPHA) : 0
++          rgba << blend(GRID_COLOR[0], row[i], alpha) << blend(GRID_COLOR[1], row[i + 1], alpha) <<
++                  blend(GRID_COLOR[2], row[i + 2], alpha) << 255
++        end
++        previous = row
++      end
++
++      File.binwrite(out_path, PngDiff.encode_rgba(img[:width], img[:height], rgba))
++      { status: :gridded, width: img[:width], height: img[:height], spacing:, composite_image: out_path }
++    end
++
++    def difference_pixel(a_px, b_px, amplify)
++      [
++        clamp((a_px[0] - b_px[0]).abs * amplify),
++        clamp((a_px[1] - b_px[1]).abs * amplify),
++        clamp((a_px[2] - b_px[2]).abs * amplify),
++        255,
++      ]
++    end
++
++    def overlay_pixel(a_px, b_px)
++      [(a_px[0] + b_px[0]) / 2, (a_px[1] + b_px[1]) / 2, (a_px[2] + b_px[2]) / 2, 255]
++    end
++
++    # Chromium's RGB screenshots carry no alpha byte; pretend 255 so every
++    # mode downstream has a four-element pixel to work with.
++    def opaque(px) = [px[0], px[1], px[2], 255]
++
++    def clamp(v) = v > 255 ? 255 : v
++
++    def blend(ink, under, alpha) = (ink * alpha + under * (255 - alpha)) / 255
++
++    # Walks both images row by row (unfiltering through PngDiff, never holding
++    # more than a scanline per side) and packs the yielded pixels into one
++    # RGBA buffer. Rows keep memory flat on full-viewport captures.
++    def map_rows(a, b)
++      a_ch = a[:channels]
++      b_ch = b[:channels]
++      a_row_bytes = a[:width] * a_ch
++      b_row_bytes = b[:width] * b_ch
++      a_prev = Array.new(a_row_bytes, 0)
++      b_prev = Array.new(b_row_bytes, 0)
++      out = String.new(capacity: a[:width] * a[:height] * 4, encoding: Encoding::BINARY)
++
++      a[:height].times do |y|
++        a_line = a[:raw].byteslice(y * (a_row_bytes + 1), a_row_bytes + 1)
++        b_line = b[:raw].byteslice(y * (b_row_bytes + 1), b_row_bytes + 1)
++        a_row = PngDiff.unfilter_row(a_line, previous: a_prev, channels: a_ch)
++        b_row = PngDiff.unfilter_row(b_line, previous: b_prev, channels: b_ch)
++
++        a[:width].times do |x|
++          ai = x * a_ch
++          bi = x * b_ch
++          a_px = [a_row[ai], a_row[ai + 1], a_row[ai + 2]]
++          b_px = [b_row[bi], b_row[bi + 1], b_row[bi + 2]]
++          out << yield(a_px, b_px, x, y).pack("C4")
++        end
++        a_prev = a_row
++        b_prev = b_row
++      end
++      out
++    end
++  end
++end
+diff --git a/MASTER/data/laws.yml b/MASTER/data/laws.yml
+index c374276..f66fca9 100644
+--- a/MASTER/data/laws.yml
++++ b/MASTER/data/laws.yml
+@@ -2540,7 +2540,7 @@ RATCHET_DEPS_UNGRAPHED:
+   statement: "Dependency targets named by law_deps.<law_id>.after that do not resolve to a registered Law."
+   severity: warning
+   resolution: review
+-  value: 132
++  value: 0
+   may_only: fall
+ 
+ RATCHET_DUALITY_MECHANICAL_GAP:
+@@ -5837,9 +5837,9 @@ law_deps:
+   DECOUPLE:
+     after: [FLATTEN, LINEARITY]
+ 
+-  # Hoist constants before merge — merged code references the hoisted constant.
++  # Hoist before merge — merged code references the hoisted constant.
+   MERGE:
+-    after: [HOIST_CONSTANTS, HOIST]
++    after: [HOIST]
+ 
+   # Kill dead code before defrag — defragging dead code wastes effort.
+   DEFRAG:
+@@ -5855,24 +5855,21 @@ law_deps:
+   PRIMITIVE_OBSESSION:
+     after: [DATA_CLUMPS]
+ 
+-  # Fix switch statements (type dispatch) after removing middle men —
+-  # middle men often hide the type dispatch.
+-  SWITCH_STATEMENTS:
+-    after: [MIDDLE_MAN]
+-
+   # Comment drift after all structural changes — restructured code needs
+   # comment review, not before.
+   COMMENTS_AS_DEODORANT:
+-    after: [DEFRAG, MERGE, FLATTEN, EXTRACT]
++    after: [DEFRAG, MERGE, FLATTEN]
+ 
+   # Strunk Laws after all structural operations — prose quality is a
+-  # final-pass concern.
+-  OMIT_NEEDLESS:
++  # final-pass concern. Keys are the live Law ids (law/lexical.rb,
++  # law/universal.rb); the old short aliases (OMIT_NEEDLESS, ACTIVE_VOICE,
++  # PARALLEL_STRUCTURE) never registered and were dead nodes.
++  OMIT_NEEDLESS_WORDS:
+     after: [DEFRAG, REFLOW]
+-  ACTIVE_VOICE:
+-    after: [OMIT_NEEDLESS]
+-  PARALLEL_STRUCTURE:
+-    after: [ACTIVE_VOICE]
++  PROSE_ACTIVE_VOICE:
++    after: [OMIT_NEEDLESS_WORDS]
++  PROSE_PARALLEL_FORM:
++    after: [PROSE_ACTIVE_VOICE]
+ 
+   # Reflow after all density changes.
+   REFLOW:
+@@ -5884,20 +5881,20 @@ law_deps:
+     after: [DEFRAG, MERGE, DECOUPLE, FLATTEN]
+ 
+   # Scanner Law ordering — structural before style, security before polish.
+-  bare_rescue:
+-    after: [fail_visibly]
+-  silent_rescue:
+-    after: [bare_rescue]
+-  god_class:
+-    after: [small_functions, nesting_depth]
+-  long_method:
+-    after: [nesting_depth]
+-  n_plus_one:
+-    after: [find_each]
+-  yaml_declarative:
+-    after: [semantic]
++  # Keys and targets are live Law ids. bare_rescue, yaml_declarative and
++  # rule_coverage never registered as Laws; the chains that ran through them
++  # are collapsed onto their live neighbours (SILENT_RESCUE after
++  # FAIL_VISIBLY, veto_patterns after semantic).
++  SILENT_RESCUE:
++    after: [FAIL_VISIBLY]
++  NO_GOD_CLASS:
++    after: [SMALL_FUNCTIONS, NESTING_DEPTH]
++  SMALL_FUNCTIONS:
++    after: [NESTING_DEPTH]
++  N_PLUS_ONE:
++    after: [FIND_EACH]
+   veto_patterns:
+-    after: [yaml_declarative]
++    after: [semantic]
+   semantic:
+     after: [rubocop, reek]
+   adversarial:
+@@ -5908,14 +5905,12 @@ law_deps:
+     after: [co_change_coupling]
+   co_change_coupling:
+     after: [interconnect]
+-  interconnect:
+-    after: [rule_coverage]
+   DRY:
+     after: [MERGE, DEFRAG]
+   KISS:
+-    after: [FLATTEN, long_method]
++    after: [FLATTEN, SMALL_FUNCTIONS]
+   SRP:
+-    after: [FEATURE_ENVY, god_class]
++    after: [FEATURE_ENVY, NO_GOD_CLASS]
+   CQS:
+     after: [SRP]
+ 
+@@ -5925,15 +5920,15 @@ law_deps:
+   OPEN_CLOSED:
+     after: [SRP]
+   LISKOV:
+-    after: [SRP, god_class]
++    after: [SRP, NO_GOD_CLASS]
+   INTERFACE_SEGREGATION:
+     after: [SRP]
+   DEPENDENCY_INVERSION:
+     after: [FEATURE_ENVY, SRP]
+-  html_lang:
+-    after: [meta_charset]
+-  no_inline_styles:
+-    after: [magic_color]
++  HTML_LANG:
++    after: [META_CHARSET]
++  NO_INLINE_STYLES:
++    after: [MAGIC_COLOR]
+ 
+ plugins:
+   video_recordings:
+diff --git a/MASTER/lib/cli/operator_intent.rb b/MASTER/lib/cli/operator_intent.rb
+index 778157b..4153f56 100644
+--- a/MASTER/lib/cli/operator_intent.rb
++++ b/MASTER/lib/cli/operator_intent.rb
+@@ -72,6 +72,7 @@ module Master
+       # pass through the normal work path first; they are not deployment consent.
+       def self.direct_full_stack_confirmation?(text)
+         request = text.to_s
++        return false if strict_confirm?
+         return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
+         return false if request.match?(NON_PRODUCTION_ENV_RE)
+         return false if request.match?(EXCLUSION_RE)
+@@ -92,6 +93,30 @@ module Master
+           destination_of(request).to_s.downcase == "vm23"
+       end
+ 
++      # A full-stack request that names STUDIO is deployed without it, since
++      # STUDIO owns no vm23 service. Say so in the reply instead of dropping it
++      # silently (F8, 2026-11-23). The result is returned unchanged for any
++      # other request or shape.
++      STUDIO_SCOPE_NOTE = "STUDIO is source-only on vm23 (no service of its own); it rides in the pinned checkout. " \
++                          "Deploying the registered surfaces."
++
++      def self.with_studio_note(result, text)
++        request = text.to_s
++        return result unless request.match?(NON_DEPLOYABLE_TREE_RE)
++        return result unless full_inventory_scope?(request) || complete_stack_components?(request)
++        return result unless result.respond_to?(:ok?) && result.ok? && result.value!.is_a?(Hash)
++
++        value = result.value!.dup
++        %i[rendered output].each do |key|
++          value[key] = "#{STUDIO_SCOPE_NOTE}\n\n#{value[key]}" if value[key].is_a?(String) && !value[key].include?(STUDIO_SCOPE_NOTE)
++        end
++        Master::Result.ok(value)
++      end
++
++      # MASTER_DEPLOY_STRICT_CONFIRM=1 turns off the polite-question shortcut:
++      # only a literal --confirm authorizes production (F7, opt-in).
++      def self.strict_confirm?(env = ENV) = env["MASTER_DEPLOY_STRICT_CONFIRM"] == "1"
++
+       def self.destination_of(request)
+         captures = request.to_s.scan(DESTINATION_RE).flatten
+         captures.find { |capture| KNOWN_DESTINATIONS.include?(capture.downcase) } || captures.first
+diff --git a/MASTER/lib/cli/turn_router.rb b/MASTER/lib/cli/turn_router.rb
+index e4e362b..a20e52a 100644
+--- a/MASTER/lib/cli/turn_router.rb
++++ b/MASTER/lib/cli/turn_router.rb
+@@ -65,7 +65,8 @@ module Master
+           confirmed = text.match?(/(?:^|\s)--confirm(?:\s|$)/i) ||
+                       OperatorIntent.direct_full_stack_confirmation?(text)
+           args = "#{args} --confirm" if confirmed
+-          return dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:, cancellation:)
++          result = dispatch_slash("/deploy #{args}", container:, felt_sense:, on_turn:, cancellation:)
++          return OperatorIntent.with_studio_note(result, text)
+         when :ambiguous
+           return Master::Result.ok({ rendered: proposal.message, output: proposal.message })
+         when :unavailable
+diff --git a/MASTER/lib/io/lane_reply.rb b/MASTER/lib/io/lane_reply.rb
+index 269b574..3ceea67 100644
+--- a/MASTER/lib/io/lane_reply.rb
++++ b/MASTER/lib/io/lane_reply.rb
+@@ -31,6 +31,13 @@ module Master
+       LIMIT_429_RE = /(?:\bHTTP\W{0,3}|\bstatus\W{0,3}|\bcode\W{0,3}|\berror\W{0,3})429\b|\b429\s+(?:too\s+many|rate|error)/i
+       UNREACHABLE_RE = /ECONNREFUSED|connection\s+refused|(?:ollama|server|host)\s+unreachable|unreachable\s+at|Failed\s+to\s+open\s+TCP|could\s+not\s+resolve|getaddrinfo|network\s+is\s+unreachable|name\s+or\s+service\s+not\s+known/i
+       AUTH_RE = /(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})40[13]\b|PERMISSION_DENIED|unauthori[sz]ed|invalid\s+api[\s_-]?key|not\s+logged\s+in|user\s+not\s+found|please\s+run\s+\/login|authentication\s+(?:failed|error|required)|token\s+(?:has\s+)?expired/i
++      # A model that answers "I am not a chat model" (ollama_cloud clef:27b, 2026-11-23:
++      # "decision model, only supports /v1/systemone") will answer it every time.
++      # Matching the stated incapability, not a bare 400, keeps an oversized prompt
++      # from parking a healthy model. Deliberately NOT a Verdict: verdicts retire
++      # whole lanes (LaneQuota), and this is a fact about one model.
++      INCAPABLE_RE = %r{\b(?:decision|embedding|rerank(?:er|ing)?|moderation|completion-only)\s+model\b[^.\n]{0,60}\bonly\s+supports?\b|\bonly\s+supports?\s+/v\d+/[a-z_-]+}i
++
+       UNITS = { "d" => 86_400, "h" => 3600, "m" => 60, "s" => 1 }.freeze
+       SPAN = /\d+\s*(?:days?|hours?|hrs?|minutes?|mins?|seconds?|secs?|[dhms])(?![a-z])/i
+       AFTER_RE = /(?:resets?|try\s+again|retry)\s+(?:in|after)\s+((?:#{SPAN}[\s,]*(?:and\s+)?)+)/i
+@@ -38,6 +45,8 @@ module Master
+       CLOCK_RE = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b(?:\s*\(([A-Za-z]+(?:\/[A-Za-z_+\-0-9]+)*)\))?/i
+       @zone_lock = Mutex.new
+ 
++      def incapable?(reply) = INCAPABLE_RE.match?(reply.to_s)
++
+       def read(reply, now: Time.now.to_f)
+         text = reply.to_s
+         return Verdict.new(:billing, BILLING_WAIT_S, false) if
+diff --git a/MASTER/lib/io/model_skip_cache.rb b/MASTER/lib/io/model_skip_cache.rb
+index dd4c3e0..f64b2df 100644
+--- a/MASTER/lib/io/model_skip_cache.rb
++++ b/MASTER/lib/io/model_skip_cache.rb
+@@ -15,6 +15,9 @@ module Master
+         provider_error llm_call_failure model_missing invalid_request failure
+       ].freeze
+ 
++      # How long a model that stated it cannot chat stays parked (this process).
++      INCAPABLE_PARK_MS = 6 * 3_600_000
++
+       # Keep this list aligned with the router's failover_skip_categories:
+       # otherwise a failed lane is skipped only for the current turn and the
+       # cache silently refuses to park it for the next one.
+@@ -73,13 +76,17 @@ module Master
+ 
+       # A later deadline extends a park and an earlier one never shortens it, so
+       # a 30s blip after a stated six-hour reset does not bring the lane back early.
+-      def skip!(model, reason:, category: nil)
++      #
++      # for_ms: parks for exactly that long (a model that stated it cannot do the
++      # job); it still counts a strike, and a longer existing park still wins.
++      def skip!(model, reason:, category: nil, for_ms: nil)
+         cat = category&.to_sym
+         return if cat && !SKIP_CATEGORIES.include?(cat)
+ 
+         now = now_ms
+         parser_now = @clock ? now : Process.clock_gettime(Process::CLOCK_REALTIME) * 1000
+-        ttl = ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes: strike!(model, now))
++        strikes = strike!(model, now)
++        ttl = for_ms || ttl_ms(category: cat, reason: reason.to_s, now_ms: parser_now, strikes:)
+         return if ttl <= 0 || model.to_s.empty?
+ 
+         @mutex.synchronize do
+diff --git a/MASTER/lib/operator/law_inventory.rb b/MASTER/lib/operator/law_inventory.rb
+index a9f6aab..7a84161 100644
+--- a/MASTER/lib/operator/law_inventory.rb
++++ b/MASTER/lib/operator/law_inventory.rb
+@@ -221,7 +221,14 @@ module Operator
+     def rule_dependencies
+       raw = Master.load_laws(root: MASTER)
+       deps = raw["law_deps"] || {}
+-      return deps.transform_keys { |key| key.to_s.downcase }.transform_values { |value| Array(value).map(&:to_s) } if deps.is_a?(Hash)
++      if deps.is_a?(Hash)
++        return deps.transform_keys { |key| key.to_s.downcase }.transform_values do |value|
++          # Entries are { "after" => [...] }; Array(hash) would yield key-value
++          # pairs, so the old Array(value) rendered every dependency list as
++          # stringified Ruby pairs in `laws --card`. Bare arrays pass through.
++          Array(value.is_a?(Hash) ? value["after"] : value).map(&:to_s)
++        end
++      end
+ 
+       {}
+     rescue StandardError
+diff --git a/MASTER/lib/operator/parse_sweep.rb b/MASTER/lib/operator/parse_sweep.rb
+index 5186ad7..f6722c9 100644
+--- a/MASTER/lib/operator/parse_sweep.rb
++++ b/MASTER/lib/operator/parse_sweep.rb
+@@ -1,6 +1,13 @@
+ # frozen_string_literal: true
+ 
+-require "prism"
++# Prism ships with Ruby 3.3+. On an older Ruby the sweep falls back to the
++# interpreter's own parser instead of dying with a LoadError (2026-11-23: a
++# Ruby 3.2 host crashed `fix-here --dry` on this require).
++begin
++  require "prism"
++rescue LoadError
++  nil
++end
+ 
+ module Operator
+ 
+@@ -32,9 +39,28 @@ module Operator
+         full = File.join(root, path)
+         next unless File.file?(full)
+ 
++        error = parse_error(full)
++        Failure.new(path:, line: error[0], message: error[1]) if error
++      end
++    end
++
++    # [line, message] of the first syntax error, or nil when the file parses.
++    def parse_error(full)
++      if defined?(Prism)
+         error = Prism.parse_file(full).errors.first
+-        Failure.new(path:, line: error.location.start_line, message: error.message) if error
++        return error && [error.location.start_line, error.message]
+       end
++
++      parse_error_without_prism(full)
++    end
++
++    # compile only parses; nothing in the file is run.
++    def parse_error_without_prism(full)
++      RubyVM::InstructionSequence.compile(File.read(full, encoding: "UTF-8"), full)
++      nil
++    rescue SyntaxError => e
++      first = e.message.lines.first.to_s
++      [first[/#{Regexp.escape(full)}:(\d+)/, 1].to_i, first.sub(/\A.*?:\d+:\s*/, "").strip]
+     end
+ 
+     def render(failures)
+diff --git a/MASTER/lib/review/llm_dispatcher.rb b/MASTER/lib/review/llm_dispatcher.rb
+index fbe715a..9f78b7d 100644
+--- a/MASTER/lib/review/llm_dispatcher.rb
++++ b/MASTER/lib/review/llm_dispatcher.rb
+@@ -444,6 +444,12 @@ module Master
+         outcome = Result.wrap(result)
+         failure = outcome.ok? ? nil : outcome.message.to_s
+         Io::LaneQuota.note(model, failure) if failure
++        # A permanent model-level refusal (a decision-only model asked to chat,
++        # an unknown model id) is not a lane fault: counting it silences every
++        # healthy sibling on the provider for five minutes, and the model stays
++        # in the catalogue to fail again. ollama_cloud:clef:27b, 2026-11-23.
++        return if failure && %i[invalid_request model_missing].include?(outcome.category)
++
+         lane = Io::LaneSilence.lane_of(model)
+         return silence_local_runtime(lane, failure) if failure && local_runtime_failure?(model, failure)
+         return unless Io::LaneSilence.record(failure.nil?, lane, reason: failure)
+@@ -666,7 +672,8 @@ module Master
+           # again; clear only its credential hold, never vendor quota state.
+           Io::LaneQuota.revive(Io::LaneQuota::OPENROUTER_AUTH_LANE) if Io::LaneQuota.openrouter_model?(model)
+         else
+-          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status)
++          park = Io::ModelSkipCache::INCAPABLE_PARK_MS if status == :invalid_request && Io::LaneReply.incapable?(error)
++          Io::ModelSkipCache.skip!(model, reason: error || status.to_s, category: status, for_ms: park)
+         end
+         # Process-local free-floor counting: the pass-0 child's outcomes never
+         # reach the parent's RunPulse, so LaneSelection counts for itself.
+diff --git a/MASTER/lib/voice/speech_worker.rb b/MASTER/lib/voice/speech_worker.rb
+index e198134..84122b2 100644
+--- a/MASTER/lib/voice/speech_worker.rb
++++ b/MASTER/lib/voice/speech_worker.rb
+@@ -13,6 +13,15 @@ module Master
+     # keeps its name there (Speech.synthesize_edge_socket, Speech.worker_timeout);
+     # what to say, in which voice and style, stays in speech.rb.
+     module SpeechWorker
++      # The one-shot worker re-execs and boots MASTER, so its stderr opens with
++      # deps0: banner lines that bury the real cause (F5, 2026-11-23). Drop them
++      # when anything else was said; a bare deps0: failure is the cause, keep it.
++      def worker_failure_detail(err)
++        lines = err.to_s.lines.map(&:strip).reject(&:empty?)
++        said = lines.reject { |line| line.start_with?("deps0:") }
++        (said.empty? ? lines : said).join("\n")
++      end
++
+       def synthesize_edge_oneshot(text:, voice_name:, style_config:, audio_path:, timeout: nil)
+         timeout ||= worker_timeout(text.to_s.length)
+         err, status = run_edge_worker(text, voice_name, style_config, audio_path, timeout)
+@@ -26,7 +35,7 @@ module Master
+                     else
+                       "unknown process status"
+                     end
+-          detail = err.to_s.strip
++          detail = worker_failure_detail(err)
+           message = detail.empty? ? "edge worker failed: #{outcome}; stderr empty" : "edge worker failed: #{detail} (#{outcome})"
+           warn_tts(message)
+           return cleanup_failed_audio(audio_path)
+diff --git a/MASTER/test/test_helper.rb b/MASTER/test/test_helper.rb
+index c77a80f..1e6d497 100644
+--- a/MASTER/test/test_helper.rb
++++ b/MASTER/test/test_helper.rb
+@@ -72,20 +72,28 @@ ENV["MASTER_SWALLOW_LOG_PATH"] = File.join(LIVE_STATE_DIR, "swallowed_errors.jso
+ # Otherwise RubyGems can select a host-installed Minitest (or a native gem
+ # built against another Ruby) before the suite has a chance to activate MASTER.
+ $LOAD_PATH.unshift(File.expand_path("../lib", __dir__))
+-require_relative "../lib/boot/dependency_manager"
+-test_root = File.expand_path("..", __dir__)
+-test_boot = Master::Boot::DependencyManager.new(root: test_root, env: ENV, out: $stderr)
+-test_result = test_boot.ensure!
+-unless test_result.ok
+-  abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
++# MASTER_TEST_LIGHT=1 skips the dependency install and the bundler activation
++# below, for a host that already has the gems (or cannot reach the network) and
++# wants one pure-logic test file to run. The pinned private bundle stays the
++# default and the only mode CI and `rake test` use; light mode is a debugging
++# aid, never proof (2026-11-23: no agent could run a single test without it).
++MASTER_TEST_LIGHT = ENV["MASTER_TEST_LIGHT"] == "1"
++unless MASTER_TEST_LIGHT
++  require_relative "../lib/boot/dependency_manager"
++  test_root = File.expand_path("..", __dir__)
++  test_boot = Master::Boot::DependencyManager.new(root: test_root, env: ENV, out: $stderr)
++  test_result = test_boot.ensure!
++  unless test_result.ok
++    abort("deps0: #{test_result.message}\n#{test_result.output}".strip)
++  end
++  # A test boot keeps the :test group even in deploy-bundle mode: this run IS
++  # the test, the law-file preflight needs minitest, and without the group the
++  # Kernel#gem activation below dies with "minitest is not part of the bundle"
++  # on the deploy host exactly once a deploy bundle exists (measured on vm23
++  # 2026-11-08, deploy refused at preflight-boot).
++  test_boot.activate_environment!(without: "development")
++  require "bundler/setup"
+ end
+-# A test boot keeps the :test group even in deploy-bundle mode: this run IS
+-# the test, the law-file preflight needs minitest, and without the group the
+-# Kernel#gem activation below dies with "minitest is not part of the bundle"
+-# on the deploy host exactly once a deploy bundle exists (measured on vm23
+-# 2026-11-08, deploy refused at preflight-boot).
+-test_boot.activate_environment!(without: "development")
+-require "bundler/setup"
+ 
+ if ENV["COVERAGE"] == "1"
+   require "simplecov"
+@@ -100,7 +108,7 @@ if ENV["COVERAGE"] == "1"
+   end
+ end
+ 
+-gem "minitest", "~> 5.25"
++gem "minitest", "~> 5.25" unless MASTER_TEST_LIGHT
+ require "minitest/autorun"
+ require "minitest/mock"
+ require "tmpdir"
+diff --git a/MASTER/test/test_lane_failover.rb b/MASTER/test/test_lane_failover.rb
+index 5f916d3..1d9d523 100644
+--- a/MASTER/test/test_lane_failover.rb
++++ b/MASTER/test/test_lane_failover.rb
+@@ -373,6 +373,33 @@ class TestLaneFailover < Minitest::Test
+     Silence.record(true, "ollama")
+   end
+ 
++  # A model that refuses the request for good (decision-only model asked to
++  # chat) is not a lane fault: three of those must not silence its siblings.
++  # ollama_cloud:clef:27b sank the whole lane this way on 2026-11-23.
++  def test_permanent_model_refusals_are_not_lane_strikes
++    door = Master::Review::LLMDispatcher.allocate
++    door.instance_variable_set(:@bus, nil)
++    %i[invalid_request model_missing].each do |category|
++      (Silence::SILENT_AFTER + 2).times do
++        door.send(:note_lane_silence, Master::Result.err("400 decision model", category:), "ollama_cloud:clef:27b")
++      end
++      refute Silence.refuses?("ollama_cloud:healthy-sibling"), "#{category} silenced the lane"
++    end
++  ensure
++    Silence.record(true, "ollama_cloud")
++  end
++
++  def test_ordinary_provider_failures_still_silence_the_lane
++    door = Master::Review::LLMDispatcher.allocate
++    door.instance_variable_set(:@bus, nil)
++    Silence::SILENT_AFTER.times do
++      door.send(:note_lane_silence, Master::Result.err("upstream exploded", category: :provider_error), "ollama_cloud:clef:27b")
++    end
++    assert Silence.refuses?("ollama_cloud:healthy-sibling")
++  ensure
++    Silence.record(true, "ollama_cloud")
++  end
++
+   def test_single_call_failover_skips_a_recently_failed_model
+     skip_cache = Master::Io::ModelSkipCache
+     skip_cache.clear!
+diff --git a/MASTER/test/test_law_inventory.rb b/MASTER/test/test_law_inventory.rb
+index 7a4b7f9..006e264 100644
+--- a/MASTER/test/test_law_inventory.rb
++++ b/MASTER/test/test_law_inventory.rb
+@@ -81,4 +81,29 @@ class TestLawInventory < Minitest::Test
+     assert_operator matrix.size, :>, 5
+     assert matrix.all? { |row| row[:persona] && row[:axes] && row[:rules] }
+   end
++
++  # law_deps entries are { "after" => [...] } mappings. Array(hash) yields
++  # key-value pairs, so the previous transform returned stringified pairs
++  # and every law's dependencies read as Ruby syntax instead of Law ids.
++  def test_rule_dependencies_returns_the_after_list_not_stringified_pairs
++    document = {
++      "law_deps" => {
++        "MERGE" => { "after" => %w[HOIST FLATTEN] },
++        "DECOUPLE" => { "after" => ["FLATTEN"] },
++      },
++    }
++    Master.stub(:load_laws, ->(root:) { document }) do
++      deps = Operator::LawInventory.rule_dependencies
++      assert_equal %w[HOIST FLATTEN], deps.fetch("merge")
++      assert_equal ["FLATTEN"], deps.fetch("decouple")
++      assert deps.values.flatten.all? { |dep| dep.match?(/\A[A-Z_]+\z/) }
++    end
++  end
++
++  def test_rule_dependencies_tolerates_bare_array_entries
++    document = { "law_deps" => { "MERGE" => %w[HOIST] } }
++    Master.stub(:load_laws, ->(root:) { document }) do
++      assert_equal %w[HOIST], Operator::LawInventory.rule_dependencies.fetch("merge")
++    end
++  end
+ end
+diff --git a/MASTER/test/test_model_skip_cache.rb b/MASTER/test/test_model_skip_cache.rb
+index c6c0574..37a598d 100644
+--- a/MASTER/test/test_model_skip_cache.rb
++++ b/MASTER/test/test_model_skip_cache.rb
+@@ -147,4 +147,40 @@ class TestModelSkipCache < Minitest::Test
+   ensure
+     cache.clock = nil
+   end
++
++  CLEF = "400 Bad Request: clef:27b is a decision model, only supports /v1/systemone"
++
++  # ollama_cloud:clef:27b (2026-11-23) refused chat for good. A stated
++  # incapability parks that one model for hours; a bare 400 never does, because
++  # a 400 can be an oversized prompt that a healthy model would answer shortened.
++  def test_a_stated_incapability_is_recognised_and_ordinary_400s_are_not
++    reply = Master::Io::LaneReply
++    assert reply.incapable?(CLEF)
++    assert reply.incapable?("model rerank-v3 is an embedding model and only supports /v1/embeddings")
++    refute reply.incapable?("400 Bad Request: prompt is too long for this model")
++    refute reply.incapable?("400 invalid request body")
++    assert_nil reply.read(CLEF), "must not become a lane verdict: verdicts retire whole lanes"
++  end
++
++  def test_for_ms_parks_one_model_for_the_stated_time_and_not_its_siblings
++    cache = Master::Io::ModelSkipCache
++    cache.clock = -> { 1_000 }
++    cache.skip!("ollama_cloud:clef:27b", reason: CLEF, category: :invalid_request,
++                for_ms: cache::INCAPABLE_PARK_MS)
++
++    assert_equal 1_000 + cache::INCAPABLE_PARK_MS, cache.skipped_until_ms("ollama_cloud:clef:27b")
++    assert cache.skipped?("ollama_cloud:clef:27b")
++    refute cache.skipped?("ollama_cloud:gemma3:27b")
++  ensure
++    cache.clock = nil
++  end
++
++  def test_without_for_ms_an_invalid_request_keeps_the_ordinary_park
++    cache = Master::Io::ModelSkipCache
++    cache.clock = -> { 1_000 }
++    cache.skip!("m1", reason: "400 prompt too long", category: :invalid_request)
++    assert_equal 1_000 + 5000, cache.skipped_until_ms("m1")
++  ensure
++    cache.clock = nil
++  end
+ end
+diff --git a/MASTER/test/test_operator_intent_scope.rb b/MASTER/test/test_operator_intent_scope.rb
+new file mode 100644
+index 0000000..94bbcb4
+--- /dev/null
++++ b/MASTER/test/test_operator_intent_scope.rb
+@@ -0,0 +1,34 @@
++# frozen_string_literal: true
++
++require_relative "test_helper"
++require_relative "../lib/cli/operator_intent"
++
++# F7 and F8 from the 2026-11-23 dry-run: a full-stack request that names STUDIO
++# must say STUDIO was left out, and the polite-question consent shortcut can be
++# switched off so only a literal --confirm authorizes production.
++class TestOperatorIntentScope < Minitest::Test
++  Intent = Master::CLI::OperatorIntent
++  FULL = "hi, can you please redeploy OPENBSD, RAILS, STUDIO, and MASTER/web on vm23?"
++
++  def test_studio_note_is_prepended_once_to_a_full_stack_reply
++    result = Master::Result.ok({ rendered: "ok", output: "ok" })
++    noted = Intent.with_studio_note(Intent.with_studio_note(result, FULL), FULL).value!
++    assert_equal 1, noted[:output].scan(Intent::STUDIO_SCOPE_NOTE).size
++    assert noted[:rendered].end_with?("ok")
++  end
++
++  def test_other_requests_and_errors_pass_through_untouched
++    result = Master::Result.ok({ rendered: "ok", output: "ok" })
++    assert_same result, Intent.with_studio_note(result, "redeploy RAILS on vm23")
++    err = Master::Result.err("boom")
++    assert_same err, Intent.with_studio_note(err, FULL)
++  end
++
++  def test_strict_confirm_turns_off_the_polite_question_shortcut
++    assert Intent.direct_full_stack_confirmation?(FULL)
++    ENV["MASTER_DEPLOY_STRICT_CONFIRM"] = "1"
++    refute Intent.direct_full_stack_confirmation?(FULL)
++  ensure
++    ENV.delete("MASTER_DEPLOY_STRICT_CONFIRM")
++  end
++end
+diff --git a/MASTER/test/test_parse_sweep.rb b/MASTER/test/test_parse_sweep.rb
+index 27ab9dd..7f1ddcf 100644
+--- a/MASTER/test/test_parse_sweep.rb
++++ b/MASTER/test/test_parse_sweep.rb
+@@ -47,4 +47,18 @@ class TestParseSweep < Minitest::Test
+     root = File.expand_path("../..", __dir__)
+     assert_empty Operator::ParseSweep.failures(root), "tracked Ruby that does not parse"
+   end
++
++  # Ruby before 3.3 has no Prism; the sweep must still answer, with the same
++  # file and line, instead of dying on the require.
++  def test_the_interpreter_fallback_reports_the_same_file_and_line
++    Dir.mktmpdir("parse-sweep") do |dir|
++      path = File.join(dir, "chat.rb")
++      File.write(path, MISSING_COMMA)
++      line, message = Operator::ParseSweep.parse_error_without_prism(path)
++      assert_equal 3, line
++      refute_empty message
++      File.write(path, "puts 1\n")
++      assert_nil Operator::ParseSweep.parse_error_without_prism(path)
++    end
++  end
+ end
+diff --git a/MASTER/test/test_speech_worker_failure_detail.rb b/MASTER/test/test_speech_worker_failure_detail.rb
+new file mode 100644
+index 0000000..120e7c3
+--- /dev/null
++++ b/MASTER/test/test_speech_worker_failure_detail.rb
+@@ -0,0 +1,25 @@
++# frozen_string_literal: true
++
++require_relative "test_helper"
++require_relative "../lib/voice/speech_worker"
++
++# The one-shot TTS worker re-execs MASTER, so its stderr opens with deps0:
++# boot lines that buried the real cause in the operator's error (2026-11-23).
++class TestSpeechWorkerFailureDetail < Minitest::Test
++  Host = Class.new { include Master::Voice::SpeechWorker }
++
++  def detail(err) = Host.new.send(:worker_failure_detail, err)
++
++  def test_boot_banner_lines_are_dropped_when_the_cause_follows
++    err = "deps0: bundle ok\ndeps0: bundle ok\ntts0: one-shot synthesis produced no audio\n"
++    assert_equal "tts0: one-shot synthesis produced no audio", detail(err)
++  end
++
++  def test_a_bare_deps0_failure_is_the_cause_and_stays
++    assert_equal "deps0: gem missing", detail("deps0: gem missing\n")
++  end
++
++  def test_empty_stderr_stays_empty
++    assert_equal "", detail(nil)
++  end
++end
+diff --git a/MASTER/test/test_token_guard.rb b/MASTER/test/test_token_guard.rb
+new file mode 100644
+index 0000000..294195a
+--- /dev/null
++++ b/MASTER/test/test_token_guard.rb
+@@ -0,0 +1,59 @@
++# frozen_string_literal: true
++
++require_relative "test_helper"
++require_relative "../tools/token_guard"
++require "open3"
++require "tmpdir"
++
++# A PAT pasted into chat on 2026-11-23 had nothing between it and a commit. The
++# fake credentials below are assembled at run time so this file never carries a
++# token-shaped literal of its own.
++class TestTokenGuard < Minitest::Test
++  TOKEN = ("ghp_" + ("Qx7Lm2Vz" * 5)).freeze
++  GUARD = File.expand_path("../tools/token_guard.rb", __dir__)
++
++  def diff_adding(line, path: "scripts/deploy.sh", start: 10)
++    "diff --git a/#{path} b/#{path}\n--- a/#{path}\n+++ b/#{path}\n@@ -1,0 +#{start},1 @@\n+#{line}\n"
++  end
++
++  def test_an_added_token_is_found_with_its_file_and_line
++    found = TokenGuard.scan(diff_adding("export GH=#{TOKEN}"))
++    assert_equal [["scripts/deploy.sh", 10, "GitHub token"]], found.map { |f| [f.path, f.line, f.kind] }
++  end
++
++  def test_the_report_never_repeats_the_secret
++    found = TokenGuard.scan(diff_adding("export GH=#{TOKEN}"))
++    refute_includes TokenGuard.report(found), TOKEN
++  end
++
++  def test_removed_and_context_lines_are_not_read
++    diff = "+++ b/a.rb\n@@ -1,2 +1,1 @@\n-token #{TOKEN}\n #{TOKEN}\n"
++    assert_empty TokenGuard.scan(diff)
++  end
++
++  def test_obvious_placeholders_pass_like_the_scanner_fixtures
++    ["ghp_abcdefghijklmnopqrstuvwxyz123456", "ghp_#{'a' * 36}", "ghp_EXAMPLE#{'Z9' * 10}"].each do |fake|
++      assert_empty TokenGuard.scan(diff_adding(fake)), fake
++    end
++  end
++
++  def test_other_credential_shapes_are_found
++    assert_equal ["private key block"], TokenGuard.scan(diff_adding("-----BEGIN RSA " + "PRIVATE KEY-----")).map(&:kind)
++    assert_equal ["Anthropic key"], TokenGuard.scan(diff_adding("k=sk-ant-#{'Rt4Yp8Ks' * 5}")).map(&:kind)
++  end
++
++  def test_the_cli_refuses_a_staged_token_and_the_override_allows_it
++    Dir.mktmpdir do |dir|
++      run = ->(*cmd, env: {}) { Open3.capture3(env, *cmd, chdir: dir) }
++      run.call("git", "init", "-q")
++      File.write(File.join(dir, "env.sh"), "GH=#{TOKEN}\n")
++      run.call("git", "add", "env.sh")
++      _o, err, status = run.call(RbConfig.ruby, GUARD)
++      refute status.success?
++      assert_match(/env\.sh:1/, err)
++      refute_includes err, TOKEN
++      _o, _e, status = run.call(RbConfig.ruby, GUARD, env: { "PUB5_ALLOW_TOKEN_SHAPE" => "1" })
++      assert status.success?
++    end
++  end
++end
+diff --git a/MASTER/test/test_visual_register.rb b/MASTER/test/test_visual_register.rb
+new file mode 100644
+index 0000000..3fd29af
+--- /dev/null
++++ b/MASTER/test/test_visual_register.rb
+@@ -0,0 +1,184 @@
++# frozen_string_literal: true
++
++require_relative "test_helper"
++require "tmpdir"
++require "open3"
++require "fileutils"
++require_relative "../checks/support/visual_register"
++
++class TestVisualRegister < Minitest::Test
++  # Tiny in-memory PNGs through PngDiff's own codec: the composite modes are
++  # pure pixel functions, so exact byte-level assertions pin them without a
++  # browser ever opening.
++  def write_png(dir, name, width, height, pixels)
++    path = File.join(dir, name)
++    File.binwrite(path, Deploy::PngDiff.encode_rgba(width, height, pixels.flatten.pack("C*")))
++    path
++  end
++
++  def pixel(path, x, y)
++    img = Deploy::PngDiff.decode(File.binread(path))
++    row_bytes = img[:width] * img[:channels]
++    row = previous = Array.new(row_bytes, 0)
++    (y + 1).times do |yy|
++      line = img[:raw].byteslice(yy * (row_bytes + 1), row_bytes + 1)
++      row = Deploy::PngDiff.unfilter_row(line, previous:, channels: img[:channels])
++      previous = row
++    end
++    i = x * img[:channels]
++    [row[i], row[i + 1], row[i + 2]]
++  end
++
++  def solid(dir, name, rgb, width: 2, height: 2)
++    write_png(dir, name, width, height, Array.new(width * height) { rgb + [255] })
++  end
++
++  def test_anaglyph_of_identical_captures_reads_gray
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [10, 200, 90])
++      out = File.join(dir, "out.png")
++      result = Deploy::VisualRegister.composite(a_path: a, b_path: a, mode: "anaglyph", out_path: out)
++      assert_equal :composited, result[:status]
++      assert_equal [10, 200, 90], pixel(out, 0, 0)
++      assert_equal [10, 200, 90], pixel(out, 1, 1)
++    end
++  end
++
++  def test_anaglyph_keeps_a_in_red_and_b_in_cyan
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [255, 0, 0])
++      b = solid(dir, "b.png", [0, 0, 255])
++      out = File.join(dir, "out.png")
++      Deploy::VisualRegister.composite(a_path: a, b_path: b, mode: "anaglyph", out_path: out)
++      assert_equal [255, 0, 255], pixel(out, 0, 0) # red from A, green+blue from B
++    end
++  end
++
++  def test_difference_is_black_where_identical_and_amplified_where_not
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [100, 100, 100])
++      b = solid(dir, "b.png", [110, 90, 100])
++      same = File.join(dir, "same.png")
++      drift = File.join(dir, "drift.png")
++      Deploy::VisualRegister.composite(a_path: a, b_path: a, mode: "difference", out_path: same)
++      Deploy::VisualRegister.composite(a_path: a, b_path: b, mode: "difference", out_path: drift, amplify: 4)
++      assert_equal [0, 0, 0], pixel(same, 1, 1)
++      assert_equal [40, 40, 0], pixel(drift, 1, 1)
++    end
++  end
++
++  def test_difference_clamps_instead_of_wrapping
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [255, 0, 0])
++      b = solid(dir, "b.png", [0, 0, 0])
++      out = File.join(dir, "out.png")
++      Deploy::VisualRegister.composite(a_path: a, b_path: b, mode: "difference", out_path: out, amplify: 4)
++      assert_equal [255, 0, 0], pixel(out, 0, 0) # 255 * 4 would wrap without the clamp
++    end
++  end
++
++  def test_overlay_blends_half_and_half
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [0, 100, 200])
++      b = solid(dir, "b.png", [100, 100, 100])
++      out = File.join(dir, "out.png")
++      Deploy::VisualRegister.composite(a_path: a, b_path: b, mode: "overlay", out_path: out)
++      assert_equal [50, 100, 150], pixel(out, 1, 0)
++    end
++  end
++
++  def test_checkerboard_alternates_per_tile
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [255, 0, 0], width: 2, height: 2)
++      b = solid(dir, "b.png", [0, 0, 255], width: 2, height: 2)
++      out = File.join(dir, "out.png")
++      Deploy::VisualRegister.composite(a_path: a, b_path: b, mode: "checkerboard", out_path: out, tile: 1)
++      assert_equal [255, 0, 0], pixel(out, 0, 0)
++      assert_equal [0, 0, 255], pixel(out, 1, 0)
++      assert_equal [0, 0, 255], pixel(out, 0, 1)
++      assert_equal [255, 0, 0], pixel(out, 1, 1)
++    end
++  end
++
++  def test_dimension_mismatch_refuses_to_guess
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [0, 0, 0], width: 2, height: 2)
++      b = solid(dir, "b.png", [0, 0, 0], width: 4, height: 2)
++      result = Deploy::VisualRegister.composite(a_path: a, b_path: b, mode: "anaglyph",
++                                                out_path: File.join(dir, "out.png"))
++      assert_equal :dimension_mismatch, result[:status]
++      assert_nil result[:composite_image]
++    end
++  end
++
++  def test_unknown_mode_is_refused
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [0, 0, 0])
++      assert_raises(ArgumentError) do
++        Deploy::VisualRegister.composite(a_path: a, b_path: a, mode: "sepia", out_path: File.join(dir, "o.png"))
++      end
++    end
++  end
++
++  def test_grid_overlay_tints_lines_and_leaves_interiors
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [0, 0, 0], width: 4, height: 4)
++      out = File.join(dir, "out.png")
++      Deploy::VisualRegister.grid_overlay(capture_path: a, out_path: out, spacing: 2)
++      on_line = pixel(out, 1, 0) # y == 0 is a (major) grid line over black
++      off_line = pixel(out, 1, 1)
++      assert_equal [0, 0, 0], off_line
++      assert_equal 0, on_line[0]
++      assert_operator on_line[1], :>, 0 # cyan ink, green/blue channels only
++      assert_equal on_line[1], on_line[2]
++    end
++  end
++
++  # The shipped bug lived in the command line, not the library: flags were never
++  # captured (--out "required" on every call) and a private PngDiff method was
++  # called. These run the real executable so both stay caught.
++  BIN = File.expand_path("../bin/visual-register", __dir__)
++
++  def cli(*args)
++    Open3.capture3(RbConfig.ruby, BIN, *args)
++  end
++
++  def test_cli_writes_the_composite_to_out_and_honors_amplify
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [10, 10, 10])
++      b = solid(dir, "b.png", [12, 10, 10])
++      weak = File.join(dir, "weak.png")
++      strong = File.join(dir, "strong.png")
++      _o, err, status = cli(a, b, "--mode", "difference", "--amplify", "1", "--out", weak)
++      assert status.success?, err
++      _o, err, status = cli(a, b, "--mode", "difference", "--amplify", "4", "--out", strong)
++      assert status.success?, err
++      assert_equal [2, 0, 0], pixel(weak, 0, 0)
++      assert_equal [8, 0, 0], pixel(strong, 0, 0)
++    end
++  end
++
++  def test_cli_grid_flag_reaches_the_grid_path
++    Dir.mktmpdir do |dir|
++      shot = solid(dir, "shot.png", [200, 10, 10], width: 8, height: 8)
++      out = File.join(dir, "grid.png")
++      _o, err, status = cli(shot, "--grid", "--spacing", "4", "--out", out)
++      assert status.success?, err
++      refute_equal [200, 10, 10], pixel(out, 0, 0), "grid line should tint the corner"
++      assert_equal [200, 10, 10], pixel(out, 1, 1)
++    end
++  end
++
++  def test_cli_exit_codes_for_missing_out_unknown_mode_and_mismatch
++    Dir.mktmpdir do |dir|
++      a = solid(dir, "a.png", [1, 2, 3])
++      big = solid(dir, "big.png", [1, 2, 3], width: 4, height: 4)
++      out = File.join(dir, "o.png")
++      refute cli(a, a)[2].success?
++      refute cli(a, a, "--mode", "nope", "--out", out)[2].success?
++      _o, err, status = cli(a, big, "--out", out)
++      assert_equal 1, status.exitstatus
++      assert_match(/dimensions differ/, err)
++    end
++  end
++end
+diff --git a/MASTER/tools/token_guard.rb b/MASTER/tools/token_guard.rb
+new file mode 100644
+index 0000000..c8bf232
+--- /dev/null
++++ b/MASTER/tools/token_guard.rb
+@@ -0,0 +1,84 @@
++#!/usr/bin/env ruby
++# frozen_string_literal: true
++
++# Refuse a commit or push whose ADDED lines carry a real-looking credential.
++#
++# A GitHub PAT was pasted into a chat on 2026-11-23, and the handoff notes record
++# the same thing happening before. The runtime redactor scrubs logs; nothing
++# stopped a token from being committed. This reads only what a change adds, so
++# an old fixture is never re-flagged, and it never prints the token it found.
++#
++#   token_guard.rb              scan the staged diff        (pre-commit)
++#   token_guard.rb --range A..B scan the commits in a range (pre-push)
++#
++# Obvious placeholders (alphabet runs, repeated characters, EXAMPLE/FAKE) pass,
++# which is what the scanner fixtures in this repo use. PUB5_ALLOW_TOKEN_SHAPE=1
++# says "I looked, it is not a credential" for the one case this misjudges.
++
++module TokenGuard
++  Finding = Data.define(:path, :line, :kind)
++
++  PATTERNS = {
++    "GitHub token" => /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{30,}\b/,
++    "GitHub fine-grained token" => /\bgithub_pat_[A-Za-z0-9_]{30,}\b/,
++    "Anthropic key" => /\bsk-ant-[A-Za-z0-9_-]{30,}/,
++    "API key" => /\bsk-[A-Za-z0-9]{32,}\b/,
++    "AWS access key" => /\bAKIA[0-9A-Z]{16}\b/,
++    "private key block" => /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
++  }.freeze
++
++  PLACEHOLDER = /abcdefghijklm|0123456789|(.)\1{7,}|example|fake|dummy|redacted|your[_-]?(?:token|key)|<[^>]+>/i
++
++  module_function
++
++  def placeholder?(text) = text.match?(PLACEHOLDER)
++
++  # diff is unified-diff text; only lines it adds are read.
++  def scan(diff)
++    path = nil
++    line_no = 0
++    findings = []
++    diff.each_line do |raw|
++      case raw
++      when /\A\+\+\+ b\/(.*)/ then path = Regexp.last_match(1).strip
++      when /\A@@ -\S+ \+(\d+)/ then line_no = Regexp.last_match(1).to_i - 1
++      when /\A\+(?!\+\+)/
++        line_no += 1
++        text = raw[1..]
++        PATTERNS.each do |kind, pattern|
++          hit = text[pattern]
++          findings << Finding.new(path: path.to_s, line: line_no, kind:) if hit && !placeholder?(hit)
++        end
++      when /\A[ ]/ then line_no += 1
++      end
++    end
++    findings
++  end
++
++  def report(findings)
++    findings.map { |f| "  #{f.path}:#{f.line}  #{f.kind}" }.join("\n")
++  end
++end
++
++if $PROGRAM_NAME == __FILE__
++  exit 0 if ENV["PUB5_ALLOW_TOKEN_SHAPE"] == "1"
++
++  diff =
++    if ARGV.first == "--range"
++      IO.popen(["git", "log", "-p", "--format=", "-U0", ARGV.fetch(1)], err: File::NULL, &:read)
++    else
++      IO.popen(%w[git diff --cached -U0 --no-color], &:read)
++    end
++  findings = TokenGuard.scan(diff.to_s.dup.force_encoding(Encoding::UTF_8).scrub)
++  exit 0 if findings.empty?
++
++  warn ""
++  warn "token-guard: REFUSED - #{findings.size} added line(s) look like a real credential:"
++  warn TokenGuard.report(findings)
++  warn ""
++  warn "  Remove it and rotate it if it was ever pasted anywhere. Revoke on GitHub first;"
++  warn "  history rewrites do not un-leak a token. If it is a placeholder this misjudged:"
++  warn "  PUB5_ALLOW_TOKEN_SHAPE=1 git commit ..."
++  warn ""
++  exit 1
++end
+diff --git a/MASTER/web/public/face.css b/MASTER/web/public/face.css
+index d024b5b..50c704a 100644
+--- a/MASTER/web/public/face.css
++++ b/MASTER/web/public/face.css
+@@ -259,7 +259,7 @@ body[data-focus-mode="1"] #prompt-form {
+ 
+ /* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
+ canvas#face {
+-  background: #000;
++  background: var(--face-bg);
+   z-index: 1;
+   transform: translateZ(0);
+ }
+@@ -612,7 +612,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-large);
+-  background: #000;
++  background: var(--face-bg);
+   contain: layout style paint;
+ }
+ 
+@@ -624,7 +624,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+@@ -652,7 +652,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+@@ -936,7 +936,7 @@ body[data-layout="face"].controls-hidden #ui-status,
+ body[data-layout="face"][data-edge-hover="1"] .face-controls,
+ body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
+ 
+-#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
++#shortcut-sheet { border: 1px solid var(--face-dim); background: var(--face-bg); color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+ #shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
+ #shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
+ .tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }
+@@ -1392,7 +1392,7 @@ body[data-history-open="1"] #chat-log {
+   min-height: var(--tap-min, 44px);
+   display: inline-flex;
+   align-items: center;
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-fg);
+   border: 1px solid var(--border-strong);
+   border-radius: 0;
+@@ -1430,7 +1430,7 @@ body[data-history-open="1"] #chat-log {
+   bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
+   z-index: var(--z-ui);
+   padding: 8px 8px;
+-  background: color-mix(in srgb, #000 88%, transparent);
++  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
+   border: 1px solid var(--border-soft);
+   font: var(--text-meta)/1.4 var(--font-mono);
+   color: var(--face-muted);
+@@ -1468,7 +1468,7 @@ body.face-loading::before {
+   content: '';
+   position: fixed;
+   inset: 0;
+-  background: #000;
++  background: var(--face-bg);
+   opacity: 0.35;
+   pointer-events: none;
+   z-index: 2;
+@@ -1512,7 +1512,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
+   padding: 4px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .12em;
+diff --git a/MASTER/web/styles/face/10_foundation.css b/MASTER/web/styles/face/10_foundation.css
+index 8937753..037f52e 100644
+--- a/MASTER/web/styles/face/10_foundation.css
++++ b/MASTER/web/styles/face/10_foundation.css
+@@ -127,7 +127,7 @@ body[data-focus-mode="1"] #prompt-form {
+ 
+ /* WebGL layer stack (independent of the --z-* DOM chrome scale below): raw canvas(0) < face(1) < fx(2) */
+ canvas#face {
+-  background: #000;
++  background: var(--face-bg);
+   z-index: 1;
+   transform: translateZ(0);
+ }
+diff --git a/MASTER/web/styles/face/20_chrome.css b/MASTER/web/styles/face/20_chrome.css
+index ccff5ca..5624edd 100644
+--- a/MASTER/web/styles/face/20_chrome.css
++++ b/MASTER/web/styles/face/20_chrome.css
+@@ -179,7 +179,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-large);
+-  background: #000;
++  background: var(--face-bg);
+   contain: layout style paint;
+ }
+ 
+@@ -191,7 +191,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+@@ -219,7 +219,7 @@ body[data-mode="speaking"] #mic-dot {
+   padding: 8px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .14em;
+diff --git a/MASTER/web/styles/face/30_conversation.css b/MASTER/web/styles/face/30_conversation.css
+index 358677e..cefaa72 100644
+--- a/MASTER/web/styles/face/30_conversation.css
++++ b/MASTER/web/styles/face/30_conversation.css
+@@ -165,7 +165,7 @@ body[data-layout="face"].controls-hidden #ui-status,
+ body[data-layout="face"][data-edge-hover="1"] .face-controls,
+ body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: 1; pointer-events: auto; }
+ 
+-#shortcut-sheet { border: 1px solid var(--face-dim); background: #0a0a0a; color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
++#shortcut-sheet { border: 1px solid var(--face-dim); background: var(--face-bg); color: var(--face-fg); padding: 12px 16px; max-width: 28rem; }
+ #shortcut-sheet table { width: 100%; font-size: var(--text-meta); }
+ #shortcut-sheet kbd { font-family: inherit; opacity: 0.85; }
+ .tool-diff pre.diff-body { font-size: var(--text-meta); max-height: 12rem; overflow: auto; white-space: pre-wrap; }
+diff --git a/MASTER/web/styles/face/40_accessibility_motion.css b/MASTER/web/styles/face/40_accessibility_motion.css
+index e1dcd2d..4e86844 100644
+--- a/MASTER/web/styles/face/40_accessibility_motion.css
++++ b/MASTER/web/styles/face/40_accessibility_motion.css
+@@ -8,7 +8,7 @@
+   min-height: var(--tap-min, 44px);
+   display: inline-flex;
+   align-items: center;
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-fg);
+   border: 1px solid var(--border-strong);
+   border-radius: 0;
+@@ -46,7 +46,7 @@
+   bottom: calc(var(--face-chrome-bottom) + var(--safe-bottom));
+   z-index: var(--z-ui);
+   padding: 8px 8px;
+-  background: color-mix(in srgb, #000 88%, transparent);
++  background: color-mix(in srgb, var(--face-bg) 88%, transparent);
+   border: 1px solid var(--border-soft);
+   font: var(--text-meta)/1.4 var(--font-mono);
+   color: var(--face-muted);
+@@ -84,7 +84,7 @@ body.face-loading::before {
+   content: '';
+   position: fixed;
+   inset: 0;
+-  background: #000;
++  background: var(--face-bg);
+   opacity: 0.35;
+   pointer-events: none;
+   z-index: 2;
+@@ -128,7 +128,7 @@ body[data-runtime-profile="crt"] #cognition-ecology {
+   padding: 4px 8px;
+   border: 1px solid var(--border-faint);
+   border-radius: var(--radius-pill);
+-  background: #000;
++  background: var(--face-bg);
+   color: var(--face-muted);
+   font: var(--text-meta)/1 var(--font-mono);
+   letter-spacing: .12em;
+diff --git a/OPENBSD/bin/vps_ci.sh b/OPENBSD/bin/vps_ci.sh
+index 46b64d6..6c34ea7 100755
+--- a/OPENBSD/bin/vps_ci.sh
++++ b/OPENBSD/bin/vps_ci.sh
+@@ -123,7 +123,7 @@ app_dir=/home/${app}/app
+ [[ -f ${repo}/RAILS/_core.sh ]] && . "${repo}/RAILS/_core.sh"
+ command -v deploy_status >/dev/null 2>&1 || deploy_status() { :; }
+ 
+-export PUB4_CI_GUARD=1
++export PUB5_CI_GUARD=1
+ export PUB5_RAILS_ROOT=${PUB5_RAILS_ROOT:-$repo/RAILS}
+ 
+ # Path and safe creation live in OPENBSD/lib/ci_lock.sh — the lock moved out of
+diff --git a/OPENBSD/bin/vps_console.exp b/OPENBSD/bin/vps_console.exp
+index 4a6cdc5..07cbe13 100755
+--- a/OPENBSD/bin/vps_console.exp
++++ b/OPENBSD/bin/vps_console.exp
+@@ -85,7 +85,7 @@ switch -- $mode {
+     set timeout 20
+     console_open
+     at_prompt_loose
+-    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub4_install_latest.log; pgrep -lf bundle\r"
++    send "ruby -e 'p=ARGV.fetch(0); puts File.readlines(p).last(15) if File.file?(p)' /tmp/pub5_install_latest.log; pgrep -lf bundle\r"
+     at_prompt_loose
+     send "doas rcctl check master brgen amber bsdports 2>/dev/null\r"
+     at_prompt_loose
+diff --git a/OPENBSD/bin/vps_deploy_master.sh b/OPENBSD/bin/vps_deploy_master.sh
+index 05a30ec..ee0d3f0 100755
+--- a/OPENBSD/bin/vps_deploy_master.sh
++++ b/OPENBSD/bin/vps_deploy_master.sh
+@@ -131,12 +131,6 @@ asset_stamp="$asset_dir/.pub5-build-sha"
+ echo "==> db prepare"
+ BUNDLE_GEMFILE="$WEB/Gemfile" BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
+ 
+-echo "==> db prepare"
+-BUNDLE_WITHOUT=development:test "$BUNDLE" exec rails db:prepare
+-
+-echo "==> verify prebuilt assets"
+-BUNDLE_WITHOUT=development:test BUNDLE_GEMFILE="$WEB/Gemfile" "$BUNDLE" exec ruby "$ROOT/MASTER/checks/runner.rb" master_web_assets
+-
+ echo "==> runtime dirs"
+ doas /bin/ksh -c '
+   set -eu
+diff --git a/OPENBSD/bin/vps_install_all.sh b/OPENBSD/bin/vps_install_all.sh
+index 14c0ffe..a82ef10 100755
+--- a/OPENBSD/bin/vps_install_all.sh
++++ b/OPENBSD/bin/vps_install_all.sh
+@@ -9,9 +9,9 @@ if [[ ${1:-} == -h || ${1:-} == --help ]]; then
+   exit 0
+ fi
+ 
+-PUB4=${PUB4:-/home/dev/pub5}
+-. "${PUB4}/OPENBSD/lib/ruby_select.sh"
+-LOG=${LOG:-/tmp/pub4_install_$(date +%Y%m%d_%H%M%S).log}
++PUB5=${PUB5:-/home/dev/pub5}
++. "${PUB5}/OPENBSD/lib/ruby_select.sh"
++LOG=${LOG:-/tmp/pub5_install_$(date +%Y%m%d_%H%M%S).log}
+ 
+ exec > >(tee -a "$LOG") 2>&1
+ 
+@@ -26,7 +26,7 @@ admin_service() {
+   doas /usr/sbin/rcctl "$action" "$service"
+ }
+ 
+-log "pub4 install - log: $LOG"
++log "pub5 install - log: $LOG"
+ # ruby, not awk, and the pattern changed with it: OpenBSD vmstat -s writes
+ # "53853 pages free" and has no line matching /free memory/ at all, so the awk
+ # this replaces printed an empty figure on every run it ever made.
+@@ -37,30 +37,30 @@ log "free memory: $(vmstat -s | "$RUBY" -e 'puts $stdin.read[/^\s*(\d+)\s+pages
+ # The failures are counted from here and the exit status carries them.
+ failed=0
+ 
+-if [[ -d ${PUB4}/.git ]]; then
++if [[ -d ${PUB5}/.git ]]; then
+   log "git pull"
+   # --ff-only and never a stash: a stashed Gemfile.lock on this box once took
+   # master down, and a stash hides local edits where nobody looks for them.
+-  git -C "$PUB4" pull --ff-only origin main || log "WARN: git pull failed (continuing with tree on disk)"
+-  git -C "$PUB4" log -1 --oneline
++  git -C "$PUB5" pull --ff-only origin main || log "WARN: git pull failed (continuing with tree on disk)"
++  git -C "$PUB5" log -1 --oneline
+ fi
+ 
+ log "=== MASTER CLI + web ==="
+-[[ -d ${PUB4}/MASTER ]] || { log "ERR: MASTER missing"; exit 1 }
+-cd "${PUB4}/MASTER"
++[[ -d ${PUB5}/MASTER ]] || { log "ERR: MASTER missing"; exit 1 }
++cd "${PUB5}/MASTER"
+ bundle install
+-cd "${PUB4}/MASTER/web"
++cd "${PUB5}/MASTER/web"
+ bundle config set --local path vendor/bundle
+ bundle install
+ RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 bundle exec rails assets:precompile
+-bundle exec ruby "${PUB4}/MASTER/checks/runner.rb" master_web_assets
++bundle exec ruby "${PUB5}/MASTER/checks/runner.rb" master_web_assets
+ admin_service restart master 2>/dev/null || admin_service start master
+ admin_service check master || { log "WARN: master not ok"; failed=$((failed + 1)); }
+ 
+ typeset -a APPS
+-APPS=(${(f)"$("$RUBY" -r"${PUB4}/OPENBSD/lib/deploy_inventory" \
+-  -e 'puts Deploy::Inventory.new(root: ARGV[0]).app_names' "$PUB4")"})
+-(( ${#APPS} )) || { log "ERR: no apps read from ${PUB4}/RAILS/apps.yml"; exit 1 }
++APPS=(${(f)"$("$RUBY" -r"${PUB5}/OPENBSD/lib/deploy_inventory" \
++  -e 'puts Deploy::Inventory.new(root: ARGV[0]).app_names' "$PUB5")"})
++(( ${#APPS} )) || { log "ERR: no apps read from ${PUB5}/RAILS/apps.yml"; exit 1 }
+ 
+ # master is in apps.yml but was installed above: it runs in place under
+ # MASTER/web, and it has no <app>.sh copy-tree script to run here.
+@@ -70,7 +70,7 @@ for app in $APPS; do
+     brgen|amber|bsdports|mrdamascy) ;;
+     *) log "ERR: refused app from apps.yml: $app"; failed=$((failed + 1)); continue ;;
+   esac
+-  typeset script="${PUB4}/RAILS/${app}/${app}.sh"
++  typeset script="${PUB5}/RAILS/${app}/${app}.sh"
+   log "=== Rails: ${app} ==="
+   if [[ ! -f $script ]]; then
+     log "WARN: missing $script"
+diff --git a/OPENBSD/bin/vps_run_remote.sh b/OPENBSD/bin/vps_run_remote.sh
+index 84528ff..08e11d6 100755
+--- a/OPENBSD/bin/vps_run_remote.sh
++++ b/OPENBSD/bin/vps_run_remote.sh
+@@ -21,7 +21,7 @@ KEY=$SSH_KEY
+ VM=${SSH_USER}@${SSH_HOST}
+ HYP=${HYPERVISOR:-dev@server4.openbsd.amsterdam}
+ HYP_PORT=${HYP_PORT:-31415}
+-REMOTE_LOG=/tmp/pub4_install_latest.log
++REMOTE_LOG=/tmp/pub5_install_latest.log
+ quoted_vm=${(q)VM}
+ quoted_log=${(q)REMOTE_LOG}
+ 
+diff --git a/OPENBSD/test/test_vps_deploy_contract.rb b/OPENBSD/test/test_vps_deploy_contract.rb
+index b525f62..a9d3264 100644
+--- a/OPENBSD/test/test_vps_deploy_contract.rb
++++ b/OPENBSD/test/test_vps_deploy_contract.rb
+@@ -145,6 +145,20 @@ class VpsDeployContractTest < Minitest::Test
+     assert_includes SOURCE, "unknown app or group"
+   end
+ 
++  # The 2026-09-16 runner.rb deletion killed this deploy under set -e. The
++  # conditional asset check is the fix; an unconditional call ahead of it, or a
++  # second db:prepare, re-opens that outage and costs a second Rails boot on a
++  # one-core box (found 2026-11-23).
++  def test_master_deploy_prepares_the_database_once_and_checks_assets_only_through_the_guard
++    assert_equal 1, MASTER_DEPLOY.scan('echo "==> db prepare"').length
++    assert_equal 1, MASTER_DEPLOY.scan("rails db:prepare").length
++    runner_calls = MASTER_DEPLOY.lines.grep(/exec ruby .*checks\/runner\.rb/)
++    assert_equal 1, runner_calls.length
++    guard = MASTER_DEPLOY.index('if [ -f "$ROOT/MASTER/checks/runner.rb" ]; then')
++    assert guard, "the runner.rb existence guard is missing"
++    assert_operator MASTER_DEPLOY.index(runner_calls.first), :>, guard
++  end
++
+   def test_master_deploy_refuses_root_override
+     source = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
+     assert_includes source, 'if [ "$ROOT" != "/home/dev/pub5" ]; then'
+diff --git a/RAILS/_assets.sh b/RAILS/_assets.sh
+index 2a0653e..bf71d41 100755
+--- a/RAILS/_assets.sh
++++ b/RAILS/_assets.sh
+@@ -5,14 +5,14 @@ set -euo pipefail
+ 
+ # master_web_assets_precompile — Propshaft digest manifest + digested files for production face UI.
+ master_web_assets_precompile() {
+-  local web_root=${1:-${PUB4:-/home/dev/pub5}/MASTER/web}
++  local web_root=${1:-${PUB5:-/home/dev/pub5}/MASTER/web}
+   [[ -d $web_root ]] || { log_warn "master_web_assets_precompile: missing ${web_root}"; return 0; }
+   log "MASTER web assets:precompile"
+   (
+     cd "$web_root"
+     rm -rf public/assets
+     RAILS_ENV=production SECRET_KEY_BASE="${SECRET_KEY_BASE:-dummy}" bundle_exec exec rails assets:precompile
+-    bundle_exec exec ruby "${PUB4:-/home/dev/pub5}/MASTER/checks/runner.rb" master_web_assets
++    bundle_exec exec ruby "${PUB5:-/home/dev/pub5}/MASTER/checks/runner.rb" master_web_assets
+   ) || { log_err "MASTER web assets precompile failed"; return 1; }
+   log_ok "MASTER web assets ready"
+ }
+diff --git a/STUDIO/dilla/data/dilla.json b/STUDIO/dilla/data/dilla.json
+index 2f120e5..5fda1c2 100644
+--- a/STUDIO/dilla/data/dilla.json
++++ b/STUDIO/dilla/data/dilla.json
+@@ -309,6 +309,14 @@
+   ],
+   "drum_patterns": {
+     "comment": "16 steps per bar, step 0 = downbeat. [step, velocity, optional lane]. Ghost notes ride low. Busts and fills are generated from bust_bars.",
++    "in_space_measured": {
++      "comment": "Measured transcription, not an authored groove: demucs htdemucs drums stem of the in_space canon row (render_evidence/measured_canon.json), 16-slot best-phase grid over 39 bars, velocities = measured onset strengths. The backbeat peaks at slots 2/3 and 10 rather than 4/12 - that drunk placement is what the analyzer measured, phase-locked per its own +/-45 ms window; pair with the in_space groove profile, which carries the +17.7 ms off-8th lateness the flat grid cannot.",
++      "kick": [[2, 0.52], [6, 1.0], [7, 0.63], [10, 0.67], [15, 0.52], [0, 0.26], [3, 0.33], [11, 0.44], [14, 0.33]],
++      "snare": [[2, 0.83], [3, 0.61], [6, 0.83], [10, 1.0], [11, 0.67], [14, 0.61], [15, 0.67]],
++      "ghost": [[1, 0.17], [5, 0.17], [7, 0.17]],
++      "hats": [[0, 0.87], [1, 0.93], [2, 1.0], [3, 0.73], [4, 0.87], [5, 0.87], [6, 0.6], [7, 0.6], [8, 0.87], [9, 0.93], [10, 1.0], [11, 0.73], [12, 0.87], [13, 0.93], [14, 0.87], [15, 0.93]],
++      "bust_bars": 8
++    },
+     "boom_bap": {
+       "kick": [
+         [
+@@ -1328,6 +1336,17 @@
+   },
+   "groove_profiles": {
+     "comment": "spread_ms = per-hit timing jitter sigma; nudge = fixed offsets ms; drag = whole-loop lateness; velocity wobble is performer-owned.",
++    "in_space": {
++      "comment": "Measured from the in_space canon row: swing position 52.7%, off-8th residual +17.7 ms LATE (slots 2/6/10/14 drag), on-grid share 0.67. The step offsets carry the measured lateness the swing percent cannot express; keep them together.",
++      "spread_ms": 10,
++      "nudge": { "kick": 8, "snare": -6, "hat": -4, "ghost": 4 },
++      "drag_ms": 4,
++      "swing_by_lane": { "kick": 52.7, "snare": 52.7, "hat": 52.7, "ghost": 53 },
++      "step_offsets_ms": {
++        "hat": { "2": 18, "6": 18, "10": 18, "14": 18 },
++        "snare": { "2": 18, "10": 18 }
++      }
++    },
+     "dilla_shadow": {
+       "spread_ms": 9,
+       "nudge": {
+diff --git a/STUDIO/dilla/data/recovered_music.json b/STUDIO/dilla/data/recovered_music.json
+index b8039e5..6022044 100644
+--- a/STUDIO/dilla/data/recovered_music.json
++++ b/STUDIO/dilla/data/recovered_music.json
+@@ -1326,6 +1326,40 @@
+     }
+   ],
+   "engine_modules": [
++    {
++      "id": "in_space",
++      "title": "In Space (measured-canon study)",
++      "key": "C",
++      "bpm": 92,
++      "loop_bars": 4,
++      "bars_per_chord": 1,
++      "chords": [
++        "Fmaj9",
++        "Em9",
++        "Dm9",
++        "Cmaj9"
++      ],
++      "melody_midi": [
++        76,
++        77,
++        79,
++        76,
++        74,
++        72
++      ],
++      "feel": {
++        "bass": "dub",
++        "melody": "sweet_soul",
++        "swing": 52.7,
++        "grit": 0.7
++      },
++      "source_status": "engine_study",
++      "sources": [
++        "render_evidence/measured_canon.json row slug=in_space (demucs htdemucs + node spectral analysis, 2026-11-22): 91.7 BPM, 52.7% swing, +17.7 ms off-8th residual, C major (Krumhansl r=0.51)",
++        "Ableton remake tutorial (youtube O3Ha5xkLjbA) - arrangement reference only, not source audio"
++      ],
++      "note": "NOT a transcription. Drums and groove are measured from the canon row (patterns in_space_measured, groove in_space); harmony is engine-authored from the measured mix chroma (peaks E/F/G/A) and the motif is an engine hook on those peaks, descending to resolve like the Time chop contour. The record's sample identity is unverified, so no artist harmony is claimed (ORIGINAL AUTHENTICS)."
++    },
+     {
+       "id": "gospel_69_ballad_walk",
+       "title": "Gospel 6/9 ballad walk (engine study)",
+diff --git a/STUDIO/dilla/data/reference_measurements/in_space.json b/STUDIO/dilla/data/reference_measurements/in_space.json
+new file mode 100644
+index 0000000..9230a6b
+--- /dev/null
++++ b/STUDIO/dilla/data/reference_measurements/in_space.json
+@@ -0,0 +1,46 @@
++{
++  "slug": "in_space",
++  "artist": "J Dilla",
++  "title": "In Space",
++  "assembled": "2026-11-23",
++  "acquisition": {
++    "requested": "https://www.youtube.com/watch?v=O3Ha5xkLjbA (Ableton remake tutorial - arrangement reference, not source audio)",
++    "youtube_status": "media CDN returned 403 to the datacenter host; direct acquisition refused",
++    "source": "SoundCloud full upload (uploader Incognotion), title-matched; match_class full_fan_upload per measured_canon.json",
++    "audio": "202.9 s, 44.1 kHz (analysis-session copy, kept outside the repo per the samples/ policy)",
++    "stems": "demucs htdemucs: drums / bass / other / vocals"
++  },
++  "method": "per stem: band energy shares (kick<130Hz, snare 150-1200Hz bp@400, hats>5kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation 55-200bpm folded to 60-180, 16-slot grid via best-phase quantization (+-45ms), swing from off-8th residuals; mix: chroma (FFT 8192 @22050, 55-2200Hz) + Krumhansl key correlation - identical to the measured_canon pipeline",
++  "measured": {
++    "drums": {
++      "tempo": { "bpm": 91.7, "confidence": 2.52 },
++      "grid16": {
++        "kick": [0.26, 0.11, 0.52, 0.33, 0, 0.11, 1, 0.63, 0.04, 0.04, 0.67, 0.44, 0.04, 0.07, 0.33, 0.52],
++        "snare": [0.11, 0.17, 0.83, 0.61, 0, 0.17, 0.83, 0.17, 0, 0.06, 1, 0.67, 0, 0, 0.61, 0.67],
++        "hat": [0.87, 0.93, 1, 0.73, 0.87, 0.87, 0.6, 0.6, 0.87, 0.93, 1, 0.73, 0.87, 0.93, 0.87, 0.93]
++      },
++      "swing_position_pct": 52.7,
++      "off8_residual_ms": 17.7,
++      "on_grid_share": 0.67,
++      "bars_spanned": 39,
++      "band_energy_share": { "kick_low": 0.628, "snare_mid": 0.099, "hat_high": 0.021 },
++      "onsets": { "kick": 209, "snare": 168, "hat": 291 }
++    },
++    "mix": {
++      "key_estimate": { "key": "C", "mode": "major", "r": 0.51 },
++      "chroma": [0.569, 0.492, 0.617, 0.478, 0.964, 1, 0.459, 0.83, 0.717, 0.692, 0.303, 0.335],
++      "levels": { "rms_dbfs": -18.39, "peak_dbfs": 1.8, "crest_db": 20.18 }
++    }
++  },
++  "renderable_counterparts": {
++    "drum_pattern": "in_space_measured (data/dilla.json)",
++    "groove_profile": "in_space (data/dilla.json)",
++    "progression": "in_space (data/recovered_music.json, engine_study tier - harmony is chroma-derived, NOT a transcription)"
++  },
++  "limits": [
++    "SoundCloud transcodes can decode above 0 dBFS; levels are relative evidence only",
++    "key estimate is single-method (Krumhansl, r=0.51 is weak); chroma peaks E/F/G/A guided the study voicings",
++    "swing assumes off-8th placement; the 16-slot grid is best-phase within +-45 ms, so slot placement is the analyzer's phase, not a score",
++    "sample identity of the record is unverified; no artist harmony is claimed"
++  ]
++}
+diff --git a/bin/master b/bin/master
+new file mode 100755
+index 0000000..572d385
+--- /dev/null
++++ b/bin/master
+@@ -0,0 +1,3 @@
++#!/bin/sh
++# Convenience shim; MASTER/bin/master is the one entrypoint and resolves its own root.
++exec "$(dirname "$0")/../MASTER/bin/master" "$@"

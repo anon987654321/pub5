@@ -1,0 +1,42 @@
+diff --git a/STUDIO/lora/guides.yml b/STUDIO/lora/guides.yml
+index 86156ac..50a51bd 100644
+--- a/STUDIO/lora/guides.yml
++++ b/STUDIO/lora/guides.yml
+@@ -96,6 +96,12 @@ checks:
+   lens: the prompt names a focal length between 50 and 85 mm and a distance
+   grade: exposure and white balance first, skin on the vectorscope, one grade for the whole piece
+   spend: one test frame, reviewed full size, before any batch
++  film: >-
++    a clip passes only when watched in full: identity stable across every
++    frame, no melt or morph in hair, clothing or background, physically
++    plausible blinks and small movements, one restrained camera move, and
++    coherent light and skin tone throughout. A beautiful first frame does
++    not make a beautiful film.
+   review: >-
+     Use a contact sheet for pairwise triage, then inspect every finalist at full
+     size. A contact sheet cannot establish focus, texture, expression, likeness
+diff --git a/STUDIO/lora/idea_picture.rb b/STUDIO/lora/idea_picture.rb
+index ccce6e4..10e8844 100644
+--- a/STUDIO/lora/idea_picture.rb
++++ b/STUDIO/lora/idea_picture.rb
+@@ -483,9 +483,20 @@ module Studio
+             "actual_cost_usd" => nil,
+             "actual_cost_status" => "NOT_REPORTED",
+           },
++          # A film is judged in motion, watched in full: a beautiful first
++          # frame proves nothing about the last one. Every temporal axis stays
++          # NOT_REVIEWED until a person has watched the whole clip.
+           "human_review" => {
+             "visual" => "NOT_REVIEWED",
+             "likeness" => "NOT_REVIEWED",
++            "temporal" => {
++              "watched_in_full" => "NOT_REVIEWED",
++              "identity_stability" => "NOT_REVIEWED",
++              "no_melt_or_morph" => "NOT_REVIEWED",
++              "motion_plausibility" => "NOT_REVIEWED",
++              "camera_restraint" => "NOT_REVIEWED",
++              "light_coherence" => "NOT_REVIEWED",
++            },
+           }
+         }
+         Tempfile.create([".film-receipt-", ".json"], File.dirname(receipt_path), mode: 0o600) do |file|
