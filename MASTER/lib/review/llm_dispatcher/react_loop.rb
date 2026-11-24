@@ -31,6 +31,13 @@ module Master
           and JSON object arguments matching its declared parameters. Do not simulate calls in Ruby or Python.
           If no tool is needed, answer normally. If a tool is unavailable, say so plainly.
         TEXT
+        MALFORMED_TOOL_CORRECTION = <<~TEXT.strip.freeze
+          Your previous <tool_call> block was malformed and did not execute. Retry with one complete,
+          valid <tool_call>{"name":"ToolName","args":{"param":"value"}}</tool_call> block. The content
+          must be valid JSON: double-quoted property names and strings, an object for args, and both
+          closing braces and tags. Do not repeat the malformed block or claim that a tool ran.
+          If no tool is needed, answer normally. If a tool is unavailable, say so plainly.
+        TEXT
 
         def react_tool_loop(selected_model, messages, sys:, stream:, image: nil, &blk)
           react_sys = build_react_system(sys, selected_model:)
@@ -46,21 +53,26 @@ module Master
                                       image:, blk: nil)
             return result if result.err?
 
-            if done == :unexecuted_tool_call
+            if %i[unexecuted_tool_call malformed_tool_call].include?(done)
               if protocol_retries < MAX_PROTOCOL_RETRIES
+                correction = done == :malformed_tool_call ? MALFORMED_TOOL_CORRECTION : TOOL_PROTOCOL_CORRECTION
                 history << { role: "assistant", content: result.to_s[0, 4_000] }
-                history << { role: "user", content: TOOL_PROTOCOL_CORRECTION }
+                history << { role: "user", content: correction }
                 protocol_retries += 1
-                @bus&.publish("react:protocol_repair", model: selected_model, attempt: protocol_retries)
+                @bus&.publish("react:protocol_repair", model: selected_model, attempt: protocol_retries,
+                              kind: done)
                 next
               end
 
-              @bus&.publish("react:protocol_failure", model: selected_model, attempts: protocol_retries + 1)
-              return Result.err(
-                "react: model emitted Ruby-style tool calls instead of invoking tools; no tools were executed. " \
-                  "Retry with a provider that supports MASTER's tool protocol.",
-                category: :llm_failure,
-              )
+              @bus&.publish("react:protocol_failure", model: selected_model, attempts: protocol_retries + 1,
+                            kind: done)
+              message = if done == :malformed_tool_call
+                          "react: model repeated a malformed tool-call payload after one correction; no tools were executed."
+                        else
+                          "react: model emitted Ruby-style tool calls instead of invoking tools; no tools were executed. " \
+                            "Retry with a provider that supports MASTER's tool protocol."
+                        end
+              return Result.err(message, category: :llm_failure)
             end
 
             if done
@@ -91,7 +103,7 @@ module Master
           text = result.to_s
           if Master::PhantomRecovery.malformed_tool_call?(text)
             @bus&.publish("react:malformed_tool_call", model: selected_model, step:)
-            return [Result.err("react: malformed tool-call response; no tool was executed", category: :llm_failure), true]
+            return [result, :malformed_tool_call]
           end
 
           if (unexecuted = unexecuted_tool_call_names(text)).size.positive? &&
