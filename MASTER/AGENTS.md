@@ -533,7 +533,8 @@ the curated, tracked set published to GitHub; it is not git-ignored. Raw
 per-width captures stay in temp (`pub5-screenshot-sweep/`). A sweep clears
 the old set before publishing, and a failed sweep leaves no review set. The
 critic reads only captures emitted by the current sweep; it never reuses an
-older image or manifest.
+older image or manifest. An HTTP-200 startup placeholder is not a rendered
+page and must never be published as review evidence.
 
 ## Judging your own work
 

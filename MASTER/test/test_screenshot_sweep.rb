@@ -74,6 +74,29 @@ class TestScreenshotSweep < Minitest::Test
     assert_includes Master::Fix::WorkLane.skipped(:code), "screenshot sweep"
   end
 
+  def test_startup_placeholder_is_failed_instead_of_published_as_a_render
+    cdp = Object.new
+    def cdp.viewport(*) = nil
+    def cdp.navigate(*) = nil
+    def cdp.status = 200
+    def cdp.evaluate(script)
+      return "text/html" if script == "document.contentType"
+      return true if script.include?("starting up")
+
+      false
+    end
+
+    camera = Master::Fix::ScreenshotSweep::Camera.new(cdp:, widths: [390], dir: Dir.tmpdir)
+    surface = Struct.new(:url).new("http://127.0.0.1:38182/")
+    Dir.mktmpdir do |page_dir|
+      shot = camera.take(surface, page_dir:, dialogs: false)
+
+      assert shot.html
+      assert_empty shot.widths
+      assert_match(/startup placeholder/, shot.note)
+    end
+  end
+
   def test_the_sweep_widths_are_declared_data
     widths = YAML.safe_load_file(File.join(ROOT, Master::Fix::ScreenshotSweep::GEOMETRY)).fetch("sweep_widths")
 
