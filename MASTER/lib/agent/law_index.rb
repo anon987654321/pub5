@@ -12,6 +12,7 @@
 # without running anything.
 
 require "yaml"
+require "json"
 require "digest"
 
 module Master
@@ -42,19 +43,18 @@ module Master
         end
 
         def index
-          current = @index
-          current ||= JSON.parse(File.read(index_path)) if File.file?(index_path)
-          return @index = current if current && current["input_fingerprint"] == input_fingerprint
-
-          # The index is a projection of its inputs, not of the surrounding
-          # checkout revision. Refresh only when a source that actually shapes
-          # the dictionary has changed.
-          write_index!
-          @index
+          # This reader is also used by the zero-dependency agent tier. It may
+          # read a stale committed projection, but it must never load Prism or
+          # rebuild the index as a side effect. The full-runtime fast gate owns
+          # regeneration and reports its result explicitly.
+          write_index! unless File.file?(index_path)
+          @index ||= JSON.parse(File.read(index_path))
         end
 
         def input_paths
           [
+            File.expand_path(__FILE__),
+            File.expand_path("bare_law_loader.rb", __dir__),
             File.expand_path("../../law/lexical.rb", __dir__),
             File.expand_path("../../checks/data/law_fixtures.yml", __dir__),
             data_path("law_kinds.yml"),
@@ -66,10 +66,10 @@ module Master
         def input_fingerprint
           material = input_paths.sort.map do |path|
             relative = path.delete_prefix("#{master_root}/")
-            digest = File.file?(path) ? Digest::SHA256.file(path).hexdigest : "missing"
-            "#{relative}\\0#{digest}"
+            digest = File.file?(path) ? Digest::SHA256.file(path).hexdigest : nil
+            [relative, digest]
           end
-          Digest::SHA256.hexdigest(material.join("\\n"))
+          Digest::SHA256.hexdigest(JSON.generate(material))
         end
 
         def one(id)
@@ -126,10 +126,10 @@ module Master
         end
 
         def law_index_inputs
-          corpus = Master::Agent::BareCorpus.new([input_paths.fetch(0)])
-          fixtures = load_yaml(input_paths.fetch(1)).fetch("laws", {})
-          kind_path = input_paths.fetch(2)
-          incident_path = input_paths.fetch(3)
+          corpus = Master::Agent::BareCorpus.new([input_paths.fetch(2)])
+          fixtures = load_yaml(input_paths.fetch(3)).fetch("laws", {})
+          kind_path = input_paths.fetch(4)
+          incident_path = input_paths.fetch(5)
           kinds = File.file?(kind_path) ? load_yaml(kind_path).fetch("kinds", []) : []
           incidents = File.file?(incident_path) ? load_yaml(incident_path).fetch("incidents", []) : []
           {

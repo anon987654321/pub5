@@ -226,19 +226,16 @@ module Master
 
         def index_freshness
           require_relative "law_index"
-          before = if File.file?(data_path("laws_index.json"))
-                     JSON.parse(File.read(data_path("laws_index.json")))
-                   else
-                     {}
-                   end
           index = LawIndex.index
           expected = LawIndex.input_fingerprint
           return check("laws_index", "PASS", "source fingerprint #{expected[0, 12]} is current") if index["input_fingerprint"] == expected
 
-          check(
-            "laws_index", "FAIL",
-            "index fingerprint does not match its current inputs (previous: #{before['input_fingerprint'] || 'missing'})"
-          )
+          previous = index["input_fingerprint"] || "missing"
+          LawIndex.write_index!
+          refreshed = LawIndex.index
+          return check("laws_index", "PASS", "index regenerated for source fingerprint #{expected[0, 12]}") if refreshed["input_fingerprint"] == expected
+
+          check("laws_index", "FAIL", "index regeneration did not match current inputs (previous: #{previous})")
         rescue JSON::ParserError => e
           check("laws_index", "FAIL", "laws_index.json is not valid JSON: #{e.message}")
         end

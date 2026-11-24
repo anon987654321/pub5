@@ -75,31 +75,31 @@ module Master
       end
 
       def test_law_index_answers_a_full_dictionary_row
-        previous_path = LawIndex.instance_variable_get(:@index_path)
-        previous_index = LawIndex.instance_variable_get(:@index)
-
-        Dir.mktmpdir do |dir|
-          output = File.join(dir, "laws_index.json")
-          LawIndex.instance_variable_set(:@index_path, output)
-          LawIndex.instance_variable_set(:@index, nil)
-          File.write(output, JSON.generate("schema" => 1, "input_fingerprint" => "stale", "laws" => {}))
-
-          index = LawIndex.index
-          row = index.fetch("laws").fetch("NO_PUTS")
-          %w[id severity mode lifecycle languages exemptions definition_sources].each do |field|
-            assert row.key?(field), "the dictionary row for NO_PUTS is missing #{field}"
-          end
-          assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
-                       "the kind registry is where the exemption is owned, not the detector source"
-
-          proof = index.fetch("laws").fetch("adversarial")
-          assert_equal "test", proof.dig("fixtures", "status")
-          assert_equal proof.dig("fixtures", "proof"), proof["proved_by"]
-          assert_equal LawIndex.input_fingerprint, index.fetch("input_fingerprint")
-        ensure
-          LawIndex.instance_variable_set(:@index_path, previous_path)
-          LawIndex.instance_variable_set(:@index, previous_index)
+        LawIndex.instance_variable_set(:@index, nil)
+        LawIndex.index
+        row = LawIndex.index.fetch("laws").fetch("NO_PUTS")
+        %w[id severity mode lifecycle languages exemptions definition_sources].each do |field|
+          assert row.key?(field), "the dictionary row for NO_PUTS is missing #{field}"
         end
+        assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
+                     "the kind registry is where the exemption is owned, not the detector source"
+        assert_match(/\\A[0-9a-f]{64}\\z/, LawIndex.input_fingerprint)
+      end
+
+      def test_law_index_projects_named_test_proofs_from_fixture_registry
+        inputs = {
+          statements: {},
+          fixtures: { "adversarial" => { "status" => "test", "proof" => "test/test_adversarial_law.rb" } },
+          kinds: [],
+          defaults: {},
+          corpus: Struct.new(:laws).new({}),
+          incident_by_law: {},
+        }
+
+        row = LawIndex.law_index_row("adversarial", { "severity" => "error" }, inputs)
+
+        assert_equal "test/test_adversarial_law.rb", row["proved_by"]
+        assert_equal "test/test_adversarial_law.rb", row.dig("fixtures", "proof")
       end
 
       def test_law_index_writer_emits_a_final_newline
