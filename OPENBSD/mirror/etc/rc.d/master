@@ -50,7 +50,7 @@ _ruby_suffix=${_ruby_suffix#ruby}
 _bundle="/usr/local/bin/bundle${_ruby_suffix}"
 [ -x "$_bundle" ] || { echo "master: Bundler for Ruby ${_ruby_suffix:-default} is unavailable" >&2; exit 1; }
 
-daemon_flags="-c 'cd /home/dev/pub5/MASTER/web && set -a && . /etc/master.env && set +a && export PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 RAILS_ENV=production CACHE_VERSION=${CACHE_VERSION} SECRET_KEY_BASE_DUMMY=1 BUNDLE_FROZEN=true && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+daemon_flags="-c 'cd /home/dev/pub5/MASTER/web && set -a && . /etc/master.env && set +a && export PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 RAILS_ENV=production CACHE_VERSION=${CACHE_VERSION} SECRET_KEY_BASE_DUMMY=1 BUNDLE_FROZEN=true BUNDLE_PATH=/home/dev/.bundle/master BUNDLE_WITHOUT=development:test && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
 # Prod safety flags (MASTER_SAFE_MODE etc.) live in /etc/master.env (see master.env.sample).
 # rc.d sets a minimal set; env can override for the face runtime. See DeployPaths and
 # MASTER/data/budgets.yml for resource budgets on 1GB VPS.
@@ -207,6 +207,8 @@ rc_pre() {
   # Deploy-in-progress lock, first: resource_guard reads this flag to hold off
   # shedding during the bundle check and the cold boot that follow.
   touch /home/dev/pub5/.deploying 2>/dev/null || true
+  export BUNDLE_PATH=/home/dev/.bundle/master
+  export BUNDLE_WITHOUT=development:test
   # Check, never install. rc_pre runs as root, and a root `bundle install` in
   # dev's checkout leaves root-owned gems and .bundle/config that the next dev
   # deploy cannot rewrite. vps_deploy_master.sh installs both bundles as dev; a
