@@ -1628,6 +1628,26 @@ function setSubjectScatter(positions, stages = null) {
       if (!Number.isFinite(stage) || stage < 0 || stage > 1) return false;
     }
   }
+  const from = faceGeom.getAttribute("subjectFrom");
+  if (!from || from.array.length !== positions.length) return false;
+  const direct = faceMat.uniforms.uSubjectDirect;
+  const smooth = (lo, hi, x) => {
+    const t = Math.max(0, Math.min(1, (x-lo)/Math.max(0.000001, hi-lo)));
+    return t*t*(3-2*t);
+  };
+  const m = smooth(0, 1, morphCurrent);
+  const staged = faceMat.uniforms.uSemanticStaged.value;
+  for (let i = 0; i < positions.length; i++) {
+    const stage = stageAttribute.array[Math.floor(i/3)];
+    const gate = staged ? smooth(stage, Math.min(1, stage+0.18), 1-m) : 1;
+    const blend = 1-(1-m)*gate;
+    const origin = direct.value ? from.array[i] : faceHome[i];
+    from.array[i] = faceScatter[i]*(1-blend)+origin*blend;
+  }
+  from.needsUpdate = true;
+  direct.value = 1;
+  morphCurrent = 1;
+  faceMat._morphVel = 0;
   faceScatter.set(positions);
   attribute.needsUpdate = true;
   stageAttribute.array.fill(0);
@@ -1647,6 +1667,7 @@ function setSubjectScatter(positions, stages = null) {
 function resetSubjectScatter() {
   const attribute = faceGeom?.getAttribute?.("scatter");
   if (!faceScatter || !FACE_SCATTER_HOME || !attribute) return false;
+  if (faceMat?.uniforms?.uSubjectDirect) faceMat.uniforms.uSubjectDirect.value = 0;
   faceScatter.set(FACE_SCATTER_HOME);
   attribute.needsUpdate = true;
   const stageAttribute = faceGeom?.getAttribute?.("semanticStage");
