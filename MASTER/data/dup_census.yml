@@ -11,13 +11,15 @@
 # - Rails app-local migrations, schemas, boot/config and tests execute against
 #   independent application/database roots. Shared migrations are inert under
 #   the one-migration-per-app contract.
+# - The commerce-ledger migration is repeated in Amber and Brgen because each
+#   app applies the schema change to its own database and migration history.
 # - BIZ/tools HTML files are editable build bases; BIZ/<plan>/ HTML files are
 #   the reader-facing published copies or retained historical deliverables.
 # - The remaining MASTER/OPENBSD and RAILS copies preserve runtime boundaries
 #   or per-application contracts; they are not shared by a common deploy root.
 # This ceiling is not permission for further copies: any additional exact
 # duplicate group fails the existing ratchet until reviewed and reduced.
-duplicate_sets: 161
+duplicate_sets: 162
 duplicate_members:
 - "BIZ/future_healthcare_os/future_healthcare_os.html | BIZ/tools/future_healthcare_os.html"
 - "BIZ/future_nato_weapons/future_nato_weapons.html | BIZ/tools/future_nato_weapons.html"
@@ -62,6 +64,7 @@ duplicate_members:
 - "RAILS/amber/db/migrate/20260915120000_add_link_embed_to_posts.rb | RAILS/brgen/db/migrate/20260915120000_add_link_embed_to_posts.rb"
 - "RAILS/amber/db/migrate/20261031120000_create_billing_subscriptions.rb | RAILS/brgen/db/migrate/20261031120000_create_billing_subscriptions.rb"
 - "RAILS/amber/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb | RAILS/brgen/db/migrate/20261102160000_remove_affiliate_visitor_identifiers.rb"
+- "RAILS/amber/db/migrate/20261122170000_create_commerce_ledger_entries.rb | RAILS/brgen/db/migrate/20261122170000_create_commerce_ledger_entries.rb"
 - "RAILS/amber/db/queue_schema.rb | RAILS/mrdamascy/db/queue_schema.rb"
 - "RAILS/amber/test/importmap_external_hosts_test.rb | RAILS/brgen/test/importmap_external_hosts_test.rb | RAILS/bsdports/test/importmap_external_hosts_test.rb"
 - "RAILS/amber/test/models/destroy_cascade_test.rb | RAILS/bsdports/test/models/destroy_cascade_test.rb"
