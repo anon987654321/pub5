@@ -226,7 +226,6 @@ class TestDocPaths < Minitest::Test
     MASTER/data/voice/norwegian/bergen_lora_data_checklist.md
     MASTER/data/voice/norwegian/engine_comparison.md
     MASTER/lib/cli/face/contract.md
-    MASTER/FACE_WORLD.md
     MIGRATION.md
     SECURITY.md
     STUDIO/dilla/vendor/tone/LICENSE.md
