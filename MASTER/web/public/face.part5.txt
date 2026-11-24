@@ -1642,7 +1642,10 @@ function setSubjectScatter(positions, stages = null) {
     const gate = staged ? smooth(stage, Math.min(1, stage+0.18), 1-m) : 1;
     const blend = 1-(1-m)*gate;
     const origin = direct.value ? from.array[i] : faceHome[i];
-    from.array[i] = faceScatter[i]*(1-blend)+origin*blend;
+    const travel = 1-blend;
+    const ripple = direct.value && i%3 === 2
+      ? Math.sin(stage*6.283185-(1-m)*6.283185)*4*travel*(1-travel)*0.025 : 0;
+    from.array[i] = faceScatter[i]*(1-blend)+origin*blend+ripple;
   }
   from.needsUpdate = true;
   direct.value = 1;
