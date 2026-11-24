@@ -1634,6 +1634,7 @@ function setSubjectScatter(positions, stages = null) {
   if (stages) stageAttribute.array.set(stages);
   stageAttribute.needsUpdate = true;
   if (faceMat?.uniforms?.uSemanticStaged) faceMat.uniforms.uSemanticStaged.value = stages ? 1 : 0;
+  if (faceMat?.uniforms?.uSubjectActive) faceMat.uniforms.uSubjectActive.value = 1;
   semanticMorphTarget = 0;
   semanticMorphRestoreOnSettled = false;
   if (faceReducedMotionActive()) {
@@ -1654,6 +1655,7 @@ function resetSubjectScatter() {
     stageAttribute.needsUpdate = true;
   }
   if (faceMat?.uniforms?.uSemanticStaged) faceMat.uniforms.uSemanticStaged.value = 0;
+  if (faceMat?.uniforms?.uSubjectActive) faceMat.uniforms.uSubjectActive.value = 0;
   semanticMorphTarget = 1;
   semanticMorphRestoreOnSettled = true;
   if (faceReducedMotionActive()) {
