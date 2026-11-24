@@ -302,11 +302,33 @@ A Git checkout writes tracked files with ordinary read permissions. The
 consent and IdeaPicture gates still require owner-only files. Before running a
 generation, consent check or gallery rebuild from a checkout, run:
 
-    chmod 700 STUDIO/lora/*/evidence STUDIO/lora/merethe/sources STUDIO/lora/merethe/dataset
-    chmod 600 STUDIO/lora/*/subject.env STUDIO/lora/*/consent.yml STUDIO/lora/*/evidence/*
+    chmod 700 STUDIO/lora/*/evidence STUDIO/lora/merethe/sources \
+      STUDIO/lora/merethe/sources/additional STUDIO/lora/merethe/dataset \
+      STUDIO/lora/merethe/weights
+    chmod 600 STUDIO/lora/*/subject.env STUDIO/lora/*/consent.yml \
+      STUDIO/lora/*/evidence/* STUDIO/lora/merethe/weights/merethe/replicate_training.json
     find STUDIO/lora/merethe/sources STUDIO/lora/merethe/dataset -type f -exec chmod 600 {} +
 
 The committed renders and `selfies/manifest.js` are static and need no gate.
+
+## Default selfie route
+
+`ruby STUDIO/lora/photograph.rb --selfie-series --subject NAME` uses the
+subject's `references/` photographs when present. With none, it falls back to
+the published `sources/`: up to four recent `sources/additional/` photographs
+and four archive `sources/` photographs. It sends them to the catalogue's
+default reference engine, `google/nano-banana-2.1`, and records `engine` and
+`reference_photographs` in the subject's `ledger.jsonl`. Without references the
+series uses the pinned LoRA. `--engine` and `--inference-profile` remain
+explicit overrides; no new flag is required for the default.
+
+Each render also records an ArcFace cosine under `likeness` in `ledger.jsonl`.
+The scorer runs only when `insightface` is installed for `python3` (or the
+interpreter named by `STUDIO_INSIGHTFACE_PYTHON`); without it the state is
+`INCONCLUSIVE`, never PASS. A cosine below `0.55` is `FAIL`; review it before
+publishing. The house sitting keeps portrait-distance geometry with selfie
+framing (README §1); `Selfie.phone_selfie` is an explicit arm's-length
+distortion study, not the default.
 
 ## Consent and source rights
 

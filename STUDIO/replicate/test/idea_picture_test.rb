@@ -282,6 +282,46 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  def test_reference_files_fall_back_to_published_sources
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "probe")
+      FileUtils.mkdir_p(File.join(subject, "sources", "additional"))
+      File.write(File.join(subject, "sources", "additional", "01.jpg"), "recent")
+      File.write(File.join(subject, "sources", "01.jpg"), "archive")
+
+      files = Studio::Visual::IdeaPicture.reference_files(subject)
+
+      assert_includes files, File.join(subject, "sources", "additional", "01.jpg")
+      assert_includes files, File.join(subject, "sources", "01.jpg")
+    end
+  end
+
+  def test_reference_engine_preflight_does_not_validate_the_subject_lora
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      subject_dir = File.join(subject_root, "probe")
+      FileUtils.mkdir_p(subject_dir, mode: 0o700)
+      File.write(
+        File.join(subject_dir, "subject.env"),
+        "REPLICATE_MODEL=owner/model:version-123\nLIKELINESS_REVIEWED_VERSION=owner/model:version-123\n",
+        mode: "w", perm: 0o600
+      )
+      seen = []
+      client = Object.new
+      client.define_singleton_method(:input_names) do |model|
+        seen << model
+        %w[prompt image_input aspect_ratio resolution output_format]
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root,
+        engine: "google/nano-banana-2.1"
+      )
+
+      assert_equal "google/nano-banana-2.1", picture.validate_model!
+      assert_equal ["google/nano-banana-2.1"], seen
+    end
+  end
+
   def test_minimax_image_reference_uploads_only_one_subject_reference
     Dir.mktmpdir do |dir|
       subject_root = File.join(dir, "subjects")

@@ -29,6 +29,16 @@ class TestStudioLoraCraft < Minitest::Test
     assert_equal 10, Studio::Lora::Selfie::SCENE_STOCKS.uniq.length
   end
 
+  def test_phone_selfie_is_an_explicit_arm_length_study
+    default = Studio::Lora::Selfie.scene(1)
+    phone = Studio::Lora::Selfie.scene(1, phone: true)
+
+    refute_match(/24mm-equivalent/, default)
+    assert_match(/24mm-equivalent phone lens/, phone)
+    assert_match(/arm's length/, phone)
+    refute_match(/\b(?:35|50|85)mm\b/, phone)
+  end
+
   def test_first_four_subject_sittings_use_fw26_wardrobe_directions
     scenes = Studio::Lora::Selfie::SUBJECT_SCENES
 
