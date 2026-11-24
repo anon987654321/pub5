@@ -114,8 +114,9 @@ def ollama_installed_models
   @ollama_installed_models = fetch_ollama_tags
 end
 
-# Remotely executed Ollama cloud IDs are recognized only so routing can reject
-# them. There is deliberately no cloud catalogue or opt-in path.
+# A legacy cloud-suffixed id in the local `ollama:` namespace is not a daemon
+# model. Hosted Ollama Cloud is a separate `ollama_cloud:` provider routed by
+# the OpenAI-compatible endpoint catalogue in models.yml.
 def ollama_cloud_model?(model_id)
   name = model_id.to_s.sub(%r{\Aollama[:/]}, "")
   name.end_with?(":cloud", "-cloud")
