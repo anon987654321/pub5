@@ -1,6 +1,5 @@
 # Migration record — pub4 → pub5
 
-> Historical provenance only. This file does not define current operational behavior; use the owning tree documentation and registries for current truth.
 
 > **Historical provenance only.** This file records the pub4-to-pub5 port; it is not current policy, runtime configuration, a work backlog or an operator runbook. For current authority, start with [AGENTS.md](AGENTS.md) and the owning tree's maintained entrypoint.
 
