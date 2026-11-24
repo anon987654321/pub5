@@ -201,6 +201,10 @@ ownership:
       convergence evidence check) - distinct from bin/'s runtime entry points
     risk: medium
     check: ruby -Ilib:test test/test_lifecycle_tools.rb
+  tools/device/:
+    purpose: Termux bootstrap and resident agent/wake service installers
+    risk: high
+    check: ruby -Ilib:test test/test_termux_installer.rb
   tools/research/:
     purpose: cognition benchmarks, challenge measurement and LLM trajectory datasets
     risk: medium

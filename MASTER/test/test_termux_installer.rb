@@ -6,7 +6,7 @@ require "tmpdir"
 
 class TermuxInstallerTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  SCRIPT = File.join(ROOT, "tools", "device", "termux", "install.sh")
+  SCRIPT = File.join(ROOT, "tools", "device", "termux_install.sh")
   MOBILE_INSTALLER = File.join(ROOT, "bin", "master-mobile-install")
   MASTER_ENTRYPOINT = File.join(ROOT, "bin", "master")
 
