@@ -41,12 +41,13 @@ class TestStudioReplicateClientPaths < Minitest::Test
         "properties" => properties,
         "required" => []
       }
+      schemas = { "Input" => schema, "TrainingInput" => schema }
       if uri.path.include?("/versions/")
-        { "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } } }
+        { "openapi_schema" => { "components" => { "schemas" => schemas } } }
       else
         { "visibility" => "private", "latest_version" => {
           "id" => "c" * 64,
-          "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } }
+          "openapi_schema" => { "components" => { "schemas" => schemas } }
         } }
       end
     end
@@ -92,7 +93,7 @@ class TestStudioReplicateClientPaths < Minitest::Test
         "properties" => { "input_images" => {}, "prompt" => {} },
         "required" => ["input_images"]
       }
-      { "openapi_schema" => { "components" => { "schemas" => { "Input" => schema } } } }
+      { "openapi_schema" => { "components" => { "schemas" => { "TrainingInput" => schema } } } }
     end
   end
 
