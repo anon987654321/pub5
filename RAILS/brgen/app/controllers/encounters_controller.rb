@@ -14,7 +14,7 @@ class EncountersController < ApplicationController
     blocked = me.blocked_user_ids + Block.where(blocked_id: me.id).pluck(:blocker_id)
     mine = Encounter.pair!(me, blocked_ids: blocked.uniq)
     if mine.matched?
-      redirect_to mine.conversation
+      redirect_to mine.chat
     else
       redirect_to waiting_encounters_path
     end
@@ -25,9 +25,9 @@ class EncountersController < ApplicationController
   # the visit follows the redirect into the conversation.
   def waiting
     matched = Current.user.encounters.matched.order(:updated_at).last
-    if matched&.conversation && matched.fresh?
+    if matched&.chat && matched.fresh?
       matched.close!
-      redirect_to matched.conversation
+      redirect_to matched.chat
       return
     end
 

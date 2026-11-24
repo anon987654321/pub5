@@ -25,7 +25,7 @@ class EncountersControllerTest < ActionDispatch::IntegrationTest
     assert_equal Encounter::MATCHED, match.status
 
     get waiting_encounters_path
-    assert_redirected_to match.conversation
+    assert_redirected_to match.chat
   end
 
   test "the second ask pairs immediately" do
@@ -35,7 +35,7 @@ class EncountersControllerTest < ActionDispatch::IntegrationTest
 
     post encounters_path
     match = Encounter.matched.order(:created_at).last
-    assert_redirected_to match.conversation
+    assert_redirected_to match.chat
     assert_equal first.id, match.partner_id
   end
 
