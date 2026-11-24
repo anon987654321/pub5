@@ -726,7 +726,7 @@ class TestTaskContract < Minitest::Test
     end
     manuals = interfaces.map do |identifier|
       page, section = identifier.match(/\A(.+)\(([1-9])\)\z/).captures
-      content = "#{page.upcase}(#{section})\nNAME\n  #{page} - fixture manual text\nSYNOPSIS\n  #{page} [options]\nDESCRIPTION\n  Complete fixture body for the receipt validation test.\nSEE ALSO\n  operator(8)\n"
+      content = openbsd_manual_fixture(page, section, release:)
       {
         page:, section:,
         source: "https://man.openbsd.org/OpenBSD-#{release}/#{page}.#{section}",
@@ -737,6 +737,16 @@ class TestTaskContract < Minitest::Test
       hostname: "vm23", os_release: release, architecture: "amd64", scope:,
       source_reads:, native_interfaces: interfaces, manual_pages: manuals
     }
+  end
+
+  # A mandoc render: title line, sections, and the closing footer that repeats
+  # the title (the completeness signal a truncated read loses).
+  def openbsd_manual_fixture(page, section, release: "7.8", synopsis: true)
+    title = "#{page.upcase}(#{section})"
+    body = "#{title}\nNAME\n  #{page} - fixture manual text\n"
+    body += "SYNOPSIS\n  #{page} [options]\n" if synopsis
+    body + "DESCRIPTION\n  Complete fixture body for the receipt validation test.\nSEE ALSO\n  operator(8)\n\n" \
+           "OpenBSD #{release}                    November 1, 2026                    #{title}\n"
   end
 
   def openbsd_task_contract(receipt = openbsd_preflight_fixture)
@@ -777,6 +787,55 @@ class TestTaskContract < Minitest::Test
     wrong_title = openbsd_preflight_fixture
     wrong_title[:manual_pages].first[:content] = "RCCTL(1)\nNAME\n  not the requested section\nDESCRIPTION\n  still too short\n"
     assert_raises(CONTRACT::Invalid) { openbsd_task_contract(wrong_title) }
+  end
+
+  def test_openbsd_manual_read_without_its_footer_is_truncated
+    truncated = openbsd_preflight_fixture
+    content = truncated[:manual_pages].first[:content]
+    truncated[:manual_pages].first[:content] = content.lines[0...-1].join
+    error = assert_raises(CONTRACT::Invalid) { openbsd_task_contract(truncated) }
+    assert_match(/rcctl\(8\) ends without its footer/, error.message)
+  end
+
+  def test_format_pages_without_synopsis_and_versioned_port_pages_are_complete_reads
+    receipt = openbsd_preflight_fixture(interfaces: %w[acme-client.conf(5) ruby(1)])
+    receipt[:manual_pages].first[:content] = openbsd_manual_fixture("acme-client.conf", "5", synopsis: false)
+    receipt[:manual_pages].last[:source] = "target-local:/usr/local/man/man1/ruby34.1"
+    contract = openbsd_task_contract(receipt)
+    assert_equal "target-local:/usr/local/man/man1/ruby34.1",
+                 contract.openbsd_preflight.fetch("manual_pages").last.fetch("source")
+
+    receipt[:manual_pages].last[:source] = "target-local:/usr/local/man/man1/rubocop.1"
+    assert_raises(CONTRACT::Invalid) { openbsd_task_contract(receipt) }
+  end
+
+  # A fake vm23 that answers only the two bootstrap reads and overstrikes NAME
+  # the way mandoc does on a pipe.
+  def fake_openbsd_host(calls)
+    lambda do |command|
+      calls << command
+      words = Shellwords.shellsplit(command)
+      next ["OpenBSD 7.8 amd64\n", true] if words == %w[uname -srm]
+      next ["/usr/share/man/man1/#{words.last}.1\n", true] if words.length == 3 && words[1] == "-w"
+      next ["/usr/share/man/man#{words[2]}/#{words[3]}.#{words[2]}\n", true] if words[1] == "-w"
+
+      [openbsd_manual_fixture(words[2], words[1]).sub("NAME", "N\bNA\bAM\bME\bE"), true]
+    end
+  end
+
+  def test_receipt_builder_reads_sources_and_target_manuals_into_an_admitted_receipt
+    require "fix/openbsd_receipt_builder"
+    calls = []
+    command = "zsh -fc 'print ok; tmux ls'"
+    preflight = Master::Fix::OpenBSDReceiptBuilder.build(
+      root: Master::REPO_ROOT, reader: fake_openbsd_host(calls), hostname: "vm23", commands: [command]
+    ).fetch("openbsd_preflight")
+
+    assert_includes preflight.fetch("manual_pages").first.fetch("content").lines.map(&:strip), "NAME"
+    gate = Master::Fix::OpenBSDManualPreflight
+    assert(calls.all? { |call| gate.bootstrap_remote_command?(Shellwords.shellsplit(call)) })
+    contract = openbsd_task_contract(preflight)
+    assert_nil gate.refusal_for_command(command: "ssh dev@brgen.no #{Shellwords.escape(command)}", contract:)
   end
 
   def test_openbsd_command_admission_requires_the_specific_manual
@@ -935,7 +994,7 @@ class TestTaskContract < Minitest::Test
       openbsd_preflight_fixture(source_paths: ["OPENBSD/RUNBOOK.md", "OPENBSD/bin/vps-deploy"], interfaces: %w[rcctl(8) rc(8) rc.conf(8) rc.d(8) rc.subr(8) ksh(1) zsh(1)]),
     )
     assert_nil Master::Fix::OpenBSDManualPreflight.refusal_for_command(
-      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy all'", contract:
+      command: "ssh -o BatchMode=yes dev@brgen.no 'zsh OPENBSD/bin/vps-deploy brgen'", contract:
     )
   end
 
@@ -1057,7 +1116,7 @@ class TestTaskContract < Minitest::Test
     reason = Master::Fix::OpenBSDManualPreflight.refusal_for_ssh_argv(
       ssh_argv: ["ssh", "-o", "BatchMode=yes", "dev@brgen.no"],
       remote_command: "rcctl restart master",
-      contract:
+      contract:, receipt_path: File.join(Dir.tmpdir, "absent-openbsd-preflight-#{Process.pid}.json")
     )
 
     assert_match(/openbsd_preflight/, reason)

@@ -539,7 +539,9 @@ module Master
             # refused every write outside MASTER for as long as it stood.
             return [] unless under_root?(path)
 
-            rel = path.to_s.delete_prefix("#{@root}/")
+            # Keys are relative to the map's own root, not the scan root: from
+            # the repository, MASTER/lib/fix/x.rb must read as lib/fix/x.rb.
+            rel = File.expand_path(path.to_s).delete_prefix("#{@ownership_root}/")
             return [] if skip?(rel)
             dir = File.dirname(rel)
             return [] if dir == "." || covered?(rel, dir)

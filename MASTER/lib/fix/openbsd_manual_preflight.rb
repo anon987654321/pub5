@@ -35,7 +35,9 @@ module Master
         "nsd" => "nsd(8)", "nsd-checkconf" => "nsd-checkconf(8)",
         "nsd-checkzone" => "nsd-checkzone(8)", "nsd-control" => "nsd-control(8)",
         "relayctl" => "relayctl(8)", "makemap" => "makemap(8)",
-        "cron" => "cron(8)", "zsh" => "zsh(1)", "ruby" => "ruby(1)",
+        # OPENBSD/lib/ruby_select.sh exports $RUBY as the selected ruby binary;
+        # MASTER/bin/operator's remote_ruby runs every host script through it.
+        "cron" => "cron(8)", "zsh" => "zsh(1)", "ruby" => "ruby(1)", "$RUBY" => "ruby(1)",
         "git" => "git(1)", "stat" => "stat(1)", "ssh" => "ssh(1)",
         "mount" => "mount(8)", "umount" => "umount(8)", "disklabel" => "disklabel(8)",
         "bioctl" => "bioctl(8)", "installboot" => "installboot(8)", "fsck" => "fsck(8)",
@@ -71,7 +73,7 @@ module Master
       SHELL_BUILTINS = %w[
         cd command exec exit return set unset export readonly read shift
         getopts trap umask wait jobs fg bg alias unalias type hash times
-        break continue local typeset let eval source . test true false echo printf
+        break continue local typeset let eval source . test true false echo printf print
       ].freeze
       SHELL_MANUAL_PAGES = %w[ksh(1) sh(1) zsh(1)].freeze
       WRAPPER_VALUE_OPTIONS = {
@@ -262,9 +264,8 @@ module Master
       # versioned man.openbsd.org URL, or a local target-man* checkout path.
       def validated_manual_source(source, page:, section:, release:)
         versioned_url = %r{\Ahttps://man\.openbsd\.org/OpenBSD-#{Regexp.escape(release)}/[A-Za-z0-9_.+-]+\.[1-9]\z}
-        local_page = %r{\Atarget-local:/\S+/man[1-9]/#{Regexp.escape(page)}\.#{Regexp.escape(section)}\z}
         versioned_path = source.end_with?("/#{page}.#{section}")
-        return source if (source.match?(versioned_url) && versioned_path) || source.match?(local_page)
+        return source if (source.match?(versioned_url) && versioned_path) || target_local_source?(source, page, section)
 
         raise TaskContract::Invalid, "OpenBSD manual source must identify #{page}(#{section}) on the exact target release"
       end
@@ -285,12 +286,27 @@ module Master
         content
       end
 
+      # A target-local page file is <page>.<section>, or for a versioned port
+      # binary <page><version>.<section>: ruby 3.4 installs ruby34.1, whose
+      # rendered title is RUBY(1). The title check still binds the content.
+      def target_local_source?(source, page, section)
+        source.match?(%r{\Atarget-local:/\S+/man#{section}/#{Regexp.escape(page)}[0-9.]*\.#{section}\z})
+      end
+
+      # Every page has NAME and DESCRIPTION; SYNOPSIS is absent from real pages
+      # such as acme-client.conf(5) and daily(8). Completeness is the closing
+      # footer, which repeats the title: a truncated read loses it.
       def require_full_page_sections!(content, page_id)
         headings = content.lines.map(&:strip)
-        missing_headings = %w[NAME SYNOPSIS DESCRIPTION].reject { |heading| headings.include?(heading) }
-        return if missing_headings.empty?
+        missing_headings = %w[NAME DESCRIPTION].reject { |heading| headings.include?(heading) }
+        unless missing_headings.empty?
+          raise TaskContract::Invalid,
+                "OpenBSD manual content is missing full-page sections for #{page_id}: #{missing_headings.join(', ')}"
+        end
+        footer = headings.reverse.find { |line| !line.empty? }.to_s
+        return if footer.match?(/#{Regexp.escape(page_id)}\z/i)
 
-        raise TaskContract::Invalid, "OpenBSD manual content is missing full-page sections for #{page_id}: #{missing_headings.join(', ')}"
+        raise TaskContract::Invalid, "OpenBSD manual #{page_id} ends without its footer; the read is truncated"
       end
 
       def manual_measurements(item, content, label)
@@ -418,6 +434,9 @@ module Master
           next unless File.file?(absolute)
 
           { "path" => relative, "manuals" => required_path_manuals(relative) }
+        end.tap do |inventory|
+          # Zero files is a wrong root or a broken checkout, never a pass.
+          raise TaskContract::Invalid, "no tracked OpenBSD mirror configuration under #{root}" if inventory.empty?
         end
       rescue SystemCallError => error
         raise TaskContract::Invalid, "cannot enumerate OpenBSD mirror configuration paths: #{error.class}"
@@ -489,8 +508,7 @@ module Master
 
         source = receipt.fetch("source").to_s
         versioned = source == "https://man.openbsd.org/OpenBSD-#{release}/#{page}.#{section}"
-        target_local = source.match?(%r{\Atarget-local:/\S+/man#{section}/#{Regexp.escape(page)}\.#{section}\z})
-        return false unless versioned || target_local
+        return false unless versioned || target_local_source?(source, page, section)
 
         true
       rescue KeyError, TypeError
@@ -1106,8 +1124,10 @@ module Master
         return %w[daily(8) cron(8) ksh(1)] if %w[OPENBSD/mirror/etc/daily.local OPENBSD/mirror/etc/weekly.local].include?(path)
         return %w[crontab(5) cron(8) ksh(1) zsh(1) ruby(1)] if path == "OPENBSD/mirror/etc/crontab.vm23"
         return %w[zsh(1)] if path == "OPENBSD/mirror/etc/.zshrc"
-        return %w[mailcap(5) mutt(1)] if path == "OPENBSD/mirror/home/johann/.mailcap"
-        return %w[mutt(1)] if path == "OPENBSD/mirror/home/johann/.muttrc"
+        # OpenBSD has no mailcap(5); mutt is the consumer and muttrc(5)
+        # documents how it reads mailcap entries.
+        return %w[mutt(1) muttrc(5)] if path == "OPENBSD/mirror/home/johann/.mailcap"
+        return %w[mutt(1) muttrc(5)] if path == "OPENBSD/mirror/home/johann/.muttrc"
         return %w[sshd_config(5) sshd(8) ssh(1)] if path == "OPENBSD/mirror/etc/ssh/sshd_config"
         return %w[nsd.conf(5) nsd(8) nsd-checkconf(8) nsd-control(8)] if path == "OPENBSD/mirror/var/nsd/etc/nsd.conf"
         if path.match?(%r{\AOPENBSD/mirror/var/nsd/zones/master/[^/]+\.zone\z})
@@ -1281,7 +1301,7 @@ module Master
       end
 
       HOST_IDENTITY_ALIASES = {
-        "vm23" => %w[vm23 brgen.no www.brgen.no],
+        "vm23" => %w[vm23 brgen.no www.brgen.no brgen.openbsd.amsterdam],
         "server4" => %w[server4 server4.openbsd.amsterdam www.openbsd.amsterdam],
       }.freeze
 

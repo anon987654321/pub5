@@ -416,29 +416,41 @@ module Operator
         return [false, "vm23 identity receipt names a host outside OPENBSD/data/operator.yml"]
       end
 
-      hostname, ok = probe.call("hostname")
-      return [false, "SSH to vm23 failed during read-only hostname probe: #{hostname}"] unless ok
-      actual_hostname = hostname.to_s.lines.map(&:strip).reject(&:empty?).first
-      unless actual_hostname == expected.fetch("hostname")
-        return [false, "SSH reached #{actual_hostname.inspect}, but the admitted production host is #{expected.fetch("hostname")}; nothing was deployed"]
-      end
-
-      uname, ok = probe.call("uname -srm")
-      return [false, "SSH to vm23 failed during read-only OS probe: #{uname}"] unless ok
-      os_name, release, architecture = uname.to_s.strip.split(/\s+/, 4)
-      unless [os_name, release, architecture] == [
-        "OpenBSD", expected.fetch("os_release"), expected.fetch("architecture")
-      ]
-        return [false, "vm23 OS identity mismatch: got #{uname.to_s.strip.inspect}; receipt expects OpenBSD #{expected.fetch("os_release")} #{expected.fetch("architecture")}; nothing was deployed"]
-      end
-
-      [true, nil]
+      refusal = hostname_identity_refusal(expected.fetch("hostname"), probe) || os_identity_refusal(expected, probe)
+      [refusal.nil?, refusal]
     rescue KeyError => error
       [false, "vm23 identity receipt is incomplete: #{error.key}"]
     rescue SystemCallError => error
       [false, "vm23 identity preflight could not read its configuration (#{error.class})"]
     rescue Psych::Exception => error
       [false, "vm23 identity configuration is invalid (#{error.class})"]
+    end
+
+    # vm23 answers `hostname` with its FQDN; the receipt names the canonical
+    # host. One alias table serves this probe and the SSH admission gate.
+    def hostname_identity_refusal(admitted, probe)
+      output, ok = probe.call("hostname")
+      return "SSH to vm23 failed during read-only hostname probe: #{output}" unless ok
+
+      actual = output.to_s.lines.map(&:strip).reject(&:empty?).first.to_s
+      return if host_identity_names(admitted).include?(actual.downcase)
+
+      "SSH reached #{actual.inspect}, but the admitted production host is #{admitted}; nothing was deployed"
+    end
+
+    def os_identity_refusal(expected, probe)
+      uname, ok = probe.call("uname -srm")
+      return "SSH to vm23 failed during read-only OS probe: #{uname}" unless ok
+
+      wanted = ["OpenBSD", expected.fetch("os_release"), expected.fetch("architecture")]
+      return if uname.to_s.strip.split(/\s+/, 4).first(3) == wanted
+
+      "vm23 OS identity mismatch: got #{uname.to_s.strip.inspect}; " \
+        "receipt expects #{wanted.join(" ")}; nothing was deployed"
+    end
+
+    def host_identity_names(hostname)
+      [hostname, *Master::Fix::OpenBSDManualPreflight::HOST_IDENTITY_ALIASES.fetch(hostname, [])]
     end
 
     # `bin/operator vps deploy <app> --remote`: judge the commit here, then hand the
