@@ -19,7 +19,7 @@ require "time"
 require "fileutils"
 require "minitest/autorun"
 require_relative "../../lib/agent/agent_cli"
-require_relative "../../lib/autopoiesis/kernel"
+require_relative "../../lib/autopoiesis"
 
 # The router loads these lazily; the suite names them directly.
 %w[bare_scan law_index status_view receipts openbsd_tier fast_gate falsify

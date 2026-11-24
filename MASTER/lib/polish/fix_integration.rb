@@ -15,7 +15,7 @@
 require_relative "discovery"
 require_relative "opportunity"
 require_relative "../stigmergy/trace_store"
-require_relative "../autopoiesis/kernel"
+require_relative "../autopoiesis"
 
 module Polish
   class FixIntegration

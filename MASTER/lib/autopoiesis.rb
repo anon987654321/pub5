@@ -15,7 +15,7 @@ require "fileutils"
 module Master
   module Autopoiesis
     class Kernel
-      COMPONENT_MANIFEST = File.expand_path("../../data/autopoietic_components.json", __dir__)
+      COMPONENT_MANIFEST = File.expand_path("../data/autopoietic_components.json", __dir__)
 
       def initialize(repo_root:, trace_store: nil)
         @repo_root = File.expand_path(repo_root)
