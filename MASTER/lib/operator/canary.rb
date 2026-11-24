@@ -287,9 +287,9 @@ module Operator
 
     # Stops at the first failure: the later checks load the same code, and the
     # first message is the one the operator needs.
-    def run(root:, rehearse: true, studio: false, runner: method(:capture))
+    def run(root:, rehearse: true, runner: method(:capture))
       results = []
-      steps(root, rehearse, studio, runner).each do |name, step|
+      steps(root, rehearse, runner).each do |name, step|
         results << step.call
         results.last.name = name
         break unless results.last.ok
@@ -297,7 +297,11 @@ module Operator
       results
     end
 
-    def steps(root, rehearse, studio, runner)
+    # STUDIO is source-only on vm23: no service runs it, so its own suite is not
+    # a vm23 release gate (operator decision, 2026-11-24). The clean-tree check
+    # still refuses uncommitted STUDIO edits; `rake -f STUDIO/replicate/Rakefile
+    # check test` remains STUDIO's proof.
+    def steps(root, rehearse, runner)
       ruby = RbConfig.ruby
       list = {
         "syntax" => -> { syntax(root) },
@@ -305,11 +309,6 @@ module Operator
         "boot smoke" => -> { shell(runner, [ruby, "tools/boot_smoke.rb"], File.join(root, "MASTER")) },
       }
       list["rehearse"] = -> { shell(runner, [ruby, "OPENBSD/bin/rehearse"], root) } if rehearse
-      if studio
-        list["STUDIO check + test"] = lambda {
-          shell(runner, [ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"], File.join(root, "STUDIO"))
-        }
-      end
       list
     end
 
@@ -496,7 +495,7 @@ module Operator
 
         preflight_word = "VPS_DEPLOY_SKIP_PREFLIGHT=1 I_UNDERSTAND_FAST_DEPLOY=1"
       else
-        results = run(root:, runner:, studio: inventory.target_kind(app) == :all)
+        results = run(root:, runner:)
         out.puts(report(results))
         return [false, "preflight failed on #{sha[0, 9]}; nothing was sent to the box"] unless results.all?(&:ok)
 

@@ -70,11 +70,11 @@ The pinned checkout is the whole pub5 repository, so the same release also
 advances all tracked STUDIO source under `/home/dev/pub5/STUDIO`. STUDIO is
 source and local creative tooling (Dilla, LoRA, Postpro and the Studio CLI),
 not a registered vm23 service: it is not installed as a daemon or exposed as
-a separate deploy target. For a full `all` release, workstation preflight
-syntax-checks STUDIO and runs `rake -f replicate/Rakefile check test` before
-any SSH or production change. A dirty or untracked file in any of MASTER,
-RAILS, OPENBSD or STUDIO blocks the release, so the pinned commit cannot
-silently omit local STUDIO edits.
+a separate deploy target. Workstation preflight syntax-checks STUDIO, but
+STUDIO’s own suite (`rake -f replicate/Rakefile check test`) is not a vm23
+release gate. A dirty or untracked file in any of MASTER, RAILS, OPENBSD or
+STUDIO still blocks the release, so the pinned commit cannot silently omit
+local STUDIO edits.
 
 This is the controlled equivalent of copying the mirror into `/`, not a blind recursive copy. It deliberately does not reboot the host: the installer restarts the affected daemons/services after validation. A reboot is a separate maintenance decision, not an automatic side effect of every release.
 

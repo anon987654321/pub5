@@ -461,7 +461,10 @@ class DeployPreflightTest < Minitest::Test
     assert_equal "RTFM_FIRST receipt missing", reason
   end
 
-  def test_full_release_runs_studio_checks_before_remote_deployment
+  # STUDIO runs nothing on vm23; its suite is its own proof, not a release
+  # gate (operator decision 2026-11-24). Uncommitted STUDIO edits are still
+  # refused: test_remote_command_refuses_untracked_studio_source.
+  def test_full_release_does_not_gate_on_the_studio_suite
     calls = []
     runner = lambda do |argv, chdir|
       calls << [argv, chdir]
@@ -472,13 +475,8 @@ class DeployPreflightTest < Minitest::Test
 
     assert ok
     assert_includes command, "VPS_DEPLOY_SHA=#{SHA}"
-    assert(
-      calls.any? do |argv, chdir|
-        argv == [RbConfig.ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"] &&
-          File.basename(chdir) == "STUDIO"
-      end,
-      "full production release must run STUDIO's check and test tasks on the workstation"
-    )
+    studio_calls = calls.select { |_argv, chdir| File.basename(chdir) == "STUDIO" }
+    assert_empty studio_calls, "STUDIO's suite must not gate a vm23 release"
   end
 
   def test_remote_break_glass_needs_the_acknowledgement
