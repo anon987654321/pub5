@@ -41,7 +41,7 @@ published pair or editable source; shared bases, build/check/print tools,
 templates and research live under `BIZ/tools/`.
 
 Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
-[OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/README.md) or
+[OPENBSD](OPENBSD/README.md), [STUDIO](STUDIO/README.md) or
 [BIZ](BIZ/README.md), depending on the work.
 
 ## Documentation standard

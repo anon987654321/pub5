@@ -32,14 +32,24 @@ class TestDocPaths < Minitest::Test
     .cursorlaws
     MASTER/README.md
     MASTER/AGENTS.md
+    BIZ/README.md
     OPENBSD/README.md
     OPENBSD/CLAUDE.md
     OPENBSD/RUNBOOK.md
     RAILS/README.md
     RAILS/CLAUDE.md
-    MASTER/tools/README.md
+    RAILS/__shared/README.md
+    RAILS/amber/README.md
+    RAILS/brgen/README.md
+    RAILS/bsdports/README.md
+    RAILS/hjerterom/README.md
+    RAILS/mrdamascy/README.md
+    RAILS/mytoonz/README.md
+    STUDIO/README.md
+    STUDIO/dilla/README.md
+    STUDIO/lora/README.md
+    STUDIO/postpro/README.md
     STUDIO/replicate/README.md
-    BIZ/README.md
   ].freeze
 
   def test_execution_owners_are_live_ruby_implementations
@@ -128,7 +138,7 @@ class TestDocPaths < Minitest::Test
     assert_includes root_readme, "`MASTER/data/laws.yml`"
     assert_includes root_readme, "`RAILS/CLAUDE.md`"
     assert_includes root_readme, "`OPENBSD/CLAUDE.md`"
-    assert_includes root_readme, "`STUDIO/replicate/README.md`"
+    assert_includes root_readme, "`STUDIO/README.md`"
     refute_includes root_readme, "target tree's `AGENTS.md`"
     refute_match(/\]\(ARCHITECTURE\.md\)/, root_readme)
   end
@@ -161,6 +171,26 @@ class TestDocPaths < Minitest::Test
   # have short pointer files; Codex and Copilot read AGENTS.md directly.
   HARNESS_FILES = %w[AGENTS.md GEMINI.md GLM.md .cursorlaws].freeze
 
+  PROJECT_READMES = %w[
+    README.md
+    BIZ/README.md
+    MASTER/README.md
+    OPENBSD/README.md
+    RAILS/README.md
+    RAILS/__shared/README.md
+    RAILS/amber/README.md
+    RAILS/brgen/README.md
+    RAILS/bsdports/README.md
+    RAILS/hjerterom/README.md
+    RAILS/mrdamascy/README.md
+    RAILS/mytoonz/README.md
+    STUDIO/README.md
+    STUDIO/dilla/README.md
+    STUDIO/lora/README.md
+    STUDIO/postpro/README.md
+    STUDIO/replicate/README.md
+  ].freeze
+
   # Non-entry Markdown survives only when an active boundary has a distinct job.
   # Historical research, app ledgers and design experiments remain in Git history.
   # Runtime behavior and recovery contracts now live in Ruby or YAML. TREE_CONTRACTS.md is the one
@@ -172,14 +202,10 @@ class TestDocPaths < Minitest::Test
     BIZ/RESTORATION_REPORT.md
     BIZ/tools/fetat_proposal.md
     STUDIO/replicate/agent-guidance/claude/agents/rails-layout-refiner.md
-    RAILS/__shared/SOCIAL_FRONT_PAGE.md
     MASTER/data/law/TREE_CONTRACTS.md
-    STUDIO/postpro/ARCHAEOLOGY.md
-    STUDIO/postpro/LEGACY_RESTORE.md
     MASTER/data/law/PUB5_PERMISSION_MATRIX.md
     MASTER/data/law/ad_creative_governance.md
     MASTER/data/law/bergen_brand_systems.md
-    RAILS/mrdamascy/APP_SPEC.md
     BIZ/research/bringhurst-strunk-research.md
     BIZ/research/business-plan-quality.md
     BIZ/research/typographic-styles.md
@@ -193,10 +219,7 @@ class TestDocPaths < Minitest::Test
     BIZ/tools/nordvakt_proposal.md
     BIZ/tools/norwegianfinancial_proposal.md
     MASTER/data/receipts/fix-session-2026-11-19-grok.md
-    RAILS/amber/__logo/PROPOSALS.md
-    RAILS/amber/__logo/RESEARCH.md
     SECURITY.md
-    STUDIO/lora/PHOTOGRAPHY.md
     STUDIO/dilla/vendor/tone/LICENSE.md
   ].freeze
 
@@ -218,6 +241,15 @@ class TestDocPaths < Minitest::Test
   def test_no_docs_directories_remain
     files = tracked.grep(%r{(?:\A|/)docs/})
     assert_empty files, "docs folders are retired; keep live contracts beside their owners: #{files.join(", ")}"
+  end
+
+  def test_each_project_has_one_readme_at_its_project_root
+    readmes = tracked.select { |path| File.basename(path) == "README.md" }.sort
+
+    assert_equal PROJECT_READMES.sort, readmes,
+                 "keep one README per project; move useful content into its owner README:\n" \
+                 "missing: #{(PROJECT_READMES - readmes).sort.join(", ")}\n" \
+                 "extra: #{(readmes - PROJECT_READMES).sort.join(", ")}"
   end
 
   def test_markdown_stays_at_meaningful_boundaries
