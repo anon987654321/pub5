@@ -1,0 +1,44 @@
+diff --git a/MASTER/AGENTS.md b/MASTER/AGENTS.md
+index c8f820a..dc21eb7 100644
+--- a/MASTER/AGENTS.md
++++ b/MASTER/AGENTS.md
+@@ -1049,6 +1049,20 @@ because agents read the Law one identity at a time. Reopen with a duplicate body
+   weights live under `STUDIO/lora/<subject>/`; generated stills land flat in
+   `STUDIO/lora/`. MASTER routes requests through its adapters and owns no
+   provider or media-generation implementation.
++- **STUDIO gates run before media work, not after.** Before training or after
++  changing a subject dataset, run `ruby STUDIO/lora/quality.rb` and read the
++  subject report: `dataset_diversity` WARN means the set photographs itself
++  twice; `approval` other than CURRENT — NEVER_REVIEWED, UNREVIEWED_VERSION,
++  STALE_PROFILE, or STALE_AGE past `approval_max_age_days` — means likeness
++  review is not in force; `provenance` PROVENANCE_DRIFT means a reviewed image
++  moved or changed. All three block until repaired or explicitly decided by the
++  operator. Before queuing training and monthly, run `ruby
++  STUDIO/lora/spend.rb`: EXCEEDED blocks, WARNING is reported to the operator,
++  and NOT_CONFIGURED is reported as-is, never given an invented number. Before
++  shipping graded output, run `ruby STUDIO/postpro/verify.rb` on the grade
++  sidecar and ship only VERIFIED; MISMATCH and VERSION_DRIFT block. Review
++  receipts carry NOT_REVIEWED axes because likeness is a human review; no tool
++  verdict replaces it.
+ - **No unmeasured gem.** The ruby_llm satellites stay out: `-schema` is
+   deprecated in favour of a Hash, and `-resilience`, `-top_secret`, `-agents`,
+   `-team` and `-template` are thinner than what MASTER owns. `-test`,
+diff --git a/MASTER/data/laws.yml b/MASTER/data/laws.yml
+index c374276..618d8e3 100644
+--- a/MASTER/data/laws.yml
++++ b/MASTER/data/laws.yml
+@@ -5811,10 +5811,13 @@ architecture:
+       path: STUDIO
+       # b5acc93bc flattened the photograph tree; the public entry it preserved
+       # is the photograph loader, guarded by STUDIO/test/idea_picture_test.rb.
++      # The LoRA and postpro gates are pinned one assertion per file under
++      # STUDIO/replicate/test/: dataset diversity, approval decay, review
++      # provenance, grade replay and the spend envelope.
+       entry: STUDIO/lora/photograph.rb
+       owner: studio
+       depends_on: []
+-      check: cd STUDIO && ruby -Itest test/idea_picture_test.rb
++      check: cd STUDIO && ruby -Itest test/idea_picture_test.rb && ruby replicate/test/lora_dataset_diversity_test.rb && ruby replicate/test/lora_approval_decay_test.rb && ruby replicate/test/lora_provenance_test.rb && ruby replicate/test/postpro_verify_test.rb && ruby replicate/test/lora_spend_test.rb
+ 
+ # Sole runtime scoring source for Master::CLI::Pipeline. A clean self-scan
+ # contributes scan_clean automatically; test_pass and code_review come from
