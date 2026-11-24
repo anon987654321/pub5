@@ -63,7 +63,7 @@ module Studio
         @subject_directory = File.join(subjects_root, @subject)
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
-        raise ArgumentError, "inference profiles apply only to the subject LoRA route" if @engine && !inference_profile.nil?
+        raise ArgumentError, "inference profiles apply only to the subject's pinned LoRA route" if @engine && !inference_profile.nil?
         @lora_only = !!lora_only
         raise ArgumentError, "inference profiles apply only to the subject's pinned LoRA route" if !inference_profile.nil? && !@lora_only
         @allow_unreviewed_likeness = !!allow_unreviewed_likeness

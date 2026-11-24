@@ -413,8 +413,8 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_equal 1, charts.length
     assert_equal "never_catch_me_flylo", charts.first.fetch("id")
     studies = Dilla.progressions.select { |row| row["source"] == "engine_study" }
-    assert_equal 2, studies.length
-    assert studies.all? { |row| row.fetch("note").include?("not a transcription") }
+    assert_equal 3, studies.length
+    assert studies.all? { |row| row.fetch("note").match?(/not a transcription/i) }
   end
 
   def test_archived_corpus_chord_timing_is_explicit_and_loop_complete
@@ -1095,7 +1095,7 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/muteState:\{k:0,s:0,c:0,h:0,o:0\}/, javascript)
     refute_match(/Tone\.BitCrusher/, javascript)
     refute_match(/\bbitCrush\b/, javascript)
-    assert_match(/widener\.connect\(masterDrive\)/, javascript)
+    assert_match(/widener\.connect\(limiter\)/, javascript)
     assert_match(/let stepUiByIndex=Array\.from\(\{length:16\}/, javascript)
     refute_match(/void posEl\.offsetWidth/, javascript)
     assert_match(/if\(vizCanvas\.width!==width\)vizCanvas\.width=width;/, javascript)

@@ -182,7 +182,7 @@ class TestStudioLoraReview < Minitest::Test
   private
 
   def write_private(path)
-    File.write(path, "synthetic image bytes", mode: "w", perm: 0o600)
+    File.write(path, "synthetic image bytes for #{path}", mode: "w", perm: 0o600)
     File.chmod(0o600, path)
   end
 end

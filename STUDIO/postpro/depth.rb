@@ -1,9 +1,14 @@
 # frozen_string_literal: true
 
 require "vips"
-require "numo/narray"
 require "digest"
 require "fileutils"
+
+begin
+  require "numo/narray"
+rescue LoadError
+  # Optional: the depth estimator runs only when this gem and the weights exist.
+end
 
 # A real depth map, where the old ones were cues standing in for one.
 #
@@ -68,6 +73,7 @@ module Postpro
     def self.load_model
       @model = nil
       return if ENV["POSTPRO_DEPTH"] == "0"
+      return unless defined?(Numo::SFloat)
 
       require "onnxruntime"
       @model = OnnxRuntime::Model.new(ONNX_GRAPH)

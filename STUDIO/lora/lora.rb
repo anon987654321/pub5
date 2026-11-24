@@ -226,7 +226,7 @@ module Studio
         subject = wizard.ask("Subject", default: "ragnhild")
         count = wizard.number("How many sittings", default: 4, range: 1..24)
         # A selfie series means this subject's own trained identity.
-        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("photograph.rb", __dir__),
                         "--selfie-series", "--subject", subject, "--count", count.to_s)
         success ? 0 : ($?.exitstatus || 1)
       end

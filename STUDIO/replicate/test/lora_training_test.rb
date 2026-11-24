@@ -188,11 +188,12 @@ class TestStudioLoraTrainingRunner < Minitest::Test
         { "subject" => subject, "destination" => "owner/#{subject}" }
       end
       timeouts = []
+      assertions = self
       runner.define_singleton_method(:train_subject!) do |_client, package, timeout:, billing_rate:, approved_budget_usd:, reserved_timeout_seconds:|
         timeouts << timeout
-        assert_equal billing_rate, Studio::Lora::Training::BILLING_RATE
-        assert_equal approved_budget_usd, BigDecimal("4.50")
-        assert_equal timeout, reserved_timeout_seconds
+        assertions.assert_equal billing_rate, Studio::Lora::Training::BILLING_RATE
+        assertions.assert_equal approved_budget_usd, BigDecimal("4.50")
+        assertions.assert_equal timeout, reserved_timeout_seconds
         {
           "subject" => package.fetch("subject"),
           "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",

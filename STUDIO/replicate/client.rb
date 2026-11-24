@@ -970,6 +970,8 @@ module Studio
         end
       end
 
+      public :wait_for_training
+
       def operation_timeout!(value, label)
         seconds = Float(value)
         unless seconds.finite? && seconds.positive? && seconds <= 86_400

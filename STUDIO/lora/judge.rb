@@ -17,7 +17,7 @@ require "json"
 require "optparse"
 require "pathname"
 require "yaml"
-require_relative "../output_paths"
+require_relative "../replicate/output_paths"
 require_relative "../postpro/uncanny"
 
 module Studio

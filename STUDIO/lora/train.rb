@@ -131,7 +131,7 @@ module Studio
               "provider_training_jobs" => results.count { |result| result["provider_request_dispatched"] },
               "spend" => {
                 "approved_batch_budget_usd" => decimal_string(approved_budget),
-                "rate_usd_per_second" => decimal_string(BILLING_RATE),
+                "rate_usd_per_second" => rate_string(BILLING_RATE),
                 "pricing_hardware" => BILLING.fetch("hardware"),
                 "pricing_verified_on" => BILLING.fetch("verified_on"),
                 "pricing_source" => BILLING.fetch("source"),
@@ -163,7 +163,11 @@ module Studio
         end
 
         def decimal_string(value)
-          value.round(6).to_s("F")
+          format("%.6f", value)
+        end
+
+        def rate_string(value)
+          value.to_s("F")
         end
 
         def minimum_reserved_seconds(minimum, margin)
@@ -476,7 +480,7 @@ module Studio
               "provider_cancellation_confirmed" => training.is_a?(Hash) && training["client_cancel_confirmed"] == true,
               "billing" => billing || {
                 "cost_status" => (provider_request_dispatched ? "NOT_REPORTED_BY_PROVIDER" : "NOT_REQUESTED"),
-                "rate_usd_per_second" => decimal_string(billing_rate),
+                "rate_usd_per_second" => rate_string(billing_rate),
                 "pricing_source" => BILLING.fetch("source")
               }
             }
@@ -491,7 +495,7 @@ module Studio
             return {
               "cost_status" => "NOT_REPORTED_BY_PROVIDER",
               "provider_compute_seconds" => nil,
-              "rate_usd_per_second" => decimal_string(rate),
+              "rate_usd_per_second" => rate_string(rate),
               "calculated_cost_usd" => nil,
               "pricing_hardware" => BILLING.fetch("hardware"),
               "pricing_verified_on" => BILLING.fetch("verified_on"),
@@ -504,7 +508,7 @@ module Studio
           {
             "cost_status" => "CALCULATED_FROM_PROVIDER_PREDICT_TIME_NOT_INVOICE",
             "provider_compute_seconds" => decimal_string(compute_seconds),
-            "rate_usd_per_second" => decimal_string(rate),
+            "rate_usd_per_second" => rate_string(rate),
             "calculated_cost_usd" => decimal_string(calculated),
             "pricing_hardware" => BILLING.fetch("hardware"),
             "pricing_verified_on" => BILLING.fetch("verified_on"),

@@ -119,8 +119,6 @@ module Studio
         # appear more faithful than it is.
         def reference_files
           Quality.evaluation_files(subject: @subject, root: @root)
-        rescue Quality::Error => error
-          raise Error, error.message
         end
 
         def build(candidate: false, profile: nil)
