@@ -5,6 +5,17 @@ class NvdRateLimit < ApplicationRecord
 
   validates :name, presence: true, uniqueness: true
 
+  # The one throttle row. create_or_find_by! alone stopped working once the
+  # uniqueness validation landed (3ea26c8b): with the row present, create!
+  # fails validation (RecordInvalid) before the unique index can raise the
+  # RecordNotUnique that create_or_find_by! rescues, so every call after the
+  # first raised. Find first; the rescue covers two workers racing to create.
+  def self.singleton
+    find_by(name: NAME) || create_or_find_by!(name: NAME)
+  rescue ActiveRecord::RecordInvalid
+    find_by!(name: NAME)
+  end
+
   def self.interval
     ENV["NVD_API_KEY"].present? ? 0.6.seconds : 6.seconds
   end
@@ -12,7 +23,7 @@ class NvdRateLimit < ApplicationRecord
   # Reserve a distinct delayed-job slot with compare-and-swap. This avoids
   # relying on row locks that SQLite does not implement as row-level locks.
   def self.reserve_slot
-    row = create_or_find_by!(name: NAME)
+    row = singleton
 
     loop do
       now = Time.current
@@ -29,7 +40,7 @@ class NvdRateLimit < ApplicationRecord
   # overdue while a queue is drained; this check prevents overdue work bursting
   # against NVD even when its original reserved time has passed.
   def self.claim_or_defer
-    row = create_or_find_by!(name: NAME)
+    row = singleton
 
     loop do
       now = Time.current

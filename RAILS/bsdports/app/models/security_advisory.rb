@@ -28,6 +28,16 @@ class SecurityAdvisory < ApplicationRecord
     source_url.presence || (identifier.present? ? "https://nvd.nist.gov/vuln/detail/#{identifier}" : nil)
   end
 
+  # Takes what a fresh NVD record knows: fills blanks, and a new score (with
+  # its severity) always wins. Does not save.
+  def absorb(attrs)
+    self.title = attrs[:title] if title.blank?
+    self.description = attrs[:description] if description.blank? && attrs[:description]
+    self.published_at ||= attrs[:published_at]
+    self.source_url ||= attrs[:source_url]
+    assign_attributes(attrs.slice(:cvss_score, :severity).compact)
+  end
+
   def cve?
     identifier.to_s.start_with?("CVE-")
   end

@@ -63,4 +63,14 @@ class NvdCveTest < ActiveSupport::TestCase
     linked = SecurityAdvisoryPort.where(security_advisory: first_record).pluck(:port_id)
     assert_equal [ @first.id, @second.id ].sort, linked.sort
   end
+
+  test "a port that sees the same CVE again keeps one link" do
+    payload = { "id" => "CVE-2026-44003", "descriptions" => [ { "value" => "Seen twice" } ] }
+
+    NvdCve.new(@first).send(:record, payload)
+    NvdCve.new(@first).send(:record, payload)
+
+    advisory = SecurityAdvisory.find_by!(identifier: "CVE-2026-44003")
+    assert_equal [ @first.id ], SecurityAdvisoryPort.where(security_advisory: advisory).pluck(:port_id)
+  end
 end
