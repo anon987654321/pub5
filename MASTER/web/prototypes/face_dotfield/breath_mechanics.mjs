@@ -5,7 +5,8 @@
  * Respects magic_hex budget: no new colors, only motion, brightness, and air.
  * Wires SETTLE_MS and the solid --solo mark (left eye) into the WebGL render loop.
  */
-import { sampleZone, SETTLE_MS, SOLO_PROBABILITY } from '../public/face_zones.mjs';
+// Prototype only; the live runtime uses public/face_stipple_system.js.
+import { sampleZone, SETTLE_MS, SOLO_PROBABILITY } from '../../public/face_zones.mjs';
 
 export function installBreathMechanics(stippleSystem) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
