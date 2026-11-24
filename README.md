@@ -15,7 +15,7 @@ evidence does not establish an outcome; it is never a passing result.
 - [Amber](RAILS/amber/README.md) — a private wardrobe and style companion.
 - [BSDPorts](RAILS/bsdports/README.md) — search and inspect the OpenBSD ports tree.
 - [Marketplace, Takeaway and Brgen's other verticals](RAILS/brgen/README.md) — local commerce and food ordering.
-- [Dating](RAILS/brgen/engines/dating/README.md), [Messenger](RAILS/brgen/engines/messenger/README.md), [Maps](RAILS/brgen/engines/maps/README.md), [Radio](RAILS/brgen/engines/radio/playlist/README.md) and [TV](RAILS/brgen/engines/radio/tv/README.md) — Brgen's distinct city services.
+- Dating, Messenger, Maps, Radio, TV, Marketplace and Takeaway are distinct Brgen services, documented in the [Brgen project guide](RAILS/brgen/README.md).
 - [Mr. Damascy](RAILS/mrdamascy/README.md) — the standalone Bergen restaurant ordering app.
 - [BIZ](BIZ/README.md) — evidence-backed business, funding and professional documents.
 
@@ -41,7 +41,7 @@ published pair or editable source; shared bases, build/check/print tools,
 templates and research live under `BIZ/tools/`.
 
 Start with [MASTER](MASTER/README.md), [RAILS](RAILS/README.md),
-[OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/replicate/README.md) or
+[OPENBSD](OPENBSD/RUNBOOK.md), [STUDIO](STUDIO/README.md) or
 [BIZ](BIZ/README.md), depending on the work.
 
 ## Documentation standard
@@ -68,7 +68,7 @@ literal. The full editorial contract lives in [MASTER/AGENTS.md](MASTER/AGENTS.m
 | MASTER | `MASTER/AGENTS.md` and `MASTER/README.md` |
 | RAILS | `RAILS/CLAUDE.md`, `RAILS/README.md`, then the target app or engine README and any local `AGENTS.md` |
 | OPENBSD | `OPENBSD/CLAUDE.md`, `OPENBSD/RUNBOOK.md` |
-| STUDIO | `STUDIO/replicate/README.md` and the target tool's README |
+| STUDIO | `STUDIO/README.md` and the target tool's README |
 | BIZ | `BIZ/README.md` and the target workstream's source/production profile |
 
 Do not assume every tree has an `AGENTS.md`: use the maintained entrypoint
