@@ -189,6 +189,9 @@ Operator::CiGuard.run! do
     # locally `rails -T` lists all 156 tasks. Bundle fine, rake fine, constant fine
     # -- only the dispatch is broken, and only there. Going straight to rake does
     # not touch it.
-    step "seeds", "#{seed_env} bin/rake db:seed:replant"
+    # Seeds prove they load, then the test database is emptied again: replant
+    # left a seeded Bergen courier behind, and the next run's dispatch test
+    # found it as the nearest free driver (2026-11-24).
+    step "seeds", "#{seed_env} bin/rake db:seed:replant && #{seed_env} bin/rake db:truncate_all"
   end
 end

@@ -18,7 +18,11 @@ module Marketplace
 
       relation.reorder(
         Arel.sql(
-          "(#{relevance}) DESC, "           "(marketplace_listings.ranking_score * 0.75 + "           "marketplace_listings.seller_score * 0.15 + "           "#{delivery_quality_sql} * 0.10) DESC, "           "(#{preference}) DESC, marketplace_listings.id DESC"
+          "(#{relevance}) DESC, " \
+          "(marketplace_listings.ranking_score * 0.75 + " \
+          "marketplace_listings.seller_score * 0.15 + " \
+          "#{delivery_quality_sql} * 0.10) DESC, " \
+          "(#{preference}) DESC, marketplace_listings.id DESC"
         )
       )
     end
@@ -101,7 +105,7 @@ module Marketplace
       ids = preferred_category_ids
       return "0.0" if ids.empty?
 
-      "CASE WHEN marketplace_listings.category_id IN (#{ids.join(",")}) THEN 1.0 ELSE 0.0 END"
+      "CASE WHEN marketplace_listings.category_id IN (#{ids.map { Integer(_1) }.join(",")}) THEN 1.0 ELSE 0.0 END"
     end
 
     def delivery_quality_sql
