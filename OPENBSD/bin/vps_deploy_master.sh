@@ -158,7 +158,7 @@ doas /bin/ksh -c '
     path=$root/$name
     [ ! -L "$path" ] || { echo "refusing symlinked runtime directory: $path" >&2; exit 1; }
     [ -d "$path" ] || install -d -o dev -g master -m 2775 "$path"
-    links=$(find "$path" -type l -print -quit)
+    links=$(find "$path" -type l -print | head -n 1)
     [ -z "$links" ] || { echo "symlink inside runtime directory: $links" >&2; exit 1; }
     chown -R dev:master "$path"
     chmod -R u+rwX,g+rwX "$path"
