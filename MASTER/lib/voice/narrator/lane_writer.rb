@@ -9,7 +9,10 @@ module Master
       class LaneWriter
         Unavailable = Class.new(StandardError)
 
-        UNSUPPORTED_LANES = %w[grok-cli codex-cli agy web-chat].freeze
+        # LaneWriter calls RubyLLM directly. Hosted OpenAI-compatible lanes
+        # belong to LLMDispatcher's HTTP sender, so passing their routing IDs
+        # here produces an invalid RubyLLM model id instead of narration.
+        UNSUPPORTED_LANES = %w[grok-cli codex-cli agy web-chat ollama_cloud].freeze
 
         def initialize(config, lanes: Master::Io::LaneSelection)
           @config = config

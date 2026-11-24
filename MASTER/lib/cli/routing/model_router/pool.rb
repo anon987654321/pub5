@@ -594,6 +594,7 @@ module Master
           public def local_server_models = local_server_index.keys
 
           def local_server_index
+            return {} unless ENV["MASTER_LOCAL_SERVERS"] == "1"
             return {} if ENV["MASTER_NO_POOL_PROBES"] == "1"
 
             @local_server_index ||= Array(@rules["local_servers"]).each_with_object({}) do |base, index|

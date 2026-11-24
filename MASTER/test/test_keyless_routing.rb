@@ -15,7 +15,8 @@ class TestKeylessRouting < Minitest::Test
       DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY LLM7_API_KEY
       ZAI_API_KEY REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
       MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_WEB_CHAT MASTER_LOCAL_ONLY MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_OLLAMA_ENABLED
-      MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LLM_GATEWAY_URL MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
+      MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LOCAL_SERVERS MASTER_LLM_GATEWAY_URL
+      MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
     ].to_h { |key| [key, ENV[key]] }
     @saved_env.each_key { |key| ENV.delete(key) }
     # Neutralize both local subscription CLIs so these tests grade keyless and
@@ -777,18 +778,26 @@ class TestKeylessRouting < Minitest::Test
       socket.print("HTTP/1.1 200 OK\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
       socket.close
     end
-    ENV.delete("MASTER_NO_POOL_PROBES")
-    router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
     base = "http://127.0.0.1:#{server.addr[1]}/v1"
-    router.instance_variable_get(:@rules)["local_servers"] = [base]
-    router.define_singleton_method(:start_pool_probes) { {} }
+    router = local_server_router(base)
 
     assert_equal base, router.local_server_for("local:Qwen/Qwen3-4B")
     assert router.reachable?("local:Qwen/Qwen3-4B")
   ensure
     ENV["MASTER_NO_POOL_PROBES"] = "1"
+    ENV.delete("MASTER_LOCAL_SERVERS")
     thread&.kill
     server&.close
+  end
+
+  def local_server_router(base)
+    ENV.delete("MASTER_NO_POOL_PROBES")
+    ENV["MASTER_LOCAL_SERVERS"] = "1"
+    config = FakeConfig.new(model: Master.free_primary_model)
+    Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT).tap do |router|
+      router.instance_variable_get(:@rules)["local_servers"] = [base]
+      router.define_singleton_method(:start_pool_probes) { {} }
+    end
   end
 
   def test_browser_chat_is_not_an_automatic_fallback_when_paid_api_keys_are_configured

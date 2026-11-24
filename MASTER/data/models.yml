@@ -629,10 +629,11 @@ cli_lanes:
     models: [gguf]
     login: set MASTER_LLAMA_MODEL to a readable local GGUF file
 
-# OpenAI-compatible servers on this machine. A server that answers /models
-# puts each model it lists in the pool as local:<id>. mistral.rs
-# (`mistralrs serve`) and LM Studio listen on 1234, llama.cpp's llama-server
-# on 8080.
+# OpenAI-compatible servers on this machine. Set MASTER_LOCAL_SERVERS=1 to
+# probe them; an ordinary portable boot never assumes they exist. A server
+# that answers /models puts each model it lists in the pool as local:<id>.
+# mistral.rs (`mistralrs serve`) and LM Studio listen on 1234, llama.cpp's
+# llama-server on 8080.
 local_servers:
   - http://localhost:1234/v1
   - http://localhost:8080/v1

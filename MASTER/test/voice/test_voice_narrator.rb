@@ -374,6 +374,17 @@ class TestVoiceNarrator < Minitest::Test
     assert_equal "fast", lanes.instance_variable_get(:@asked)
   end
 
+  def test_lane_writer_skips_hosted_routes_that_need_the_http_sender
+    lanes = Object.new
+    def lanes.tier(_name) = ["ollama_cloud:deepseek-v4.1-flash", "anthropic/claude-sonnet-5-5"]
+    def lanes.order(ids) = ids
+    def lanes.alive?(_id) = true
+
+    writer = Narrator::LaneWriter.new({ "lane_tier" => "fast" }, lanes:)
+
+    assert_equal "anthropic/claude-sonnet-5-5", writer.pick
+  end
+
   def test_lane_writer_raises_when_no_lane_is_live
     lanes = Object.new
     def lanes.tier(_name) = ["anthropic/claude-sonnet-5-5"]
