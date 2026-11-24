@@ -261,7 +261,7 @@ class TestKeylessRouting < Minitest::Test
     assert_equal ["ollama:gemma3:4b"], ollama_fallbacks
   end
 
-  CLOUD_UNSUPPORTED = "ollama cloud models are unsupported"
+  CLOUD_UNSUPPORTED = "legacy ollama:cloud ids are not local daemon models"
 
   # The code rule on its own, then whatever data/lanes.yml hand-kills ahead of
   # it: a dead entry names itself, so the reason follows the list, not a name here.
