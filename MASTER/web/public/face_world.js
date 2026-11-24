@@ -658,7 +658,8 @@
     const descriptor = explicitSubject
       ? normalizeVisualSubject(visualSubject)
       : inferVisualSubject(value);
-    const next = descriptor ? "object" : "face";
+    if (!descriptor) return restoreFaceSubject();
+    const next = "object";
     const signature = subjectSignature(descriptor);
     if (next === semanticForm && signature === subjectSignature(semanticDescriptor) &&
         !pendingSubjectForm) return next;
