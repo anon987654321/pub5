@@ -260,7 +260,13 @@ void main(){
   p = mix(p, mix(expressionFrom, expressionTo, uExpressionBlend),
     clamp(uExpressionStrength, 0.0, 1.0));
   p = mix(p, mix(scatter, position, localMorph), uSubjectActive * (1.0-localMorph));
-  p = mix(p, mix(scatter, subjectFrom, localMorph), uSubjectDirect);
+  vec3 subjectPoint = mix(scatter, subjectFrom, localMorph);
+  // A bounded travelling displacement exists only during the transition.
+  float travel = 1.0 - localMorph;
+  float envelope = 4.0 * travel * (1.0 - travel);
+  float signal = sin(semanticStage * 6.283185 - morphProgress * 6.283185);
+  subjectPoint.z += signal * envelope * 0.025;
+  p = mix(p, subjectPoint, uSubjectDirect);
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
   // Treat the point cloud as a shallow physical surface instead of a flat depth gradient.
