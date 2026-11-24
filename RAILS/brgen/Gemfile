@@ -67,7 +67,6 @@ end
 
 group :test do
   gem "capybara"
-  gem "puma"
   gem "selenium-webdriver"
   gem "axe-core-capybara"
 end

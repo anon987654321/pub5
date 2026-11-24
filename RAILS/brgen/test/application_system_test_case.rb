@@ -2,6 +2,7 @@
 
 require "test_helper"
 require "axe/matchers/be_axe_clean"
+require_relative "../../__shared/test/capybara_falcon"
 
 # The verticals route by subdomain, and brgen.no's names resolve to vm23. Chrome
 # maps every brgen.no host to the test server instead, so a system test visits
