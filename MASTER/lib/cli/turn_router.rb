@@ -52,6 +52,13 @@ module Master
         if (fix_request = explicit_fix_request(text))
           return dispatch_slash(rewrite_slash(fix_request), container:, felt_sense:, on_turn:, cancellation:)
         end
+        # These specific LoRA operations are executable requests even when
+        # phrased politely as questions. General questions remain conversational.
+        if Master::Io::MediaIntent.handles_lora_workflow?(text)
+          return Master::Io::MediaIntent.dispatch(
+            text, root: container.fetch(:root, Dir.pwd), bus: container[:bus]
+          )
+        end
         return casual_reply(text, container:, felt_sense:, on_chunk:, image:) if question?(text)
 
         proposal = OperatorIntent.new(

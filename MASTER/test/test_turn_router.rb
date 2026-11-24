@@ -50,6 +50,32 @@ class TurnRouterTest < Minitest::Test
     end
   end
 
+  def test_polite_lora_readiness_questions_reach_the_studio_readiness_adapter
+    message = "Can you check Johann's photographic readiness?"
+    reached = nil
+    Master::Io::MediaIntent.stub(:dispatch, lambda { |text, **|
+      reached = text
+      Master::Result.ok({ rendered: "readiness inspected" })
+    }) do
+      Master::CLI::TurnRouter.stub(:casual_reply, ->(*, **) { flunk "LoRA readiness should not be sent to chat" }) do
+        result = Master::CLI::TurnRouter.call(message:, container: build_container)
+        assert result.ok?
+      end
+    end
+    assert_equal message, reached
+  end
+
+  def test_advice_about_lora_remains_a_conversational_question
+    message = "Should I compare the LoRA profiles?"
+    reached = nil
+    Master::Io::MediaIntent.stub(:dispatch, ->(*) { reached = :media; Master::Result.ok({ rendered: "" }) }) do
+      Master::CLI::TurnRouter.stub(:casual_reply, ->(*, **) { reached = :chat; Master::Result.ok({ rendered: "" }) }) do
+        Master::CLI::TurnRouter.call(message:, container: build_container)
+      end
+    end
+    assert_equal :chat, reached
+  end
+
   def test_do_can_and_will_imperatives_are_not_misrouted_as_questions
     ["Do fix the broken tests", "Can refactor this method", "Will add authentication"].each do |text|
       refute Master::CLI::TurnRouter.question?(text), text
