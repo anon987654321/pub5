@@ -122,7 +122,7 @@ surface. That does not make this standalone app a multi-restaurant marketplace
 today. Any future integration must preserve its own order/payment ownership
 boundary and is not permission to add marketplace coupling pre-emptively.
 
-For implementation detail, read [APP_SPEC.md](APP_SPEC.md). For contribution
+For implementation detail, read [product specification](#product-specification). For contribution
 constraints, read [AGENTS.md](AGENTS.md). Historical repair transcripts remain
 in Git history; they are not an operational checklist or a second specification.
 
