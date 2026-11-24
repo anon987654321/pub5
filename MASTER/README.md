@@ -329,7 +329,7 @@ The following internal guides now live here instead of in nested directories. Th
 
 ### Checks
 
-<sub>Source: `MASTER/checks/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 > **Terminology and authority.** The preferred user-facing term is **check**. This guide keeps **check** where it names existing implementation classes, environment variables, or commands; this is a glossary banner, not a partial mass rename. A Law is a normative requirement, a check is an instrument, and proof is evidence about what was measured. Source authority runs `soul.yml > laws.yml > executable laws and gates > tree contracts > Git history`. Soul owns global identity, preservation and protected paths; `laws.yml` owns individual Law identities, statements and internal invariant order. The registry in checks.yml is an execution inventory, not a second Law catalogue. The executable Law DSL reads per-Law policy from `laws.yml#law_catalogue`; the runtime configuration lives beside the catalogue in the same file. See MASTER/data/synonyms.yml. Do not invent hard/soft/ops tiers. Machine outcomes such as skipped, inconclusive, and gaps remain distinct.
 
@@ -405,7 +405,7 @@ captured screenshots and manifest, then promote the exact files reviewed with
 `ruby MASTER/tools/approve_visual_baselines.rb --manifest PATH`. The tool checks
 the capture hash, dimensions, route inventory and runtime status, and refuses to
 overwrite an existing reference unless `--replace` is explicit. See
-`data/visual_baselines/README.md` for the workflow.
+the Approved visual baselines section for the workflow.
 
 Uncaught JavaScript exceptions, document HTTP errors, first-party server errors,
 failed first-party scripts/stylesheets, and missing screenshot evidence fail the
@@ -534,7 +534,7 @@ ruby MASTER/checks/runner.rb --json --all > check_run.json
 
 ### Approved visual baselines
 
-<sub>Source: `MASTER/checks/data/visual_baselines/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 This directory holds **approved reference PNGs**, not the latest run's screenshots.
 Only a deliberately small set of surfaces opt into pixel comparison via
@@ -597,7 +597,7 @@ references when the rendering environment deliberately differs.
 
 ### Norwegian accent evaluation fixtures
 
-<sub>Source: `MASTER/data/voice/norwegian/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 Evaluation data for Norwegian accent work (Bergen high-tone vs Eastern
 low-tone), consumed by `Voice::Benchmark`'s tonem lane
@@ -717,8 +717,7 @@ data-collection plan for the operator, not a wired route.
 <sub>Consolidated from `MASTER/data/voice/norwegian/engine_comparison.md`.</sub>
 
 Focused comparison for Norwegian (Bokmål) accent work, status late 2026.
-Provenance: salvaged from the reviewed external patch (see README.md in
-this directory); ranks are proposals for future engine work, not wired
+Provenance: salvaged from the reviewed external patch (see the consolidated project reference below); ranks are proposals for future engine work, not wired
 routes, and are corrected to what MASTER actually runs today.
 
 ## Ranking for future Norwegian engine work
@@ -776,7 +775,7 @@ routes, and are corrected to what MASTER actually runs today.
 
 ### Air Superiority
 
-<sub>Source: `MASTER/plugins/air_superiority/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 **Air Superiority lets a machine know its own airwaves: every Wi-Fi network and
 Bluetooth device around it, measured against what its owner has already
@@ -825,7 +824,7 @@ form with a JSON object naming the kind, network or device, and its identifiers.
 
 ### Session Browser
 
-<sub>Source: `MASTER/plugins/session_browser/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 Session Browser provides persistent browser sessions for explicitly allowlisted public hosts. Its network transport permits GET and HEAD only; this is not a read-only guarantee. Page JavaScript executes, and a GET endpoint can change remote state. Treat every page and its scripts as untrusted. The plugin reuses MASTER's WebBrowse request broker and snapshot script rather than creating a second network stack or a second page extractor.
 
@@ -850,7 +849,7 @@ The persistent profile stores website cookies and session tokens on disk, so add
 
 ### Social Browser
 
-<sub>Source: `MASTER/plugins/social_browser/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 **Social Browser lets MASTER act in the one place an operator lives
 online, their own accounts, while the operator keeps every key, every consent
@@ -904,7 +903,7 @@ Inside a MASTER session, the plugin command reaches it.
 
 ### Soulseek
 
-<sub>Source: `MASTER/plugins/soulseek/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 MASTER connects to an existing [slskd](https://github.com/slskd/slskd) daemon through its versioned HTTP API. slskd owns the Soulseek network session and transfer engine; MASTER owns command admission, local collection inventory and the acquisition boundary.
 
@@ -979,7 +978,7 @@ MASTER does not bypass peer queues, locked shares, DRM, paywalls or access contr
 
 ### tap_probes (parked)
 
-<sub>Source: `MASTER/plugins/tap_probes/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 Parked focus-walk and tap-target browser probes.
 
@@ -992,7 +991,7 @@ Parked 2026-11-01 under the essentials pass; sponsor: the operator.
 
 ### Travel Browser
 
-<sub>Source: `MASTER/plugins/travel_browser/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 **Travel Browser lets MASTER do the searching, comparing and form-filling of a
 trip, and leaves the one act that spends money, and every secret on the way to
@@ -1045,7 +1044,7 @@ Inside a MASTER session, the plugin command reaches it.
 
 ### tts_dsp (parked)
 
-<sub>Source: `MASTER/plugins/tts_dsp/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 Parked TTS benchmark/measure/quality suite and tts-e2e gate.
 
@@ -1058,7 +1057,7 @@ Parked 2026-11-01 under the essentials pass; sponsor: the operator.
 
 ### video_recordings (parked)
 
-<sub>Source: `MASTER/plugins/video_recordings/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 Parked session/face video recorders, capture probe and README media tooling.
 
@@ -1071,7 +1070,7 @@ Parked 2026-11-01 under the essentials pass; sponsor: the operator.
 
 ### Tools
 
-<sub>Source: `MASTER/tools/README.md` (now consolidated here)</sub>
+<sub>Consolidated project reference.</sub>
 
 **MASTER keeps its instruments in plain sight and holds them to the same
 standard as the code they measure, because a measurement nobody has checked is
