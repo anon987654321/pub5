@@ -153,6 +153,10 @@ module Master
           end
 
           def fallback_rank(model, task_type:)
+            # A configured browser-chat model is an explicit operator choice,
+            # not merely another anonymous fallback discovered at boot.
+            return -1 if model == @config.model && web_chat_model?(model)
+
             # A floor that proved dead stops leading or even middling a chain:
             # behind the paid_tail and local ranks, where it can only be reached
             # when every lane that actually answers failed (2026-11-07).

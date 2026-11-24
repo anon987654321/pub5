@@ -83,7 +83,12 @@ module Master
         def semantic_findings(found, reading)
           return skipped(reading, OUTSIDE_SAMPLE) unless semantic_due?(found, reading.path)
           return [] if (reading = modelled(reading)).laws.empty?
+          return skipped(reading, INCONCLUSIVE) if semantic_gap?(reading.path)
 
+          fresh_semantic_findings(reading)
+        end
+
+        def fresh_semantic_findings(reading)
           replayed = @semantic_reads.replay(reading.subject(relative_progress_path(reading.path)))
           return skipped(reading, UNCHANGED) + replayed unless replayed.nil?
           return defer(reading) if on_this_thread(@deferral)
@@ -106,6 +111,13 @@ module Master
         def semantic_budget_open?
           budget = on_this_thread(@semantic_budget)
           budget.nil? || budget.open?
+        end
+
+        # An unchanged file whose semantic evidence is already inconclusive
+        # cannot become measurable during this run. Keep the gap visible, but
+        # do not spend each convergence pass rediscovering the same limit.
+        def semantic_gap?(path)
+          @semantic_gap_mutex.synchronize { @semantic_gaps.key?(relative_progress_path(path)) }
         end
 
         def budgeted_read(reading)

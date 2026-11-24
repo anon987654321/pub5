@@ -709,7 +709,7 @@ class TestLLMDispatcher < Minitest::Test
     dispatcher, asked = recording_dispatcher
     saved = ENV["MASTER_MODEL"]
     ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
-    result = Master.stub(:any_api_key_present?, true) do
+    result = Master.stub(:llm_reachable?, true) do
       dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }])
     end
 
@@ -727,7 +727,7 @@ class TestLLMDispatcher < Minitest::Test
     ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
     ask = -> { dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }]) }
 
-    Master.stub(:any_api_key_present?, true) do
+    Master.stub(:llm_reachable?, true) do
       Master::Io::LaneState.stub(:usable?, false) do
         ask.call
         ENV["MASTER_MODEL_STRICT"] = "0"
@@ -1102,7 +1102,7 @@ class TestLLMDispatcher < Minitest::Test
       dispatcher.send(:send_hosted, "test-provider:model-a", [{ role: "user", content: "hi" }], sys: nil)
     end
 
-    assert_equal "Authorization: Bearer rotated-secret", sent.fetch(0).fetch(:headers).fetch("Authorization")
+    assert_equal "Bearer rotated-secret", sent.fetch(0).fetch(:headers).fetch("Authorization")
   ensure
     old.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old
   end
@@ -1205,17 +1205,19 @@ class TestLLMDispatcher < Minitest::Test
   # answer-shaped error the breaker never penalizes.
   def test_a_dead_handshake_rises_to_the_circuit_breaker_not_the_lane
     dispatcher, = build_dispatcher
-    original = Net::HTTP.method(:start)
-    Net::HTTP.define_singleton_method(:start) { |*| raise Net::OpenTimeout, "execution expired" }
+    http = Object.new
+    %i[open_timeout= read_timeout= write_timeout=].each { |name| http.define_singleton_method(name) { |_seconds| nil } }
+    http.define_singleton_method(:start) { raise Net::OpenTimeout, "execution expired" }
+    http.define_singleton_method(:started?) { false }
     router = Object.new
     router.define_singleton_method(:local_server_for) { |_id| "http://127.0.0.1:9/v1" }
     dispatcher.instance_variable_set(:@model_router, router)
 
-    assert_raises(Net::OpenTimeout) do
-      dispatcher.send(:send_local_server, "local:m", [{ role: "user", content: "hi" }], sys: nil)
+    Net::HTTP.stub(:new, http) do
+      assert_raises(Net::OpenTimeout) do
+        dispatcher.send(:send_local_server, "local:m", [{ role: "user", content: "hi" }], sys: nil)
+      end
     end
-  ensure
-    Net::HTTP.define_singleton_method(:start, original) if original
   end
 
   # A hosted lane carries a vision ask as one trailing typed-part user row:

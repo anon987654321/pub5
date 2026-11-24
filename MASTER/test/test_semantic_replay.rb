@@ -96,4 +96,16 @@ class TestSemanticReplay < Minitest::Test
 
     assert_equal 2, law.calls
   end
+
+  def test_an_inconclusive_read_is_not_repeated_by_the_same_processor
+    law = ModelLaw.new(:inconclusive)
+    processor = Master::Fix::Scan::FileProcessor.new(cache_root: @dir)
+
+    2.times do
+      processor.apply_laws(code: "x = 1\n", ast: nil, path: PATH, law_set: [CheapLaw.new, law])
+    end
+
+    assert_equal 1, law.calls
+    assert_equal 1, processor.semantic_gaps.size
+  end
 end
