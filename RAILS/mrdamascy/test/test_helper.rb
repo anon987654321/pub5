@@ -100,7 +100,7 @@ module StripeHttpStubbing
         path: path,
         headers: headers,
         body: body,
-        body_parsed: body.is_a?(String) ? URI.decode_www_form(body).to_h : body
+        body_parsed: body.is_a?(String) ? URI.decode_www_form(body).to_h : body,
       }
       StripeClient.instance_variable_set(:@calls, calls)
 

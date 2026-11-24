@@ -38,7 +38,7 @@ class PromoApplier
           # its "saving" is the fee it removes, never a basket discount.
           discount_ore: free_delivery ? 0 : best[:saving],
           delivery_fee_ore: free_delivery ? 0 : base_fee,
-          source: :promo
+          source: :promo,
         }
       else
         { promo: nil, discount_ore: best[:saving], delivery_fee_ore: base_fee, source: :loyalty }

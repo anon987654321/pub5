@@ -12,5 +12,5 @@
 Rails.application.config.filter_parameters += [
   :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate,
   :otp, :ssn, :cvv, :cvc, :phone, :authorization, :api_key, :access_token, :refresh_token,
-  :private_key, :credit_card, :card_number, :iban,
+  :private_key, :credit_card, :card_number, :iban
 ]

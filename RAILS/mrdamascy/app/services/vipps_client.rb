@@ -282,7 +282,7 @@ class VippsClient
           "client_id" => env!("VIPPS_CLIENT_ID"),
           "client_secret" => env!("VIPPS_CLIENT_SECRET"),
           "Ocp-Apim-Subscription-Key" => env!("VIPPS_SUBSCRIPTION_KEY"),
-          "Merchant-Serial-Number" => env!("VIPPS_MSN")
+          "Merchant-Serial-Number" => env!("VIPPS_MSN"),
         }, body: "{}")
 
         @access_token = body["access_token"].presence or
