@@ -25,7 +25,7 @@ module Master
       # held `coverage/` for code-coverage artifacts since before this map
       # existed, and an instrument state that silently refuses to commit is
       # the inert-config defect twice over.
-      STATE = "coverage_map/state.json"
+      STATE = "state/coverage_map.json"
       TREES = MasterPaths::TREES
 
       class << self

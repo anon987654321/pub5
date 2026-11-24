@@ -21,7 +21,7 @@ module Master
     module Reconcile
       extend Base
 
-      MISSIONS = "reconcile/missions.jsonl"
+      MISSIONS = "state/reconcile_missions.jsonl"
 
       class << self
         include Base

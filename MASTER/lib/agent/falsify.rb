@@ -28,7 +28,7 @@ module Master
     module Falsify
       extend Base
 
-      READINGS = "falsification/readings.jsonl"
+      READINGS = "state/falsification_readings.jsonl"
 
       class << self
         include Base

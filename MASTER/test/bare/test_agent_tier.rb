@@ -202,7 +202,7 @@ module Master
       end
 
       def test_falsify_holds_its_thesis_on_fixture_traffic
-        readings_backup = File.read(File.join(master_root, "data", "falsification", "readings.jsonl"))
+        readings_backup = File.read(File.join(master_root, "data", "state", "falsification_readings.jsonl"))
         begin
           out, = capture_io { Falsify.run_experiment }
           reading = out.match(/\{.*\}/m) ? JSON.parse(out[/\{.*\}/m])["reading"] : nil
@@ -212,7 +212,7 @@ module Master
           assert_operator reading["ungoverned"]["defect_survival"], :>, 0.5,
                           "the ungoverned lane must let most seeded defects survive, or the experiment proves nothing"
         ensure
-          File.write(File.join(master_root, "data", "falsification", "readings.jsonl"), readings_backup)
+          File.write(File.join(master_root, "data", "state", "falsification_readings.jsonl"), readings_backup)
         end
       end
 
@@ -228,7 +228,7 @@ module Master
       end
 
       def test_coverage_state_json_ends_with_a_final_newline
-        path = File.join(master_root, "data", "coverage_map", "state.json")
+        path = File.join(master_root, "data", "state", "coverage_map.json")
         assert File.binread(path).end_with?("\n"),
                "coverage state JSON must end with the repository-required newline"
       end
@@ -298,19 +298,19 @@ module Master
       end
 
       def test_reconcile_opens_scoped_missions_for_gate_failures
-        missions_backup = File.read(File.join(master_root, "data", "reconcile", "missions.jsonl"))
+        missions_backup = File.read(File.join(master_root, "data", "state", "reconcile_missions.jsonl"))
         begin
           out, = capture_io { Reconcile.check }
           payload_text = out[/\{\s*"command": "reconcile check".*\z/m]
           payload = JSON.parse(payload_text) if payload_text
           if payload.nil? || payload["drift_count"].to_i.positive?
-            assert File.file?(File.join(master_root, "data", "reconcile", "missions.jsonl")),
+            assert File.file?(File.join(master_root, "data", "state", "reconcile_missions.jsonl")),
                    "a drift opens a mission where the next session reads it, or there was no drift to open"
           else
             assert_equal 0, payload["missions_opened"].to_i, "no drift, no mission"
           end
         ensure
-          File.write(File.join(master_root, "data", "reconcile", "missions.jsonl"), missions_backup)
+          File.write(File.join(master_root, "data", "state", "reconcile_missions.jsonl"), missions_backup)
         end
       end
 
