@@ -1,6 +1,6 @@
 # LoRA and subject photography
 
-This project owns subject-aware training, inference, evaluation and photography workflows. Each subject's private datasets, consent evidence, model versions and likeness reviews remain separately scoped. Private media and credentials do not belong in the public repository.
+This project owns subject-aware training, inference, evaluation and photography workflows. Each subject's datasets, consent evidence, model versions and likeness reviews remain separately scoped. Private media and credentials do not belong in the public repository unless the operator records explicit publication approval; the 2026-11-24 approval in Privacy covers only the files named there.
 
 
 
@@ -283,29 +283,42 @@ This subject lives beside the other trained identities at `STUDIO/lora/merethe/`
 
 ## Privacy
 
-The 15 recovered archive photographs, 14 additional portraits, their 14
-training-caption sidecars and the three tracked subject descriptors have been
-removed from the current public default-branch tree. Earlier pub5 commits and
-the archived pub4 source commit remain reachable until a separate coordinated
-history cleanup. Source copies, captions, datasets, weights, subject.env,
-consent records and evidence are local-only. Ignore rules do not erase history.
-Do not force-add private media or subject configuration. Agreement to training
-is not blanket permission to publish photographs or weights.
+On 2026-11-24 the operator approved publication and distribution of the
+Merethe/Wenche, Johann and Ragnhild likeness records: the 29 source
+photographs, the 18-image captioned training dataset and ZIP, the consent and
+evidence records, the Replicate weight manifest, the 15 graded selfies with
+their raw stills, the contact sheets and the gallery manifest. Those files are
+tracked in this tree. The consent records set `model_publication` and
+`model_distribution` true. The destination model stays private on Replicate;
+its 164 MB weight archive is published as the `wenche-flux-lora-2026-11-24`
+release asset.
 
-This package does not upload images, create a Replicate training, or generate
-images. Those are separate operator actions. Keep the destination model private
-unless the subject separately agrees to publication and distribution.
+New subject data remains private by default. Adding photographs, consent
+records or weights requires a new recorded publication approval; the existing
+approval covers only the files named here. Repository visibility and any
+history cleanup remain separate operator actions.
+
+A Git checkout writes tracked files with ordinary read permissions. The
+consent and IdeaPicture gates still require owner-only files. Before running a
+generation, consent check or gallery rebuild from a checkout, run:
+
+    chmod 700 STUDIO/lora/*/evidence STUDIO/lora/merethe/sources STUDIO/lora/merethe/dataset
+    chmod 600 STUDIO/lora/*/subject.env STUDIO/lora/*/consent.yml STUDIO/lora/*/evidence/*
+    find STUDIO/lora/merethe/sources STUDIO/lora/merethe/dataset -type f -exec chmod 600 {} +
+
+The committed renders and `selfies/manifest.js` are static and need no gate.
 
 ## Consent and source rights
 
-Likeness generation and each Replicate image upload require a private
-private consent record with written subject permission for `likeness_generation` and
+Likeness generation and each Replicate image upload require a consent record
+with written subject permission for `likeness_generation` and
 `provider_processing`. Dataset preparation additionally requires explicit
 `model_training` and `model_retention` permission, plus `training_use` rights
 for every source set. Merethe's source evidence must cover `me2_archive` and
 `additional_images`; ZIP upload and model training additionally require a
 separate `training_dataset` rights entry. Model publication and distribution
-are independent permissions and default to false.
+are independent permissions and default to false; the three subject records
+here carry the operator's 2026-11-24 approval for both.
 
 Copy `consent.example.yml` to the local
 `merethe/consent.yml`. Record written subject permission in a
@@ -314,8 +327,8 @@ set. A public webpage is provenance, not permission to train or send
 photographs to a provider. The evidence directory must be mode 0700 and each
 record mode 0600. The gate reads but never creates or infers permission.
 
-The repository ignores new subject data, but the existing source photographs
-remain in Git history. Ignore rules do not untrack files or erase earlier
+The repository ignores new untracked subject data; the approved records named
+in Privacy are tracked. Ignore rules do not untrack files or erase earlier
 commits. Repository visibility and history cleanup remain separate operator
 actions.
 
