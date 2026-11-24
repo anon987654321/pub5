@@ -51,7 +51,8 @@ class TestStudioLoraCli < Minitest::Test
       assert_equal true, report.fetch("read_only")
       assert_equal 0, report.fetch("provider_calls")
       assert_equal false, report.fetch("training_started")
-      assert_equal quality, report.fetch("quality")
+      assert_equal quality.fetch("state"), report.fetch("state")
+      assert_equal quality.fetch("subjects"), report.fetch("subjects")
     end
   end
 
