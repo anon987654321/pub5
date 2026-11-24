@@ -50,9 +50,9 @@ class NvdCveTest < ActiveSupport::TestCase
   test "one CVE discovered for two ports remains one advisory linked to both" do
     payload = {
       "id" => "CVE-2026-44002",
-      "descriptions" => [{ "value" => "A sample vulnerability affecting multiple packages" }],
+      "descriptions" => [ { "value" => "A sample vulnerability affecting multiple packages" } ],
       "published" => "2026-09-01T12:00:00.000",
-      "metrics" => { "cvssMetricV31" => [{ "cvssData" => { "baseScore" => 8.1 } }] }
+      "metrics" => { "cvssMetricV31" => [ { "cvssData" => { "baseScore" => 8.1 } } ] },
     }
 
     first_record = NvdCve.new(@first).send(:record, payload)

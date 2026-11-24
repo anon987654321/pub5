@@ -50,7 +50,7 @@ class Dependency < ApplicationRecord
     }
     nodes = { port.id => root }
     edges = []
-    frontier = [port]
+    frontier = [ port ]
     depth = 0
     truncated = false
 
