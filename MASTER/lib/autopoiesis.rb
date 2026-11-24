@@ -75,7 +75,7 @@ module Master
           schema: 1,
           last_regeneration: nil,
           components: [
-            { "id" => "trace_store", "kind" => "infrastructure", "path" => "MASTER/lib/stigmergy/trace_store.rb", "status" => "healthy", "regenerated_at" => nil },
+            { "id" => "trace_store", "kind" => "infrastructure", "path" => "MASTER/lib/stigmergy.rb", "status" => "healthy", "regenerated_at" => nil },
             { "id" => "polish_discovery", "kind" => "scanner", "path" => "MASTER/lib/polish/discovery.rb", "status" => "healthy", "regenerated_at" => nil },
             { "id" => "polish_opportunity", "kind" => "model", "path" => "MASTER/lib/polish/opportunity.rb", "status" => "healthy", "regenerated_at" => nil }
           ]

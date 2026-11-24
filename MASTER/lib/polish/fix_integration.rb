@@ -14,14 +14,14 @@
 
 require_relative "discovery"
 require_relative "opportunity"
-require_relative "../stigmergy/trace_store"
+require_relative "../stigmergy"
 require_relative "../autopoiesis"
 
 module Polish
   class FixIntegration
     def initialize(repo_root:)
       @repo_root = File.expand_path(repo_root)
-      @traces = Stigmergy::TraceStore.new
+      @traces = Master::Stigmergy::TraceStore.new
       @discovery = Discovery.new(repo_root: @repo_root, trace_store: @traces)
       @auto = Autopoiesis::Kernel.new(repo_root: @repo_root, trace_store: @traces)
     end

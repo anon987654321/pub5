@@ -20,6 +20,7 @@ require "fileutils"
 require "minitest/autorun"
 require_relative "../../lib/agent/agent_cli"
 require_relative "../../lib/autopoiesis"
+require_relative "../../lib/stigmergy"
 
 # The router loads these lazily; the suite names them directly.
 %w[bare_scan law_index status_view receipts openbsd_tier fast_gate falsify
@@ -243,6 +244,12 @@ module Master
           assert File.binread(output).end_with?("\n"),
                  "generated component JSON must end with the repository-required newline"
         end
+      end
+
+      def test_stigmergy_is_owned_by_master_and_keeps_its_canonical_data_path
+        assert defined?(Master::Stigmergy::TraceStore)
+        assert_equal File.join(master_root, "data", "traces"), Master::Stigmergy::TraceStore::DEFAULT_PATH
+        refute Object.const_defined?(:Stigmergy, false)
       end
 
       def test_autopoiesis_does_not_claim_unimplemented_regeneration

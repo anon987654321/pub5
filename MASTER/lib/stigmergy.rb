@@ -13,9 +13,10 @@ require "time"
 require "fileutils"
 require "securerandom"
 
-module Stigmergy
-  class TraceStore
-    DEFAULT_PATH = File.expand_path("../../data/traces", __dir__)
+module Master
+  module Stigmergy
+    class TraceStore
+    DEFAULT_PATH = File.expand_path("../data/traces", __dir__)
     SCHEMA = 1
 
     attr_reader :root
@@ -112,6 +113,7 @@ module Stigmergy
       return unless path && File.exist?(path)
       dest = File.join(@root, "archive", File.basename(path))
       FileUtils.mv(path, dest)
+    end
     end
   end
 end

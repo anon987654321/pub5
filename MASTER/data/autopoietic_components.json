@@ -5,7 +5,7 @@
     {
       "id": "trace_store",
       "kind": "infrastructure",
-      "path": "MASTER/lib/stigmergy/trace_store.rb",
+      "path": "MASTER/lib/stigmergy.rb",
       "status": "healthy",
       "regenerated_at": null
     },

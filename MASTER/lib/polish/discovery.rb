@@ -8,7 +8,7 @@
 
 require "yaml"
 require_relative "opportunity"
-require_relative "../stigmergy/trace_store"
+require_relative "../stigmergy"
 
 module Polish
   class Discovery
@@ -16,7 +16,7 @@ module Polish
 
     def initialize(repo_root:, trace_store: nil, policy: nil)
       @repo_root = File.expand_path(repo_root)
-      @traces = trace_store || Stigmergy::TraceStore.new
+      @traces = trace_store || Master::Stigmergy::TraceStore.new
       @policy = policy || load_policy
     end
 
