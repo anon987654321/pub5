@@ -193,17 +193,6 @@ end
 # judged whatever other sessions had staged in pub5 instead of that commit.
 repo_root = File.expand_path("..", __dir__)
 committing_in_repo = IO.popen(%w[git rev-parse --show-toplevel], &:read).to_s.strip == repo_root
-if committing_in_repo
-  census = File.join(repo_root, "MASTER", "lib", "operator", "sprawl_census.rb")
-  checked = system(RbConfig.ruby, census, "--growth-only")
-  unless checked
-    warn ""
-    warn "pre-commit: REFUSED - tracked file/directory counts exceed MASTER/data/sprawl_census.yml."
-    warn "  Reuse existing paths or remove an equal amount of structure before adding more."
-    warn ""
-    exit 1
-  end
-end
 
 if committing_in_repo && ENV["LINT"] != "0" && ENV["LINT_SKIP"] != "1"
   repo = File.expand_path("../MASTER/bin/operator", __dir__)

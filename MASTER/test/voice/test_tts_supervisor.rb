@@ -162,6 +162,30 @@ class TestTtsSupervisor < Minitest::Test
     end
   end
 
+  def test_replace_worker_recovers_an_unowned_socket_without_a_listener
+    Dir.mktmpdir("tts", "/tmp") do |root|
+      FileUtils.mkdir_p(File.join(root, ".master"))
+      Sup.stub(:pool_size, 2) do
+        @pids.delete(0)
+        path = Sup.socket_path(root, index: 0)
+        server = UNIXServer.new(path)
+        server.close
+        spawned = false
+
+        Sup.stub(:spawn_daemon, ->(**_options) { spawned = true }) do
+          Sup.stub(:wait_for_socket, ->(*) { true }) do
+            assert Sup.replace_worker(root:, path:, index: 0)
+          end
+        end
+
+        assert spawned, "a refused socket is stale and must not block a replacement"
+        refute File.exist?(path), "the stale socket path must be removed before replacement"
+      ensure
+        server&.close
+      end
+    end
+  end
+
   def test_retire_socket_rejects_a_noncanonical_path_without_touching_slot_zero
     Dir.mktmpdir("master_tts_bad_path") do |root|
       FileUtils.mkdir_p(File.join(root, ".master"))

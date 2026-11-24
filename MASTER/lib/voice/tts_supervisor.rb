@@ -164,13 +164,16 @@ module Master
       #
       # Callers hold the pool-slot lock: ensure_pool_worker! is the only one.
       def replace_worker(root:, path:, index:)
-        # If the path exists but this process has no child identity for the slot,
-        # it may be owned by another MASTER. Leave both socket and worker alone.
+        # A path without our child identity may belong to another MASTER. Keep a
+        # responsive or merely busy socket intact; a refused UNIX connection is
+        # the narrow, OS-proven stale case that no worker owns.
         if (File.exist?(path) || File.symlink?(path)) && !@daemon_pids.key?(index)
-          Master::Trace::Dmesg.status(
-            "tts0", "slot #{index} has an unowned socket path; refusing to unlink or replace it", io: $stderr
-          )
-          return false
+          unless stale_socket?(path)
+            Master::Trace::Dmesg.status(
+              "tts0", "slot #{index} has a reachable or unverified external socket; leaving it intact", io: $stderr
+            )
+            return false
+          end
         end
 
         if @daemon_pids.key?(index)
@@ -322,6 +325,17 @@ module Master
         end
       rescue SystemCallError, EOFError, IOError => e
         Master::Ground::Swallow.log(e, context: "TtsSupervisor.socket_alive?")
+        false
+      end
+
+      def stale_socket?(path)
+        return false unless File.socket?(path)
+
+        UNIXSocket.open(path) { |_socket| }
+        false
+      rescue Errno::ECONNREFUSED, Errno::ENOENT
+        true
+      rescue SystemCallError, IOError
         false
       end
 
