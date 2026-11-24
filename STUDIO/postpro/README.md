@@ -1,6 +1,6 @@
 # postpro
 
-Historical source and behavioral decisions from `pub`, `pub2`, `pub3` and the Git history of `pub4` are indexed in [ARCHAEOLOGY.md](#postpro-archaeological-recovery-record). It distinguishes restored effects from intentionally retired mechanisms.
+Historical source and behavioral decisions from `pub`, `pub2`, `pub3` and the Git history of `pub4` are indexed in [Postpro archaeological recovery record](#postpro-archaeological-recovery-record). It distinguishes restored effects from intentionally retired mechanisms.
 
 Startup diagnostics, dependency probing and the explicit opt-in dependency-installation path live in `bootstrap.rb`; optional per-effect texture/contrast diagnostics live in `explain.rb`. Loading the entrypoint is observational; `rake postpro:bootstrap` is the intentional installation command.
 
@@ -30,7 +30,7 @@ command line, one subject per file in the load order `POSTPRO_LIB` names. Video 
 processes), so neither file becomes another entrypoint monolith. `--vocab-check` reads
 `postpro.rb`, `legacy_effects.rb`, `dilla_analog.rb`, `uncanny.rb`, `motion.rb`, `motion_process.rb` and every `lib/` file as one source.
 `legacy_effects.rb` holds creative effects recovered from the older `pub/postpro` line, and
-`LEGACY_RESTORE.md` records which of them already had current equivalents. The file `dilla_analog.rb` translates mechanisms
+`Legacy Postpro restore section` records which of them already had current equivalents. The file `dilla_analog.rb` translates mechanisms
 from dilla's analog chains into still images, so that temporal wow and flutter become spatial
 registration error. The file `uncanny.rb` measures whether a picture looks rendered,
 `rescue.rb` diagnoses a bad photograph, `frame_set.rb` reads a folder as a set, and `depth.rb`
@@ -57,9 +57,9 @@ The `pub` v12.9/v13.3.14 and `pub2` v14.2 vocabularies are preserved as
 compatibility names and provenance, not parallel runtimes. Five historic names
 already had current equivalents; the other 24 are restored through
 `legacy_effects.rb` and the current dispatcher. The complete name-to-effect
-mapping belongs in [LEGACY_RESTORE.md](#legacy-postpro-restore); the repository
+mapping belongs in [Legacy Postpro restore section](#legacy-postpro-restore); the repository
 lineage and disposition of historic behavior belong in
-[ARCHAEOLOGY.md](#postpro-archaeological-recovery-record).
+[Postpro archaeological recovery record](#postpro-archaeological-recovery-record).
 
 The original interactive workflow remains as an operating concept: professional
 and experimental intensity, random variations, short effect chains, recursive
@@ -171,7 +171,7 @@ will read a sharp cloud as near.
 
 When the `onnxruntime` and `numo-narray` gems and the model weights are present, `depth.rb`
 runs Depth Anything V2 small locally and both effects use its map instead. The weights are
-fetched out of band into `STUDIO/postpro/models/depth/`, never committed, and each frame's
+fetched out of band into the local ignored depth-model cache, never committed, and each frame's
 plane is cached there. That directory does not exist on a fresh checkout. Without the gems or
 the weights everything falls back to the proxies, with one quiet log line.
 
@@ -315,7 +315,7 @@ through `image_presenter.rb`. The replicate tool hands every fresh generation he
 and lora grades its renders the same way. Programmatic invocation goes through
 `Master::Io::ScriptDispatch` under the tool name `postpro`, and natural-language routing goes
 through `Io::MediaIntent` as `/postpro`. Route new path references through those, and do not
-hardcode the file location. `MASTER/tools/postpro` is a compatibility symlink into this folder.
+hardcode the file location. 
 
 The file `video.yml` remains the video-generation recipe contract. Postpro no longer starts a
 separate Ruby process per frame: `postpro.rb --video` streams frames through the live in-process
@@ -364,7 +364,7 @@ The following research preserves provenance and disposition for earlier Postpro 
 
 ### Postpro archaeological recovery record
 
-<sub>Consolidated from `STUDIO/postpro/ARCHAEOLOGY.md`.</sub>
+<sub>Consolidated from `STUDIO/postpro/Postpro archaeological recovery record`.</sub>
 
 Scope: source and history in `anon987654321/pub`, `pub2`, `pub3`, and `pub4`, searched under `postpro`, `Postpro`, and nearby Repligen/Replicate integration names. This is a preservation map, not a claim that old code can be pasted into the current engine unchanged.
 
@@ -389,7 +389,7 @@ Sources:
 
 The early interface was an interactive batch tool: select professional or experimental mode, choose random treatments or a JSON recipe, match file patterns (including recursive patterns), choose 1–5 variations and 1–5 effects per variation, and see progress and aggregate statistics. It documented retry-on-failure, rotation/debug logging, RGB/RGBA handling, and finishing/polish steps. Professional mode was deliberately restrained; experimental mode admitted stronger distortion. JSON recipes could set simple intensities or effect-specific parameters such as blend modes and borders.
 
-The v13.3.14 specification enumerated 29 user-facing effects. That vocabulary is preserved in `LEGACY_RESTORE.md` and `legacy_effects.rb`; equivalent present-day implementations are preferred over copying the old pixel math where a measured stock, H&D curve, grain model, or current effect is more truthful.
+The v13.3.14 specification enumerated 29 user-facing effects. That vocabulary is preserved in `Legacy Postpro restore section` and `legacy_effects.rb`; equivalent present-day implementations are preferred over copying the old pixel math where a measured stock, H&D curve, grain model, or current effect is more truthful.
 
 Historical wording worth retaining as provenance:
 
@@ -416,12 +416,12 @@ The documented core had Portra, Vision3, Velvia and Tri-X; camera-profile correc
 
 ### `pub4`: measured house grade and restoration
 
-The present implementation lives under `STUDIO/postpro/`, with `lib/` holding the effect dispatch, presets, stocks, grain, random chains, recipe handling, pipeline, sidecars, audits and CLI. `motion.rb` owns the video grading contract and CLI, while `motion_process.rb` owns bounded frame IO, timestamp checks and subprocess lifecycles; `MASTER/tools/postpro` is a compatibility symlink.
+The present implementation lives under `STUDIO/postpro/`, with `lib/` holding the effect dispatch, presets, stocks, grain, random chains, recipe handling, pipeline, sidecars, audits and CLI. `motion.rb` owns the video grading contract and CLI, while `motion_process.rb` owns bounded frame IO, timestamp checks and subprocess lifecycles.
 
 The camera archive has a separate lineage and should not be mistaken for film emulation. The 2019 `pub/postpro/cameras_lightroom_vsco.tgz` held 1,250 DCPs covering 121 camera bodies, ten stock labels and six VSCO tone variants. The recovery commit records that `ToneCurve`, `LookTable` and `HueSatDeltas` were empty in all 1,250 files; the same body's stock variants often shared one matrix (Portra 400 and Fuji 400H were byte-identical), with 22 distinct matrices observed among the 33 bodies carrying a given profile. The recovered 3×3 values are camera sensor-calibration data, not film stocks or emulsion looks. The original implementation applied them directly to an already rendered image; pub5 now preserves the evidence but refuses that path until the transform domain and direction are explicit and tested. Source: [pub4 DCP recovery commit](https://github.com/anon987654321/pub4/commit/d3b5107911818b7c51e06e540b68a73d56f36784).
 
 Current recovery anchors:
-- [LEGACY_RESTORE.md](#legacy-postpro-restore)
+- [Legacy Postpro restore section](#legacy-postpro-restore)
 - [legacy_effects.rb](legacy_effects.rb)
 - [recipe.rb](lib/recipe.rb)
 - [random_chain.rb](lib/random_chain.rb)
@@ -434,8 +434,8 @@ The new engine preserves the original user intent but intentionally changes the 
 
 The two documents that were folded into implementation—not lost to an accidental delete—are
 still recoverable at their exact historical snapshot:
-- [`STUDIO/AMBITION.md` — all 168 proposals](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md)
-- [`STUDIO/lora/PHOTOGRAPHY.md` — the four-layer photography model and refitted visual laws](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/lora/PHOTOGRAPHY.md)
+- [Pub4 STUDIO/AMBITION.md — all 168 proposals](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md)
+- [Pub4 STUDIO/lora/PHOTOGRAPHY.md — the four-layer photography model and refitted visual laws](https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/lora/PHOTOGRAPHY.md)
 - [The later folding/deletion commit](https://github.com/anon987654321/pub4/commit/80709c0712559031fef10fe486f530ac35b185fc), whose message says those ideas now stand beside the code that uses them.
 
 This record preserves the trail without reintroducing two competing top-level specifications.
@@ -446,7 +446,7 @@ grain, halation and highlight shoulder) is the grade's proper scope.
 
 | Historical visual law or proposal | Current owner / status |
 | --- | --- |
-| Strong centres, levels of scale, squint test, least astonishment | Prompt/selection principles; `STUDIO/replicate/craft.rb` and current generation prompts. They are not all objectively measurable gates. |
+| Strong centres, levels of scale, squint test, least astonishment | Prompt/selection principles; current generation prompts and current generation prompts. They are not all objectively measurable gates. |
 | Define errors out / poka-yoke | `rescue.rb` states geometry, focus, motion blur, expression and clipped source highlights honestly instead of claiming a grade can repair them. |
 | Parse, don't validate; refuse unsupported settings | Replicate's model-specific input vocabularies, `Chain.problems`, and Postpro's checked recipe/preset vocabularies. |
 | DRY for near-identical frames | `frame_set.rb` fingerprints and near-duplicate detection. |
@@ -483,7 +483,7 @@ obscure:
 
 | Historical capability or idea | Present disposition |
 | --- | --- |
-| 29 named creative effects | All 29 names have current equivalents or compatibility implementations; see `LEGACY_RESTORE.md`. |
+| 29 named creative effects | All 29 names have current equivalents or compatibility implementations; see `Legacy Postpro restore section`. |
 | Professional vs experimental intensity lanes | Evolved into coherent named random lanes and opt-in `--rough` / `--heavy`; not copied as a second independent effects mode. |
 | JSON recipes with effect-specific options | Preserved through `recipe.rb`, `RECIPE_ALLOWED` and the shared grade dispatcher; vocabulary audit tests reachability. |
 | Recursive input patterns and multi-variation batches | Present-day batch/prompted entry points are the supported interface; output names, sidecars and family contact sheets are more explicit. |
@@ -536,9 +536,9 @@ This document is a historical map, not a test receipt. Current effect reachabili
 
 ### Legacy Postpro restore
 
-<sub>Consolidated from `STUDIO/postpro/LEGACY_RESTORE.md`.</sub>
+<sub>Consolidated from `STUDIO/postpro/Legacy Postpro restore section`.</sub>
 
-For the repository-by-repository lineage and the disposition of other historical behaviors, see [ARCHAEOLOGY.md](#postpro-archaeological-recovery-record).
+For the repository-by-repository lineage and the disposition of other historical behaviors, see [Postpro archaeological recovery record](#postpro-archaeological-recovery-record).
 
 The archived `anon987654321/pub/postpro` v13.3.14 line exposed 29 user-facing creative
 effects.
@@ -598,7 +598,7 @@ The old internal `apply_effects`, `apply_effects_from_recipe` and random driver
 functions are not restored because current postpro already has a safer recipe engine,
 measured random-chain generator, provenance, and validation.
 
-This restore does not resurrect the old frame-by-frame video implementation verbatim. The experiment introduced in [9ac4b113](https://github.com/anon987654321/pub4/commit/9ac4b11332762333da58f8ec4358eec7cbbcb1d4) was removed in [ec2cdf45](https://github.com/anon987654321/pub4/commit/ec2cdf458f6f571692fea1ea97e8335881b56135): it launched a fresh Ruby interpreter for every frame (about 0.46 seconds of boot each), measured roughly an hour per minute of 1080p against its six-minute estimate, and had two of eight tests time out. `motion.rb` now recovers the product intent with one process, in-memory frame grading, deterministic moving/held grain, exact rational frame rates for constant-rate sources, audio-copy muxing, atomic final output plus checksum-bearing provenance sidecar, and bounded frames/pixels/runtime/temp bytes (runtime is checked between frames and during subprocess work; a single native frame operation cannot be forcibly interrupted). It refuses variable-rate or frame-count-ambiguous input instead of silently changing timing. Shutter-angle treatment remains a future video-specific effect; the current live grade is reused unchanged rather than inventing a second implementation. The new tests are authored but not executed in this GitHub-only session. See [ARCHAEOLOGY.md](#postpro-archaeological-recovery-record) for the contract.
+This restore does not resurrect the old frame-by-frame video implementation verbatim. The experiment introduced in [9ac4b113](https://github.com/anon987654321/pub4/commit/9ac4b11332762333da58f8ec4358eec7cbbcb1d4) was removed in [ec2cdf45](https://github.com/anon987654321/pub4/commit/ec2cdf458f6f571692fea1ea97e8335881b56135): it launched a fresh Ruby interpreter for every frame (about 0.46 seconds of boot each), measured roughly an hour per minute of 1080p against its six-minute estimate, and had two of eight tests time out. `motion.rb` now recovers the product intent with one process, in-memory frame grading, deterministic moving/held grain, exact rational frame rates for constant-rate sources, audio-copy muxing, atomic final output plus checksum-bearing provenance sidecar, and bounded frames/pixels/runtime/temp bytes (runtime is checked between frames and during subprocess work; a single native frame operation cannot be forcibly interrupted). It refuses variable-rate or frame-count-ambiguous input instead of silently changing timing. Shutter-angle treatment remains a future video-specific effect; the current live grade is reused unchanged rather than inventing a second implementation. The new tests are authored but not executed in this GitHub-only session. See [Postpro archaeological recovery record](#postpro-archaeological-recovery-record) for the contract.
 
 ## Dilla analog bridge
 

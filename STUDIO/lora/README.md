@@ -13,12 +13,12 @@ This project owns subject-aware training, inference, evaluation and photography 
 > `STUDIO/lora/guides.yml` cites it as its source. The body below is verbatim
 > as recovered. Where the body names pub4-era state, the pub5 mapping is:
 > the four layers are runtime data in `STUDIO/lora/guides.yml` (`layers:`),
-> the house grade default lives in `STUDIO/postpro/postpro.rb` and
-> `postpro/lib/presets.rb`, and §4's uncanny metrics are measured by
-> `STUDIO/postpro/uncanny.rb` with its ratchet. MASTER's rule file in this
+> the house grade default lives in `../postpro/postpro.rb` and
+> `../postpro/lib/presets.rb`, and §4's uncanny metrics are measured by
+> `../postpro/uncanny.rb` with its ratchet. MASTER's rule file in this
 > repository is `MASTER/data/laws.yml`; the refit section below keeps the
 > historical wording. The repligen chain engine did not migrate; the
-> generation lane is `STUDIO/lora/` with `STUDIO/replicate/client.rb`.
+> generation lane is `./` with `../replicate/client.rb`.
 
 Research note, 2026-08-25. Written because three STUDIO tools now depend on the
 answer and none of them had it written down: **lora** decides what a dataset
@@ -283,7 +283,7 @@ provenance for the subject and campaign context; a public page or photograph
 does not establish consent for likeness generation, provider processing,
 training, publication or distribution.
 
-This subject lives beside the other trained identities at `STUDIO/lora/merethe/`. Generated stills land directly in `STUDIO/lora/`; the subject directory holds private model setup, sources, data and weights.
+This subject lives beside the other trained identities at `STUDIO/lora/merethe/`. Generated stills land directly in `./`; the subject directory holds private model setup, sources, data and weights.
 
 ## Privacy
 
@@ -303,7 +303,7 @@ unless the subject separately agrees to publication and distribution.
 ## Consent and source rights
 
 Likeness generation and each Replicate image upload require a private
-`consent.yml` with written subject permission for `likeness_generation` and
+private consent record with written subject permission for `likeness_generation` and
 `provider_processing`. Dataset preparation additionally requires explicit
 `model_training` and `model_retention` permission, plus `training_use` rights
 for every source set. Merethe's source evidence must cover `me2_archive` and
@@ -311,8 +311,8 @@ for every source set. Merethe's source evidence must cover `me2_archive` and
 separate `training_dataset` rights entry. Model publication and distribution
 are independent permissions and default to false.
 
-Copy `STUDIO/lora/consent.example.yml` to the local
-`STUDIO/lora/merethe/consent.yml`. Record written subject permission in a
+Copy `consent.example.yml` to the local
+`merethe/consent.yml`. Record written subject permission in a
 private file under `evidence/`; use separate rights evidence for each source
 set. A public webpage is provenance, not permission to train or send
 photographs to a provider. The evidence directory must be mode 0700 and each
@@ -355,7 +355,7 @@ this avoids teaching a general-purpose identity model from intimate images.
 Four clean portraits are not enough for a reliable first training. Add at least
 eight more suitable photos to reach the 12-image minimum; eight to fourteen
 additional photos (12–18 total) is the preferred range. Put them in the local,
-ignored folder \`STUDIO/lora/merethe/sources/additional/\`. Prefer ordinary,
+ignored folder `merethe/sources/additional/`. Prefer ordinary,
 non-intimate photos with her face clearly visible, varied expressions, angles,
 clothing and everyday settings. Avoid filters, stickers, text overlays, heavy
 retouching and repeated near-duplicates. Each image needs a same-basename \`.txt\`
@@ -439,7 +439,7 @@ ruby STUDIO/lora/review.rb --subject merethe --candidate
 ```
 
 The private contact sheet and report are written below
-`STUDIO/lora/merethe/.cache/likeness-review/`. Repeat for Johann and Ragnhild.
+the subject's private likeness-review cache. Repeat for Johann and Ragnhild.
 Only after the person is recognisable in every candidate should the exact
 immutable model version be entered in that subject's local
 `subject.env` as `LIKELINESS_REVIEWED_VERSION`.
@@ -483,8 +483,8 @@ after generation and training, not a substitute for either.
 
 ## Subject environment
 
-Copy \`STUDIO/lora/subject.env.example\` to the ignored local
-\`STUDIO/lora/merethe/subject.env\` when private subject configuration is
+Copy `subject.env.example` to the ignored local
+`merethe/subject.env` when private subject configuration is
 needed. Keep the descriptor and model settings outside Git. A private training
 manifest may live under \`weights/merethe/replicate_training.json\`.
 Do not put API tokens in this file.

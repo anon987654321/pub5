@@ -225,7 +225,7 @@ catalog whenever supplied.
 Users in each city get names in that city's
 language through Brgen::CityContent.with_faker_locale. Setting Faker::Config.locale alone gives
 English, because Faker's data is tagged nb-NO while the app declares only bare locales. The
-photographs the seeds attach are described in config/demo_media/README.md.
+photographs the seeds attach are described in the [Demo media section](#demo-media).
 
 ## Affiliate income
 

@@ -116,7 +116,7 @@ voice of the creative work.
   They are used for local comparison only and are not uploaded or included in
   candidate-render requests; the candidate render uses the already trained,
   immutable LoRA version and the selected scene prompt.
-  The subject's private `consent.yml` must separately grant
+  The subject's private consent record must separately grant
   `subject_consent.likeness_review: true` and include
   `likeness_review` in its subject-consent evidence `covers`; its
   `source_rights` must grant `review_use: true` and include an
@@ -185,7 +185,7 @@ voice of the creative work.
   `ruby STUDIO/lora/lora.rb review --subject NAME` and MASTER's existing-series
   review request inspect the latest completed series without candidate renders.
   Candidate renders stay
-  under the subject's ignored `.cache/likeness-review/` tree; they cannot enter
+  under the subject's ignored likeness-review cache; they cannot enter
   the published selfie folder or approve a model.
   The candidate step still requires all training consent and source-rights
   permissions; ZIP uploads also require a regular, singly-linked mode-0600 file

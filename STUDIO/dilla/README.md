@@ -386,11 +386,10 @@ to Go"; Fantastic <- Herbie Hancock "You'll Know When You Get There".
 
 The original understanding document and the audit commit were written
 2026-11-22 but lost with the recycle before push. This copy was rebuilt
-from the surviving audit script (`scripts/authentics_audit.py`), the
-curated-picks script (`scripts/update_curated_picks.py`) and the
-measurement selftest record (`download/dilla_reference/analysis/
-pipeline_selftest.json`). The content matches the lost commit's
-described state; the git history of the rebuild starts fresh.
+from the retained audit findings, curated-picks record and measurement
+self-test result. The one-off scripts used to collect them are not part of
+the maintained source tree. The content matches the lost commit's described
+state; the git history of the rebuild starts fresh.
 
 
 ### STUDIO/dilla/render_evidence — measured canon and render verdict
