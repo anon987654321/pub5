@@ -181,10 +181,12 @@ reference-root` answer the same policy for MASTER. `out/`, `samples/` and
 One take is the exception: `dilla.wav` sits beside `dilla.rb` with its
 `.provenance.json`, `.quality.json` and `.session.json` sidecars, so a fresh
 checkout can audition the engine before rendering anything. It is the only
-audio file tracked in the repository. Rebuild it deliberately with
-`--overwrite`; the seed in its provenance reproduces it byte for byte:
+audio file tracked in the repository, and it is a canon-checked take: the
+`j_dilla` style (players, Ebm, 93 BPM, 24 bars), measured 6/6 inside the
+canon envelope in `render_evidence/render_vs_canon_20261124.json`. Rebuild it
+deliberately with `--overwrite`; the seed reproduces it byte for byte:
 
-    ruby STUDIO/dilla/dilla.rb --progression 20 --bars 8 --seed 304501763 \
+    ruby STUDIO/dilla/dilla.rb --style j_dilla --bars 24 --seed 20261124 \
       --out STUDIO/dilla/dilla.wav --overwrite
 
 ## RG-69 browser renderer

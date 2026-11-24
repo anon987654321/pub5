@@ -1,7 +1,7 @@
 {
   "engine": "dilla",
   "version": "4.3.0",
-  "created_at": "2026-11-24T18:42:18Z",
+  "created_at": "2026-11-24T19:02:14Z",
   "ruby": "3.3.13",
   "ruby_engine": "ruby",
   "ruby_platform": "x86_64-linux-gnu",
@@ -9,13 +9,13 @@
     "mode": "render",
     "style": "j_dilla",
     "renderer_path": "/workspace/project/pub5/STUDIO/dilla/dilla.rb",
-    "renderer_sha256": "b4056f4074a350245e20a2047cd688a6c538fe3aa2bb5c3f95f4f7de84d1cc32",
+    "renderer_sha256": "5ec67197fee1512ce51bb466f39e7dcb13e60eef27c058cd2c7853652f232c58",
     "music_theory_path": "/workspace/project/pub5/STUDIO/dilla/data/music_theory.json",
     "music_theory_sha256": "2eb81ba7392f216db986df7491394482cc676dee302a6e7a75073b9f9b1fe8e9",
     "engine_sources": {
       "dilla.rb": {
         "path": "/workspace/project/pub5/STUDIO/dilla/dilla.rb",
-        "sha256": "b4056f4074a350245e20a2047cd688a6c538fe3aa2bb5c3f95f4f7de84d1cc32"
+        "sha256": "5ec67197fee1512ce51bb466f39e7dcb13e60eef27c058cd2c7853652f232c58"
       },
       "analog_core.rb": {
         "path": "/workspace/project/pub5/STUDIO/dilla/analog_core.rb",
@@ -43,11 +43,11 @@
       }
     }
   },
-  "seed": 304501763,
-  "performer": "break_biscuit",
+  "seed": 20261124,
+  "performer": "dusty_44",
   "source": {
-    "progression_id": "minor11_ballad_drift",
-    "progression_tier": "engine_study",
+    "progression_id": "players",
+    "progression_tier": "recovered",
     "sample_rights_status": "not_used",
     "sample": {
       "status": "not_used"
@@ -60,7 +60,7 @@
   },
   "flags": {
     "out": "STUDIO/dilla/dilla.wav",
-    "progression": "20",
+    "progression": null,
     "drums": null,
     "midi": false,
     "midi_out": null,
@@ -70,7 +70,7 @@
     "profile": null,
     "groove": null,
     "bpm": null,
-    "bars": "8",
+    "bars": "24",
     "kit": null,
     "voice": null,
     "rig": null,
@@ -86,21 +86,21 @@
   },
   "render": {
     "wav": "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
-    "duration_s": 32.6,
+    "duration_s": 64.54,
     "lufs": -9.5,
-    "bytes": 5750688,
-    "sha256": "aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423"
+    "bytes": 11384104,
+    "sha256": "636198844d3ae439adb5db8ef52ce34f4384554190f2a2be206786eeb49dc2ce"
   },
   "files": {
     "quality": {
       "path": "/workspace/project/pub5/STUDIO/dilla/dilla.quality.json",
       "bytes": 345,
-      "sha256": "27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6"
+      "sha256": "875441b7bf3ef313b32fad020fe4e72254a430ea815f3f0ff76b54485c13f6ec"
     },
     "session": {
       "path": "/workspace/project/pub5/STUDIO/dilla/dilla.session.json",
-      "bytes": 731,
-      "sha256": "116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6"
+      "bytes": 683,
+      "sha256": "c2b11a76e18ed985bda342e6ff0f55746b3d7f1c32ac6c644060c5e2a0ee4a31"
     }
   }
 }

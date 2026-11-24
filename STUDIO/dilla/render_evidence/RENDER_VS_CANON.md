@@ -68,3 +68,77 @@ off-8th residuals; mix chroma (FFT 8192 @ 22.05 kHz, 55–2200 Hz) + Krumhansl.
 Canon: 13 measured rows from the operator-curated 22-track list recovered
 from pub git history (index.html a3185f4), SoundCloud title-matched with
 honest match classes.
+
+---
+
+# Re-check 2026-11-24 — engine 4.3.0, take players / seed 20261124
+
+The verdict above was measured on 2026-11-22, before the analog work in
+dilla 4.3.0 (per-stroke tune/decay drift, velocity-shaped click and crack, a
+soft-knee tape stage). Nothing in the earlier record covers that engine, so
+the protocol was re-run on the current one instead of being inherited.
+
+Machine-readable record: `render_vs_canon_20261124.json`.
+
+## Take identity
+
+- progression `players` (recovered), Ebm, 93 BPM, 24 bars, seed 20261124
+- style `j_dilla` -> drums `dilla_shadow_full`, kit `kit_dust`, voice
+  `rhodes_mark1`, rig `dilla_night`, groove `los_angeles`, sonitex subtle
+- rendered with `--overwrite`; wav SHA-256 `6361988…` is the file in
+  `STUDIO/dilla/dilla.wav`, so the numbers below describe the committed audio
+
+## Metric comparison (drums stem, n=13 canon rows)
+
+| metric | render | canon median | canon range | verdict |
+|---|---|---|---|---|
+| drum swing position (%) | 48.6 | 49.6 | 45.0 – 52.8 | PASS |
+| on-grid share (16-slot) | 0.39 | 0.66 | 0.35 – 1.00 | PASS |
+| off-8th residual (ms) | -13.6 | -1.5 | -47.7 – +19.8 | PASS |
+| kick low-band share (<130 Hz) | 0.738 | 0.672 | 0.375 – 0.807 | PASS |
+| snare mid-band share (bp@400) | 0.082 | 0.099 | 0.055 – 0.202 | PASS |
+| hat high-band share (>5 kHz) | 0.015 | 0.018 | 0.002 – 0.033 | PASS |
+
+6/6 inside the canon envelope. Tempo: drums raw 62 folds to 93, mix locks
+93.1 directly, inside the 85–95 window; 11/13 canon rows carry a mirror in
+that window too.
+
+## What the engine change did to the numbers
+
+The same take was measured twice, before and after one edit.
+
+| variant | swing % | on-grid | off-8th (ms) | verdict |
+|---|---|---|---|---|
+| with a 5 %-probability ±32 ms "scatter tail" | 47.7 | 0.39 | -21.9 | 6/6 |
+| tail removed (committed) | 48.6 | 0.39 | -13.6 | 6/6 |
+
+Both pass. The tail was removed anyway: it was a claim I had written into the
+code as a comment ("measured records carry a scatter tail") without a canon
+row behind it, and removing it moved the off-8th residual from -21.9 ms back
+toward the canon median of -1.5 ms rather than away from it.
+
+## Method trap, recorded so nobody repeats it
+
+A two-stem demucs pass (`--two-stems=drums`) is **not** comparable to this
+record. On the tail variant it reported an off-8th residual of **+36.3 ms**
+and swing 53.8 %, both outside canon, while the four-stem pipeline measured
+**-21.9 ms** and 47.7 % on the identical file. The two-stem "drums" output
+leaks bass and chord material into the stem and drags the onset picker.
+Canon comparisons use four stems or nothing.
+
+## Honest gaps
+
+- **Nobody has listened to this take.** `dilla.audit.json` says
+  `technical_state: PASS`, `state: INCONCLUSIVE` because the listening
+  checklist is unsigned. The canon metrics bound the groove and the band
+  balance; they do not certify that it moves anyone.
+- Key estimate: F minor, r=0.71, against a declared Eb progression. The
+  analyzer's own `players` canon row estimates F major at r=0.26, and chroma
+  cosine against the reference `players` mix is 0.844 (0.734 in the 2026-11-22
+  record), so the harmony space matches even though the single-method key
+  estimate disagrees. Not treated as evidence of a wrong key.
+- Demucs here is 4.1.0 on torch 2.15 CPU; the canon rows were separated on the
+  earlier host. Same model (`htdemucs`), same analyzer, different release.
+- Levels not compared; canon rows are transcoded previews.
+- `sample_flip=null`: no Dilla audio material is used. The claim is measured
+  groove, band balance and harmony, not sample identity.

@@ -1,38 +1,38 @@
 {
   "schema_version": 1,
-  "created_at": "2026-11-24T18:44:05Z",
+  "created_at": "2026-11-24T19:02:25Z",
   "technical_state": "PASS",
   "state": "INCONCLUSIVE",
   "audio": {
     "path": "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
-    "sha256": "aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423",
-    "bytes": 5750688,
+    "sha256": "636198844d3ae439adb5db8ef52ce34f4384554190f2a2be206786eeb49dc2ce",
+    "bytes": 11384104,
     "sample_rate": 44100,
     "channels": 2,
     "bits_per_sample": 16,
-    "duration_s": 32.6
+    "duration_s": 64.535
   },
   "session": {
-    "seed": 304501763,
-    "progression": "minor11_ballad_drift",
-    "bpm": 64,
-    "bars": 8,
+    "seed": 20261124,
+    "progression": "players",
+    "bpm": 93,
+    "bars": 24,
     "arrangement": null,
-    "performer": "break_biscuit",
+    "performer": "dusty_44",
     "drums": "dilla_shadow_full",
     "groove_profile": "los_angeles"
   },
   "quality": {
-    "peak_dbfs": -1.03,
-    "rms_dbfs": -11.61,
-    "crest_db": 10.58,
+    "peak_dbfs": -1.54,
+    "rms_dbfs": -11.11,
+    "crest_db": 9.57,
     "lufs_estimate": -9.5,
     "stem_energy_share": {
-      "drums": 0.248,
-      "sub": 0.023,
-      "bass": 0.338,
-      "chords": 0.281,
-      "melody": 0.11,
+      "drums": 0.287,
+      "sub": 0.027,
+      "bass": 0.339,
+      "chords": 0.28,
+      "melody": 0.067,
       "foley": 0.0,
       "sample": 0.0
     }
@@ -41,12 +41,12 @@
     "quality": {
       "path": "/workspace/project/pub5/STUDIO/dilla/dilla.quality.json",
       "bytes": 345,
-      "sha256": "27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6"
+      "sha256": "875441b7bf3ef313b32fad020fe4e72254a430ea815f3f0ff76b54485c13f6ec"
     },
     "session": {
       "path": "/workspace/project/pub5/STUDIO/dilla/dilla.session.json",
-      "bytes": 731,
-      "sha256": "116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6"
+      "bytes": 683,
+      "sha256": "c2b11a76e18ed985bda342e6ff0f55746b3d7f1c32ac6c644060c5e2a0ee4a31"
     }
   },
   "file_properties": {
@@ -70,7 +70,7 @@
     {
       "name": "wav_structure",
       "state": "PASS",
-      "detail": "RIFF/WAVE PCM 2ch 44100Hz 16-bit; 32.6s"
+      "detail": "RIFF/WAVE PCM 2ch 44100Hz 16-bit; 64.535s"
     },
     {
       "name": "wav_delivery_format",
@@ -80,12 +80,12 @@
     {
       "name": "wav_sha256",
       "state": "PASS",
-      "detail": "actual aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423; recorded aaa45927c2cc9da6333d80d01ed4110fbdd4a19fa512e0cfa359da35cd9e9423"
+      "detail": "actual 636198844d3ae439adb5db8ef52ce34f4384554190f2a2be206786eeb49dc2ce; recorded 636198844d3ae439adb5db8ef52ce34f4384554190f2a2be206786eeb49dc2ce"
     },
     {
       "name": "wav_bytes",
       "state": "PASS",
-      "detail": "actual 5750688; recorded 5750688"
+      "detail": "actual 11384104; recorded 11384104"
     },
     {
       "name": "wav_path",
@@ -105,7 +105,7 @@
     {
       "name": "quality_sha256",
       "state": "PASS",
-      "detail": "actual 27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6; recorded 27bcd14f9e0c178376bb84221adbb0f307f501d54a9dcb89df24e78d1beb54b6"
+      "detail": "actual 875441b7bf3ef313b32fad020fe4e72254a430ea815f3f0ff76b54485c13f6ec; recorded 875441b7bf3ef313b32fad020fe4e72254a430ea815f3f0ff76b54485c13f6ec"
     },
     {
       "name": "session_file",
@@ -115,22 +115,22 @@
     {
       "name": "session_bytes",
       "state": "PASS",
-      "detail": "actual 731; recorded 731"
+      "detail": "actual 683; recorded 683"
     },
     {
       "name": "session_sha256",
       "state": "PASS",
-      "detail": "actual 116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6; recorded 116952f35a6c6b2245a9a2fd77fd4e04a24f09ff5e4b06ae167c5ffdf987c0a6"
+      "detail": "actual c2b11a76e18ed985bda342e6ff0f55746b3d7f1c32ac6c644060c5e2a0ee4a31; recorded c2b11a76e18ed985bda342e6ff0f55746b3d7f1c32ac6c644060c5e2a0ee4a31"
     },
     {
       "name": "seed",
       "state": "PASS",
-      "detail": "session seed 304501763; provenance seed 304501763"
+      "detail": "session seed 20261124; provenance seed 20261124"
     },
     {
       "name": "arrangement",
       "state": "PASS",
-      "detail": "progression \"minor11_ballad_drift\"; bars 8"
+      "detail": "progression \"players\"; bars 24"
     },
     {
       "name": "quality_metrics",
@@ -140,7 +140,7 @@
     {
       "name": "quality_duration",
       "state": "PASS",
-      "detail": "WAV 32.6s; quality report 32.6s"
+      "detail": "WAV 64.535s; quality report 64.54s"
     }
   ],
   "manual_audition": {

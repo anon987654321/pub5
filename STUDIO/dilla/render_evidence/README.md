@@ -11,11 +11,16 @@ over declared harmony; limits stay attached to the numbers.
   curated list (SoundCloud title-matched with honest match classes) + 8 honest
   `no_match` rows. Per-stem band shares, onset grids, swing placement, tempo
   locks, mix chroma/Krumhansl.
-- `render_vs_canon.json` — the closed-loop verdict: the rendered `dilla.wav`
-  take (players, Ebm, 93 BPM, los_angeles) measured with the same analyzer and
-  compared against the canon envelope. 6/6 bounded metrics inside the canon
-  range.
-- `RENDER_VS_CANON.md` — the human-readable verdict with the honest gaps.
+- `render_vs_canon.json` — the 2026-11-22 closed-loop verdict: the rendered
+  `dilla.wav` take (players, Ebm, 93 BPM, los_angeles) measured with the same
+  analyzer and compared against the canon envelope. 6/6 bounded metrics inside
+  the canon range. **Superseded by the 2026-11-24 record below** for any claim
+  about the current engine.
+- `render_vs_canon_20261124.json` — the re-check on engine 4.3.0 (analog
+  drift, velocity-shaped kit, tape stage), take `players` / seed 20261124,
+  which is the wav committed at `STUDIO/dilla/dilla.wav`. 6/6 inside canon.
+- `RENDER_VS_CANON.md` — the human-readable verdicts with the honest gaps,
+  both records, plus the two-stem-vs-four-stem method trap.
 - `tools/` — the pipeline that produced the record:
   - `dilla_stem_analyze.js` — pure Node analyzer (stdin: f32le mono 22050 Hz;
     stdout: one JSON). Band shares, onset flux, tempo autocorrelation, 16-slot

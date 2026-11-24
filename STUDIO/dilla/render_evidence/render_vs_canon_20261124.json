@@ -1,0 +1,290 @@
+{
+  "assembled": "2026-11-24T19:00:42.352Z",
+  "render": {
+    "file": "the rendered take (see session sidecar sha256)",
+    "session_progression": "players (recovered), Ebm, 93 bpm, los_angeles groove, kit_dust, 24 bars",
+    "declared_swing_nominal": 54
+  },
+  "canon": {
+    "rows": 13,
+    "slugs": [
+      "microphone_master",
+      "in_space",
+      "timeless",
+      "motor_city_17",
+      "players",
+      "la_la",
+      "massage_situation",
+      "me_yesterday_corded",
+      "camel",
+      "golden_diva",
+      "due_time",
+      "exhibit_a",
+      "rounded"
+    ],
+    "method": "per stem: band energy shares (kick<130Hz, snare 150-1200Hz bp@400, hats>5kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation 55-200bpm folded to 60-180, 16-slot grid via best-phase quantization (+-45ms), swing from off-8th residuals; mix: chroma (FFT 8192 @22050, 55-2200Hz) + Krumhansl key correlation",
+    "limits": "SoundCloud transcodes decode above 0 dBFS on some rows (peak_dbfs > 0) - levels are relative evidence only; official_preview rows carry 30s windows; key estimates are single-method (Krumhansl) and cross-checks are pending; swing assumes off-8th placement"
+  },
+  "metrics": [
+    {
+      "metric": "drum swing position",
+      "unit": "%",
+      "canon": {
+        "n": 13,
+        "median": 49.6,
+        "min": 45,
+        "max": 52.8
+      },
+      "render": 48.6,
+      "within_canon": true,
+      "note": "measured off-8th placement, not the declared nominal"
+    },
+    {
+      "metric": "on-grid share (16)",
+      "unit": "share",
+      "canon": {
+        "n": 13,
+        "median": 0.66,
+        "min": 0.35,
+        "max": 1
+      },
+      "render": 0.39,
+      "within_canon": true,
+      "note": ""
+    },
+    {
+      "metric": "off-8th residual",
+      "unit": "ms",
+      "canon": {
+        "n": 13,
+        "median": -1.5,
+        "min": -47.7,
+        "max": 19.8
+      },
+      "render": -13.6,
+      "within_canon": true,
+      "note": ""
+    },
+    {
+      "metric": "kick low-band share",
+      "unit": "share",
+      "canon": {
+        "n": 13,
+        "median": 0.672,
+        "min": 0.375,
+        "max": 0.807
+      },
+      "render": 0.738,
+      "within_canon": true,
+      "note": "drums stem, <130Hz"
+    },
+    {
+      "metric": "snare mid-band share",
+      "unit": "share",
+      "canon": {
+        "n": 13,
+        "median": 0.099,
+        "min": 0.055,
+        "max": 0.202
+      },
+      "render": 0.082,
+      "within_canon": true,
+      "note": "drums stem, bp@400"
+    },
+    {
+      "metric": "hat high-band share",
+      "unit": "share",
+      "canon": {
+        "n": 13,
+        "median": 0.018,
+        "min": 0.002,
+        "max": 0.033
+      },
+      "render": 0.015,
+      "within_canon": true,
+      "note": "drums stem, >5kHz"
+    }
+  ],
+  "tempo_verdict": {
+    "render_drums_raw_bpm": 62,
+    "render_drums_fold_candidates": [
+      124,
+      93,
+      82.7
+    ],
+    "render_drums_in_85_95": [
+      93
+    ],
+    "render_mix_raw_bpm": 93.1,
+    "render_mix_in_85_95": [
+      93.1
+    ],
+    "canon_drums_raw": [
+      61.5,
+      91.7,
+      174.8,
+      92.8,
+      92.5,
+      63.2,
+      131.7,
+      150.5,
+      84.9,
+      94.8,
+      92,
+      86,
+      91.8
+    ],
+    "canon_rows_with_85_95_mirror": 11,
+    "canon_rows_total": 13,
+    "render_matches_declared_93": true,
+    "note": "autocorrelation locks differ per row (half/double/dotted mirrors); window 85-95 established in REFERENCE_ANALYSIS.md"
+  },
+  "key_verdict": {
+    "render_key_estimate": {
+      "key": "F",
+      "mode": "minor",
+      "r": 0.71
+    },
+    "canon_max_r": 0.77,
+    "canon_median_r": 0.56,
+    "declared_key_family": "Eb (Ebm progression \"players\")",
+    "render_pitch_class_matches_Eb": false,
+    "canon_estimates": [
+      {
+        "slug": "microphone_master",
+        "key": "C",
+        "mode": "major",
+        "r": 0.46
+      },
+      {
+        "slug": "in_space",
+        "key": "C",
+        "mode": "major",
+        "r": 0.51
+      },
+      {
+        "slug": "timeless",
+        "key": "A",
+        "mode": "minor",
+        "r": 0.55
+      },
+      {
+        "slug": "motor_city_17",
+        "key": "E",
+        "mode": "minor",
+        "r": 0.52
+      },
+      {
+        "slug": "players",
+        "key": "F",
+        "mode": "major",
+        "r": 0.26
+      },
+      {
+        "slug": "la_la",
+        "key": "G",
+        "mode": "major",
+        "r": 0.7
+      },
+      {
+        "slug": "massage_situation",
+        "key": "B",
+        "mode": "minor",
+        "r": 0.47
+      },
+      {
+        "slug": "me_yesterday_corded",
+        "key": "F",
+        "mode": "minor",
+        "r": 0.77
+      },
+      {
+        "slug": "camel",
+        "key": "B",
+        "mode": "minor",
+        "r": 0.67
+      },
+      {
+        "slug": "golden_diva",
+        "key": "A",
+        "mode": "minor",
+        "r": 0.56
+      },
+      {
+        "slug": "due_time",
+        "key": "G#",
+        "mode": "minor",
+        "r": 0.65
+      },
+      {
+        "slug": "exhibit_a",
+        "key": "A",
+        "mode": "minor",
+        "r": 0.72
+      },
+      {
+        "slug": "rounded",
+        "key": "D",
+        "mode": "major",
+        "r": 0.68
+      }
+    ],
+    "canon_note": "canon estimates are weak-correlation single-method (max r see table); no canon row may be treated as authority (EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY)"
+  },
+  "chroma_verdict": {
+    "render_vs_players_chroma_cosine": 0.844,
+    "note": "same analyzer, same chroma pipeline"
+  },
+  "honest_gaps": [
+    "levels are NOT compared: SoundCloud transcodes decode >0 dBFS on canon rows; levels are relative evidence only (canon limits)",
+    "centroid_hz unit is broken in the shared analyzer (values ~1e8); comparable across both sides only as a relative rank, so omitted",
+    "canon rows are 30s official previews or fan uploads, mono-transcoded; render is a 64.5s stereo mix - window difference kept",
+    "sample_flip=null: the render uses no actual Dilla sample material (sample_rights_status not_used); identity is measured-groove-and-harmony, not audio identity"
+  ],
+  "recorded_at": "2026-11-24",
+  "engine": "dilla 4.3.0",
+  "take": {
+    "style": "j_dilla",
+    "progression": "players (recovered)",
+    "key": "Ebm",
+    "bpm": 93,
+    "bars": 24,
+    "seed": 20261124,
+    "groove_profile": "los_angeles",
+    "kit": "kit_dust",
+    "rig": "dilla_night",
+    "drums": "dilla_shadow_full",
+    "wav_sha256": "636198844d3ae439adb5db8ef52ce34f4384554190f2a2be206786eeb49dc2ce",
+    "duration_s": 64.535,
+    "render_command": "ruby STUDIO/dilla/dilla.rb --style j_dilla --bars 24 --seed 20261124 --out STUDIO/dilla/dilla.wav --overwrite"
+  },
+  "supersedes": "render_vs_canon.json (2026-11-22 take, engine before 4.3.0)",
+  "pipeline": "render_evidence/tools/render_analyze.sh (htdemucs 4 stems) + compare_render_canon.js against measured_canon.json",
+  "history": [
+    {
+      "variant": "same take with a 5%-probability +/-32 ms scatter tail in drum timing",
+      "metrics": {
+        "drum swing position": 47.7,
+        "on-grid share (16)": 0.39,
+        "off-8th residual": -21.9,
+        "kick low-band share": 0.741,
+        "snare mid-band share": 0.08,
+        "hat high-band share": 0.017
+      },
+      "verdict": "6/6 inside canon; tail removed anyway for being unjustified by the canon record"
+    },
+    {
+      "variant": "this take (tail removed)",
+      "metrics": {
+        "drum swing position": 48.6,
+        "on-grid share (16)": 0.39,
+        "off-8th residual": -13.6,
+        "kick low-band share": 0.738,
+        "snare mid-band share": 0.082,
+        "hat high-band share": 0.015
+      },
+      "verdict": "6/6 inside canon"
+    }
+  ],
+  "method_note": "A two-stem demucs pass (--two-stems=drums) is NOT comparable to this record: it leaked bass and chord material into the drums stem and shifted the measured off-8th residual by ~50 ms (+36.3 vs -21.9 on the same file). Always use the four-stem pipeline for canon comparisons."
+}

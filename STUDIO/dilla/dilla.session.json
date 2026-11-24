@@ -1,19 +1,19 @@
 {
   "engine": "dilla 4.3.0",
-  "seed": 304501763,
+  "seed": 20261124,
   "progression": {
-    "id": "minor11_ballad_drift",
-    "title": "Minor-11 ballad drift (engine study)",
-    "key": "D minor",
-    "bpm": 64,
+    "id": "players",
+    "title": "Players (recovered)",
+    "key": "Ebm",
+    "bpm": 93,
     "loop_bars": 4,
     "chords": [
-      "Dm11",
-      "Gm11",
-      "Dm11",
-      "Gm11"
+      "Ebm9",
+      "Abm7",
+      "Fm9",
+      "Bbm7"
     ],
-    "source": "engine_study"
+    "source": "recovered"
   },
   "arrangement": null,
   "drums": "dilla_shadow_full",
@@ -22,16 +22,16 @@
   "kit": "kit_dust",
   "voice": "rhodes_mark1",
   "rig": "dilla_night",
-  "bars": 8,
+  "bars": 24,
   "performer": {
-    "id": "break_biscuit",
-    "name": "Break Biscuit"
+    "id": "dusty_44",
+    "name": "Dusty 44"
   },
   "event_counts": {
-    "drum": 218,
-    "chord": 12,
-    "bass": 27,
-    "melody": 35,
+    "drum": 664,
+    "chord": 45,
+    "bass": 96,
+    "melody": 91,
     "foley": 0
   },
   "sample_flip": null

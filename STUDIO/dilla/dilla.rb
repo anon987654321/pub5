@@ -935,12 +935,7 @@ module Dilla
       jitter = @groove.spread(groove_lane)
       @timing_offsets ||= {}
       offset = @timing_offsets.fetch([groove_lane, step]) do
-        ms = @rng.jitter_ms(jitter)
-        # Measured records carry a scatter tail well past the gaussian body: a
-        # few strokes per bar land 15-40 ms off the grid, and that tail is what
-        # reads as a player rather than a quantized pattern.
-        ms += (@rng.rand * 2.0 - 1.0) * 32.0 if @rng.rand < 0.05
-        @timing_offsets[[groove_lane, step]] = ms / 1000.0
+        @timing_offsets[[groove_lane, step]] = @rng.jitter_ms(jitter) / 1000.0
       end
       nudge_ms = groove_lane == "soulclap" ? @groove.clap_early_ms : @groove.nudge(groove_lane)
       t = step_time(bar, step, groove_lane) + (nudge_ms / 1000.0) +
