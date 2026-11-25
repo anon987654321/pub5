@@ -108,6 +108,40 @@ class LayoutScoreTest < Minitest::Test
     assert_equal 1.0, compute(nested).subs["centering"]
   end
 
+  def test_focal_rewards_one_dominant_voice
+    vis = { "typography" => { "body_median_px" => 16 } }
+    hero = compute([el(16, 0, 300, 60, "font_size" => 40), el(16, 80, 300, 30, "font_size" => 16)], "visual" => vis)
+    assert_equal 1.0, hero.subs["focal"]
+    assert_equal 2.5, hero.facts["focal_ratio"]
+
+    twins = compute([el(16, 0, 300, 60, "font_size" => 40), el(16, 80, 300, 60, "font_size" => 40),
+                     el(16, 160, 300, 30, "font_size" => 16)], "visual" => vis)
+    assert_in_delta 0.2, twins.subs["focal"], 0.01,
+                    "two co-dominant voices are the diluted first screen the contract refuses"
+  end
+
+  def test_focal_without_a_display_voice_is_nil
+    vis = { "typography" => { "body_median_px" => 16 } }
+    quiet = compute([el(16, 0, 300, 30, "font_size" => 14)], "visual" => vis)
+    assert_nil quiet.subs["focal"], "a page with no display voice is not marked down here"
+  end
+
+  def test_action_rewards_one_primary_next_action
+    primary = el(16, 600, 200, 48, "interactive" => true, "tag" => "button")
+    solo = compute([primary, el(16, 0, 300, 24)])
+    assert_equal 1.0, solo.subs["action"]
+    assert_equal 1, solo.facts["actions"]
+
+    split = compute([primary, el(240, 600, 200, 48, "interactive" => true, "tag" => "button"), el(16, 0, 300, 24)])
+    assert_equal 0.75, split.subs["action"]
+    assert_equal 2, split.facts["actions"]
+
+    assert_nil compute([el(16, 0, 300, 24)]).subs["action"], "no button-scale action is nil, not zero"
+
+    thin = compute([el(16, 600, 200, 24, "interactive" => true, "tag" => "a"), el(16, 0, 300, 24)])
+    assert_nil thin.subs["action"], "nav-scale links are not primary actions"
+  end
+
   def test_missing_parts_redistribute_weight
     result = compute([])
     assert_equal 0.0, result.score

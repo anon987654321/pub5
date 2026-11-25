@@ -16,12 +16,18 @@ module Master
     #   density  painted share of the viewport; 0.25-0.60 is full marks, linear to 0 at 0 and 1
     #   balance  evenness of vertical gaps between stacked blocks (1 - coefficient of variation)
     #   centering horizontal centroid of painted content against the viewport centre; 4% of the width is free
+    #   focal    one dominant typographic voice: the largest text size against the next-largest
+    #            (or the body when it stands alone); full marks at FOCAL_DOMINANT, diluted voices
+    #            decay to FOCAL_BASE, no display voice is nil
+    #   action   one clearly primary next action: the largest button-scale interactive block's
+    #            share of all button-scale area on the first screen; nil with none
     #
     # A sub-score with nothing to measure is nil and its weight is redistributed,
     # so a page without paragraphs is not marked down for having no measure.
     module LayoutScore
-      WEIGHTS = { "edges" => 0.15, "grid" => 0.15, "scale" => 0.20, "measure" => 0.15,
-                  "heading" => 0.10, "density" => 0.10, "balance" => 0.05, "centering" => 0.10 }.freeze
+      WEIGHTS = { "edges" => 0.13, "grid" => 0.13, "scale" => 0.17, "measure" => 0.13,
+                  "heading" => 0.09, "density" => 0.09, "balance" => 0.05, "centering" => 0.09,
+                  "focal" => 0.06, "action" => 0.06 }.freeze
       EDGE_CLUSTER_PX = 2
       EDGE_FREE = 6
       EDGE_SPAN = 12.0
@@ -35,7 +41,14 @@ module Master
       CENTER_SPAN = 0.16
       ON_PX = 1.0
       BLOCK_MIN_W = 24
-      VERSION = 3
+      FOCAL_MIN_VOICE = 1.25
+      FOCAL_DOMINANT = 2.0
+      FOCAL_BASE = 0.2
+      ACTION_DOMINANT = 0.6
+      ACTION_FLOOR = 0.2
+      ACTION_MIN_H = 40
+      ACTION_MIN_W = 88
+      VERSION = 4
       Result = Data.define(:score, :subs, :facts)
 
       module_function
@@ -49,7 +62,8 @@ module Master
           "edges" => edges(els, facts), "grid" => grid(els, gaps, tokens),
           "scale" => on_scale(els, gaps, tokens), "measure" => measure(els, facts),
           "heading" => heading(payload, els, tokens), "density" => density(payload, els, geometry:),
-          "balance" => balance(gaps), "centering" => centering(payload, els, geometry:)
+          "balance" => balance(gaps), "centering" => centering(payload, els, geometry:),
+          "focal" => focal(payload, els, facts), "action" => action(els, facts)
         }
         Result.new(score: combine(subs), subs:, facts:)
       end
@@ -212,6 +226,44 @@ module Master
         mean = gaps.sum / gaps.size
         deviation = Math.sqrt(gaps.sum { |g| (g - mean)**2 } / gaps.size)
         clamp(1.0 - deviation / mean)
+      end
+
+      # The identity contract gives a first screen one dominant focal point and
+      # one clearly primary next action; these two sub-scores are that rule as
+      # arithmetic, over data the geometry probe already reports. Typographic
+      # concentration (not area) is the focal measure so a prose page with one
+      # clear voice is not punished for having no hero image.
+      def focal(payload, els, facts)
+        body = body_size(payload, els)
+        return unless body
+
+        voices = blocks(els).filter_map { |e| e["font_size"].to_f if e["text"].to_s != "" && e["font_size"].to_f.positive? }
+        return if voices.empty?
+
+        largest = voices.max
+        return if largest < body * FOCAL_MIN_VOICE
+
+        second = voices.sort.reverse[1]
+        dominance = largest / [second, body].compact.max
+        facts["focal_ratio"] = dominance.round(2)
+        return 1.0 if dominance >= FOCAL_DOMINANT
+
+        clamp(FOCAL_BASE + (dominance - 1.0) / (FOCAL_DOMINANT - 1.0) * (1.0 - FOCAL_BASE))
+      end
+
+      def action(els, facts)
+        actions = blocks(els).select do |e|
+          e["interactive"] && e["rect"]["h"].to_f >= ACTION_MIN_H && e["rect"]["w"].to_f >= ACTION_MIN_W
+        end
+        return if actions.empty?
+
+        areas = actions.map { |e| (e["frect"] || e["rect"]).then { |r| r["w"].to_f * r["h"].to_f } }
+        share = areas.max / areas.sum
+        facts["actions"] = actions.size
+        facts["action_share"] = share.round(2)
+        return 1.0 if share >= ACTION_DOMINANT
+
+        clamp((share - ACTION_FLOOR) / (ACTION_DOMINANT - ACTION_FLOOR))
       end
 
       def centering(payload, els, geometry: nil)
