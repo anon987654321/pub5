@@ -37,15 +37,15 @@ module Master
 
         def coverage(files:)
           scoped = Array(files).select { |path| File.file?(path) }
-          counts = scoped.filter_map { |path| domain_for(path) }.tally
+          counts = scoped.flat_map { |path| domains_for(path) }.tally
           {
             files_seen: scoped.size,
-            measured_files: counts.values.sum,
+            measured_files: scoped.count { |path| domains_for(path).any? },
             domains: counts.keys.map(&:to_s).sort,
             domain_counts: counts.transform_keys(&:to_s).sort.to_h,
             quality_areas: counts.keys.flat_map { |domain| QUALITY_AREAS.fetch(domain, []) }.uniq.sort,
             external_review_areas: EXTERNAL_REVIEW_AREAS,
-            unmeasured_files: scoped.size - counts.values.sum,
+            unmeasured_files: scoped.count { |path| domains_for(path).empty? },
           }
         end
 
@@ -58,11 +58,23 @@ module Master
             structure: method(:scan_structure),
             music: method(:scan_music),
           }
-          domains = scoped.filter_map { |path| domain_for(path) }.uniq
+          domains = scoped.flat_map { |path| domains_for(path) }.uniq
           domains.flat_map do |domain|
-            candidates = scoped.select { |path| domain_for(path) == domain }
+            candidates = scoped.select { |path| domains_for(path).include?(domain) }
             implementations.fetch(domain).call(root:, files: candidates.first(400))
           end.sort_by { |opportunity| -opportunity.leverage }
+        end
+
+        # A file may express several modalities. Its primary classification
+        # remains useful to existing callers, but never excludes other evidence.
+        def domains_for(path)
+          primary = domain_for(path)
+          return [] unless primary
+
+          extension = File.extname(path.to_s).downcase
+          return [primary, :visual].uniq if primary == :prose && VISUAL_EXTENSIONS.include?(extension)
+
+          [primary]
         end
 
         def domain_for(path)
