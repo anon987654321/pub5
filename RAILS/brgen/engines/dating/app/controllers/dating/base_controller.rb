@@ -46,9 +46,7 @@ class Dating::BaseController < ApplicationController
   # Two copies of "who may this person be shown" is two places for orientation
   # or a block to stop being honoured.
   def dating_blocked_users
-    outgoing = Block.where(blocker_id: Current.user.id).select(:blocked_id)
-    incoming = Block.where(blocked_id: Current.user.id).select(:blocker_id)
-    User.where(id: outgoing).or(User.where(id: incoming)).select(:id)
+    Block.counterparts_for(Current.user)
   end
 
   def candidate_scope

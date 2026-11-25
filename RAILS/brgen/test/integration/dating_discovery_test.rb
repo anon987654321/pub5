@@ -39,6 +39,31 @@ class DatingDiscoveryTest < ActiveSupport::TestCase
     assert_includes ids, open.id
   end
 
+  test "nonbinary and other gender preferences apply mutually" do
+    viewer = profile("woman", "nonbinary")
+    mutual = profile("nonbinary", "woman")
+    wrong_preference = profile("nonbinary", "man")
+    wrong_gender = profile("other", "woman")
+
+    ids = Dating::Profile.oriented_for(viewer).ids
+    assert_includes ids, mutual.id
+    assert_not_includes ids, wrong_preference.id
+    assert_not_includes ids, wrong_gender.id
+    assert_includes Dating::Profile.oriented_for(profile("woman", "other")).ids, wrong_gender.id
+  end
+
+  test "matches hide blocks in either direction" do
+    viewer = profile("woman", "everyone")
+    first = profile("man", "everyone")
+    second = profile("nonbinary", "everyone")
+    third = profile("other", "everyone")
+    Dating::Match.insert_all!([ first, second, third ].map { |candidate| { initiator_id: viewer.user_id, receiver_id: candidate.user_id, status: "matched" } })
+    Block.create!(blocker_id: viewer.user_id, blocked_id: first.user_id)
+    Block.create!(blocker_id: second.user_id, blocked_id: viewer.user_id)
+
+    assert_equal [ third.user_id ], Dating::Match.active.visible_to(viewer.user).pluck(:receiver_id)
+  end
+
   test "a dating profile requires an adult age" do
     u = User.create!(email_address: "age-#{SecureRandom.hex(4)}@brgen.no",
                      password: "password12345", username: "a_#{SecureRandom.hex(3)}", city: @city)

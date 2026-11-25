@@ -7,7 +7,8 @@ class Dating::DislikesController < Dating::BaseController
     with: -> { redirect_back fallback_location: root_path, alert: t("shared.flash.rate_limited") }
 
   def create
-    user = Dating::Profile.visible.includes(:user).find_by!(user_id: params[:user_id]).user
+    user = Dating::Profile.visible.with_photos.where.not(user_id: dating_blocked_users)
+      .where.not(user_id: Current.user.id).includes(:user).find_by!(user_id: params[:user_id]).user
     Dating::Dislike.find_or_create_by!(disliker: Current.user, dislikee: user)
     redirect_to root_path
   end

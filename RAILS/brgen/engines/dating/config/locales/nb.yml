@@ -62,6 +62,8 @@ nb:
     looking_for_options:
       man: "Menn"
       woman: "Kvinner"
+      nonbinary: "Ikke-binære personer"
+      other: "Andre kjønn"
       everyone: "Alle"
     path_crossings_title: "Krysset spor"
     path_crossings_intro: "Folk som har sagt ja og var i nærheten mens du var det. Nøyaktig sted vises aldri."

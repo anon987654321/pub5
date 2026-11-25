@@ -26,6 +26,11 @@ class Dating::Match < ApplicationRecord
                if: -> { status == "matched" && (previously_new_record? || saved_change_to_status?) }
 
   scope :active, -> { where(status: "matched") }
+  scope :visible_to, ->(viewer) {
+    blocked = Block.counterparts_for(viewer)
+    where("initiator_id = ? OR receiver_id = ?", viewer.id, viewer.id)
+      .where.not(initiator_id: blocked).where.not(receiver_id: blocked)
+  }
 
   # Either direction: uniqueness is initiator+receiver, so A→B and B→A are
   # different rows. Mutual likes create one of those; rematch must find it.
