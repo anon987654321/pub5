@@ -48,7 +48,10 @@ class PlaylistPlayerTest < ApplicationSystemTestCase
     assert wait_until { evaluate_script("!document.querySelector('audio').paused") }, "the track never started"
 
     execute_script("Turbo.visit('/sets')")
-    assert_current_path "/sets"
+    # A Turbo visit waits on the server rendering /sets; under CI load that
+    # outran Capybara's 2 s default and the test read the playlist path still
+    # in place (brgen bin/ci, 2026-11-25).
+    assert_current_path "/sets", wait: 10
     assert_no_selector ".playlist-app"
     docked = "(a => a && !a.paused && a.currentTime > 0)(document.querySelector('#playlist-dock audio'))"
     assert wait_until { evaluate_script(docked) },
