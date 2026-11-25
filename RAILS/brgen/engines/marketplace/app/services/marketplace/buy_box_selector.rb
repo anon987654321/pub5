@@ -60,7 +60,7 @@ module Marketplace
       return if offers.empty?
 
       scores = score_offers(offers)
-      ordered = offers.sort_by { |offer| [-scores.fetch(offer.id).total, offer.id] }
+      ordered = offers.sort_by { |offer| [ -scores.fetch(offer.id).total, offer.id ] }
       Result.new(winner: ordered.first, offers: ordered, scores: scores)
     end
 
@@ -88,11 +88,11 @@ module Marketplace
         delivery = max_delivery == min_delivery ? 1.0 :
           (max_delivery - offer.delivery_promise.to_i).to_f / (max_delivery - min_delivery)
         performance = offer.seller_score.to_f.clamp(0.0, 1.0)
-        stock = [offer.available_quantity.to_i, 10].min / 10.0
+        stock = [ offer.available_quantity.to_i, 10 ].min / 10.0
         fulfilment = FULFILMENT_SCORES.fetch(offer.fulfilment_method.to_i, 0.25)
         values = { price:, delivery:, performance:, stock:, fulfilment: }
         total = values.sum { |factor, value| WEIGHTS.fetch(factor) * value }
-        [offer.id, Score.new(total:, **values)]
+        [ offer.id, Score.new(total:, **values) ]
       end
     end
 

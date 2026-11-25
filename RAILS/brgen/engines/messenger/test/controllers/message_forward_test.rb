@@ -40,7 +40,7 @@ class MessageForwardTest < ActionDispatch::IntegrationTest
   # sender chose for the original.
   test "a message from a disappearing or view-once thread cannot be forwarded" do
     sign_in_as(@user)
-    [3600, 0].each do |duration|
+    [ 3600, 0 ].each do |duration|
       @source.update!(disappearing_duration: duration)
       message = say(@source, @friend, "Forsvinner #{duration}")
 

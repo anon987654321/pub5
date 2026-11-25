@@ -50,7 +50,7 @@ class Playlist::PlaylistsController < Playlist::BaseController
       color: embed_color,
       show_artwork: params[:show_artwork] != "0",
       compact: params[:compact] == "1",
-      hide_branding: params[:hide_branding] == "1"
+      hide_branding: params[:hide_branding] == "1",
     }
     response.headers.delete("X-Frame-Options")
     render layout: false

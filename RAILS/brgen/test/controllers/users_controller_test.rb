@@ -33,7 +33,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
       email_address: "newcomer@example.test",
       username: "newcomer",
       password: "password123",
-      password_confirmation: "password123"
+      password_confirmation: "password123",
     } }
     assert_redirected_to root_path
 
@@ -150,7 +150,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     post users_path, params: { accept_terms: "1", accept_age: "1", user: {
       email_address: "carryover@example.test",
       password: "password123",
-      password_confirmation: "password123"
+      password_confirmation: "password123",
     } }
     assert_redirected_to root_path
 
@@ -164,7 +164,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
       post users_path, params: { user: {
         email_address: "noterms@example.test",
         password: "password123",
-        password_confirmation: "password123"
+        password_confirmation: "password123",
       } }
     end
     assert_response :unprocessable_entity
@@ -189,7 +189,7 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
         username:,
         password: "password123",
         password_confirmation: "password123",
-      }
+      },
     }
 
     assert_no_difference -> { User.where(guest: false).count } do

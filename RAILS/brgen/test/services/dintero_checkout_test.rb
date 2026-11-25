@@ -127,7 +127,7 @@ class DinteroCheckoutTest < ActiveSupport::TestCase
     assert_equal 10_000, session[:payload][:items].first[:amount]
     assert_equal [
       { payout_destination_id: "seller-1", amount: 9_500 },
-      { payout_destination_id: "platform-1", amount: 500 }
+      { payout_destination_id: "platform-1", amount: 500 },
     ], session[:payload][:items].first[:splits]
     assert_equal(
       { type: "proportional", destinations: [ "platform-1" ] },
@@ -180,7 +180,7 @@ class DinteroCheckoutTest < ActiveSupport::TestCase
     payable.dintero_split_json = JSON.generate(
       splits: [
         { payout_destination_id: "seller-1", amount: 9_500 },
-        { payout_destination_id: "platform-1", amount: 500 }
+        { payout_destination_id: "platform-1", amount: 500 },
       ],
       fee_split: { type: "proportional", destinations: [ "platform-1" ] }
     )
@@ -196,7 +196,7 @@ class DinteroCheckoutTest < ActiveSupport::TestCase
 
     assert_equal [
       { payout_destination_id: "seller-1", amount: 9_500 },
-      { payout_destination_id: "platform-1", amount: 500 }
+      { payout_destination_id: "platform-1", amount: 500 },
     ], seen[:payload][:items].first[:splits]
     assert_equal "proportional", seen[:payload][:fee_split][:type]
     assert_equal "platform-1", seen[:payload][:fee_split][:destinations].first
@@ -214,7 +214,7 @@ class DinteroCheckoutTest < ActiveSupport::TestCase
     payable.dintero_split_json = JSON.generate(
       splits: [
         { payout_destination_id: "seller-1", amount: 9_500 },
-        { payout_destination_id: "platform-1", amount: 500 }
+        { payout_destination_id: "platform-1", amount: 500 },
       ],
       fee_split: { type: "proportional", destinations: [ "platform-1" ] }
     )
@@ -250,7 +250,7 @@ class DinteroCheckoutTest < ActiveSupport::TestCase
     payable.dintero_split_json = JSON.generate(
       splits: [
         { payout_destination_id: "seller-1", amount: 9_500 },
-        { payout_destination_id: "platform-1", amount: 500 }
+        { payout_destination_id: "platform-1", amount: 500 },
       ],
       fee_split: { type: "proportional", destinations: [ "platform-1" ] }
     )
@@ -273,7 +273,7 @@ class DinteroCheckoutTest < ActiveSupport::TestCase
     payable.dintero_split_json = JSON.generate(
       splits: [
         { payout_destination_id: "seller-1", amount: 9_500 },
-        { payout_destination_id: "platform-1", amount: 500 }
+        { payout_destination_id: "platform-1", amount: 500 },
       ],
       fee_split: { type: "proportional", destinations: [ "platform-1" ] }
     )

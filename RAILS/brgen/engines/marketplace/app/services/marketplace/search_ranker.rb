@@ -77,7 +77,7 @@ module Marketplace
         [
           "CASE WHEN LOWER(marketplace_listings.title) LIKE LOWER(#{quoted}) THEN 0.70 ELSE 0 END",
           "CASE WHEN LOWER(marketplace_listings.description) LIKE LOWER(#{quoted}) THEN 0.20 ELSE 0 END",
-          "CASE WHEN LOWER(marketplace_categories.name) LIKE LOWER(#{quoted}) THEN 0.10 ELSE 0 END"
+          "CASE WHEN LOWER(marketplace_categories.name) LIKE LOWER(#{quoted}) THEN 0.10 ELSE 0 END",
         ].join(" + ")
       end
 

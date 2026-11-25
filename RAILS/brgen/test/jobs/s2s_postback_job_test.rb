@@ -45,14 +45,14 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     handler = lambda do |uri, **options|
       request = Net::HTTP::Get.new(uri)
       options.fetch(:headers, {}).each { |key, value| request[key] = value }
-      sent << [request, options]
+      sent << [ request, options ]
       Struct.new(:code).new(responses.shift || "200")
     end
     Shared::OutboundHttp.stub(:request, handler) { yield sent }
   end
 
   def perform_with_http(conversion)
-    with_outbound_http(["200"]) do |sent|
+    with_outbound_http([ "200" ]) do |sent|
       Shared::S2sPostbackJob.perform_now(conversion.id)
       sent.map(&:first)
     end
@@ -135,7 +135,7 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     calls = []
     response = Struct.new(:code).new("200")
     handler = lambda do |uri, **options|
-      calls << [uri, options]
+      calls << [ uri, options ]
       response
     end
 
@@ -151,5 +151,4 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     assert_equal 3, options.fetch(:write_timeout)
     assert_equal "Brgen-S2S-Attribution/1.0", options.dig(:headers, "User-Agent")
   end
-
 end

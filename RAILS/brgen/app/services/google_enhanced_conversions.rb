@@ -192,7 +192,7 @@ module GoogleEnhancedConversions
       destination = {
         "operatingAccount" => {
           "accountType" => "GOOGLE_ADS",
-          "accountId" => customer_id
+          "accountId" => customer_id,
         },
         "productDestinationId" => conversion_action_id,
       }

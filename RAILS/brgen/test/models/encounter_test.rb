@@ -62,7 +62,7 @@ class EncounterTest < ActiveSupport::TestCase
     Block.create!(blocker_id: blocker.id, blocked_id: blocked.id)
     blocked.encounters.create!(status: Encounter::WAITING)
 
-    mine = Encounter.pair!(blocker, blocked_ids: [blocked.id])
+    mine = Encounter.pair!(blocker, blocked_ids: [ blocked.id ])
     assert_equal Encounter::WAITING, mine.status
     assert_equal Encounter::WAITING, blocked.encounters.first.reload.status
   end

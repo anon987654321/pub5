@@ -187,7 +187,7 @@ DIALECT_MARKERS = {
   # English, and Los Angeles rather than any American city: a freeway with
   # its article, or a neighbourhood only an Angeleno names.
   "lsangeles.com" => [ /\bthe (?:405|10|101|110|5)\b/i, /\bSepulveda\b/, /\bKoreatown\b/,
-                       /\bBoyle Heights\b/, /\bVenice\b/, /\bthe Valley\b/, /\bWestwood\b/ ]
+                       /\bBoyle Heights\b/, /\bVenice\b/, /\bthe Valley\b/, /\bWestwood\b/ ],
 }.freeze
 
 test "every city bank is written in that city's dialect" do

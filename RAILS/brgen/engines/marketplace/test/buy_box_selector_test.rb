@@ -34,7 +34,7 @@ class Marketplace::BuyBoxSelectorTest < ActiveSupport::TestCase
     result = Marketplace::BuyBoxSelector.for(slower)
 
     assert_equal faster.id, result.winner.id
-    assert_equal [faster.id, slower.id], result.offers.map(&:id)
+    assert_equal [ faster.id, slower.id ], result.offers.map(&:id)
     assert_includes result.reasons_for(slower).join(" "), I18n.t("marketplace.buy_box_reason.delivery", current: I18n.t("marketplace.delivery_promise.pickup_only"), winner: I18n.t("marketplace.delivery_promise.same_day_bergen"))
     assert_equal "EAN 0123", slower.reload.buy_box_key
   end
@@ -48,7 +48,7 @@ class Marketplace::BuyBoxSelectorTest < ActiveSupport::TestCase
 
     result = Marketplace::BuyBoxSelector.for(shop_offer)
 
-    assert_equal [shop_offer.id], result.offers.map(&:id)
+    assert_equal [ shop_offer.id ], result.offers.map(&:id)
     assert_nil private_offer.reload.buy_box_key
     assert_nil Marketplace::BuyBoxSelector.for(private_offer)
   end
@@ -68,6 +68,6 @@ class Marketplace::BuyBoxSelectorTest < ActiveSupport::TestCase
       )
     end
 
-    assert_equal [first.id], Marketplace::BuyBoxSelector.for(first).offers.map(&:id)
+    assert_equal [ first.id ], Marketplace::BuyBoxSelector.for(first).offers.map(&:id)
   end
 end

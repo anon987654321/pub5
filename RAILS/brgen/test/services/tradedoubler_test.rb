@@ -243,7 +243,7 @@ class TradedoublerTest < ActiveSupport::TestCase
         { "productName" => "No id", "clickUrl" => "https://clk.test/x" },
         { "id" => "no-url", "productName" => "No click url" },
         { "id" => "no-title", "clickUrl" => "https://clk.test/y" },
-        product_row("good")
+        product_row("good"),
       ]))
     end
     stub_http(responder) { assert_equal 1, Shared::Tradedoubler.import! }

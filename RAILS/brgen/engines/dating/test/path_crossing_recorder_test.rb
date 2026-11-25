@@ -26,7 +26,7 @@ class Dating::PathCrossingRecorderTest < ActiveSupport::TestCase
     )
     attach_pixel!(profile.photos, filename: "#{prefix}.png")
     profile.save!
-    [user, profile]
+    [ user, profile ]
   end
 
   test "records an approximate crossing only for two visible verified opted-in profiles" do
@@ -44,7 +44,7 @@ class Dating::PathCrossingRecorderTest < ActiveSupport::TestCase
     assert_equal 1, crossings.size
     crossing = Dating::PathCrossing.last
     assert_equal @city.id, crossing.city_id
-    assert_equal [@first_user.id, @second_user.id].sort, [crossing.user_a_id, crossing.user_b_id]
+    assert_equal [ @first_user.id, @second_user.id ].sort, [ crossing.user_a_id, crossing.user_b_id ]
     assert_equal now.to_date, crossing.crossing_on
     assert_equal 60.39, crossing.approx_latitude.to_f
     assert_equal 5.32, crossing.approx_longitude.to_f

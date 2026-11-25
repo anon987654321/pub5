@@ -9,7 +9,7 @@ class Encounter < ApplicationRecord
   WAITING = "waiting"
   MATCHED = "matched"
   CLOSED = "closed"
-  STATUSES = [WAITING, MATCHED, CLOSED].freeze
+  STATUSES = [ WAITING, MATCHED, CLOSED ].freeze
 
   # A wait older than this is nobody waiting anymore; the next ask closes it.
   WAIT_LASTS_FOR = 90.seconds

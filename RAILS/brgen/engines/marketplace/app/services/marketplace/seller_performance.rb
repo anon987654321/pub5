@@ -51,9 +51,9 @@ class Marketplace::SellerPerformance
   def listings
     @listings ||= if @owner.is_a?(Marketplace::Store)
                     Marketplace::Listing.where(store_id: @owner.id)
-                  else
+    else
                     Marketplace::Listing.where(user_id: @owner.id, store_id: nil)
-                  end
+    end
   end
 
   def ratio(numerator, denominator)

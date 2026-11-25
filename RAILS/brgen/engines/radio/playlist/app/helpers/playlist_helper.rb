@@ -48,7 +48,7 @@ module PlaylistHelper
         artist: track.artist.presence || "Radio Bergen",
         id: "local-#{track.id}",
         src: main_app.url_for(track.audio_file),
-        artwork: (main_app.url_for(track.artwork) if track.artwork.attached?)
+        artwork: (main_app.url_for(track.artwork) if track.artwork.attached?),
       }.compact
     end
   end
@@ -57,14 +57,14 @@ module PlaylistHelper
   # queued behind every YouTube reference an hour and a half in.
   def radio_interleave(references, whyp)
     opener, *rest = references
-    [opener, *whyp.zip(rest).flatten, *rest.drop(whyp.size)].compact
+    [ opener, *whyp.zip(rest).flatten, *rest.drop(whyp.size) ].compact
   end
 
   def radio_tunnel_fallback_tracks
     [
       { title: "Microphone Master", id: "9EGHwkDix78", artist: "J Dilla" },
       { title: "In Space", id: "vO2nWXCVt6o", artist: "J Dilla" },
-      { title: "Get It Together", id: "t6T-Q6HMbEo", artist: "Slum Village" }
+      { title: "Get It Together", id: "t6T-Q6HMbEo", artist: "Slum Village" },
     ]
   end
 

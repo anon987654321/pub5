@@ -71,5 +71,4 @@ class MessageBroadcastTest < ActiveSupport::TestCase
     assert_equal "replace", unsent.last["action"]
     refute_includes unsent.last.to_html, "rettet"
   end
-
 end

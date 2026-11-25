@@ -105,7 +105,7 @@ class ChannelPresence
     end
 
     def push_device_key(conversation_id, user_id, device_type, device_id)
-      identity = [conversation_id, user_id, device_type, device_id].join(":")
+      identity = [ conversation_id, user_id, device_type, device_id ].join(":")
       "brgen:presence:push-device:#{Digest::SHA256.hexdigest(identity)}"
     end
 

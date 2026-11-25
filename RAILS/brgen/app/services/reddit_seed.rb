@@ -102,7 +102,7 @@ class RedditSeed
         commentable_id: post.id,
         content: body.truncate(10_000),
         created_at: post.created_at + (index + 1).minutes + rand(0..40).seconds,
-        updated_at: Time.current
+        updated_at: Time.current,
       }
     end
     Comment.insert_all(rows) if rows.any?

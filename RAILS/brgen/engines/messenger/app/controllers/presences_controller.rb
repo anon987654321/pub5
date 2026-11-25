@@ -55,15 +55,15 @@ class PresencesController < ApplicationController
   # are never written to the cache.
   def with_owned_device
     record = case params[:device_type].to_s
-             when "web"
+    when "web"
                endpoint = params[:endpoint].to_s
                return false if endpoint.empty? || endpoint.bytesize > 4096
                Current.user.push_subscriptions.find_by(endpoint: endpoint)
-             when "native"
+    when "native"
                token = params[:token].to_s.downcase
                return false unless token.match?(/\A\h{64,200}\z/)
                Current.user.native_push_tokens.find_by(token: token)
-             end
+    end
     return false unless record
 
     yield(params[:device_type].to_s, record.id)

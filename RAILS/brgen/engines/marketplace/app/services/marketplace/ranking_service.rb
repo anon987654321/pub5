@@ -70,7 +70,7 @@ module Marketplace
 
       conversion = purchases.to_f / clicks
       cart_rate = carts.to_f / clicks
-      return_penalty = returns.positive? ? (1.0 - (returns.to_f / [purchases, 1].max)).clamp(0.0, 1.0) : 1.0
+      return_penalty = returns.positive? ? (1.0 - (returns.to_f / [ purchases, 1 ].max)).clamp(0.0, 1.0) : 1.0
 
       ((conversion * 0.6) + (cart_rate * 0.4)).clamp(0.0, 1.0) * return_penalty
     end

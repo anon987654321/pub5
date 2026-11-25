@@ -146,7 +146,7 @@ class UserPurgeJob < ApplicationJob
     [ "ActivityEvent", :subject_type, :subject_id ],
     [ "Reaction", :reactable_type, :reactable_id ],
     [ "Vote", :votable_type, :votable_id ],
-    [ "Shared::OutboundClick", :subject_type, :subject_id ]
+    [ "Shared::OutboundClick", :subject_type, :subject_id ],
   ].freeze
 
   # Private Messenger rows preserve their thread and reply shape, but
@@ -186,7 +186,7 @@ class UserPurgeJob < ApplicationJob
     attrs = {
       deleted_at: Time.current,
       deletion_scheduled_at: nil,
-      updated_at: Time.current
+      updated_at: Time.current,
     }
     attrs[:email_address] = "purged-#{user.id}@deleted.invalid" if user.has_attribute?(:email_address)
     attrs[:username] = "deleted_#{user.id}"                if user.has_attribute?(:username)

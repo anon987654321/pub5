@@ -24,8 +24,8 @@ class RedditSeedTest < ActiveSupport::TestCase
         "title" => "[r/bergen] Best kanelbolle?",
         "body" => "Looking for bakery tips downtown.",
         "url" => "https://www.reddit.com/r/bergen/comments/abc123/",
-        "top_comments" => [ { "author" => "u1", "body" => "Baker Hansen on Torget." } ]
-      }
+        "top_comments" => [ { "author" => "u1", "body" => "Baker Hansen on Torget." } ],
+      },
     ])
 
     rewriter = Object.new

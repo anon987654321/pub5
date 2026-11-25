@@ -268,7 +268,7 @@ module Marketplace
               },
               options: {
                 split_draft: false,
-              }
+              },
             },
             idempotency_key: "brgen-draft-#{reference}"
           )
@@ -292,7 +292,7 @@ module Marketplace
             external_id: order.id.to_s,
             description: order.listing.title.to_s.truncate(120),
             quantity: (order.quantity.presence || 1).to_i,
-            amount: order.total_cents
+            amount: order.total_cents,
           }
         end
 
@@ -306,10 +306,10 @@ module Marketplace
             items: orders.map { |order| session_item(order) },
             url: {
               return_url: return_url,
-              callback_url: callback_url
+              callback_url: callback_url,
             },
             profile_id: DinteroClient.profile_id,
-            fee_split: fee_splits.first
+            fee_split: fee_splits.first,
           }.compact
         end
 
@@ -318,7 +318,7 @@ module Marketplace
           {
             line_id: order.id.to_i,
             amount: order.total_cents,
-            splits: contract[:splits]
+            splits: contract[:splits],
           }
         end
 
@@ -326,7 +326,7 @@ module Marketplace
           {
             line_id: order.id.to_i,
             amount: order.total_cents,
-            splits: contract[:splits]
+            splits: contract[:splits],
           }
         end
       end

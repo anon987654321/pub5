@@ -134,8 +134,8 @@ class Message < ApplicationRecord
     edit(new_content) || raise(ActiveRecord::RecordInvalid, self)
   end
 
-  # The row stays, the body goes: a hard delete leaves a hole in a thread and
-  # orphans whatever replied to it.
+# The row stays, the body goes: a hard delete leaves a hole in a thread and
+# orphans whatever replied to it.
 def unsend!
   update_columns(
     content: "", deleted_at: Time.current, updated_at: Time.current,

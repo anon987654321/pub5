@@ -176,7 +176,7 @@ class Marketplace::ListingsController < Marketplace::BaseController
   # let a job advert arrive carrying rent, and the row would sit there with
   # nothing rendering it.
   def listing_form_options
-    [Marketplace::Category.all, Marketplace::Store.active.where(owner: Current.user).order(:name)]
+    [ Marketplace::Category.all, Marketplace::Store.active.where(owner: Current.user).order(:name) ]
   end
 
   def assign_listing_source(listing, source, store_id)

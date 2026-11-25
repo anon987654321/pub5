@@ -28,7 +28,7 @@ class ApplicationController < ActionController::Base
     keys = %w[tracking_id trackingid mediago_trackingid rc_uuid]
     incoming = keys.filter_map do |key|
       value = params[key]
-      [key, value] if value.is_a?(String) && value.bytesize <= 500 && !value.match?(/[[:cntrl:]]/)
+      [ key, value ] if value.is_a?(String) && value.bytesize <= 500 && !value.match?(/[[:cntrl:]]/)
     end.to_h
     session[:s2s_click_ids] = session[:s2s_click_ids].to_h.merge(incoming) if incoming.any?
     click_ids = session[:s2s_click_ids]

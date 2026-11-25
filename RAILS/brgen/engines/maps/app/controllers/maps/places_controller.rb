@@ -80,7 +80,7 @@ module Maps
         lat: latitude,
         lng: longitude,
         city: place.city&.name,
-        neighborhood: place.neighborhood&.name
+        neighborhood: place.neighborhood&.name,
       }
     end
 
