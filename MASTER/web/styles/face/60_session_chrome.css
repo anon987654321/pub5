@@ -139,6 +139,7 @@ body.mission-control code {
 /* The face and terminal occupy separate regions; never cover the transcript
    with the particle canvas. Keep the existing face, input and voice owners. */
 body[data-layout="face"] {
+  --terminal-font-size: 1rem;
   --face-region-height: clamp(120px, 44dvh, 540px);
   --face-region-top: calc(var(--face-bar-height) + var(--safe-top));
   --terminal-region-top: calc(var(--face-region-top) + var(--face-region-height));
@@ -205,8 +206,8 @@ body[data-layout="face"] .msg-body {
 @media (max-height: 500px) {
   body[data-layout="face"] { --face-region-height: 30dvh; }
 }
-@media (max-width: 479px) {
-  body[data-layout="face"] { --terminal-font-size: 1rem; }
+@media (min-width: 480px) {
+  body[data-layout="face"] { --terminal-font-size: 1.25rem; }
 }
 
 /* Compact measured sensory chrome. Camera opens the native photo picker;

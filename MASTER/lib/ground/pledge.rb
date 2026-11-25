@@ -114,7 +114,6 @@ module Master
           "/dev/urandom", auth_path])
         read.concat(gem_paths)
         write = %w[tmp log storage].map { |path| File.join(web_root, path) }
-        write << File.join(root, ".master", "pairing")
         write.concat(["/tmp", "/dev/null"])
         plan = {}
         read.each { |path| plan[File.expand_path(path)] = "r" if File.exist?(path) }

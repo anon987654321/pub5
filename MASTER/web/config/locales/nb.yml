@@ -222,8 +222,8 @@ nb:
     title: "Paringstilgang"
     lede: "Administrer enheter som har løst inn en engangskode for paring."
     access_policy: >-
-      Paring gir bare tilgang til meldinger. Den gir ikke operatørverktøy eller
-      skalltilgang. En innløst paring forblir aktiv til den tilbakekalles.
+      Paring identifiserer bare nettleseren. Den gir ikke meldingstilgang,
+      operatørverktøy eller skalltilgang. En innløst paring forblir aktiv til den tilbakekalles.
     back_to_master: "Tilbake til MASTER"
     one_time_code: "Engangskode for paring"
     code_expires: "Denne uinnløste koden utløper om %{seconds} sekunder."
@@ -237,12 +237,12 @@ nb:
     subject: "Subjekt"
     paired_at: "Paretidspunkt"
     revoke: "Tilbakekall tilgang"
-    confirm_revoke: "Tilbakekalle denne paringen? Tilgangen til meldinger opphører."
+    confirm_revoke: "Tilbakekalle denne nettleserparingen?"
     no_token_expiry: >-
       Innløste paringer utløper ikke automatisk nå. Tilbakekall et subjekt her for å
       avslutte tilgangen.
     scope: "Omfang"
-    messaging_scope: "bare meldinger"
+    messaging_scope: "bare nettlesersamtale"
     audit_heading: "Nylig paringsaktivitet"
     audit_empty: "Ingen paringsaktivitet er registrert."
     audit_actor: "Handlingskilde"

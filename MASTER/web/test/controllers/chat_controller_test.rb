@@ -70,14 +70,14 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
   # (test_visitor_can_redeem_a_pairing_code_in_chat below), so what is left to
   # assert here is the profile mark — it is what decides which tools the face
   # will run, and it is the half that survived the panel.
-  test "index marks the profile for a visitor and for an operator" do
+  test "index reports the same capability profile regardless of authentication" do
     get root_path
     assert_response :success
     assert_includes response.body, 'data-profile="public"'
 
     get root_path, headers: auth_headers
     assert_response :success
-    assert_includes response.body, 'data-profile="operator"'
+    assert_includes response.body, 'data-profile="public"'
   end
 
   test "face mask identity and profile remain stable when the same chat is reloaded" do
@@ -225,14 +225,14 @@ class ChatControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "visitor can redeem a pairing code in chat" do
-    issued = Master::Ground::Pairing.issue(label: "chat")
+    issued = Master::Ground::Pairing.issue(label: "chat", root: Rails.root.join("tmp", "public_runtime").to_s)
     post "/chat/message", params: { message: "/pair #{issued[:code]}" }
 
     assert_response :success
     assert_includes response.body, "paired"
     assert cookies[:master_paired].present?
   ensure
-    FileUtils.rm_rf(File.join(Master::ROOT, ".master", "pairing"))
+    FileUtils.rm_rf(Rails.root.join("tmp", "public_runtime", ".master", "pairing"))
   end
 
   test "message accepts seven field felt state" do

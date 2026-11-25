@@ -337,7 +337,7 @@ class ChatController < ApplicationController
       return
     end
 
-    result = Master::Ground::Pairing.redeem(pair_redeem_arg(input))
+    result = Master::Ground::Pairing.redeem(pair_redeem_arg(input), root: web_pairing_root)
     body = if result
              set_pair_cookie(result[:token])
              "paired - browser conversation only; operator commands require the local CLI"

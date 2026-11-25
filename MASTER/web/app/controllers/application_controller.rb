@@ -129,14 +129,17 @@ class ApplicationController < ActionController::Base
     head :forbidden
   end
 
+  WEB_PAIR_NOTICE = "Pairing identifies this browser only. Operator and messaging tools require a separate local session (bin/master).".freeze
+
+  def web_pairing_root = Rails.root.join("tmp", "public_runtime").to_s
+
   def pairing_active?
-    Master::Ground::Pairing.valid_token?(cookies[:master_paired].to_s)
+    Master::Ground::Pairing.valid_token?(cookies[:master_paired].to_s, root: web_pairing_root)
   end
   helper_method :pairing_active? if respond_to?(:helper_method)
 
-  def face_profile
-    Master::Ground::Pairing.face_profile(visitor: visitor?, paired: pairing_active?)
-  end
+  # Authentication and pairing never elevate the browser capability profile.
+  def face_profile = "public"
   helper_method :face_profile if respond_to?(:helper_method)
 
   def pair_redeem_limited?

@@ -206,8 +206,8 @@ en:
     title: "Pairing access"
     lede: "Manage devices that have redeemed a one-time pairing code."
     access_policy: >-
-      Pairing grants messaging access only. It does not grant operator tools or shell
-      access. A redeemed pairing stays active until revoked.
+      Pairing identifies a browser only. It grants no messaging access, operator tools
+      or shell access. A redeemed pairing stays active until revoked.
     back_to_master: "Back to MASTER"
     one_time_code: "One-time pairing code"
     code_expires: "This unredeemed code expires in %{seconds} seconds."
@@ -221,12 +221,12 @@ en:
     subject: "Subject"
     paired_at: "Paired"
     revoke: "Revoke access"
-    confirm_revoke: "Revoke this pairing? Its messaging access will stop."
+    confirm_revoke: "Revoke this browser pairing?"
     no_token_expiry: >-
       Redeemed pairings do not currently expire automatically. Revoke a subject here
       to end its access.
     scope: "Scope"
-    messaging_scope: "messaging only"
+    messaging_scope: "browser conversation only"
     audit_heading: "Recent pairing activity"
     audit_empty: "No pairing activity recorded."
     audit_actor: "Action source"

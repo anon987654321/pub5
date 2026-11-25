@@ -4,7 +4,7 @@ require "test_helper"
 
 class PairControllerTest < ActionDispatch::IntegrationTest
   def teardown
-    FileUtils.rm_rf(File.join(Master::ROOT, ".master", "pairing"))
+    FileUtils.rm_rf(Rails.root.join("tmp", "public_runtime", ".master", "pairing"))
   end
 
   test "show reports unpaired for a visitor" do
@@ -16,13 +16,13 @@ class PairControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "create redeems a code and sets the cookie" do
-    issued = Master::Ground::Pairing.issue(label: "test")
+    issued = Master::Ground::Pairing.issue(label: "test", root: Rails.root.join("tmp", "public_runtime").to_s)
     post "/pair", params: { code: issued[:code] }
 
     assert_response :success
     body = JSON.parse(response.body)
     assert_equal true, body["ok"]
-    assert_equal "messaging", body["profile"]
+    assert_equal "public", body["profile"]
     assert cookies[:master_paired].present?
   end
 
@@ -34,14 +34,14 @@ class PairControllerTest < ActionDispatch::IntegrationTest
 
   test "pair redeem works without a booted container" do
     Rails.application.config.x.master_container = nil
-    issued = Master::Ground::Pairing.issue(label: "warm")
+    issued = Master::Ground::Pairing.issue(label: "warm", root: Rails.root.join("tmp", "public_runtime").to_s)
     post "/pair", params: { code: issued[:code] }
 
     assert_response :success
   end
 
   test "create notice names the clone path" do
-    issued = Master::Ground::Pairing.issue(label: "clone")
+    issued = Master::Ground::Pairing.issue(label: "clone", root: Rails.root.join("tmp", "public_runtime").to_s)
     post "/pair", params: { code: issued[:code] }
 
     body = JSON.parse(response.body)
@@ -86,15 +86,15 @@ class PairControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the admin page lists only pairing metadata and never exposes bearer tokens" do
-    issued = Master::Ground::Pairing.issue(label: "studio tablet")
-    redeemed = Master::Ground::Pairing.redeem(issued[:code])
+    issued = Master::Ground::Pairing.issue(label: "studio tablet", root: Rails.root.join("tmp", "public_runtime").to_s)
+    redeemed = Master::Ground::Pairing.redeem(issued[:code], root: Rails.root.join("tmp", "public_runtime").to_s)
 
     get "/pair/admin", headers: auth_headers
 
     assert_response :success
     assert_includes response.body, "studio tablet"
     assert_includes response.body, redeemed[:subject]
-    assert_includes response.body, "messaging access"
+    assert_includes response.body, "browser conversation only"
     assert_not_includes response.body, redeemed[:token]
   end
 
@@ -112,20 +112,20 @@ class PairControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "600 seconds"
   end
 
-  test "admin revocation removes the subject's messaging access" do
-    issued = Master::Ground::Pairing.issue(label: "revoked device")
-    redeemed = Master::Ground::Pairing.redeem(issued[:code])
+  test "admin revocation removes the browser pairing" do
+    issued = Master::Ground::Pairing.issue(label: "revoked device", root: Rails.root.join("tmp", "public_runtime").to_s)
+    redeemed = Master::Ground::Pairing.redeem(issued[:code], root: Rails.root.join("tmp", "public_runtime").to_s)
 
     delete "/pair/admin/#{redeemed[:subject]}", headers: auth_headers
 
     assert_response :see_other
     assert_redirected_to "/pair/admin"
-    refute Master::Ground::Pairing.valid_token?(redeemed[:token])
+    refute Master::Ground::Pairing.valid_token?(redeemed[:token], root: Rails.root.join("tmp", "public_runtime").to_s)
   end
 
   test "admin audit shows issue pair and revoke without codes or bearer tokens" do
-    issued = Master::Ground::Pairing.issue(label: "audit tablet", actor: "web_operator")
-    paired = Master::Ground::Pairing.redeem(issued[:code])
+    issued = Master::Ground::Pairing.issue(label: "audit tablet", actor: "web_operator", root: Rails.root.join("tmp", "public_runtime").to_s)
+    paired = Master::Ground::Pairing.redeem(issued[:code], root: Rails.root.join("tmp", "public_runtime").to_s)
     delete "/pair/admin/#{paired[:subject]}", headers: auth_headers
     assert_response :see_other
 
@@ -134,7 +134,7 @@ class PairControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "One-time code issued"
     assert_includes response.body, "Device paired"
     assert_includes response.body, "Device access revoked"
-    assert_includes response.body, "messaging only"
+    assert_includes response.body, "browser conversation only"
     refute_includes response.body, issued[:code]
     refute_includes response.body, paired[:token]
   end
@@ -150,5 +150,19 @@ class PairControllerTest < ActionDispatch::IntegrationTest
     assert_response :too_many_requests
   ensure
     Rails.cache = prev
+  end
+  test "web pairing cannot mint or redeem local messaging credentials" do
+    web_root = Rails.root.join("tmp", "public_runtime").to_s
+    Dir.mktmpdir do |local_root|
+      local = Master::Ground::Pairing.issue(root: local_root, label: "local")
+      post "/pair", params: { code: local[:code] }
+      assert_response :unprocessable_entity
+
+      web = Master::Ground::Pairing.issue(root: web_root, label: "browser")
+      post "/pair", params: { code: web[:code] }
+      assert_response :success
+      refute Master::Ground::Pairing.valid_token?(cookies[:master_paired], root: local_root)
+      assert Master::Ground::Pairing.redeem(local[:code], root: local_root)
+    end
   end
 end

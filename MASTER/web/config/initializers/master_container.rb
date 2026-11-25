@@ -88,9 +88,13 @@ module MasterContainerLoader
     sockets = Master::Voice::TtsSupervisor.pool_size.times.map do |index|
       Master::Voice::TtsSupervisor.socket_path(root, index:)
     end
-    raise Master::SecurityError, "web auth must be provisioned before sealing" if OperatorToken.read.empty?
-    FileUtils.mkdir_p(File.join(root, ".master", "pairing"), mode: 0o700)
-    guard.web_lock!(root:, web_root: Rails.root.to_s, auth_path: OperatorToken.config_path, socket_paths: sockets)
+    state = Rails.root.join("tmp", "public_runtime").to_s
+    auth_path = File.expand_path(OperatorToken.config_path)
+    unless auth_path.start_with?(state + File::SEPARATOR) && File.file?(auth_path) &&
+        File.realpath(auth_path).start_with?(File.realpath(state) + File::SEPARATOR) && !OperatorToken.read.empty?
+      raise Master::SecurityError, "native web sandbox requires a dedicated web auth file inside public_runtime"
+    end
+    guard.web_lock!(root:, web_root: Rails.root.to_s, auth_path:, socket_paths: sockets)
     Rails.logger.info("master_container: native web sandbox sealed")
   rescue StandardError => e
     Rails.logger.fatal("master_container: native sandbox refused: #{e.class}: #{e.message}")
