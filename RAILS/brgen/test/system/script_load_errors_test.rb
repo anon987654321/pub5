@@ -27,6 +27,10 @@ class ScriptLoadErrorsTest < ApplicationSystemTestCase
   # A reflex controller subscribes on the consumer the Stimulus application
   # carries; the refusal is ActionCable's reject for that subscription, the
   # call the socket makes when the server answers reject_subscription.
+  # The server refuses this visitor too, and often first: its reject removed the
+  # subscription before the probe looked, and the probe polled until the script
+  # timeout (2 runs in 4, 2026-11-25). Reject is observed on the prototype, so
+  # whichever caller refuses first is the one judged.
   test "a refused reflex subscription throws nothing" do
     visit_city(nil, "/")
     outcome = using_wait_time(20) { page.evaluate_async_script(<<~JS) }
@@ -34,18 +38,26 @@ class ScriptLoadErrorsTest < ApplicationSystemTestCase
       Promise.all([ import("@rails/actioncable"), import("controllers/application_controller") ])
         .then(([ cable, { default: ReflexController } ]) => {
           const consumer = cable.createConsumer()
-          window.Stimulus.consumer = consumer
-          window.Stimulus.register("reflex-probe", class extends ReflexController {})
-          document.body.insertAdjacentHTML("beforeend", "<div data-controller='reflex-probe'></div>")
-          const refuse = () => {
-            const subscription = consumer.subscriptions.subscriptions[0]
-            if (!subscription) return setTimeout(refuse, 50)
+          const subscriptions = Object.getPrototypeOf(consumer.subscriptions)
+          const reject = subscriptions.reject
+          subscriptions.reject = function (identifier) {
             try {
-              consumer.subscriptions.reject(subscription.identifier)
+              const result = reject.call(this, identifier)
               done("refused quietly")
+              return result
             } catch (error) {
               done(String(error))
             }
+          }
+          window.Stimulus.consumer = consumer
+          window.Stimulus.register("reflex-probe", class extends ReflexController {})
+          document.body.insertAdjacentHTML("beforeend", "<div data-controller='reflex-probe'></div>")
+          const deadline = Date.now() + 10 * 1000
+          const refuse = () => {
+            const subscription = consumer.subscriptions.subscriptions[0]
+            if (subscription) return consumer.subscriptions.reject(subscription.identifier)
+            if (Date.now() > deadline) return done("no reflex subscription was made or refused")
+            setTimeout(refuse, 50)
           }
           refuse()
         })
