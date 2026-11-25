@@ -13,10 +13,18 @@ class FormAndOverlaySurfaceContractTest < Minitest::Test
 
   def test_text_controls_have_a_shared_surface_and_focus_state
     assert_includes CSS, 'input[type="datetime-local"]'
-    assert_includes CSS, "min-block-size: var(--tap-min)"
-    # Text fields are borderless, so focus shows as the shared outline ring.
-    assert_match(/\):not\(\.button\):focus-visible \{\s*outline: var\(--focus-ring\);/, CSS)
+    assert_includes CSS, "min-block-size: max(var(--tap-min), 3rem)"
+    assert_includes CSS, "border: 1px solid var(--border)"
+    assert_includes CSS, "border-color: var(--accent)"
+    # Fields pair a persistent boundary with the shared keyboard focus ring.
+    assert_match(/\):not\(\.button\):focus-visible \{[^}]*outline: var\(--focus-ring\);/m, CSS)
     assert_includes CSS, ":not(.button):user-invalid"
+  end
+
+  def test_default_submit_is_phone_width_without_becoming_a_desktop_bar
+    assert_includes CSS, "inline-size: 100%"
+    assert_includes CSS, "@media (min-width: 480px)"
+    assert_includes CSS, "min-inline-size: max(10rem, var(--tap-min))"
   end
 
   def test_unclassified_submit_controls_cannot_fall_back_to_ua_buttons

@@ -16,17 +16,21 @@ form :is(
   select,
   textarea
 ):not(.button) {
+  box-sizing: border-box;
   inline-size: 100%;
-  min-block-size: var(--tap-min);
+  /* Text fields deserve their own quiet boundary. A focus ring is feedback,
+     not the only clue that this empty rectangle accepts text. */
+  min-block-size: max(var(--tap-min), 3rem);
   padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
   background: var(--surface);
   color: var(--text);
   font: inherit;
   line-height: var(--leading-normal);
   accent-color: var(--accent);
-  transition: background var(--transition-fast) var(--ease-out);
+  transition: background var(--transition-fast) var(--ease-out),
+              border-color var(--transition-fast) var(--ease-out);
 }
 
 form :is(
@@ -45,6 +49,7 @@ form :is(
   select,
   textarea
 ):not(.button):focus-visible {
+  border-color: var(--accent);
   outline: var(--focus-ring);
   outline-offset: 1px;
   background: var(--surface-elevated);
@@ -102,6 +107,7 @@ form :is(
   select,
   textarea
 ):not(.button):user-invalid {
+  border-color: var(--danger);
   outline: 2px solid var(--danger);
   outline-offset: 1px;
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
@@ -139,6 +145,7 @@ form :is(.field, fieldset) > legend {
   display: block;
   color: var(--text-secondary);
   font-size: var(--text-small);
+  font-weight: var(--weight-bold);
   line-height: var(--leading-snug);
 }
 
@@ -152,9 +159,10 @@ form button[type="submit"]:not(.button):not([class]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-block-size: var(--tap-min);
+  inline-size: 100%;
+  min-block-size: max(var(--tap-min), 3rem);
   padding-inline: var(--control-pad-inline);
-  border: 0;
+  border: 1px solid var(--text);
   border-radius: 0;
   background: var(--text);
   color: var(--bg);
@@ -172,5 +180,15 @@ form input[type="submit"]:not(.button):not([class]):focus-visible,
 form button[type="submit"]:not(.button):not([class]):focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* A primary action fills a phone's form column. At wider measures it returns to
+   content width, so a sparse desktop form does not end in an arbitrary bar. */
+@media (min-width: 480px) {
+  form input[type="submit"]:not(.button):not([class]),
+  form button[type="submit"]:not(.button):not([class]) {
+    inline-size: auto;
+    min-inline-size: max(10rem, var(--tap-min));
+  }
 }
 
