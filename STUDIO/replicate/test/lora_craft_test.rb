@@ -50,4 +50,20 @@ class TestStudioLoraCraft < Minitest::Test
     assert_match(/velvet/i, scenes.fetch("merethe")[1])
     refute scenes.values.flatten.first(4).any? { |scene| scene.match?(/Net-a-Porter|MR Porter/i) }
   end
+  def test_recovered_catalogue_and_default_series
+    selfie = Studio::Lora::Selfie
+    archive = Studio::Lora::Guides.load.fetch("historical_sittings")
+    assert_equal 74, archive.fetch("ideas").size
+    assert_equal 24, archive.fetch("best").size
+    assert_equal 200, (1..200).map { |n| selfie.scenario_recipe(n).fetch("scene") }.uniq.size
+    %w[johann ragnhild merethe].each do |subject|
+      recipes = (1..4).map { |n| selfie.recipe(n, subject:) }
+      assert recipes[1].key?("historical_source")
+      assert_match(/camera distance:/, recipes[3].fetch("scene"))
+      refute_includes recipes[1].fetch("scene"), '#{'
+    end
+    %w[shoots warp best].each do |direction|
+      assert selfie.historical_recipe(1, direction:).fetch("historical_title")
+    end
+  end
 end
