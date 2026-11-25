@@ -16,6 +16,19 @@ class DesignAuthoringTest < Minitest::Test
     assert_includes text, "AVOID THE DEFAULTS"
   end
 
+  def test_recovered_creative_lenses_are_used_by_design_authoring
+    text = Authoring.context(path: "/repo/RAILS/brgen/app/views/posts/index.html.erb")
+    assert_includes text, "CREATIVE CRAFT"
+    assert_includes text, "STRONG_CENTERS"
+    assert_includes text, "Whitespace groups related things"
+    assert_includes text, "not a universal score"
+    music = Master::Design::VisualLanguage.creative_context("music")
+    assert_includes music, "Silence, rests"
+    assert_includes music, "listening remains human"
+    refute_includes music, "Whitespace groups related things"
+    assert_equal "", Master::Design::VisualLanguage.creative_context("unknown")
+  end
+
   def test_bsdports_is_not_held_to_the_house_typeface
     text = Authoring.context(path: "/repo/RAILS/bsdports/app/assets/stylesheets/application.scss")
 

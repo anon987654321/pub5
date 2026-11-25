@@ -2363,4 +2363,35 @@
       ]
     }
   }
+,
+  "craft_research": {
+    "status": "historical research, not newly verified acoustic measurements",
+    "sources": {
+      "reference_study": "https://github.com/anon987654321/pub4/blob/43c63e37312edda22955ba7e56a256da4c8bb096/STUDIO/dilla/REFERENCE_STUDY.md",
+      "beauty_engine": "https://github.com/anon987654321/pub4/commit/d70c1a4fb11bdbc920ce68cec8d553a9f4d2e13e",
+      "sampling_thesis": "https://scholarworks.sfasu.edu/etds/197/",
+      "jazz_microtiming": "https://arxiv.org/abs/1904.03442",
+      "earlier_harmony": "https://github.com/anon987654321/pub3/blob/main/multimedia/dilla/README.md",
+      "earlier_analog": "https://github.com/anon987654321/pub2/blob/main/dilla/dilla_README.md"
+    },
+    "mechanisms": [
+      "Independent but repeatable timing lanes; no universal golden-ratio swing.",
+      "Compose chops into phrases; do not copy protected samples or melodies.",
+      "Motifs, voice leading, question and answer, silence and foreground changes carry the form.",
+      "Select complementary source timbres before filtering, saturation or mastering.",
+      "Preserve kick envelope, headroom and transient detail while selectively wearing other layers.",
+      "Compare timing and arrangement controls with level-matched listening."
+    ],
+    "measurement_limits": [
+      "Tempo disagreement and half/double-time ambiguity are explicit.",
+      "Full-mix envelopes cannot identify instrument-specific onset or swing.",
+      "Band energy is not isolated kick or hat measurement; separated stems may bleed.",
+      "Onset density, spectral balance and crest factor are technical evidence, not beauty.",
+      "Historical reference mixes were not sample-accurately measured by the cited study; do not promote its hypotheses to ground truth."
+    ],
+    "superseded": [
+      "Universal 54.2% golden-ratio swing and indiscriminate large random offsets are historical hypotheses, not defaults.",
+      "Do not replace measured canon with old preset numbers."
+    ]
+  }
 }

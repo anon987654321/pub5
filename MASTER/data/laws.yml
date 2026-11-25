@@ -716,7 +716,10 @@ DENSITY_kanso_material_dishonesty:
 
 DENSITY_ma:
   parent: DENSITY
-  statement: "Negative space treated as a gap rather than a measure."
+  statement: >
+    Negative space treated as a gap rather than a measure: silence and rests,
+    photographic space, visual grouping, architectural void and paragraph
+    breaks should serve the whole rather than be filled by habit.
   resolution: review
   lineage: "Japanese aesthetic of ma"
 
@@ -728,7 +731,10 @@ DENSITY_shibui:
 
 DENSITY_wabi_sabi:
   parent: DENSITY
-  statement: "Imperfection treated as failure."
+  statement: >
+    Intentional material imperfection treated as failure, or artificial wear
+    imposed to hide a defect. Preserve expressive texture without confusing
+    it with broken anatomy, clipping, inaccessible controls or unsafe structure.
   resolution: review
   lineage: "Japanese aesthetic of wabi-sabi"
 

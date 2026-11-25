@@ -206,6 +206,7 @@ module Master
           reference_mission=#{DIRECTIONS.fetch(direction)[:reference_mission]}
           external_reference_discipline=#{reference_discipline(direction)}
           surface_anatomy=#{surface_anatomy(surface)}
+          #{creative_context("design")}
         TEXT
       end
 
@@ -284,6 +285,22 @@ module Master
         return "amber" if surface.app.to_s == "amber"
         return "bsdports" if surface.app.to_s == "bsdports"
         "brgen_social"
+      end
+
+      # Use the same recovered vocabulary for authoring and rendered critique.
+      # Domain-specific questions are evidence prompts, not objective verdicts.
+      def creative_context(domain, study: reference_study)
+        lenses = study.fetch("creative_lenses", {})
+        return "" unless lenses.is_a?(Hash)
+
+        rows = lenses.filter_map do |name, row|
+          next unless row.is_a?(Hash) && row[domain.to_s].is_a?(String)
+
+          "#{name} [#{Array(row["laws"]).join(",")}]: #{row.fetch(domain.to_s)}"
+        end
+        return "" if rows.empty?
+
+        "CREATIVE CRAFT (review lenses; not a universal score)\n#{rows.join("\n")}"
       end
 
       def reference_context
