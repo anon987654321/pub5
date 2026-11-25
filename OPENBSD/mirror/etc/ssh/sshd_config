@@ -3,8 +3,9 @@
 
 PermitRootLogin no
 
-# Key-only. Password authentication is disabled; PF does not dynamically ban
-# source addresses or apply connection-rate limits to port 22.
+# Key-only. Port 22 here takes thousands of password guesses a day and
+# pf.conf exempts SSH from the bruteforce table, so a guessable credential
+# has no throttle in front of it.
 PasswordAuthentication no
 
 # 3 was spent by a client's own key offers before it reached any other
