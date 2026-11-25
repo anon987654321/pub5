@@ -2285,6 +2285,7 @@ PRESERVE_FIRST:
 
 PRESERVE_FIRST_media_provenance:
   parent: PRESERVE_FIRST
+  severity: error
   statement: >
     A source media asset or approved prior take is overwritten, degraded or
     published without preserving its original bytes and identity, recording
@@ -3295,7 +3296,11 @@ law_catalogue:
     NO_HIDDEN_GLOBAL_STATE: {definition_sources: [MASTER/law/universal.rb], severity: error}
     NO_IMPORT_SCSS: {definition_sources: [MASTER/law/css.rb], severity: warning, languages: [scss]}
     NO_IMPORTANT: {definition_sources: [MASTER/law/web.rb], severity: warning, autofix: automatic, languages: [css, scss]}
-    NO_INFINITY_TO_I: {definition_sources: [MASTER/law/fix_hygiene.rb], severity: error, languages: [ruby], path_exclude: '/law/fix_hygiene\.rb\z'}
+    NO_INFINITY_TO_I:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      languages: [ruby]
+      path_exclude: '/law/ruby\.rb\z'
     NO_INLINE_ASSETS_IN_SHELL: {definition_sources: [MASTER/law/shell.rb], severity: warning, languages: [zsh]}
     NO_INLINE_SCRIPT_BLOCK: {
       definition_sources: [MASTER/law/html.rb],
@@ -3393,7 +3398,11 @@ law_catalogue:
     NO_ONE_PARADIGM: {definition_sources: [MASTER/law/universal.rb], severity: info, languages: [ruby]}
     NO_ORDINAL_ORNAMENT: {definition_sources: [MASTER/law/css.rb], severity: info, languages: [css, scss, html]}
     NO_OUTPUT_ARGUMENTS: {definition_sources: [MASTER/law/universal.rb], severity: warning}
-    NO_OVERESCAPED_NONCAPTURING: {definition_sources: [MASTER/law/fix_hygiene.rb], severity: error, languages: [ruby], path_exclude: '/law/fix_hygiene\.rb\z'}
+    NO_OVERESCAPED_NONCAPTURING:
+      definition_sources: [MASTER/law/ruby.rb]
+      severity: error
+      languages: [ruby]
+      path_exclude: '/law/ruby\.rb\z'
     NO_PUTS: {definition_sources: [MASTER/law/lexical.rb], severity: warning, autofix: automatic, languages: [ruby], path_exclude: 'lib/(?:agent|cli/session)/'}
       # The interface exemption lives as a kind in data/law_kinds.yml
       # (agent_interface, repl_session): stdout is the subject's only channel.

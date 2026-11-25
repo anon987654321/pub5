@@ -61,6 +61,35 @@ Law.define(:REDUNDANT_CORE_REQUIRE) do
   X
 end
 
+# Post-incident /fix hygiene belongs with the other Ruby source guards. These
+# rules stay narrow so ordinary numeric conversion and regex prose remain clean.
+Law.define(:NO_INFINITY_TO_I) do
+  source "MASTER post-incident /fix hardening - finite convergence ranks"
+  detect do |line|
+    code = line.gsub(/(['"]).*?\1/, "").sub(/#.*\z/, "")
+    code.match?(
+      /Float::(?:INFINITY|POSITIVE_INFINITY|NEGATIVE_INFINITY|NAN).*?\.(?:to_i|to_int)\b|
+       \.(?:to_i|to_int)\b.*?Float::(?:INFINITY|POSITIVE_INFINITY|NEGATIVE_INFINITY|NAN)/x,
+    )
+  end
+  fix "Use a finite sentinel or score_value before integer coercion; never call to_i/to_int on a non-finite float."
+  bad "Float::INFINITY.to_i"
+  good "UNMEASURED_SCORE = 1_000_000_000"
+end
+
+Law.define(:NO_OVERESCAPED_NONCAPTURING) do
+  source "MASTER post-incident /fix hardening - extract-then-match regex integrity"
+  detect do |line|
+    code = line.gsub(/(['"]).*?\1/, "")
+    next false unless code.match?(/\.(?:scan|match|match\?|gsub|sub|index|split|partition)\s*[(\[{]/)
+
+    code.match?(/\\\\.?\(\?:/)
+  end
+  fix "Match the extracted regex body with regex syntax appropriate to the body; do not add source-level escaping twice."
+  bad 'body.scan(/phantom:\\\\(?:detected|halt|recovery)/)'
+  good "body.scan(/phantom:\\(?:detected|halt|recovery)/)"
+end
+
 # Struct.new builds a mutable bag with member-wise == by side effect; Data.define
 # builds a value. The rewrite is one line to describe and it changes behaviour
 # at every site that mutates or compares - the model council's judgement, never
