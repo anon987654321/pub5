@@ -993,6 +993,20 @@ class VpsDeployContractTest < Minitest::Test
     SOURCE[/^set_stage preflight-disk$.*?^done$/m]
   end
 
+  # A diagnostic burst refused an unattended deploy outright (vm23, 2026-11-25):
+  # pressure is waited out within the load gate's bound, then refused.
+  def test_cpu_pressure_is_waited_out_within_the_load_bound
+    wait = SOURCE[/^admit_cpu_pressure\(\) \{.*?^\}/m].to_s
+    assert_includes wait, "VPS_DEPLOY_ADMISSION_WAIT:-900"
+    assert_includes wait, "sleep 60"
+    assert_includes wait, "deploy_refuse"
+    pressure = SOURCE[/^active_cpu_pressure\(\) \{.*?^\}/m].to_s
+    assert_includes pressure, "cpu-pressure"
+    assert_includes pressure, "420 && pressure_busy >= 80"
+    # The run's own pin/snapshot burst must not refuse it (vm23, 2026-11-25).
+    assert_includes pressure, "pressure_stamp < started"
+  end
+
   def test_deploy_admission_requires_two_low_load_and_swap_samples_without_cpu_pressure
     block = SOURCE[/^admit_host_load\(\) \{.*?^\}/m]
     refute_nil block, "the host admission gate is missing"
@@ -1005,10 +1019,7 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes load_gate, "VPS_DEPLOY_ADMISSION_WAIT:-900"
     assert_includes SOURCE[/^read_load_five\(\) \{.*?^\}/m].to_s, "vm.loadavg"
     assert_includes block, "free_swap >= 400"
-    assert_includes block, "cpu-pressure"
-    assert_includes block, "420 && pressure_busy >= 80"
-    # The run's own pin/snapshot burst must not refuse it (vm23, 2026-11-25).
-    assert_includes block, "pressure_stamp < started"
+    assert_includes block, "admit_cpu_pressure"
     assert_source SOURCE, "admit_host_load"
     assert_source SOURCE, "VPS_DEPLOY_ADMITTED_SHA=$pin"
   end

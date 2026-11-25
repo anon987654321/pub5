@@ -1103,32 +1103,55 @@ admit_load_five() {
   print -r -- "$load_five"
 }
 
+# The busy percent of a CPU-pressure reading that still counts, or nothing.
+# Unreadable state is fail-closed.
+active_cpu_pressure() {
+  local pressure_file=/var/db/pub5/cpu-pressure pressure_stamp pressure_busy now started
+  [[ -e $pressure_file ]] || return 0
+  [[ -f $pressure_file && ! -L $pressure_file ]] || deploy_refuse "CPU-pressure state is not a regular file"
+  read pressure_stamp pressure_busy < "$pressure_file" || deploy_refuse "cannot read CPU-pressure state"
+  now=$(date +%s)
+  [[ $pressure_stamp == <-> && $pressure_busy == <-> && $now == <-> ]] ||
+    deploy_refuse "cannot parse CPU-pressure state"
+  # Only pressure from before this run started counts: the pin and
+  # snapshot stages are themselves a five-second burst, and the watcher
+  # recorded 96% from them at 10:39:06, so the deploy refused itself
+  # (vm23, 2026-11-25). The five-minute load ceiling still holds.
+  started=${VPS_DEPLOY_RUN_STARTED_EPOCH:-$(( now + 1 ))}
+  if (( now >= pressure_stamp && now - pressure_stamp <= 420 && pressure_busy >= 80 &&
+        pressure_stamp < started )); then
+    print -r -- "$pressure_busy"
+  fi
+}
+
+# Pressure is waited out like load, within the same bound: a few read-only
+# diagnostics on the one-CPU box recorded 91% and refused an unattended deploy
+# that nothing else stood in the way of (vm23, 2026-11-25).
+admit_cpu_pressure() {
+  local busy waited=0
+  busy=$(active_cpu_pressure) || exit 1
+  while [[ -n $busy ]]; do
+    (( waited < ${VPS_DEPLOY_ADMISSION_WAIT:-900} )) \
+      || deploy_refuse "sustained CPU pressure is active ($busy% busy) after waiting ${waited}s"
+    log "admission: CPU pressure $busy% busy, waiting for it to clear" >&2
+    sleep 60
+    waited=$(( waited + 60 ))
+    busy=$(active_cpu_pressure) || exit 1
+  done
+}
+
 admit_host_load() {
   local sample load_five swap_output swap_blocks free_swap
-  local pressure_file=/var/db/pub5/cpu-pressure pressure_stamp pressure_busy now started
   for sample in 1 2; do
     load_five=$(admit_load_five) || exit 1
     swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null) \
       || deploy_refuse "cannot read swap status"
-    swap_blocks=$("$RUBY" -e 'match = ARGV.fetch(0).match(/([0-9]+)\s+available/i); abort "missing available count" unless match; print match[1]' "$swap_output" 2>/dev/null) \
+    swap_blocks=$("$RUBY" -e 'match = ARGV.fetch(0).match(/([0-9]+)\s+available/i)
+      abort "missing available count" unless match; print match[1]' "$swap_output" 2>/dev/null) \
       || deploy_refuse "cannot parse free swap; admission is fail-closed"
     free_swap=$(( swap_blocks * 512 / 1048576 ))
     (( free_swap >= 400 )) || deploy_refuse "only $free_swap MB swap is free; admission floor is 400 MB"
-    if [[ -e $pressure_file ]]; then
-      [[ -f $pressure_file && ! -L $pressure_file ]] || deploy_refuse "CPU-pressure state is not a regular file"
-      read pressure_stamp pressure_busy < "$pressure_file" || deploy_refuse "cannot read CPU-pressure state"
-      now=$(date +%s)
-      [[ $pressure_stamp == <-> && $pressure_busy == <-> && $now == <-> ]] || deploy_refuse "cannot parse CPU-pressure state"
-      # Only pressure from before this run started counts: the pin and
-      # snapshot stages are themselves a five-second burst, and the watcher
-      # recorded 96% from them at 10:39:06, so the deploy refused itself
-      # (vm23, 2026-11-25). The five-minute load ceiling above still holds.
-      started=${VPS_DEPLOY_RUN_STARTED_EPOCH:-$(( now + 1 ))}
-      if (( now >= pressure_stamp && now - pressure_stamp <= 420 && pressure_busy >= 80 &&
-            pressure_stamp < started )); then
-        deploy_refuse "sustained CPU pressure is active ($pressure_busy% busy)"
-      fi
-    fi
+    admit_cpu_pressure
     log "admission sample $sample/2 passed (5m load=$load_five, free swap=${free_swap}MB)"
     (( sample == 1 )) && sleep 60
   done
