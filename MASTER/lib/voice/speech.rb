@@ -783,30 +783,45 @@ module Master
         started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
         audio_path = "/tmp/m_tts_#{SecureRandom.hex(8)}.mp3"
         voice_name = VOICES.fetch(voice.to_sym, VOICES[default_voice])
-        # A failure reason belongs to this utterance, not the previous one. An
-        # absent socket sets no error; an attempted socket that returns empty or
-        # truncated audio records one through the bounded retry path.
-        clear_last_error!
-        socket_failure = {}
-        sock_path = synthesize_edge_socket(text:, voice_name:, style_config:, audio_path:, failure: socket_failure)
-        if sock_path
-          clear_last_error!
-          return shape ? shaped(sock_path) : sock_path
-        end
-
-        # Keep fast mode from cold-starting a worker when no socket exists. Only
-        # a real failed socket request merits a one-shot recovery, and only for
-        # classic CLI speech where preserving the configured voice beats latency.
-        # The per-call result cannot be erased by another utterance updating last_error.
-        socket_failed = !socket_failure[:message].to_s.empty?
-        fast_retry = fast_tts_mode? && synthesis_mode == "classic" && socket_failed
-        return if fast_tts_mode? && !fast_retry
-
-        retry_timeout = [normal_worker_timeout(text.to_s.length), 30].min if fast_retry
-        path = edge_oneshot_path(audio_path:, timeout: retry_timeout, text:, voice_name:, style_config:)
+        path = edge_socket_or_oneshot(audio_path:, text:, voice_name:, style_config:)
         shape ? shaped(path) : path
       ensure
         log_timing("edge_total", started_at, text_length: text.to_s.length) if started_at
+      end
+
+      # A failure reason belongs to this utterance, not the previous one. An
+      # absent socket sets no error; an attempted socket that returns empty or
+      # truncated audio records one through the bounded retry path.
+      def edge_socket_or_oneshot(audio_path:, **speech)
+        clear_last_error!
+        failure = {}
+        sock_path = synthesize_edge_socket(audio_path:, failure:, **speech)
+        return edge_socket_hit(sock_path) if sock_path
+
+        edge_after_socket_miss(!failure[:message].to_s.empty?, audio_path:, **speech)
+      end
+
+      def edge_socket_hit(path)
+        clear_last_error!
+        path
+      end
+
+      # Keep fast mode from cold-starting a worker when no socket exists. Only
+      # a real failed socket request merits a one-shot recovery, and only for
+      # classic CLI speech where preserving the configured voice beats latency.
+      # The per-call result cannot be erased by another utterance updating last_error.
+      def edge_after_socket_miss(socket_failed, audio_path:, **speech)
+        fast_retry = fast_tts_mode? && synthesis_mode == "classic" && socket_failed
+        return fast_mode_miss(socket_failed) if fast_tts_mode? && !fast_retry
+
+        timeout = [normal_worker_timeout(speech[:text].to_s.length), 30].min if fast_retry
+        edge_oneshot_path(audio_path:, timeout:, **speech)
+      end
+
+      # Fast mode skips the one-shot worker; a socket that failed still says so once.
+      def fast_mode_miss(socket_failed)
+        summarize_tts_failure(edge_unreachable_line) if socket_failed
+        nil
       end
 
       # One-shot recovery: audio on file wins and clears the error; anything
@@ -817,15 +832,19 @@ module Master
         if path && File.size?(path)
           clear_last_error!
         else
-          fallback = if os_voice_fallback?
-                       "enabled (a different system voice may be used)"
-                     else
-                       "disabled by tts.os_voice_fallback=false (one-speaker policy)"
-                     end
-          summarize_tts_failure("neural voices unreachable - OS voice fallback #{fallback}; speech may be silent")
+          summarize_tts_failure(edge_unreachable_line)
           path = nil
         end
         path
+      end
+
+      # The one line a failed neural ladder prints: what failed last, and what
+      # the speaker does next. note_tts recorded the rungs before it.
+      def edge_unreachable_line
+        cause = @last_error.to_s.lines.first.to_s.strip
+        cause = cause.sub(/\Aedge (?:worker|socket) failed: (?:\w+0: )?/, "")[0, 100]
+        fallback = os_voice_fallback? ? "os voice fallback" : "os voice fallback off (tts.os_voice_fallback=false)"
+        cause.empty? ? "edge endpoint unreachable, #{fallback}" : "edge endpoint unreachable (#{cause}), #{fallback}"
       end
 
       # data/voice.yml tts.post_chain, applied.
@@ -870,6 +889,14 @@ module Master
       def warn_tts(message)
         warn_tts_once(message)
         @last_error = message
+      end
+
+      # A rung of the fallback ladder that the next rung may still recover:
+      # kept for /voice status and printed only at verbose. The ladder's
+      # outcome is the one line the terminal sees.
+      def note_tts(message)
+        @last_error = message
+        warn_tts_once(message) if defined?(Master::Trace::Dmesg) && Master::Trace::Dmesg.verbose?
       end
 
       # The emit half of warn_tts, for a summary that names the ladder's

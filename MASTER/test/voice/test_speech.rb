@@ -65,6 +65,31 @@ class TestSpeech < Minitest::Test
     assert_equal message, speech.instance_variable_get(:@last_error)
   end
 
+  # Each rung of the edge ladder used to print its own voice0 line; the
+  # terminal now hears the outcome once, with the last cause folded in.
+  def test_a_failed_edge_ladder_prints_one_line_with_cause_and_fallback
+    speech = Master::Voice::Speech
+    saved = [speech.instance_variable_get(:@warned_tts), speech.instance_variable_get(:@last_error)]
+    speech.instance_variable_set(:@warned_tts, {})
+    out, err = capture_io do
+      Master::Trace::Dmesg.with_verbosity("normal") { failed_edge_ladder(speech) }
+    end
+    lines = (out + err).lines
+
+    assert_equal 1, lines.size, lines.join
+    expected = "voice0: edge endpoint unreachable (one-shot synthesis produced no audio), os voice fallback"
+    assert_includes lines.first, expected
+  ensure
+    speech.instance_variable_set(:@warned_tts, saved[0])
+    speech.instance_variable_set(:@last_error, saved[1])
+  end
+
+  def failed_edge_ladder(speech)
+    speech.send(:note_tts, "edge socket unavailable after worker retry - falling back to a one-shot worker")
+    speech.send(:note_tts, "edge worker failed: tts0: one-shot synthesis produced no audio")
+    speech.stub(:os_voice_fallback?, true) { speech.send(:summarize_tts_failure, speech.send(:edge_unreachable_line)) }
+  end
+
   # The 2026-11-08 transcript's open ear row wants a host receipt that names
   # the engine, so the synthesis branches record which one produced the audio
   # instead of leaving a reader to infer the mouth from absence. One test per
