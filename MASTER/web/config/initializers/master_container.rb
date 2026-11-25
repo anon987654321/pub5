@@ -91,9 +91,8 @@ module MasterContainerLoader
       Master.prepare_runtime!
       Master::Voice::TtsSupervisor.ensure_daemon!(root:)
       TtsJob.ensure_worker!
-      container = Master.bootstrap_container(root:)
+      container = Master::Builder.build_web(root:, state_root: Rails.root.join("tmp", "public_runtime").to_s)
       config.x.master_container = container
-      start_scheduler(container)
       Rails.logger.info("master_container: ready")
       container
     end
@@ -108,27 +107,4 @@ module MasterContainerLoader
     nil
   end
 
-  def start_scheduler(container)
-    return if defined?(@scheduler_started) && @scheduler_started
-
-    @scheduler_started = true
-    Thread.new do
-      sleep 300
-      loop do
-        due = container[:standing].due
-        if due.any?
-          results = container[:standing].run_due!
-          results.each do |r|
-            Master::Ground::Swallow.safe_call(context: "MasterContainerLoader.scheduler_publish",
-event_bus: container[:bus]) do
-              container[:bus].publish("scheduler:ran", name: r[:name])
-            end
-          end
-        end
-        sleep 900
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "MasterContainerLoader.scheduler", event_bus: container[:bus])
-      end
-    end
-  end
 end

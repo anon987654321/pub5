@@ -45,12 +45,12 @@ layers:
       smiles, so this is a dataset selection rule as much as a prompt one.
   optical_signature:
     decided_at: postpro
-    grade_can_fix: true
+    grade_can_fix: partial
     rule: >-
-      Models learn from retouched photography and have no account of subsurface
-      scattering, so skin is too clean and speculars are uniform. Grain,
-      halation and an H&D curve are the opposite of what a diffusion model
-      omits, which is why the grade is the right tool for this layer.
+      Generated faces can lack convincing microtexture and show uniform
+      speculars. Film-like grain, halation and an H&D curve change the optical
+      signature; they cannot recover real pores, facial anatomy or missing
+      scene information. Compare the ungraded original with the finished grade.
     ai_tells: [clean_skin, uniform_speculars, perfect_eye_reflections]
 
 # Per-model prompting. A negative prompt does nothing on a guidance-distilled
@@ -92,8 +92,8 @@ prompting:
 # the rest a tool can.
 checks:
   identity: a render passes only when its face similarity clears a threshold set from the subject's own references
-  light: the prompt names a direction and a source, and the frame shows catchlights
-  lens: the prompt names a focal length between 50 and 85 mm and a distance
+  light: the prompt names a direction and a source, and catchlights agree with that source when visible
+  lens: the shot names framing, distance and focal length independently; deliberate wide or telephoto perspectives are valid
   grade: exposure and white balance first, skin on the vectorscope, one grade for the whole piece
   spend: one test frame, reviewed full size, before any batch
   film: >-
@@ -120,3 +120,15 @@ calibration:
     question is "is this worse than any real photograph of her", not "is this
     better than average". Floors round down and ceilings round up, so the
     envelope can only grow by less than a millionth.
+
+# Recovered primary repository evidence. Findings are historical observations,
+# not universal scientific guarantees or permission to upload subject media.
+research:
+  four_layers: https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/PHOTOGRAPHY.md
+  ambition: https://github.com/anon987654321/pub4/blob/5c15297107d131eef8881241f6e84190670a2225/STUDIO/AMBITION.md
+  capture_checks: https://github.com/anon987654321/pub4/blob/ab785658e0f5110e57cc071b2fd37dc7b72ad18a/STUDIO/replicate/lora/guides/photography.md
+  model_prompting: https://github.com/anon987654321/pub4/commit/3f3a2a68bebbbb63141d2d86d77a431f4789c722
+  expression_trial: https://github.com/anon987654321/pub4/commit/7d9c56676ec02f9b216280c4f8ef337cfe2c0fa7
+  expression_observation: "One smiling frame among 48 neutral-moment prompts in that historical adapter run; prefer warm moments when the brief calls for them, not as a universal rule."
+  composition_focus: https://github.com/anon987654321/pub4/commit/740cac46928a5364743e728a120eaaf6bddb3d87
+  artist_brief: https://github.com/anon987654321/pub4/commit/a4adf5b19861a06162768a7f803f8d9468ecb8d0

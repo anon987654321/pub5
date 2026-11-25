@@ -415,10 +415,10 @@ face_root:
     c_accent: var(--pub5-signal)
     c_danger: oklch(60% 0.14 35)
     c_code: oklch(81% 0.10 268)
-  font_mono: '"JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular",
-    Menlo, Monaco, Consolas, monospace'
-  font_label: '"JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira
-    Code", ui-monospace, monospace'
+  font_mono: '"Geist Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace,
+    "SFMono-Regular", Menlo, Monaco, Consolas, monospace'
+  font_label: '"Geist Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia
+    Code", "Fira Code", ui-monospace, monospace'
   face_bg: "#000000"
   derived:
     face_fg: var(--c-text)

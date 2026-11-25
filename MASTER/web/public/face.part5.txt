@@ -1120,7 +1120,7 @@ async function runMessageTurn(text) {
       window.MASTERChat?.closeChatStream?.();
       return;
     }
-    const chunk = raw.replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
+    const chunk = raw.replace(/\\([\\nr])/g, (_, escaped) => escaped === "n" ? "\n" : escaped === "r" ? "\r" : "\\");
     if (chatTiming.firstTokenMs === null) {
       chatTiming.firstTokenMs = Math.round(performance.now() - chatTiming.startedAt);
     }

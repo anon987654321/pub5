@@ -274,7 +274,60 @@ module Studio
       PHOTOGRAPHIC_CRAFT = [GEOMETRY, LIGHT, SKIN, FOCUS, COMPOSITION, "no text in the frame"].join(", ")
 
       def self.photographic(words)
-        [words, PHOTOGRAPHIC_CRAFT].compact.join(", ")
+        # Phone perspective is an intentional alternative, not a contradiction
+        # appended to portrait-distance geometry.
+        tail = words.to_s.include?("24mm-equivalent phone lens") ? [LIGHT, SKIN, FOCUS, COMPOSITION] : [PHOTOGRAPHIC_CRAFT]
+        [words, *tail].compact.join(", ")
+      end
+
+      # A shot is a capture plan and a single laboratory decision, not a stack
+      # of filters. These are existing Postpro presets, not new film stocks.
+      LABORATORY = %w[house portrait cinematic neon_night reportage silver_gelatin
+                      pastel_portrait instant_pack aged_kodachrome street noir
+                      saturated_negative golden_age contact_print analog_scan
+                      vhs_tape crt_broadcast].freeze
+      SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
+      SHOT_OPTIONAL = %w[preset key_side catchlight focus].freeze
+      KEY_SIDE = {
+        "short" => "key light on the side turned away from the camera",
+        "broad" => "key light on the side facing the camera",
+        "even" => "even light across the face"
+      }.freeze
+      SHOT_FOCUS = {
+        "eyes" => FOCUS, "face" => "the face in sharp focus",
+        "deep" => "subject and background in deep focus"
+      }.freeze
+      CAMERA_DISTANCES = %w[1m 2m 3m 5m selfie].freeze
+
+      def self.compile_shot(shot)
+        raise ArgumentError, "shot must be an object" unless shot.is_a?(Hash)
+        unknown = shot.keys - (SHOT_AXES + SHOT_OPTIONAL)
+        raise ArgumentError, "unknown shot fields: #{unknown.join(', ')}" unless unknown.empty?
+        SHOT_AXES.each do |axis|
+          value = shot.fetch(axis, nil)
+          raise ArgumentError, "shot needs #{axis}" unless value.is_a?(String) && !value.strip.empty? && value.bytesize <= 2000
+        end
+        distance = shot.fetch("distance")
+        lens = shot.fetch("lens")
+        preset = shot.fetch("preset", "house")
+        raise ArgumentError, "unknown camera distance" unless CAMERA_DISTANCES.include?(distance)
+        raise ArgumentError, "unknown lens" unless LENS.key?(lens)
+        raise ArgumentError, "unknown lighting" unless LIGHTING.key?(shot.fetch("lighting"))
+        raise ArgumentError, "unknown moment" unless MOMENT.key?(shot.fetch("moment"))
+        raise ArgumentError, "unknown laboratory preset" unless LABORATORY.include?(preset)
+        raise ArgumentError, "phone distance conflicts with a portrait lens" if distance == "selfie" && lens != "24mm"
+        raise ArgumentError, "portrait distance conflicts with phone perspective" if distance != "selfie" && lens == "24mm" && shot.fetch("framing").include?("phone")
+        key_side = shot["key_side"] && KEY_SIDE.fetch(shot["key_side"]) { raise ArgumentError, "unknown key side" }
+        catchlight = shot["catchlight"] && CATCHLIGHT.fetch(shot["catchlight"]) { raise ArgumentError, "unknown catchlight" }
+        focus = SHOT_FOCUS.fetch(shot.fetch("focus", "eyes")) { raise ArgumentError, "unknown focus" }
+        clauses = [shot.fetch("scene"), shot.fetch("framing"), SUBJECT_DISTANCE.fetch(distance),
+                   LENS.fetch(lens), LIGHTING.fetch(shot.fetch("lighting")), key_side, catchlight,
+                   MOMENT.fetch(shot.fetch("moment")), shot.fetch("gaze"), shot.fetch("composition"),
+                   SKIN, focus, "no text in the frame"].compact
+        prompt = clauses.join(", ")
+        hits = backfiring_words(prompt)
+        raise ArgumentError, "prompt works against itself: #{hits.keys.join(', ')}" unless hits.empty?
+        { "shot" => shot.merge("preset" => preset), "prompt" => prompt, "preset" => preset }
       end
 
       # Where the camera stands, which is the axis that decides distortion. The
@@ -308,6 +361,7 @@ module Studio
         "rembrandt" => "Rembrandt key light, triangle of light on the shadow-side cheek",
         "split" => "split lighting, one half of the face lit and the other in shadow",
         "loop" => "loop lighting, small nose shadow angled down the cheek",
+        "butterfly" => "butterfly lighting, elevated on-axis key with a small shadow under the nose",
         "rim" => "rim light separating the subject from a dark background",
         "practical" => "lit only by practical lamps inside the scene, mixed colour temperature",
         "neon" => "neon sign lighting, saturated magenta and cyan on skin",
@@ -331,6 +385,9 @@ module Studio
         "mixed" => "warm and cool catchlights",
         "backlit" => "faint catchlights",
         "hard" => "hard sun catchlights",
+        "softbox" => "rectangular catchlights high in the eyes",
+        "beauty_dish" => "round catchlights with a darker centre",
+        "twin" => "key and fill catchlights at ten and two o'clock",
       }.freeze
 
       # The moment, not the performance. A smile asked for by name collapses to
@@ -339,6 +396,8 @@ module Studio
       # face settles.
       MOMENT = {
         "after_laugh" => "the moment just after a laugh, the face still settling",
+        "real_grin" => "a wide spontaneous grin, cheeks lifted, eyes bright",
+        "about_to_laugh" => "amused and about to laugh",
         "half_smile" => "a lopsided half-smile, one corner of the mouth higher",
         "eye_crinkle" => "fine lines at the outer corners of the eyes from a real expression",
         "breath_held" => "a breath held, lips just closed",
@@ -503,6 +562,116 @@ module Studio
 
         stock = Studio::Lora::Craft::STOCK.fetch(stocks.fetch(index))
         "#{body}, #{stock}"
+      end
+
+      # Only name stocks that the current laboratory can actually develop.
+      # The legacy scene API still exposes its original prompt vocabulary.
+      PRESET_BY_STOCK = {
+        "portra" => "house", "portra800" => "cinematic", "gold" => "golden_age",
+        "ultramax" => "saturated_negative", "fuji400h" => "pastel_portrait",
+        "superia" => "pastel_portrait", "cinestill" => "neon_night",
+        "hp5" => "reportage", "trix" => "silver_gelatin",
+        "instax" => "instant_pack", "polaroid" => "instant_pack"
+      }.freeze
+      # Different environments first; then genuinely different photographic
+      # treatments, rather than silently repeating the first six sittings.
+      ALTERNATE_TREATMENTS = [
+        ["clinical frontal portrait in an empty tiled hall, fluorescent ceiling practicals, chest-up framing, 50mm, direct gaze, calm expression", "contact_print"],
+        ["documentary portrait outside a closed theatre, hard sidelight, chest-up framing, 85mm, eyes just past the lens, mid-conversation", "street"],
+        ["oblique portrait through rain-streaked glass, layered reflections, overcast light, head-and-shoulders framing, 85mm, thoughtful gaze past the lens", "aged_kodachrome"],
+        ["graphic portrait on a stairwell landing, one bare practical lamp, strong shadow side and negative space, chest-up framing, 50mm, quiet direct gaze", "noir"],
+        ["found-media portrait in a quiet hotel corridor, warm practical lighting, waist-up framing, 50mm, a fleeting grin at the lens", "analog_scan"],
+        ["editorial close-up in an empty studio, short-side Rembrandt light, 85mm, eyes on the lens, the moment after a laugh", "portrait"],
+        ["observational portrait at an empty railway platform, blue-hour sky and warm practical fill, low vantage point, waist-up framing, 35mm, eyes off frame, reflective expression", "cinematic"],
+        ["frontal documentary portrait beside a pale stone wall, soft open shade, head-and-shoulders framing, 85mm, direct gaze, settled half-smile", "reportage"],
+        ["portrait in a silent library aisle, one green reading lamp and cool window fill, waist-up framing, 50mm, eyes on an open book, absorbed expression", "house"],
+        ["night portrait outside a record store, neon reflection in a shop window, chest-up framing, 50mm, amused eyes on the lens", "neon_night"],
+        ["portrait on an empty seaside promenade, low sunlight across the cheek, chest-up framing, 85mm, direct gaze and genuine laughter", "golden_age"],
+        ["portrait at a florist doorway, cloudy daylight and a muted floral backdrop, chest-up framing, 50mm, eyes just past the lens, relaxed half-smile", "pastel_portrait"],
+        ["portrait at a small concert after soundcheck, direct flash and deep background, waist-up framing, 35mm, eyes on the lens, a spontaneous grin", "instant_pack"],
+        ["portrait under a railway arch, distant daylight and a deliberate silhouette, head-and-shoulders framing, 85mm, eyes toward the light, quiet expression", "silver_gelatin"]
+      ].freeze
+
+      DIRECTIONS = {
+        "natural" => [
+          ["window", "after_laugh", "85mm", "house"],
+          ["open_shade", "half_smile", "50mm", "pastel_portrait"],
+          ["overcast", "real_grin", "50mm", "reportage"],
+          ["golden_hour", "about_to_laugh", "85mm", "golden_age"]
+        ],
+        "cinematic" => [
+          ["practical", "mid_word", "50mm", "cinematic"],
+          ["mixed", "half_smile", "85mm", "house"],
+          ["neon", "about_to_laugh", "50mm", "neon_night"],
+          ["rembrandt", "after_laugh", "85mm", "silver_gelatin"]
+        ],
+        "editorial" => [
+          ["butterfly", "half_smile", "105mm", "house"],
+          ["hard", "mid_word", "85mm", "saturated_negative"],
+          ["split", "breath_held", "85mm", "noir"],
+          ["window", "after_laugh", "50mm", "pastel_portrait"]
+        ],
+        "experimental" => [
+          ["practical", "unguarded", "50mm", "aged_kodachrome"],
+          ["direct_flash", "mid_word", "35mm", "contact_print"],
+          ["mixed", "breath_held", "50mm", "vhs_tape"],
+          ["hard", "half_smile", "85mm", "analog_scan"]
+        ],
+        "snapshot" => [
+          ["direct_flash", "real_grin", "24mm", "instant_pack"],
+          ["overcast", "after_laugh", "24mm", "house"],
+          ["window", "about_to_laugh", "24mm", "pastel_portrait"],
+          ["mixed", "half_smile", "24mm", "analog_scan"]
+        ]
+      }.freeze
+      CONTEXTS = [
+        "a quiet café doorway", "a covered railway platform",
+        "a studio opening onto a courtyard", "a sheltered waterfront terrace",
+        "a record-shop entrance", "an old building's open arcade"
+      ].freeze
+
+      def self.directional_recipe(number, direction:)
+        treatments = DIRECTIONS.fetch(direction) { raise ArgumentError, "unknown photographic direction" }
+        index = Integer(number) - 1
+        raise ArgumentError, "sitting must be between 1 and 24" unless index.between?(0, 23)
+        light, moment, lens, preset = treatments.fetch(index % treatments.size)
+        context = CONTEXTS.fetch(index / treatments.size)
+        shot = {
+          "scene" => "a candid portrait at #{context}",
+          "framing" => index.even? ? "head and shoulders" : "chest-up environmental framing",
+          "distance" => direction == "snapshot" ? "selfie" : "3m",
+          "lens" => lens, "lighting" => light, "moment" => moment,
+          "gaze" => index.even? ? "eyes on the lens" : "eyes just past the lens",
+          "composition" => "one clear visual centre, deliberate negative space, readable depth planes",
+          "preset" => preset
+        }
+        plan = Craft.compile_shot(shot)
+        { "scene" => plan.fetch("prompt"), "preset" => preset, "sitting" => number,
+          "shot" => plan.fetch("shot"), "direction" => direction }
+      end
+
+      def self.recipe(number, subject: nil, direction: "varied")
+        return directional_recipe(number, direction:) unless direction == "varied"
+
+        n = Integer(number)
+        raise ArgumentError, "sitting must be positive" unless n.positive?
+        scenes = SUBJECT_SCENES.fetch(subject.to_s, [])
+        stocks = SUBJECT_SCENE_STOCKS.fetch(subject.to_s, [])
+        index = n - 1
+        if index < scenes.size
+          body = scenes.fetch(index)
+          preset = PRESET_BY_STOCK.fetch(stocks.fetch(index))
+        elsif index < scenes.size + SCENES.size
+          general = index - scenes.size
+          body = SCENES.fetch(general).gsub(/\bher\b/, "the subject's")
+          preset = PRESET_BY_STOCK.fetch(SCENE_STOCKS.fetch(general))
+        else
+          alternate = index - scenes.size - SCENES.size
+          body, preset = ALTERNATE_TREATMENTS.fetch(alternate % ALTERNATE_TREATMENTS.size)
+        end
+        # Keep capture neutral; the authoritative laboratory develops it once.
+        body = body.gsub(/, (?:documentary colour-negative photography|rich Tri-X silver tones|tactile HP5 documentary grain|muted Fuji colour|natural colour-negative film)/i, "")
+        { "scene" => body, "preset" => preset, "sitting" => n }
       end
 
       # A distinct postpro heavy look per frame, and per subject. postpro deals

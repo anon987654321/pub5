@@ -46,6 +46,46 @@ class TestDillaCliContract < Minitest::Test
     assert_includes profiles, "dilla_shadow"
   end
 
+  def test_stereo_peak_cannot_disappear_in_a_mono_sum_or_stride
+    Dir.mktmpdir do |dir|
+      mix = Dilla::Stereo.new(4)
+      mix.l[1] = 1.1
+      mix.r[1] = -1.1
+      data = Dilla.write_quality(File.join(dir, "quality"), mix, -18.0, {}, 0.01, {})
+      assert_equal 2, data.fetch("clipped_samples")
+      assert_operator data.fetch("peak_dbfs"), :>, 0.0
+      assert_match(/not true peak/, data.fetch("peak_basis"))
+    end
+  end
+
+  def test_comparison_and_listening_review_are_bound_to_audio_and_receipts
+    Dir.mktmpdir do |dir|
+      paths = [0, 1].map do |index|
+        base = File.join(dir, "take#{index}")
+        wav = "#{base}.wav"
+        Dilla::Wav.write_16bit(wav, Dilla::Stereo.new(16))
+        quality = { "duration_s" => 0.0, "lufs_estimate" => -18.0 + index * 3 }
+        Dilla.atomic_write("#{base}.quality.json", JSON.generate(quality))
+        Dilla.atomic_write("#{base}.session.json", JSON.generate("seed" => index))
+        Dilla.write_provenance(base, Dilla::Options.new, { progression: { "id" => "fixture" } },
+                               { "id" => "fixture" }, wav, {}, quality, seed: index)
+        wav
+      end
+      report = Dilla.compare_takes(paths)
+      assert_equal [0.0, -3.0], report.fetch("takes").map { |row| row.fetch("suggested_playback_gain_db") }
+      assert_equal "AWAITING_OPERATOR", report.fetch("selection")
+      hash = Digest::SHA256.file(paths.first).hexdigest
+      assert_raises(ArgumentError) { Dilla.record_listening_review(paths.first, decision: "approve", sha256: "0" * 64) }
+      Dilla.record_listening_review(paths.first, decision: "approve", sha256: hash)
+      Dilla.record_listening_review(paths.first, decision: "reject", sha256: hash)
+      receipt = JSON.parse(File.read(paths.first.delete_suffix(".wav") + ".provenance.json"))
+      assert_equal %w[approved rejected], receipt.dig("human_acceptance", "history").map { |event| event.fetch("listening") }
+      assert_equal hash, Digest::SHA256.file(paths.first).hexdigest
+      File.open(paths.last.delete_suffix(".wav") + ".session.json", "a") { |file| file.write(" ") }
+      assert_raises(ArgumentError) { Dilla.compare_takes(paths) }
+    end
+  end
+
   def test_help_lists_the_reference_pipeline
     out, _err, status = run_dilla("--help")
     assert status.success?
@@ -917,6 +957,36 @@ class TestDillaIndustrialTechno < Minitest::Test
 end
 
 class TestDillaArrangementAndOfflineExport < Minitest::Test
+  def test_recovered_form_spans_the_score_and_retains_anchors
+    form = Dilla::CompositionForm.new("arc", bars: 16)
+    assert_equal %w[intimate pocket statement expansion peak subtraction afterglow return], form.plan.map { |row| row.fetch("name") }.uniq
+    events = { drum: 16.times.flat_map { |bar| [Dilla::Event.new(bar * 2.0, 0, :kick, nil, 0.8, nil), Dilla::Event.new(bar * 2.0 + 1, 0, :hats, nil, 0.6, nil)] },
+               melody: 16.times.map { |bar| Dilla::Event.new(bar * 2.0, 0.25, :melody, 72 + bar % 3, 0.7, nil) } }
+    shaped = form.apply(events, bar_seconds: 2.0, seed: 7)
+    assert_equal shaped, form.apply(events, bar_seconds: 2.0, seed: 7)
+    assert_equal events[:drum].select { |ev| ev.lane == :kick }.map(&:time), shaped[:drum].select { |ev| ev.lane == :kick }.map(&:time)
+    assert_equal events[:melody].map(&:midi), shaped[:melody].map(&:midi)
+    assert_equal 0.7, events[:melody].first.vel
+    assert_operator shaped[:melody][10].vel, :<, shaped[:melody][4].vel
+    assert_equal "NOT_REVIEWED", Dilla::CompositionForm.evidence(shaped, bars: 16, bar_seconds: 2.0, form: "arc").fetch("listening")
+  end
+
+  def test_original_motif_adapts_to_the_chord_and_prefers_contrary_motion
+    form = Dilla::CompositionForm
+    assert_equal 72, form.motif_note([72, 76, 79], anchor: 72, index: 0, previous: nil, bass_motion: 0)
+    assert_equal 77, form.motif_note([72, 77, 79], anchor: 72, index: 2, previous: 74, bass_motion: -3)
+    assert_equal 74, form.motif_note([74, 76], anchor: 75, index: 0, previous: 75, bass_motion: 2)
+    assert_includes [73, 76, 81], form.motif_note([73, 76, 81], anchor: 72, index: 2, previous: 75, bass_motion: 4)
+    assert_equal 16, Dilla.resolve_render_plan(Dilla.parse_cli(%w[--form arc])).fetch(:bars)
+  end
+
+  def test_composition_form_is_an_explicit_replayable_option
+    opts = Dilla.parse_cli(%w[--form arc --bars 16])
+    assert_equal "arc", Dilla.resolve_render_plan(opts).fetch(:form)
+    assert_nil Dilla.resolve_render_plan(Dilla::Options.new).fetch(:form)
+    assert_raises(ArgumentError) { Dilla.resolve_render_plan(Dilla.parse_cli(%w[--form unknown])) }
+  end
+
   def test_showcase_is_a_real_24_bar_multi_progression_arrangement
     show = Dilla.showcase_data
     plan = Dilla.resolve_render_plan(Dilla::Options.new, showcase: show)

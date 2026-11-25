@@ -60,7 +60,7 @@
     window.MASTER_FACE_MASK_CHARACTERS = <%= raw json_escape((@face_mask_characters || {}).to_json) %>;
     window.MASTER_FACE_MASK_CHARACTER_ROTATION = <%= raw json_escape(Array(@face_mask_character_rotation).to_json) %>;
     window.MASTER_FACE_LAW_FIELD = <%= raw json_escape(@face_law_field.to_json) %>;
-    window.MASTER_COMMANDS = <%= raw json_escape(Master::CLI::CommandRegistry.command_surface.to_json) %>;
+    window.MASTER_COMMANDS = []; // Browser controls are local; operator commands are CLI-only.
     window.MASTER_I18N = <%= raw json_escape(t("face.js").to_json) %>;
     window.MASTER_CACHE_VERSION = <%= raw json_escape(Rails.application.config.x.cache_version.to_json) %>;
     window.MASTER_T = function (key, fallback, vars) {
@@ -132,6 +132,10 @@
       <span class="sr-only" data-mic-state-text></span>
     </button>
     <span id="tts-dot" class="tts-indicator" aria-hidden="true"></span>
+    <button id="photo-button" type="button" aria-label="<%= t("face.attach_photo") %>" title="<%= t("face.attach_photo") %>">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="3"/></svg>
+    </button>
+    <span id="battery-indicator" role="img" hidden></span>
   </div>
   <div id="tts-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <%# Small synchronous prerequisite: every deferred ecology/worker module and
@@ -185,7 +189,6 @@
         aria-label="<%= t("face.new_conversation") %>"
         title="<%= t("face.new_conversation") %>"
       >↺</button>
-      <button id="photo-button" type="button" aria-label="<%= t("face.attach_photo") %>">+</button>
       <input id="photo" type="file" accept="image/*" hidden>
       <span class="prompt-sigil" aria-hidden="true"><%= Master::Face::Contract.shell_prompt %></span>
       <textarea id="prompt-input" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" placeholder="<%= t("face.placeholder") %>" aria-label="<%= t("face.message_aria") %>" required></textarea>

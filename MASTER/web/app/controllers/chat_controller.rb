@@ -92,11 +92,11 @@ class ChatController < ApplicationController
       "# HELP master_cost_usd Session cost USD",
       "master_cost_usd #{data[:cost_usd]}",
       "# HELP master_repo_dirty_count Git dirty file count",
-      "master_repo_dirty_count #{data[:repo_dirty_count]}",
+      ("master_repo_dirty_count #{data[:repo_dirty_count]}" if data[:repo_dirty_count]),
       "# HELP master_cache_efficiency_pct Cache hit efficiency",
       "master_cache_efficiency_pct #{data[:cache_efficiency]}",
     ]
-    render plain: lines.join("\n") + "\n", content_type: "text/plain; version=0.0.4"
+    render plain: lines.compact.join("\n") + "\n", content_type: "text/plain; version=0.0.4"
   end
 
   def history
@@ -165,7 +165,7 @@ class ChatController < ApplicationController
   end
 
   def photo
-    status, payload = ImagePresenter.new(logger: web_logger, process: authenticated?).store(params[:photo])
+    status, payload = ImagePresenter.new(logger: web_logger, process: false).store(params[:photo])
     render json: payload, status:
   end
 
@@ -363,9 +363,7 @@ class ChatController < ApplicationController
   end
 
   def metrics_payload(c)
-    repo_root = Master::ROOT
-    out, = Master::Io::Exec.capture2e("git", "-C", repo_root, "status", "--porcelain", timeout: 5)
-    dirty = out.lines.count
+    dirty = nil # Operator repository status is not browser telemetry.
     open_models = c[:breaker].respond_to?(:open_models) ? c[:breaker].open_models : []
     cache = Master::Trace::CacheEfficiency.snapshot
     quota = Master::Io::ModelQuota.snapshot[:exhausted]

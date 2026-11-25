@@ -99,6 +99,12 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "conversation-only runtime cannot reach operator dashboard files" do
+    Rails.application.config.x.master_container = stub_master_container.reject { |key, _| key == :gateway }
+    get "/dashboard/live", headers: auth_headers
+    assert_response :forbidden
+  end
+
   test "live returns the mission payload when container present" do
     get "/dashboard/live", headers: auth_headers
 

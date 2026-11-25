@@ -129,7 +129,7 @@ module Dilla
     attr_accessor :mode, :source, :out, :progression, :drums, :profile, :groove, :bpm,
                   :kit, :voice, :rig, :sonitex, :sonitex_instances, :vcs, :drum_balance,
                   :chord_balance, :bars, :seed, :performer, :style, :no_stems, :max_duration,
-                  :video, :mp3, :midi, :midi_out, :foley, :sample_vol, :sample_weight,
+                  :video, :mp3, :midi, :midi_out, :foley, :sample_vol, :sample_weight, :form,
                   :sample_slices, :sample_loop, :extra, :output_at, :overwrite
 
     def initialize
@@ -162,6 +162,15 @@ module Dilla
       opts.mode = :audit
       args.shift
       opts.source = args.shift or abort "audit: provide the rendered WAV path"
+    when "compare"
+      opts.mode = :compare
+      args.shift
+      opts.extra["paths"] = args.dup
+      args.clear
+    when "review"
+      opts.mode = :review
+      args.shift
+      opts.source = args.shift or abort "review: provide a rendered WAV"
     when "reproduce"
       opts.mode = :reproduce
       args.shift
@@ -212,6 +221,10 @@ module Dilla
       when "--seed" then value_flag.call(:seed)
       when "--performer" then value_flag.call(:performer)
       when "--style" then value_flag.call(:style)
+      when "--form" then value_flag.call(:form)
+      when "--decision", "--sha256"
+        abort "dilla: #{flag} is only valid with review" unless opts.mode == :review
+        opts.extra[flag.delete_prefix("--")] = args.shift or abort "dilla: #{flag} needs a value"
       when "--max-duration" then value_flag.call(:max_duration)
       when "--sample-vol" then value_flag.call(:sample_vol)
       when "--sample-weight" then value_flag.call(:sample_weight)
@@ -246,6 +259,7 @@ module Dilla
         ruby dilla.rb --progression N|--id --out PATH
             [--drums ID] [--profile P] [--groove 0.85-1.25] [--bpm X] [--bars N]
             [--kit K] [--voice V] [--rig R] [--sonitex P] [--sonitex-instances N]
+            [--form arc|unchanged]  intentional musical development or original score
             [--vcs 0.0-1.0] [--drum-balance ±dB] [--chord-balance ±dB]
             [--seed N] [--performer ID] [--mp3] [--midi] [--midi-out PATH] [--foley]
             [--overwrite]  replace existing regular output files deliberately
@@ -257,6 +271,9 @@ module Dilla
         ruby dilla.rb output-path dilla-render-directory [ISO8601]
         ruby dilla.rb output-path reference-root
       ruby dilla.rb audit PATH.wav              verify sidecars, WAV structure and checksums
+      ruby dilla.rb compare TAKE.wav TAKE2.wav  compare verified take evidence, no edits
+      ruby dilla.rb review TAKE.wav --decision approve|reject --sha256 HASH
+                                                 explicitly record operator listening decision
       ruby dilla.rb reproduce TAKE.provenance.json --out replay.wav
                                                  rerender the WAV only; verify source/runtime fingerprints
         ruby dilla.rb demo-each                  catalogue, one mp3 per track
@@ -280,6 +297,9 @@ module Dilla
     when :help then puts help_text
     when :output_path then output_path(opts)
     when :audit then puts JSON.pretty_generate(audit_render(opts.source, overwrite: opts.overwrite))
+    when :compare then puts JSON.pretty_generate(compare_takes(opts.extra.fetch("paths")))
+    when :review
+      puts JSON.pretty_generate(record_listening_review(opts.source, decision: opts.extra["decision"], sha256: opts.extra["sha256"]))
     when :reproduce
       puts JSON.pretty_generate(reproduce_render(opts.source, out: opts.out, overwrite: opts.overwrite))
     when :list then print_list
@@ -298,7 +318,18 @@ module Dilla
   def api_actions
     {
       "list" => ->(_request) { api_catalogue },
-      "render" => ->(request) { dispatch(parse_cli(Array(request["args"]).map(&:to_s))) },
+      "form_plan" => lambda do |request|
+        bars = Integer(request.fetch("bars", 16))
+        raise ArgumentError, "form needs 1..128 bars" unless bars.between?(1, 128)
+        form = request.fetch("form", "arc")
+        form == "unchanged" ? [] : CompositionForm.new(form, bars:).plan
+      end,
+      "compare_takes" => ->(request) { compare_takes(request.fetch("paths")) },
+      "render" => lambda do |request|
+        opts = parse_cli(Array(request["args"]).map(&:to_s))
+        raise ArgumentError, "listening decisions require the explicit operator CLI" if opts.mode == :review
+        dispatch(opts)
+      end,
       "reference" => ->(request) { dispatch(parse_cli(["reference", *Array(request["args"]).map(&:to_s)])) },
       "output_path" => ->(request) { api_output_path(request) },
     }
@@ -313,6 +344,7 @@ module Dilla
       "voices" => catalogue.fetch("voices").keys,
       "rigs" => catalogue.fetch("rigs").keys.reject { |k| k == "comment" },
       "styles" => %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design royksopp industrial_techno],
+      "forms" => ["unchanged", *catalogue.fetch("composition_forms").keys],
     }
   end
 
@@ -849,6 +881,107 @@ module Dilla
     end
   end
 
+  # The recovered musical arc governs event density and attention, not the
+  # measured lane timing or the notes in a sourced voicing. No new RNG draws:
+  # the unshaped performance remains a reproducible A/B control.
+  class CompositionForm
+    attr_reader :name, :bars
+
+    def initialize(name, bars:)
+      @name = name.to_s
+      @bars = Integer(bars)
+      raise ArgumentError, "form needs 1..128 bars" unless @bars.between?(1, 128)
+      @phases = Dilla.catalogue.fetch("composition_forms").fetch(@name) do
+        raise ArgumentError, "unknown composition form #{@name.inspect}"
+      end.fetch("phases")
+    end
+
+    def phase(bar)
+      @phases.fetch(([bar.to_i, 0].max * @phases.length / bars).clamp(0, @phases.length - 1))
+    end
+
+    def plan
+      (0...bars).map { |bar| phase(bar).merge("bar" => bar + 1) }
+    end
+
+    def apply(events, bar_seconds:, seed:)
+      events.transform_values do |notes|
+        notes.each_with_index.filter_map do |event, index|
+          bar = (event.time / bar_seconds).floor.clamp(0, bars - 1)
+          row = phase(bar)
+          next unless keep?(event, row, index, seed)
+
+          take = event.dup
+          take.vel = (event.vel * weight(event.lane, row)).clamp(0.01, 1.0)
+          take
+        end
+      end
+    end
+
+    def keep?(event, row, index, seed)
+      return true if %i[kick snare chord bass].include?(event.lane)
+      # Retain a supplied or generated melodic phrase's notes; shape its
+      # foreground by articulation instead of randomly deleting its contour.
+      return true if event.lane == :melody
+
+      threshold = (0.70 + row.fetch("density") * 0.30 - row.fetch("space") * 0.45).clamp(0.35, 1.0)
+      value = Digest::SHA256.hexdigest([seed, event.lane, index].join(":"))[0, 8].to_i(16) / 4_294_967_296.0
+      value < threshold
+    end
+
+    def weight(lane, row)
+      foreground = row.fetch("foreground")
+      group = case lane
+              when :chord, :bass then "harmony"
+              when :melody then "melody"
+              when :foley then "counterpoint"
+              else "drums"
+              end
+      featured = group == foreground ||
+                 (group == "drums" && %w[rhythm groove].include?(foreground)) ||
+                 (group == "melody" && foreground == "upper_voice")
+      return 1.0 if featured
+      return 0.85 if %i[kick snare bass].include?(lane) && foreground == "space"
+
+      level = 0.70 + row.fetch("density") * 0.25
+      level *= 0.65 if foreground == "space"
+      level *= 0.82 if group == "melody" && row.fetch("response") == "answer"
+      level *= 0.85 + row.fetch("tension") * 0.15 if group == "counterpoint"
+      level
+    end
+
+    # Original melodic phrases reuse a small contour; adapt each target to
+    # the allowed pitch set of the current chord. Contrary motion is a
+    # preference, never an excuse to introduce a disallowed pitch.
+    MOTIF = [0, 2, 5, 2, 0, -2, 2, 0].freeze
+
+    def self.motif_note(candidates, anchor:, index:, previous:, bass_motion:)
+      target = anchor + MOTIF.fetch(index % MOTIF.size)
+      candidates.min_by do |pitch|
+        motion = previous ? pitch - previous : 0
+        same_direction = motion * bass_motion > 0 ? 1 : 0
+        [(pitch - target).abs + same_direction, same_direction, motion.abs, pitch]
+      end
+    end
+
+    def self.evidence(events, bars:, bar_seconds:, form: nil)
+      rows = Array.new(bars) { |bar| { "bar" => bar + 1, "onsets" => {}, "velocity_sum" => {} } }
+      events.each do |group, notes|
+        notes.each do |event|
+          bar = (event.time / bar_seconds).floor.clamp(0, bars - 1)
+          row = rows.fetch(bar)
+          key = group.to_s
+          row["onsets"][key] = row["onsets"].fetch(key, 0) + 1
+          row["velocity_sum"][key] = row["velocity_sum"].fetch(key, 0.0) + event.vel
+        end
+      end
+      rows.each { |row| row["velocity_sum"].transform_values! { |value| value.round(3) } }
+      { "form" => form || "unchanged", "planned_phases" => form ? new(form, bars: bars).plan : [],
+        "bars" => rows, "listening" => "NOT_REVIEWED",
+        "interpretation" => "score onset and velocity proxies; not acoustic loudness, perceived tension or beauty" }
+    end
+  end
+
   class Sequencer
     def initialize(progress:, groove:, drums:, rig:, rng:, performer:, opts: {})
       @progress = progress
@@ -893,7 +1026,7 @@ module Dilla
         child = self.class.new(
           progress: progression, groove: @groove, drums: drums, rig: @rig,
           rng: @rng, performer: @performer,
-          opts: { bars: bars, foley: active.include?("foley") }
+          opts: { bars: bars, foley: active.include?("foley"), form: @opts[:form] }
         )
         rendered = child.events
         lane_names = { drum: "drums", chord: "chords", bass: "bass", melody: "melody", foley: "foley" }
@@ -1134,6 +1267,9 @@ module Dilla
       base = slot[:start_bar] * @groove.bar_s
       span = slot[:bars] * @groove.bar_s
       last_midi = @last_melody_midi
+      bass = bass_note_for_pc(chord[:bass] || chord[:root])
+      @bass_motion = @last_melody_bass ? bass - @last_melody_bass : 0
+      @last_melody_bass = bass
       motif_index = (slot[:start_bar].to_f * rhythm.length).round
       slot[:bars].ceil.times do |bar_offset|
         rhythm.each do |step, length|
@@ -1165,6 +1301,15 @@ module Dilla
       scale_tones = scale.map { |degree| (root_pc + degree) % 12 }.uniq
       pitch_classes = (strong || @rng.chance(0.35)) ? chord_tones : scale_tones
       candidates = (72..83).select { |midi| pitch_classes.include?(midi % 12) }
+
+      if @opts[:form] == "arc"
+        @motif_anchor ||= @rng.pick(candidates)
+        @motif_position ||= 0
+        pitch = CompositionForm.motif_note(candidates, anchor: @motif_anchor,
+                                         index: @motif_position, previous: previous, bass_motion: @bass_motion || 0)
+        @motif_position += 1
+        return pitch
+      end
 
       # Move by step when the scale offers a nearby choice; never invent a
       # passing note outside the chord or scale just to smooth the line.
@@ -2629,9 +2774,15 @@ module Dilla
     # An explicit recording's own tempo outranks the generic style preset.
     bpm = (opts.bpm || prog["bpm"] || style["bpm"]).to_f.clamp(50.0, 200.0)
     arrangement = showcase && Array(showcase["arrangement"]).any? ? showcase["arrangement"] : nil
+    form = opts.form.to_s
+    form = nil if form.empty? || form == "unchanged"
+    if form && !catalogue.fetch("composition_forms").key?(form)
+      raise ArgumentError, "unknown composition form #{form.inspect}"
+    end
     arrangement_bars = Array(arrangement).sum { |section| section.fetch("bars", 0).to_i }
+    default_form_bars = form == "arc" ? 16 : nil
     bars = (opts.bars || (arrangement_bars.positive? ? arrangement_bars : nil) ||
-            prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
+            default_form_bars || prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
     feel = prog["feel"] || {}
     groove_profiles = catalogue.fetch("groove_profiles")
     groove_candidate = opts.profile || style["groove_profile"] || "dilla_shadow"
@@ -2644,7 +2795,7 @@ module Dilla
     {
       progression: prog, drums: drums, kit: kit, voice: voice, rig: rig, sonitex: sonitex,
       bpm: bpm, bars: bars, profile: groove_profile, swing: swing, performer_id: performer,
-      arrangement: arrangement,
+      arrangement: arrangement, form: form,
       vcs: (opts.vcs || 0.54).to_f.clamp(0.0, 1.0),
       groove_scale: opts.groove ? opts.groove.to_f.clamp(0.85, 1.25) : 1.0,
       sonitex_instances: (opts.sonitex_instances || 1).to_i.clamp(1, 6)
@@ -2680,9 +2831,12 @@ module Dilla
     drum_kit = DrumKit.new(kit, rng: Random.new(rng.seed ^ 0xD11A))
     seq = Sequencer.new(
       progress: plan[:progression], groove:, drums: drums_cfg, rig:, rng:, performer:,
-      opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley }
+      opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley, form: plan[:form] }
     )
     events = seq.events
+    if plan[:form]
+      events = CompositionForm.new(plan[:form], bars: bar_count).apply(events, bar_seconds: groove.bar_s, seed: rng.seed)
+    end
 
     # --- drums & sub
     drum_buf = Hash.new { |_h, k| raise KeyError, "no drum #{k}" }
@@ -2990,6 +3144,100 @@ module Dilla
   # Inspect a delivery without pretending software can listen to it. Structural
   # checks are machine-verifiable; the overall state remains INCONCLUSIVE until
   # a person has auditioned the render against the checklist.
+  # Compare adjacent, hash-bound receipts rather than arbitrary paths from
+  # their contents. This is a read-only technical comparison, not an audition.
+  def read_take_evidence(path)
+    wav = File.expand_path(path.to_s)
+    raise ArgumentError, "expected a WAV take" unless wav.end_with?(".wav")
+    raise ArgumentError, "WAV missing or unsafe" unless File.file?(wav) && !File.symlink?(wav)
+    raise ArgumentError, "WAV exceeds comparison bound" if File.size(wav) > 512 * 1024 * 1024
+    info = audit_wav_file(wav)
+    base = wav.delete_suffix(".wav")
+    documents = %w[provenance quality session].to_h do |kind|
+      file = "#{base}.#{kind}.json"
+      unless File.file?(file) && !File.symlink?(file) && File.size(file) <= 2 * 1024 * 1024
+        raise ArgumentError, "missing or unsafe #{kind} receipt"
+      end
+      bytes = File.binread(file)
+      parsed = JSON.parse(bytes)
+      raise ArgumentError, "invalid #{kind} receipt" unless parsed.is_a?(Hash)
+      [kind, [parsed, bytes]]
+    end
+    provenance = documents.fetch("provenance").first
+    raise ArgumentError, "not a Dilla render" unless provenance["engine"] == "dilla"
+    digest = Digest::SHA256.file(wav).hexdigest
+    unless provenance.dig("render", "sha256") == digest &&
+           provenance.dig("render", "bytes") == File.size(wav)
+      raise ArgumentError, "WAV does not match its receipt"
+    end
+    %w[quality session].each do |kind|
+      bytes = documents.fetch(kind).last
+      unless provenance.dig("files", kind, "sha256") == Digest::SHA256.hexdigest(bytes) &&
+             provenance.dig("files", kind, "bytes") == bytes.bytesize
+        raise ArgumentError, "#{kind} does not match its receipt"
+      end
+    end
+    quality = documents.fetch("quality").first
+    session = documents.fetch("session").first
+    metrics = quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "clipped_samples", "peak_basis")
+    { "path" => wav, "sha256" => digest, "duration_s" => info.fetch("duration_s"),
+      "metrics" => metrics, "stem_energy_share" => quality["stem_energy_share"],
+      "form" => session.dig("composition", "form") || "unchanged",
+      "composition" => session["composition"], "seed" => session["seed"],
+      "listening" => provenance.dig("human_acceptance", "sha256") == digest ?
+        provenance.dig("human_acceptance", "listening") : "not_reviewed",
+      "reviewed_sha256" => provenance.dig("human_acceptance", "sha256") }
+  rescue JSON::ParserError => error
+    raise ArgumentError, "invalid take receipt: #{error.message}"
+  end
+
+  def compare_takes(paths)
+    unless paths.is_a?(Array) && paths.length.between?(2, 8)
+      raise ArgumentError, "compare needs two to eight WAV takes"
+    end
+    takes = paths.map { |path| read_take_evidence(path) }
+    levels = takes.map { |take| take.dig("metrics", "lufs_estimate") }
+    if levels.all? { |value| value.is_a?(Numeric) && value.finite? }
+      target = levels.min
+      takes.each_with_index { |take, index| take["suggested_playback_gain_db"] = (target - levels[index]).round(1) }
+    end
+    { "takes" => takes, "selection" => "AWAITING_OPERATOR",
+      "note" => "Estimated level-matching gains are suggestions only; no audio was changed or auditioned. Compare motif, groove, arrangement, timbre and defects by listening." }
+  end
+
+  # Only the explicit CLI action records a human decision. Never change the
+  # audio or its quality/session receipts; retain prior human decisions.
+  def record_listening_review(path, decision:, sha256:)
+    raise ArgumentError, "decision must be approve or reject" unless %w[approve reject].include?(decision)
+    raise ArgumentError, "expected an explicit WAV SHA-256" unless sha256.to_s.match?(/\A[0-9a-f]{64}\z/)
+    wav = File.expand_path(path.to_s)
+    receipt = "#{wav.delete_suffix(".wav")}.provenance.json"
+    raise ArgumentError, "missing or unsafe provenance" unless File.file?(receipt) && !File.symlink?(receipt)
+    File.open(receipt, File::RDONLY | File::NOFOLLOW) do |file|
+      file.flock(File::LOCK_EX)
+      stat = file.stat
+      unless stat.file? && stat.uid == Process.uid && stat.nlink == 1 && stat.size <= 2 * 1024 * 1024
+        raise ArgumentError, "provenance must be singly-linked and owned by the operator"
+      end
+      evidence = read_take_evidence(wav)
+      raise ArgumentError, "reviewed WAV hash differs" unless evidence.fetch("sha256") == sha256
+      provenance = JSON.parse(file.read)
+      raise ArgumentError, "provenance changed" unless provenance.dig("render", "sha256") == sha256
+      previous = provenance.fetch("human_acceptance", {})
+      history = Array(previous["history"])
+      raise ArgumentError, "listening review history limit reached" if history.length >= 128
+      event = { "listening" => decision == "approve" ? "approved" : "rejected",
+                "reviewer" => "operator", "reviewed_at" => Time.now.utc.iso8601, "sha256" => sha256 }
+      current = File.lstat(receipt)
+      unless current.file? && !current.symlink? && [current.dev, current.ino] == [stat.dev, stat.ino]
+        raise ArgumentError, "provenance changed during review"
+      end
+      provenance["human_acceptance"] = event.merge("history" => history + [event])
+      Dilla.atomic_write(receipt, JSON.pretty_generate(provenance))
+      event
+    end
+  end
+
   def audit_render(path, overwrite: false)
     wav_path = File.expand_path(path.to_s)
     raise ArgumentError, "audit expects a .wav file" unless wav_path.match?(/\.wav\z/i)
@@ -3135,7 +3383,8 @@ module Dilla
         "arrangement" => session["arrangement"], "performer" => session.dig("performer", "id"),
         "drums" => session["drums"], "groove_profile" => session["groove_profile"]
       },
-      "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share"),
+      "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share", "clipped_samples", "peak_basis"),
+      "recorded_listening" => provenance.is_a?(Hash) ? provenance["human_acceptance"] : nil,
       "files" => file_records.transform_values do |record|
         record.is_a?(Hash) ? record.slice("path", "bytes", "sha256") : {}
       end,
@@ -3215,23 +3464,32 @@ module Dilla
   def write_quality(base, mix, lufs, stem_shares, duration, plan)
     peak = 0.0
     sum = 0.0
+    clipped = 0
     n = mix.l.length
     i = 0
+    # Stereo sample peaks must not cancel in the mono sum or disappear
+    # between subsampled positions. This is not oversampled true peak.
     while i < n
-      v = (mix.l[i] + mix.r[i]) * 0.5
-      a = v.abs
-      peak = a if a > peak
-      sum += v * v
-      i += 4
+      left = mix.l[i]
+      right = mix.r[i]
+      left_peak = left.abs
+      right_peak = right.abs
+      peak = left_peak if left_peak > peak
+      peak = right_peak if right_peak > peak
+      clipped += 1 if left_peak > 1.0
+      clipped += 1 if right_peak > 1.0
+      sum += left * left + right * right
+      i += 1
     end
-    rms = Math.sqrt(sum / [n / 4, 1].max)
+    rms = Math.sqrt(sum / [n * 2, 1].max)
     total = stem_shares.values.sum
     shares = stem_shares.transform_values { |v| total.positive? ? (v / total).round(3) : 0.0 }
     data = {
       "engine" => "dilla #{VERSION}", "duration_s" => duration.round(2),
-      "peak_dbfs" => (20.0 * Math.log10(peak.clamp(1e-9, 1.0))).round(2),
-      "rms_dbfs" => (20.0 * Math.log10(rms.clamp(1e-9, 1.0))).round(2),
-      "crest_db" => (20.0 * Math.log10([peak, 1e-9].max / rms.clamp(1e-9, 1.0))).round(2),
+      "peak_dbfs" => (20.0 * Math.log10([peak, 1e-9].max)).round(2),
+      "rms_dbfs" => (20.0 * Math.log10([rms, 1e-9].max)).round(2),
+      "crest_db" => (20.0 * Math.log10([peak, 1e-9].max / [rms, 1e-9].max)).round(2),
+      "clipped_samples" => clipped, "peak_basis" => "all stereo samples before PCM quantization; not true peak",
       "lufs_estimate" => lufs.round(1),
       "stem_energy_share" => shares,
       "sonitex" => plan[:sonitex], "swing" => plan[:swing]
@@ -3249,6 +3507,7 @@ module Dilla
       "kit" => plan[:kit], "voice" => plan[:voice], "rig" => plan[:rig], "bars" => plan[:bars],
       "performer" => performer.slice("id", "name"),
       "event_counts" => events.transform_values(&:length),
+      "composition" => CompositionForm.evidence(events, bars: plan[:bars], bar_seconds: 240.0 / plan[:bpm], form: plan[:form]),
       "sample_flip" => sample_report
     }
     Dilla.atomic_write("#{base}.session.json", JSON.pretty_generate(data))
@@ -3324,7 +3583,7 @@ module Dilla
         "out" => opts.out, "progression" => opts.progression, "drums" => opts.drums,
         "midi" => opts.midi, "midi_out" => opts.midi_out, "mp3" => opts.mp3,
         "video" => opts.video, "foley" => opts.foley,
-        "profile" => opts.profile, "groove" => opts.groove, "bpm" => opts.bpm, "bars" => opts.bars,
+        "profile" => opts.profile, "groove" => opts.groove, "bpm" => opts.bpm, "bars" => opts.bars, "form" => opts.form,
         "kit" => opts.kit, "voice" => opts.voice, "rig" => opts.rig, "sonitex" => opts.sonitex,
         "sonitex_instances" => opts.sonitex_instances, "vcs" => opts.vcs,
         "drum_balance" => opts.drum_balance, "chord_balance" => opts.chord_balance,
@@ -3487,6 +3746,7 @@ module Dilla
     # from the same seeded stream; an explicitly selected performer stays fixed.
     opts.performer = flags["performer"] unless flags["performer"].nil?
     opts.foley = flags["foley"] == true
+    opts.form = flags["form"]
     opts.sample_loop = "" # suppress ambient SAMPLE_LOOP so replay inputs stay explicit
     opts.sample_vol = nil
     opts.sample_weight = nil

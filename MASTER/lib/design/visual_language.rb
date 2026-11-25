@@ -206,6 +206,7 @@ module Master
           reference_mission=#{DIRECTIONS.fetch(direction)[:reference_mission]}
           external_reference_discipline=#{reference_discipline(direction)}
           surface_anatomy=#{surface_anatomy(surface)}
+          #{creative_context("design")}
         TEXT
       end
 
@@ -284,6 +285,37 @@ module Master
         return "amber" if surface.app.to_s == "amber"
         return "bsdports" if surface.app.to_s == "bsdports"
         "brgen_social"
+      end
+
+      # Use the same recovered vocabulary for authoring and rendered critique.
+      # Domain-specific questions are evidence prompts, not objective verdicts.
+      # Route explicit craft requests, not incidental domain mentions.
+      def creative_medium(text)
+        value = text.to_s
+        return unless value.match?(/\b(?:what makes|how to|how (?:can|do) (?:we|i)|compose|create|design|critique|refine|improve|write|draft|beauty|craft|beautiful)\b/i)
+        case value
+        when /\b(?:software|code|repository|refactor|ruby)\b/i then "software"
+        when /\b(?:architecture|architectural|courtyard|interior design)\b/i then "architecture"
+        when /\b(?:music|song|beat|groove|harmony|dilla|sound design)\b/i then "music"
+        when /\b(?:photograph\w*|portrait|selfie|camera)\b/i then "photography"
+        when /\b(?:film|cinema\w*|video|cinematic)\b/i then "cinema"
+        when /\b(?:writing|prose|essay|letter|story|poem|copy)\b/i then "writing"
+        when /\b(?:design|typography|layout|interface|ui)\b/i then "design"
+        end
+      end
+
+      def creative_context(domain, study: reference_study)
+        lenses = study.fetch("creative_lenses", {})
+        return "" unless lenses.is_a?(Hash)
+
+        rows = lenses.filter_map do |name, row|
+          next unless row.is_a?(Hash) && row[domain.to_s].is_a?(String)
+
+          "#{name} [#{Array(row["laws"]).join(",")}]: #{row.fetch(domain.to_s)}"
+        end
+        return "" if rows.empty?
+
+        "CREATIVE CRAFT (review lenses; not a universal score)\n#{rows.join("\n")}"
       end
 
       def reference_context

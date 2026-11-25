@@ -618,7 +618,7 @@ conversation: nil, persona_note: nil)
   end
 
   def escape_sse(text)
-    text.gsub("\\", "\\\\").gsub("\n", "\\n")
+    text.gsub(/[\\\n\r]/) { |char| { "\\" => "\\\\", "\n" => "\\n", "\r" => "\\r" }.fetch(char) }
   end
 
   # One stop record per turn, however many writers saw the closed socket.

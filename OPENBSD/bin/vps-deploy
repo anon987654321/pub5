@@ -1197,8 +1197,15 @@ choose_deploy_order() {
   load_deploy_ports
   avail=$("$RUBY" -e 'print File.readlines(ARGV[0]).last.to_s[/mem_avail=(\d+)/, 1].to_s' \
     "${VPS_DEPLOY_GUARD_LOG:-/var/log/resource_guard_history.log}" 2>/dev/null)
+  # A Rails app that is not running is the public outage, so it goes before
+  # MASTER: skipping stopped apps here kept MASTER first while brgen, amber,
+  # bsdports and mrdamascy were all down, and every MASTER failure then held
+  # them down (vm23, 2026-11-25).
   for svc in $DEPLOY_RAILS; do
-    (( ${${=VPS_DEPLOY_STARTED:-}[(Ie)$svc]} )) || continue
+    if (( ! ${${=VPS_DEPLOY_STARTED:-}[(Ie)$svc]} )); then
+      why="$svc is not running"
+      break
+    fi
     port=${deploy_ports[$svc]:-}
     [[ -n $port ]] && wait_up "$port" 5 || why="$svc is not answering /up"
   done

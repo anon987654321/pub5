@@ -234,4 +234,17 @@ class TraceDmesgTest < Minitest::Test
   ensure
     previous ? ENV["NO_COLOR"] = previous : ENV.delete("NO_COLOR")
   end
+  # Boot prints deps0 before the config loader exists; that miss must not
+  # pin the session to a verbose fallback.
+  def test_a_config_miss_during_boot_is_normal_and_not_cached
+    dmesg = Master::Trace::Dmesg
+    saved = dmesg.instance_variable_get(:@cfg)
+    dmesg.instance_variable_set(:@cfg, nil)
+    missing = ->(_section) { raise NoMethodError, "config_section" }
+
+    Master.stub(:config_section, missing) { assert_equal "normal", dmesg.cfg.fetch("verbosity") }
+    assert dmesg.cfg.key?("boot_sgr"), "the real console.yml section loads once the loader exists"
+  ensure
+    dmesg.instance_variable_set(:@cfg, saved)
+  end
 end

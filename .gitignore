@@ -286,6 +286,10 @@ STUDIO/lora/*_selfie_*.jpg
 STUDIO/lora/*_selfie_*.jpeg
 STUDIO/lora/*_selfie_*.png
 STUDIO/lora/*_selfie_*.webp
+STUDIO/lora/*_selfie_*.jpg.json
+STUDIO/lora/*_selfie_*.jpeg.json
+STUDIO/lora/*_selfie_*.png.json
+STUDIO/lora/*_selfie_*.webp.json
 STUDIO/lora/*_film_*.mp4
 STUDIO/lora/*_film_*.webm
 STUDIO/lora/*_film_*.mov

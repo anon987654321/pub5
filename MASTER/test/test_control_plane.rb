@@ -507,6 +507,15 @@ class ControlPlaneSpec < Minitest::Test
     end
   end
 
+  def test_a_refused_session_is_told_how_to_free_the_plane
+    lock = Master::Ops::ProcessLock
+
+    assert_includes lock.release_hint("pid" => 30_147, "mode" => "interactive"), "/exit in that session"
+    assert_includes lock.release_hint("pid" => 30_147, "mode" => "interactive"), "kill -INT 30147"
+    assert_includes lock.release_hint("pid" => 9, "mode" => "control_plane"), "operator vps master stop"
+    assert_includes lock.release_hint("pid" => 9, "stale" => true), "reclaimed"
+  end
+
   def test_held_for_durations_read_like_an_operator_reads_them
     now = Time.utc(2026, 11, 5, 12, 0, 0)
 

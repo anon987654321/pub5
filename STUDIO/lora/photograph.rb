@@ -19,6 +19,36 @@ def studio_photograph_actions
           "default" => name == default, "inputs" => Array(spec["inputs"]) }
       end
     end,
+    "plan" => ->(request) { Studio::Lora::Craft.compile_shot(request.fetch("shot")) },
+    "render_shot" => lambda do |request|
+      shot = request.fetch("shot")
+      Studio::Lora::Craft.compile_shot(shot)
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: request.fetch("subject", "ragnhild"), engine: request["engine"],
+        inference_profile: request["inference_profile"]
+      )
+      result = picture.write_shot(shot, grade_seed: request["grade_seed"])
+      quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
+    end,
+    "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
+    "render_candidates" => ->(request) { studio_render_candidates(request) },
+    "series_plan" => lambda do |request|
+      count = Integer(request.fetch("count", 4))
+      raise ArgumentError, "count must be between 1 and 24" unless count.between?(1, 24)
+      (1..count).map do |number|
+        Studio::Lora::Selfie.recipe(number, subject: request["subject"], direction: request.fetch("direction", "varied"))
+      end
+    end,
+    "preferences" => lambda do |request|
+      Studio::Visual::SelfieSeries.new(subject: request.fetch("subject")).preferences
+    end,
+    "review_candidate" => lambda do |request|
+      Studio::Visual::SelfieSeries.new(subject: request.fetch("subject")).review_candidate(
+        series_id: request.fetch("series_id"), index: request.fetch("index"),
+        sha256: request.fetch("sha256"), decision: request.fetch("decision")
+      )
+    end,
     "render" => lambda do |request|
       prompt = request["prompt"].to_s
       raise ArgumentError, "render needs a prompt" if prompt.empty?
@@ -28,13 +58,15 @@ def studio_photograph_actions
         film_engine: request["film_engine"], film_resolution: request["film_resolution"],
         inference_profile: request["inference_profile"]
       ).write(
-        prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5)
+        prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
+        preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"]
       )
     end,
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(
-        subject:, engine: request["engine"], inference_profile: request["inference_profile"]
+        subject:, engine: request["engine"], inference_profile: request["inference_profile"],
+        direction: request.fetch("direction", "varied")
       ).run(
         count: request.fetch("count", 4)
       )
@@ -59,6 +91,34 @@ def studio_photograph_actions
         "model" => Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild")).validate_model! }
     end,
   }
+end
+
+# A bounded comparison of operator-chosen shots. All plans are validated
+# before the first provider prediction; failed and skipped takes remain visible.
+def studio_render_candidates(request)
+  shots = request.fetch("shots")
+  unless shots.is_a?(Array) && shots.size.between?(1, 4)
+    raise ArgumentError, "candidate batch needs 1 to 4 shots"
+  end
+  shots.each { |shot| Studio::Lora::Craft.compile_shot(shot) }
+  budget = Studio::Visual::PredictionBudget.new(request.fetch("max_predictions"))
+  picture = Studio::Visual::IdeaPicture.new(
+    subject: request.fetch("subject"), engine: request["engine"],
+    inference_profile: request["inference_profile"]
+  )
+  results = shots.map.with_index do |shot, index|
+    next { "index" => index, "state" => "SKIPPED_BUDGET" } if budget.exhausted?
+    begin
+      result = picture.write_shot(shot, grade_seed: request["grade_seed"], prediction_budget: budget)
+      quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      result.merge("index" => index, "state" => quality.fetch("delivery"),
+                   "quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
+    rescue StandardError => error
+      { "index" => index, "state" => "FAILED", "reason" => "#{error.class}: #{error.message[0, 200]}" }
+    end
+  end
+  { "prediction_limit" => budget.limit, "predictions_dispatched_or_reserved" => budget.used,
+    "candidates" => results, "review" => "AWAITING_OPERATOR" }
 end
 
 # The engine question, shared by the wizard branches below. The catalogue is the
@@ -102,6 +162,8 @@ def studio_photograph_options(argv)
     parser.on("--selfie-series", "render portraits using the subject's references when present, otherwise the pinned LoRA") { options[:series] = true }
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
+    parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental or snapshot") { |value| options[:direction] = value }
+    parser.on("--preset NAME", "named laboratory grade for a single photograph (default house)") { |value| options[:preset] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -238,7 +300,8 @@ if $PROGRAM_NAME == __FILE__
       # LoRA. An explicit --engine is an override, not a required choice.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
-        subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile]
+        subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile],
+        direction: options.fetch(:direction, "varied")
       ).run(
         count: options[:count] || 4
       )
@@ -261,7 +324,8 @@ if $PROGRAM_NAME == __FILE__
         subject: options[:subject], film_engine: options[:film_engine],
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
-        prompt, film: options[:film], duration: options[:duration]
+        prompt, film: options[:film], duration: options[:duration],
+        preset: options.fetch(:preset, "house")
       )
     end
   end

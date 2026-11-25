@@ -58,6 +58,8 @@ class TestResearchPass < Minitest::Test
     assert_includes agent.calls.fetch(:sources).join(" "), "github.com"
     assert_includes result.fetch(:brief), "untrusted evidence"
     assert_includes result.fetch(:brief), "Microtiming evidence."
+    assert_includes result.fetch(:brief), "CREATIVE CRAFT"
+    assert_includes result.fetch(:brief), "listening remains human"
     assert_includes result.fetch(:brief), "eligible files: 2"
     assert bus.events.any? { |name, _| name == "fix_loop:research" }
   end
@@ -156,6 +158,14 @@ class TestResearchPass < Minitest::Test
       pass.send(:domains_for, MasterPaths::TREES.join(" "), @plan.research_protocol).sort
     assert_equal ["music"], pass.send(:domains_for, "STUDIO/dilla", @plan.research_protocol)
     assert_equal ["bplans"], pass.send(:domains_for, "BIZ", @plan.research_protocol)
+  end
+
+  def test_craft_context_uses_the_responsible_medium_without_claiming_external_coverage
+    pass = Master::Fix::ResearchPass.new(agent: Object.new, bus: nil, plan: @plan, root: Master::REPO_ROOT)
+    assert_includes pass.send(:craft_context, "studio", "STUDIO/lora"), "likeness"
+    assert_includes pass.send(:craft_context, "studio", "STUDIO/mov"), "sound sync"
+    assert_includes pass.send(:craft_context, "engineering", "MASTER"), "concept"
+    assert_equal "", pass.send(:craft_context, "all", ".")
   end
 
   def test_domain_routing_does_not_confuse_full_repo_with_one_subtree

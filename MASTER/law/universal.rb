@@ -569,10 +569,18 @@ Law.define(:DUAL_DETECTION) do
   X
 end
 
+Law.define(:INTENTIONAL_TEMPORAL_FORM) do
+  source "Jo-ha-kyu as an aesthetic lens; pub4 Dilla Beauty Engine, 2026-10-08"
+  ask "In a work meant to develop through time, do phrases, scenes, transitions or foreground changes serve its stated intent, or are they merely arbitrary repetition and effects? Is deliberate stasis or repetition part of the brief?"
+  fix "Name the intended temporal form; preserve anchors and motifs, vary density and attention at meaningful boundaries, and allow silence or repose. Compare the actual performance or rendered sequence, not a numerical beauty proxy. Do not impose a dramatic arc on intentionally static, ambient or repetitive work."
+  bad "A dramatic musical brief repeats a dense unchanged pattern with random effects."
+  good "A motif returns through distinct phrases; deliberate subtraction creates room for its return."
+end
+
 Law.define(:MASS_GENERATE_CURATE) do
   source "MASTER-native (generate then curate)"
   ask "Is a high-stakes creative or design decision accepting the first plausible draft without exploring alternatives?"
-  fix "Generate several materially different candidates, then curate against explicit constraints."
+  fix "Generate materially different candidates within a declared budget, compare the responsible domain evidence and preserve the originals. A technical proxy or deterministic replay is not human aesthetic acceptance."
   bad <<~'X'
     solution = first_candidate
   X
@@ -1070,8 +1078,8 @@ end
 
 Law.define(:STRONG_CENTERS) do
   source "Christopher Alexander - strong centers"
-  ask "Does this artifact have one identifiable center of meaning that its parts reinforce, or is it a flat bag of unrelated pieces?"
-  fix "Strengthen the central purpose and remove or relocate unrelated pieces."
+  ask "Does this artifact have an identifiable center of meaning that its parts reinforce? In temporal work, does the foreground change intentionally rather than every part competing at once?"
+  fix "Strengthen the central purpose and remove or relocate unrelated pieces. Judge the centre in the medium: musical foreground, photographic subject, primary task, architectural place or controlling idea."
   bad <<~'X'
     README with unrelated sections on finance, CSS, music, and legal notices
   X
@@ -1083,7 +1091,7 @@ end
 Law.define(:LEVELS_OF_SCALE) do
   source "Christopher Alexander - levels of scale"
   ask "Does the design jump abruptly between granularities without useful intermediate levels?"
-  fix "Introduce meaningful intermediate structure where it clarifies the whole."
+  fix "Introduce meaningful intermediate structure where it clarifies the whole: note, phrase and section; element, group and screen; room, circulation and site; function, module and system."
   bad <<~'X'
     system with one 500-line method and 2-line helpers
   X
@@ -1178,8 +1186,8 @@ end
 
 Law.define(:ANALOG_WARMTH) do
   source "MASTER-native - Dilla audio aesthetic"
-  ask "Is generated audio unnaturally perfect because noise floor, saturation, timing drift, or humanized variation has been eliminated entirely?"
-  fix "Introduce restrained, purposeful imperfection where the aesthetic calls for it."
+  ask "Does the intended material character call for imperfection, or are blanket noise, saturation and random timing errors masking poor source selection, groove or arrangement?"
+  fix "Choose complementary timbres first; preserve attack, headroom and relationships between independent timing lanes. Apply restrained wear or variation only where the aesthetic calls for it. Added grain or noise does not recover missing source detail."
   bad <<~'X'
     notes.each { |n| synth.play(n, velocity: 127, at: n.beat) }
   X

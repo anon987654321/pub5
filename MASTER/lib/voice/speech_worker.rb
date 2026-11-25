@@ -37,19 +37,19 @@ module Master
                     end
           detail = worker_failure_detail(err)
           message = detail.empty? ? "edge worker failed: #{outcome}; stderr empty" : "edge worker failed: #{detail} (#{outcome})"
-          warn_tts(message)
+          note_tts(message)
           return cleanup_failed_audio(audio_path)
         end
 
         return audio_path if File.exist?(audio_path) && File.size(audio_path) > 0
 
-        warn_tts("edge worker produced empty audio")
+        note_tts("edge worker produced empty audio")
         cleanup_failed_audio(audio_path)
       rescue Timeout::Error
-        warn_tts("edge worker timed out after #{timeout}s")
+        note_tts("edge worker timed out after #{timeout}s")
         cleanup_failed_audio(audio_path)
       rescue StandardError => e
-        warn_tts("edge worker error: #{e.class}: #{e.message}")
+        note_tts("edge worker error: #{e.class}: #{e.message}")
         cleanup_failed_audio(audio_path)
       end
 
@@ -113,7 +113,7 @@ module Master
       # on this invocation's own state so another sentence cannot clear its failure.
       def record_socket_failure(failure, message)
         failure[:message] = message if failure
-        warn_tts(message)
+        note_tts(message)
       end
 
       def build_socket_request(voice_name, style_config, text)

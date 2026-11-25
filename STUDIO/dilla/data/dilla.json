@@ -2290,4 +2290,108 @@
       }
     }
   }
+,
+  "composition_forms": {
+    "arc": {
+      "source": "https://github.com/anon987654321/pub4/commit/d70c1a4fb11bdbc920ce68cec8d553a9f4d2e13e",
+      "status": "historical authored arrangement heuristics; not measured listener preferences",
+      "phases": [
+        {
+          "name": "intimate",
+          "density": 0.32,
+          "tension": 0.14,
+          "foreground": "harmony",
+          "space": 0.36,
+          "response": "question"
+        },
+        {
+          "name": "pocket",
+          "density": 0.54,
+          "tension": 0.28,
+          "foreground": "drums",
+          "space": 0.18,
+          "response": "answer"
+        },
+        {
+          "name": "statement",
+          "density": 0.62,
+          "tension": 0.46,
+          "foreground": "melody",
+          "space": 0.12,
+          "response": "question"
+        },
+        {
+          "name": "expansion",
+          "density": 0.72,
+          "tension": 0.64,
+          "foreground": "counterpoint",
+          "space": 0.08,
+          "response": "answer"
+        },
+        {
+          "name": "peak",
+          "density": 0.82,
+          "tension": 0.82,
+          "foreground": "rhythm",
+          "space": 0.04,
+          "response": "question"
+        },
+        {
+          "name": "subtraction",
+          "density": 0.42,
+          "tension": 0.58,
+          "foreground": "space",
+          "space": 0.48,
+          "response": "answer"
+        },
+        {
+          "name": "afterglow",
+          "density": 0.24,
+          "tension": 0.3,
+          "foreground": "upper_voice",
+          "space": 0.58,
+          "response": "question"
+        },
+        {
+          "name": "return",
+          "density": 0.48,
+          "tension": 0.22,
+          "foreground": "groove",
+          "space": 0.22,
+          "response": "answer"
+        }
+      ]
+    }
+  }
+,
+  "craft_research": {
+    "status": "historical research, not newly verified acoustic measurements",
+    "sources": {
+      "reference_study": "https://github.com/anon987654321/pub4/blob/43c63e37312edda22955ba7e56a256da4c8bb096/STUDIO/dilla/REFERENCE_STUDY.md",
+      "beauty_engine": "https://github.com/anon987654321/pub4/commit/d70c1a4fb11bdbc920ce68cec8d553a9f4d2e13e",
+      "sampling_thesis": "https://scholarworks.sfasu.edu/etds/197/",
+      "jazz_microtiming": "https://arxiv.org/abs/1904.03442",
+      "earlier_harmony": "https://github.com/anon987654321/pub3/blob/main/multimedia/dilla/README.md",
+      "earlier_analog": "https://github.com/anon987654321/pub2/blob/main/dilla/dilla_README.md"
+    },
+    "mechanisms": [
+      "Independent but repeatable timing lanes; no universal golden-ratio swing.",
+      "Compose chops into phrases; do not copy protected samples or melodies.",
+      "Motifs, voice leading, question and answer, silence and foreground changes carry the form.",
+      "Select complementary source timbres before filtering, saturation or mastering.",
+      "Preserve kick envelope, headroom and transient detail while selectively wearing other layers.",
+      "Compare timing and arrangement controls with level-matched listening."
+    ],
+    "measurement_limits": [
+      "Tempo disagreement and half/double-time ambiguity are explicit.",
+      "Full-mix envelopes cannot identify instrument-specific onset or swing.",
+      "Band energy is not isolated kick or hat measurement; separated stems may bleed.",
+      "Onset density, spectral balance and crest factor are technical evidence, not beauty.",
+      "Historical reference mixes were not sample-accurately measured by the cited study; do not promote its hypotheses to ground truth."
+    ],
+    "superseded": [
+      "Universal 54.2% golden-ratio swing and indiscriminate large random offsets are historical hypotheses, not defaults.",
+      "Do not replace measured canon with old preset numbers."
+    ]
+  }
 }

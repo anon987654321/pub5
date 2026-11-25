@@ -329,14 +329,14 @@ window._chatOnChunk = (raw) => {
     setTimeout(() => _streamEl.closest('.message')?.classList.remove('msg-error-flash'), 120);
   }
   const previousText = terminalSource.get(_streamEl) || "";
-  const text = previousText + raw.replace(/\n/g, '\\n').replace(/\\\\/g, '\\');
+  const text = previousText + String(raw);
   terminalSource.set(_streamEl, text);
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
   if (text.includes('```')) {
     _streamEl.innerHTML = renderTerminalText(text);
   } else {
     _streamEl.textContent = text;
   }
-  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
   if (nearBottom) requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });
   if (streamLive) {
     const snippet = raw.replace(/[\n\r]/g, ' ').trim() || raw;
@@ -639,6 +639,28 @@ window._chatOnDmesg = (line) => {
   if (/veto|pass/i.test(String(line))) window.MASTEREcology?.burst?.(4, 0.25);
 };
 
+// The battery icon is a local measurement, not a guess or server telemetry.
+(function wireBattery() {
+  const indicator = document.getElementById('battery-indicator');
+  if (!indicator || typeof navigator.getBattery !== 'function') return;
+  navigator.getBattery().then((battery) => {
+    const update = () => {
+      if (!Number.isFinite(battery.level) || battery.level < 0 || battery.level > 1) {
+        indicator.hidden = true;
+        return;
+      }
+      indicator.hidden = false;
+      indicator.style.setProperty('--battery-level', String(battery.level * 100) + '%');
+      const label = 'Battery ' + Math.round(battery.level * 100) + '%' + (battery.charging ? ', charging' : '');
+      indicator.setAttribute('aria-label', label);
+      indicator.title = label;
+    };
+    update();
+    battery.addEventListener('levelchange', update);
+    battery.addEventListener('chargingchange', update);
+  }).catch(() => {});
+})();
+
 (function wirePhotoUpload() {
   const photoBtn = document.getElementById('photo-button');
   const photoInput = document.getElementById('photo');
@@ -715,9 +737,11 @@ document.querySelectorAll('.tool').forEach(btn => {
   // CommandRegistry so the CLI and face cannot drift.
   COMMANDS.push(
     { cmd: 'ping', hint: 'smoke test connection', category: 'health' },
-    { action: 'dashboard', label: 'mission control', hint: 'open /dashboard', category: 'health' },
     { action: 'history', label: 'toggle history', hint: 'sidebar · Ctrl+Shift+H', category: 'session' },
     { action: 'new_chat', label: 'new chat', hint: 'fresh transcript · rotate face character', category: 'session' },
+    { action: 'attach_photo', label: 'attach photo', hint: 'choose an image', category: 'interface' },
+    { action: 'music', label: 'toggle music', hint: 'local audio', category: 'interface' },
+    { action: 'pause_voice', label: 'pause speech', hint: 'local audio', category: 'interface' },
     { action: 'export', label: 'export session', hint: 'markdown download · Ctrl+Shift+E', category: 'session' },
     { action: 'export_jsonl', label: 'export jsonl', hint: 'machine-readable session', category: 'session' },
     { action: 'export_png', label: 'export face png', hint: 'snapshot canvas', category: 'interface' },
@@ -785,7 +809,9 @@ document.querySelectorAll('.tool').forEach(btn => {
   function runEntry(entry) {
     closePalette();
     if (entry.action === 'new_chat') { beginNewChat(); return; }
-    if (entry.action === 'dashboard') { window.location.href = '/dashboard'; return; }
+    if (entry.action === 'attach_photo') { document.getElementById('photo-button')?.click(); return; }
+    if (entry.action === 'music') { document.getElementById('music-loop-button')?.click(); return; }
+    if (entry.action === 'pause_voice') { document.getElementById('pause-speech-button')?.click(); return; }
     if (entry.action === 'history') { window.MASTERHistory?.toggle?.(); return; }
     if (entry.action === 'export') { window.MASTERExport?.download?.(); return; }
     if (entry.action === 'export_jsonl') { window.MASTERExport?.jsonl?.(); return; }
@@ -1109,7 +1135,9 @@ document.querySelectorAll('.tool').forEach(btn => {
 
 (function wireUiBacklog() {
   const RETRY_ID = 'stream-retry';
-  const CMD_KEY = 'master:cmd_hist';
+  const commandHistory = [];
+  let historyIndex = 0;
+  let historyDraft = '';
   const IDB_NAME = 'master-session';
   const IDB_STORE = 'turns';
 
@@ -1197,14 +1225,29 @@ document.querySelectorAll('.tool').forEach(btn => {
   })();
 
   function pushCmdHistory(text) {
-    const trimmed = String(text || '').trim();
-    if (!trimmed) return;
-    let hist = [];
-    try { hist = JSON.parse(localStorage.getItem(CMD_KEY) || '[]'); } catch (err) { window.MASTER_LOG?.warn?.("chat:cmd_history_parse", err); }
-    if (hist[hist.length - 1] !== trimmed) hist.push(trimmed);
-    while (hist.length > 40) hist.shift();
-    localStorage.setItem(CMD_KEY, JSON.stringify(hist));
+    const value = String(text || '').trim();
+    if (!value || /^\/(?:unlock|pair)\b/i.test(value)) return;
+    if (commandHistory.at(-1) !== value) commandHistory.push(value);
+    if (commandHistory.length > 40) commandHistory.shift();
+    historyIndex = commandHistory.length;
+    historyDraft = '';
   }
+
+  input?.addEventListener('keydown', (event) => {
+    if (event.isComposing || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey ||
+        !['ArrowUp', 'ArrowDown'].includes(event.key) || !commandHistory.length) return;
+    if (input.selectionStart !== input.selectionEnd) return;
+    const up = event.key === 'ArrowUp';
+    const atEdge = up ? !input.value.slice(0, input.selectionStart).includes('\n')
+      : !input.value.slice(input.selectionEnd).includes('\n');
+    if (!atEdge || (!up && historyIndex === commandHistory.length)) return;
+    event.preventDefault();
+    if (historyIndex === commandHistory.length) historyDraft = input.value;
+    historyIndex = Math.max(0, Math.min(commandHistory.length, historyIndex + (up ? -1 : 1)));
+    input.value = historyIndex === commandHistory.length ? historyDraft : commandHistory[historyIndex];
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
 
   const origOnUser = window._chatOnUser;
   window._chatOnUser = (text) => {

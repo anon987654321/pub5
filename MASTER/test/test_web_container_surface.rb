@@ -27,6 +27,22 @@ class TestWebContainerSurface < Minitest::Test
     end
   end
 
+  def test_browser_boot_does_not_construct_operator_runtime
+    initializer = File.read(File.join(WEB, "config/initializers/master_container.rb"))
+    builder = File.read(File.join(Master::ROOT, "lib/builder.rb"))
+    web = builder.split("def build_web", 2).last.split("def warn_config_validation", 2).first
+
+    assert_includes initializer, "Master::Builder.build_web"
+    refute_includes initializer, "Master.bootstrap_container"
+    refute_includes initializer, "start_scheduler"
+    assert_includes web, "[Io::WebSearch.new"
+    assert_includes web, "memory: nil"
+    assert_includes web, "code_index: nil"
+    assert_includes web, "browser_broker: nil"
+    refute_includes web, "build_runtime"
+    refute_includes web, "McpCoordinator"
+  end
+
   def test_every_initializer_call_into_tts_job_is_public
     initializer = File.read(File.join(WEB, "config/initializers/master_container.rb"))
     controller = File.read(File.join(WEB, "app/controllers/tts_controller.rb"))

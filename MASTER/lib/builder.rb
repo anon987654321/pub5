@@ -107,6 +107,36 @@ module Master
       runtime
     end
 
+    # Browser conversation is not an operator boot. Construct only the
+    # provider, session and public search dependencies; no MCP, scanner,
+    # code index, private memory, command registry, gateway or standing orders.
+    def build_web(root:, state_root:)
+      Master.configure_providers!
+      raise SecurityError, "web runtime state is symlinked" if File.symlink?(state_root)
+      FileUtils.mkdir_p(state_root, mode: 0o700)
+      raise SecurityError, "web runtime state has incorrect owner" unless File.stat(state_root).uid == Process.uid
+      File.chmod(0o700, state_root)
+      config = Ground::Config.new(state_root)
+      config["model"] = Master.default_model if config["model"].to_s.empty? || config["model"] == Ground::Config::DEFAULTS["model"]
+      bus = Trace::EventBus.new(event_log: Trace::Log::Event.new(root: state_root))
+      session = Trace::Session.new(root: state_root, budget_max: config.budget_max, req_max: config.req_max, isolated: true)
+      governor = Fix::Governor.new(config:, event_bus: bus)
+      breaker = Io::CircuitBreakerRegistry.new(budget_max: config.budget_max, req_max: config.req_max,
+        warn_at: config.warn_at, max_per_file: config.max_per_file, event_bus: bus)
+      cache = Io::SemanticCache.new(root: state_root, ttl: config["cache_ttl"], event_bus: bus)
+      tools = [Io::WebSearch.new(governor:, event_bus: bus)].freeze
+      homeostat = Fix::Homeostat.new(event_bus: bus)
+      personality = Voice::Personality.new(Voice::Personality::DEFAULT, root:, homeostat:)
+      deps = Review::Agent::Dependencies.from_kwargs(
+        config:, session:, tools:, circuit_breaker: breaker, cache:, event_bus: bus,
+        model_router: CLI::Routing::ModelRouter.new(config:), reasoning_modes: Review::Modes.new,
+        memory: nil, personality:, code_index: nil, homeostat:, browser_broker: nil
+      )
+      agent = Review::Agent.new(deps:)
+      agent.wire_constitution(Ground::Constitution.new)
+      { root: state_root, config:, bus:, session:, governor:, breaker:, cache:, tools:, agent:, personality: }.freeze
+    end
+
     def warn_config_validation(config)
       return unless config.respond_to?(:validate) && !config.valid?
 

@@ -346,6 +346,19 @@ module Master
         lines
       end
 
+      # How a refused second session frees the plane. /exit saves the holder's
+      # session; a signal ends it without that save. A daemon runs in screen.
+      # There is no takeover flag: two writers on one plane is the bug the lock
+      # exists to prevent, so headless work queues instead.
+      def release_hint(holder)
+        pid = holder["pid"]
+        return "release: holder is gone; retry and the lock is reclaimed" if holder["stale"]
+        return "release: MASTER/bin/operator vps master stop, or kill -INT #{pid}" if holder["mode"] == "control_plane"
+
+        "release: /exit in that session, or kill -INT #{pid} (drops unsaved session state); " \
+          "--headless queues behind it"
+      end
+
       def duration_since(timestamp, now: Time.now)
         return unless timestamp.is_a?(String) && timestamp.match?(/\A\d{4}-/)
 

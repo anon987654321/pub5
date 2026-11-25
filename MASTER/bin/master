@@ -463,6 +463,8 @@ unless internal_master_child || $MASTER_PROCESS_LOCK
        .each { |line| Master::Trace::Dmesg.status("master0", line.sub(/\Amaster0: /, ""), io: $stderr) }
   detail = holder.empty? ? "" : " pid=#{holder["pid"]} host=#{holder["host"]} mode=#{holder["mode"]} since=#{holder["at"]}"
   Master::Trace::Dmesg.status("master0", "another process owns the control plane#{detail}", io: $stderr)
+  hint = holder.empty? ? nil : Master::Ops::ProcessLock.release_hint(holder)
+  Master::Trace::Dmesg.status("master0", hint, io: $stderr) if hint
   exit 75
 end
 

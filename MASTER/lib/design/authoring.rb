@@ -78,6 +78,7 @@ module Master
         surface = Surface.new(app.to_s, "mission", nil, "/")
         parts = [MISSION_PROTOCOL]
         parts << VisualLanguage.direction_lines(surface, VisualLanguage.direction_for(surface)).strip if app
+        parts << VisualLanguage.creative_context("design") unless app
         parts << Typeface::HOUSE_RULE if app.nil? || house_typeface?(surface)
         parts << TELLS
         parts << format(COMPLETION, touch: Thresholds.touch_min_px(root:), measure: Thresholds.measure_ideal_ch(root:))

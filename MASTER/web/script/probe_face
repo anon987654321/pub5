@@ -3,6 +3,8 @@
 
 require "shellwords"
 require "timeout"
+require "fileutils"
+require "json"
 
 URL = ARGV[0] || "http://localhost:53187/"
 WAIT = Integer(ENV.fetch("PROBE_WAIT", "12"))
@@ -113,7 +115,12 @@ begin
   puts browser.evaluate("document.getElementById('primer') ? 'exists' : 'gone'")
 
   puts "\n=== simulate tap ==="
-  browser.mouse.click(x: 300, y: 500)
+  primer = browser.evaluate("document.getElementById('primer')?.getBoundingClientRect()?.toJSON()")
+  if primer && primer["width"].to_f.positive? && primer["height"].to_f.positive?
+    browser.mouse.click(x: (primer["x"] + primer["width"] / 2).to_i, y: (primer["y"] + primer["height"] / 2).to_i)
+  else
+    failures << "primer has no visible hit target"
+  end
   sleep 8
 
   state = browser.evaluate(<<~JS) rescue {}
@@ -140,6 +147,44 @@ begin
     state["faceType"] = browser.evaluate("typeof window.MASTER_FACE") rescue "undefined"
   end
   failures << "MASTER_FACE missing after 60s" unless state["faceType"] == "object"
+
+  if ENV["PROBE_MASKS"] == "1" && failures.empty?
+    target = File.expand_path(ENV.fetch("PROBE_MASK_DIR", "tmp/mask-probe"))
+    FileUtils.mkdir_p(target)
+    profiles = browser.evaluate("window.MASTER_FACE_MASKS.profiles.map(p => p.id)")
+    original = browser.evaluate("window.MASTER_FACE_MASKS.current().id")
+    receipts = []
+    profiles.each do |profile|
+      selected = browser.evaluate("window.MASTER_FACE_MASKS.select(#{profile.to_json})")
+      deadline = Time.now + 8
+      settled = false
+      until Time.now > deadline
+        settled = browser.evaluate("window.MASTER_FACE?.morphCurrent <= 0.02 && document.documentElement.dataset.faceSubjectRenderer === 'primary-points'")
+        break if settled
+        sleep 0.1
+      end
+      receipt = browser.evaluate(<<~JS)
+        (() => {
+          const face = document.getElementById('face');
+          const log = document.getElementById('chat-shell');
+          const f = face.getBoundingClientRect(), l = log.getBoundingClientRect();
+          return { profile: document.documentElement.dataset.maskProfile,
+            points: (window.MASTER_FACE.faceScatter?.length || 0) / 3,
+            fps: window.MasterRenderPolicy?.snapshot?.().fps ?? null,
+            width: f.width, height: f.height, disjoint: f.bottom <= l.top + 1 };
+        })()
+      JS
+      receipt["settled"] = settled
+      receipt["selected"] = selected
+      receipts << receipt
+      failures << "mask #{profile} failed projection" unless selected && settled && receipt["profile"] == profile &&
+        receipt["points"].to_i.positive? && receipt["disjoint"]
+      browser.screenshot(path: File.join(target, "#{profile}.png"))
+    end
+    browser.evaluate("window.MASTER_FACE_MASKS.select(#{original.to_json})")
+    File.write(File.join(target, "receipts.json"), JSON.pretty_generate(receipts) + "\n")
+    puts "mask probe: #{receipts.size} captures, #{target}"
+  end
 
   puts "\n=== console log tail ==="
   puts console_msgs.last(10).join("\n") unless console_msgs.empty?

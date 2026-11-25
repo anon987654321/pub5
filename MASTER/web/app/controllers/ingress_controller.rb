@@ -62,6 +62,8 @@ class IngressController < ApplicationController
   private
 
   def run_job(job, channel:)
+    return render(json: { error: "operator automation requires the local service" }, status: :forbidden) unless container[:gateway]
+
     body = parse_body
     message = body[:message].presence || job["message"].to_s
     return render(json: { error: "empty message" }, status: :bad_request) if message.empty?

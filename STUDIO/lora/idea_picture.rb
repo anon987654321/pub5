@@ -17,6 +17,28 @@ require_relative "../lora/lora"
 
 module Studio
   module Visual
+    # Bounds calls into the prediction client across a whole refinement batch,
+    # including fallback engines. Provider-internal HTTP retries remain the
+    # responsibility of the client.
+    class PredictionBudget
+      attr_reader :remaining, :limit
+
+      def initialize(limit)
+        @limit = Integer(limit)
+        raise ArgumentError, "prediction budget must be between 1 and 8" unless @limit.between?(1, 8)
+        @remaining = @limit
+      end
+
+      def exhausted? = remaining.zero?
+      def used = limit - remaining
+
+      def consume!
+        raise ArgumentError, "prediction budget exhausted" if exhausted?
+
+        @remaining -= 1
+      end
+    end
+
     class IdeaPicture
       # Highspeed is the default everyday 768P film engine. H3 Lite remains the
       # lower-cost drafting option at 480P or 768P; both accept 4-15 seconds.
@@ -101,8 +123,15 @@ module Studio
         @inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")
       end
 
-      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
+      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false, prediction_budget: nil)
         lint_prompt!(words)
+        if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
+          raise ArgumentError, "unknown laboratory preset"
+        end
+        unless grade_seed.nil?
+          grade_seed = Integer(grade_seed)
+          raise ArgumentError, "grade seed out of range" unless grade_seed.between?(0, 2_147_483_647)
+        end
         validate_model!
         if film
           validate_film_model!
@@ -110,11 +139,33 @@ module Studio
         end
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
-        stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
-        still = render_still(words, stem, grade_seed:)
-        return { "still" => still } unless film
+        default_stem = preset ? "#{@subject}_selfie_shot" : @subject
+        stem = [safe_stem(output_stem || default_stem), stamp, SecureRandom.hex(3)].join("_")
+        @compiled_capture = compiled
+        @prediction_budget = prediction_budget
+        @capture_receipt = nil
+        @last_capture_model = @last_capture_input = nil
+        grade_seed ||= SecureRandom.random_number(2_147_483_647) if preset
+        still = render_still(words, stem, grade_seed:, preset:)
+        result = { "still" => still }
+        result["capture"] = @capture_receipt if @capture_receipt
+        @compiled_capture = false
+        result["clip"] = render_film(words, still, stem, duration) if film
+        result
+      ensure
+        @compiled_capture = false
+        @prediction_budget = nil
+      end
 
-        { "still" => still, "clip" => render_film(words, still, stem, duration) }
+      # Explicit structured shots use the same inference and consent boundary
+      # as free-form requests. The compiled prompt already owns camera geometry.
+      def write_shot(shot, grade_seed: nil, prediction_budget: nil)
+        plan = Studio::Lora::Craft.compile_shot(shot)
+        result = write(plan.fetch("prompt"), film: false, output_stem: "#{@subject}_selfie_shot",
+                       grade_seed:, preset: plan.fetch("preset"), compiled: true, prediction_budget:)
+        result.merge("plan" => plan)
+      ensure
+        @compiled_capture = false
       end
 
       # Animate an existing LoRA still; never regenerate or overwrite its source.
@@ -316,7 +367,7 @@ module Studio
         raise ArgumentError, "prompt works against itself: #{reasons}"
       end
 
-      def render_still(words, stem, grade_seed: nil)
+      def render_still(words, stem, grade_seed: nil, preset: nil)
         base_path = File.join(@directory, safe_stem(stem))
         existing = %w[.png .jpg .jpeg .webp].map { |extension| "#{base_path}#{extension}" }
                                               .find { |candidate| File.exist?(candidate) || File.symlink?(candidate) }
@@ -328,11 +379,32 @@ module Studio
 
         client.download_url(first_url(output), path)
         File.chmod(0o600, path)
-        graded = grade(path, seed: grade_seed)
+        graded = preset ? grade(path, seed: grade_seed, preset:) : grade(path, seed: grade_seed)
         File.chmod(0o600, graded)
+        if preset
+          @capture_receipt = {
+            "schema" => "studio.capture.v1", "model" => @last_capture_model,
+            "input" => @last_capture_input, "original" => path, "grade" => graded,
+            "original_sha256" => Digest::SHA256.file(path).hexdigest,
+            "grade_sha256" => Digest::SHA256.file(graded).hexdigest,
+            "preset" => preset, "grade_seed" => grade_seed, "review" => "NOT_REVIEWED"
+          }
+          # Postpro already owns the grade sidecar. Record capture provenance
+          # beside the ungraded original without modifying the lab receipt.
+          write_capture_receipt(path, @capture_receipt)
+        end
         # The provider original and its grade are separate project assets.
         # Keep both; grading must never destroy the original still.
         graded
+      end
+
+      def write_capture_receipt(path, receipt)
+        destination = "#{path}.json"
+        Tempfile.create([".capture-", ".json"], File.dirname(path), mode: 0o600) do |file|
+          file.write(JSON.pretty_generate(receipt) + "\n")
+          file.flush
+          File.link(file.path, destination)
+        end
       end
 
       # STUDIO must render on Replicate, and must not stop for want of a credit.
@@ -344,9 +416,16 @@ module Studio
         chain = render_chain
         failures = []
         chain.each_with_index do |candidate, index|
+          @prediction_budget&.consume!
           model = resolve_engine(candidate)
           begin
-            return client.predict(model, still_input(words, candidate), timeout:)
+            input = still_input(words, candidate)
+            output = client.predict(model, input, timeout:)
+            @last_capture_model = model
+            # Never persist uploaded reference URLs, tokens, or arbitrary provider inputs.
+            allowed = %w[prompt model aspect_ratio resolution size num_inference_steps guidance_scale guidance lora_scale seed go_fast output_format output_quality]
+            @last_capture_input = input.transform_keys(&:to_s).select { |key, value| allowed.include?(key) && (value.is_a?(String) || value.is_a?(Numeric) || value == true || value == false) }
+            return output
           rescue StandardError => error
             failures << "#{candidate} (#{error.message})"
             warn "STUDIO: #{candidate} failed, falling back" unless index == chain.length - 1
@@ -445,7 +524,7 @@ module Studio
         desired["subject_reference"] = primary_reference_url if allowed.include?("subject_reference")
         desired["max_images"] = 1 if allowed.include?("max_images")
         desired["number_of_images"] = 1 if allowed.include?("number_of_images")
-        desired["prompt_optimizer"] = true if allowed.include?("prompt_optimizer")
+        desired["prompt_optimizer"] = !@compiled_capture if allowed.include?("prompt_optimizer")
         desired["resolution"] = "2K" if allowed.include?("resolution")
         desired["size"] = "2K" if allowed.include?("size")
         desired["output_format"] = "jpg" if allowed.include?("output_format")
@@ -640,7 +719,8 @@ module Studio
         env = subject_env
         trigger = env["TRIGGER"].to_s.strip
         trigger = training_trigger if trigger.empty?
-        [trigger, env["DESCRIPTOR"], words, PHOTOGRAPHIC_CRAFT].compact.reject(&:empty?).join(", ")
+        capture = @compiled_capture ? words : Studio::Lora::Craft.photographic(words)
+        [trigger, env["DESCRIPTOR"], capture].compact.reject(&:empty?).join(", ")
       end
 
       # subject.env is a private operator record, never a second secret store.
@@ -770,7 +850,9 @@ module Studio
       end
 
       # postpro writes its grade beside the still it was given.
-      def grade(path, seed: nil)
+      def grade(path, seed: nil, preset: nil)
+        return grade_named(path, preset, seed:) if preset
+
         run_postpro(path, seed:)
         graded = Dir[graded_pattern(path)].max_by { |file| File.mtime(file) }
         raise "postpro succeeded but produced no graded still under #{File.dirname(path)}" unless graded
@@ -778,6 +860,25 @@ module Studio
 
         File.chmod(0o600, graded)
         graded
+      end
+
+      def grade_named(path, preset, seed: nil)
+        script = File.join(ROOT, "postpro", "postpro.rb")
+        extension = File.extname(path)
+        stem = File.basename(path, extension)
+        output = File.join(File.dirname(path), "postpro_#{stem}_#{preset}_v1#{extension}")
+        raise "refusing to replace an existing grade" if File.exist?(output) || File.symlink?(output)
+        env = seed ? { "POSTPRO_SEED" => seed.to_s } : {}
+        stdout, stderr, status = Studio::Subprocess.capture3(
+          env, RbConfig.ruby, script, "--input", path, "--output", output, "--preset", preset, timeout: 600
+        )
+        raise "postpro failed: #{[stdout, stderr].compact.join("\n").lines.last.to_s.strip}" unless status.success?
+        raise "postpro produced no regular grade" unless File.file?(output) && !File.symlink?(output)
+
+        File.chmod(0o600, output)
+        sidecar = "#{output}.json"
+        File.chmod(0o600, sidecar) if File.file?(sidecar) && !File.symlink?(sidecar)
+        output
       end
 
       def run_postpro(path, seed: nil)

@@ -45,7 +45,7 @@ module Master
       # operator confirms the spend.
       LORA_VIDEO_RE = /\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b/i.freeze
       LORA_IMAGE_RE = /\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b/i.freeze
-      LORA_SELFIE_RE = /\b(?:make|create|generate|render|rerender|re-render)\b.*\b(?:selfies|selfie\s+series)\b/i.freeze
+      LORA_SELFIE_RE = /\b(?:make|create|generate|render|rerender|re-render|give\s+(?:us|me)\s+\d{1,2})\b.*\b(?:selfies|selfie\s+series)\b/i.freeze
       LORA_READINESS_RE = /\b(?:check|audit|inspect|assess|show|report|prepare)\b.{0,100}\b(?:lora|likeness|photographic|photography|holdout)\b/i.freeze
       LORA_PROFILE_RE = /\b(?:compare|benchmark|list|show)\b.{0,100}\b(?:lora|inference)\b.{0,40}\bprofiles?\b|\b(?:compare|benchmark)\b.{0,100}\bprofiles?\b.{0,40}\b(?:lora|inference)\b/i.freeze
       LORA_EXISTING_REVIEW_RE = /\b(?:review|inspect|assess)\b.{0,100}\b(?:lora|selfies?|portraits?|photographs?|renders?)\b/i.freeze
@@ -668,7 +668,8 @@ module Master
         pattern = dilla_pattern_selection(text, choices, reference, dilla_pocket)
         groove = dilla_groove_selection(choices, reference, dilla_pocket)
         tuning = dilla_reference_settings(text, reference, dilla_pocket)
-        { progression:, pattern:, groove:, dilla_pocket:, **tuning }
+        form = text.match?(/\b(?:emotional arc|musical arc|tension and release|composed|developing arrangement|musical development)\b/i) ? "arc" : nil
+        { progression:, pattern:, groove:, dilla_pocket:, form:, **tuning }
       end
 
       def dilla_request_reference(text)
@@ -718,6 +719,7 @@ module Master
       def dilla_render_arguments(settings, output)
         argv = ["--progression", settings[:progression], "--out", output]
         argv.concat(["--drums", settings[:pattern]]) if settings[:pattern]
+        argv.concat(["--form", settings[:form]]) if settings[:form]
         argv.concat(["--profile", settings[:groove]]) if settings[:groove]
         argv.concat(["--groove", settings[:groove_scale].to_s]) unless settings[:groove_scale].nil?
         argv.concat(["--bpm", settings[:bpm].to_s]) if settings[:bpm]
@@ -913,10 +915,15 @@ module Master
 
       def lora_subjects_in(text, root: MasterPaths.repo)
         names = lora_subject_names(root:).sort_by { |name| -name.length }
-        names.filter_map do |name|
+        named = names.filter_map do |name|
           match = text.to_s.match(/(?<![a-zA-Z0-9_-])#{Regexp.escape(name)}(?![a-zA-Z0-9_-])/i)
           [name, match.begin(0)] if match
         end.sort_by(&:last).map(&:first)
+        if named.empty? && text.to_s.match?(/\ball three of us\b/i) &&
+           !text.to_s.match?(/\b(?:except|excluding|without|not)\b/i) && names.size == 3
+          return names.sort
+        end
+        named
       end
 
       def lora_subject_for(text, root: MasterPaths.repo)
@@ -1025,7 +1032,7 @@ module Master
       end
 
       def lora_count_for(text)
-        token = text.to_s.match(/\b(\d{1,2}|ten|eleven|twelve)\s+selfies?\b/i)&.captures&.first
+        token = text.to_s.match(/\b(\d{1,2}|ten|eleven|twelve)\s+(?:[a-z-]+\s+){0,8}selfies?\b/i)&.captures&.first
         return 10 if token.to_s.downcase == "ten"
         return 11 if token.to_s.downcase == "eleven"
         return 12 if token.to_s.downcase == "twelve"
@@ -1033,11 +1040,22 @@ module Master
         token ? token.to_i.clamp(1, 24) : 10
       end
 
+      def lora_art_direction(text)
+        case text.to_s
+        when /\b(?:warp records|experimental|artist photography|degraded media)\b/i then "experimental"
+        when /\b(?:fashion editorial|editorial portrait)\b/i then "editorial"
+        when /\b(?:snapshot|phone selfie|point.and.shoot)\b/i then "snapshot"
+        when /\b(?:cinematic|cinematographic)\b/i then "cinematic"
+        when /\b(?:naturalism|window.light portrait)\b/i then "natural"
+        end
+      end
+
       def generate_lora_selfies(text, root: MasterPaths.repo)
         subjects = lora_subjects_in(text, root:)
         return Result.err("lora selfie series: name a configured subject", category: :validation) if subjects.empty?
 
         count = lora_count_for(text)
+        direction = lora_art_direction(text)
         # Keep every existing portrait even when the request mentions
         # deletion or replacement. Validate all subjects before paid calls.
         begin
@@ -1050,7 +1068,8 @@ module Master
         details = []
         subjects.each do |subject|
           begin
-            subject_paths = Array(IdeaPicture.new.selfie_series(subject:, count:, replace: false)).map(&:to_s)
+            options = direction ? { direction: direction } : {}
+            subject_paths = Array(IdeaPicture.new.selfie_series(subject:, count:, replace: false, **options)).map(&:to_s)
             paths.concat(subject_paths)
             details << "#{subject}: #{subject_paths.size} render(s)"
           rescue StandardError => error

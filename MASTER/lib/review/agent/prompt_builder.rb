@@ -6,6 +6,7 @@ require_relative "../../cli/command_registry/help"
 require_relative "../../voice/dialogue_rubric"
 require_relative "../../voice/playback"
 require_relative "../../device/owner_preferences"
+require_relative "../../design/visual_language"
 
 module Master
   module Review
@@ -170,6 +171,13 @@ module Master
         end
 
         def dynamic_prompt
+          if Fiber[:master_web] == true
+            parts = [Fiber[:master_persona_note], Ground::Tool::Profile.session_note,
+              conversational_register_line, support_practice_for_turn]
+            parts << felt_sense_section if @felt_sense.is_a?(Hash)
+            return filter_prompt(parts.compact.join("\n\n"))
+          end
+
           parts = []
           # Set by the web tier when a request arrives on a host that wears a
           # different face, and cleared when the turn ends. It carries a
@@ -186,6 +194,8 @@ module Master
           parts << conversational_register_line if casual_task?
           parts << nsfw_lane_section if @config.respond_to?(:task_type) && @config.task_type.to_s == "nsfw"
           parts << runtime_surface_section
+          medium = Master::Design::VisualLanguage.creative_medium(last_user_message)
+          parts << Master::Design::VisualLanguage.creative_context(medium) if medium
           parts << support_practice_for_turn
           parts << felt_sense_section if @felt_sense.is_a?(Hash)
           parts << "Current task: #{@session.topic}" if @session.respond_to?(:topic) && @session.topic

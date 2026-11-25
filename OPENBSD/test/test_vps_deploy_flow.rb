@@ -339,12 +339,13 @@ class VpsDeployFlowTest < Minitest::Test
 
   # the order
 
-  def order_run(dir, avail:, apps_up: true, started: "brgen amber bsdports master")
+  def order_run(dir, avail:, apps_up: true, started: "brgen mrdamascy amber bsdports master")
     File.write(File.join(dir, "guard.log"), "2026-10-12T06:30:02Z load=1.0 mem_avail=#{avail}% shed=0 deploy=0\n") if avail
     zsh(<<~ZSH)
       repo=#{dir}; RUBY=#{RbConfig.ruby}; VPS_DEPLOY_GUARD_LOG=#{dir}/guard.log; VPS_DEPLOY_STARTED="#{started}"
       VPS_DEPLOY_POLL=1
       typeset -A deploy_ports; deploy_ports=(master 41004 brgen 41001 amber 41002 bsdports 41003)
+      deploy_ports[mrdamascy]=#{41_005}
       load_deploy_ports() { return 0 }
       wait_up() { #{apps_up ? 'return 0' : 'return 1'} }
       # The block reads the pinned checkout's inventory; this harness has none,
@@ -374,6 +375,16 @@ class VpsDeployFlowTest < Minitest::Test
       out, = order_run(dir, avail: 14, apps_up: false)
       assert_includes out, "ORDER=brgen mrdamascy amber bsdports master"
       assert_includes out, "is not answering /up"
+    end
+  end
+
+  # A stopped Rails app is the public outage: it goes before MASTER, so a MASTER
+  # failure can no longer hold every site down (vm23, 2026-11-25).
+  def test_a_stopped_rails_app_puts_master_last
+    Dir.mktmpdir do |dir|
+      out, = order_run(dir, avail: 14, started: "master")
+      assert_includes out, "ORDER=brgen mrdamascy amber bsdports master"
+      assert_includes out, "brgen is not running"
     end
   end
 

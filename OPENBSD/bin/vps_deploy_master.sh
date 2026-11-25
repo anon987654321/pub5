@@ -160,10 +160,16 @@ doas /bin/ksh -c '
     [ -d "$path" ] || install -d -o dev -g master -m 2775 "$path"
     links=$(find "$path" -type l -print | head -n 1)
     [ -z "$links" ] || { echo "symlink inside runtime directory: $links" >&2; exit 1; }
-    chown -R dev:master "$path"
-    chmod -R u+rwX,g+rwX "$path"
-    find "$path" -type d -exec chmod 2775 {} +
+    find "$path" -path "$root/tmp/public_runtime" -prune -o -exec chown dev:master {} +
+    find "$path" -path "$root/tmp/public_runtime" -prune -o -exec chmod u+rwX,g+rwX {} +
+    find "$path" -path "$root/tmp/public_runtime" -prune -o -type d -exec chmod 2775 {} +
   done
+  public="$root/tmp/public_runtime"
+  [ ! -L "$public" ] || { echo "refusing symlinked public state: $public" >&2; exit 1; }
+  [ -d "$public" ] || install -d -o master -g master -m 700 "$public"
+  chown -R master:master "$public"
+  chmod -R u+rwX,go-rwx "$public"
+  chmod 700 "$public"
 '
 # MASTER/.master is shared the same way (rc.d/master documents it), but nothing
 # enforced it: a boot left it 0700 and root left files in it, so the restarted

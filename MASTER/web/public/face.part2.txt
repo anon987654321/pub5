@@ -117,6 +117,7 @@ attribute vec3 scatter;
 attribute float semanticStage;
 attribute vec3 subjectFrom;
 uniform float uSubjectDirect;
+uniform vec4 uMaskMouth;
 attribute float seed;
 attribute float curvature;
 attribute float boundary;
@@ -266,6 +267,14 @@ void main(){
   float envelope = 4.0 * travel * (1.0 - travel);
   float signal = sin(semanticStage * 6.283185 - morphProgress * 6.283185);
   subjectPoint.z += signal * envelope * 0.025;
+  // The old viseme deformation above is overwritten by a direct subject.
+  // Articulate mask geometry after interpolation, never an unrelated object.
+  vec2 lip = vec2(subjectPoint.x / max(uMaskMouth.y, 0.01),
+                  (subjectPoint.y - uMaskMouth.x) / max(uMaskMouth.z, 0.01));
+  float lipWeight = (1.0 - smoothstep(1.0, 2.8, length(lip))) *
+                    uMaskMouth.w * (1.0 - localMorph);
+  subjectPoint.y += sign(lip.y) * clamp(uVowel, 0.0, 1.0) * lipWeight * 0.014;
+  subjectPoint.x += subjectPoint.x * clamp(uMouthWide, -0.4, 0.4) * lipWeight;
   p = mix(p, subjectPoint, uSubjectDirect);
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
@@ -361,7 +370,7 @@ if (_hasWebGL && THREE) {
   faceMat = new THREE.ShaderMaterial({
     vertexShader: VERT_SHADER, fragmentShader: FRAG_SHADER,
     uniforms: {
-      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
+      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uMaskMouth:{value:{x:0,y:0,z:0,w:0}}, uSemanticStaged:{value:0}, uTime:{value:0},
       uColor:{value:new Color(1,1,1)},
       uHc:{value: State.highContrast ? 1.0 : (State.contrastMore ? 0.9 : 0.0)},
       uCurl:{value:0}, uJaw:{value:0}, uMouse:{value:{x:0,y:0}},

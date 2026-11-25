@@ -215,3 +215,55 @@ vertical_anatomy:
       - source_second
       - protect_operator_owned_values
       - change_only_with_evidence
+
+# Historical principles are lenses attached to existing Laws, not a second law
+# catalogue or a universal numerical beauty metric.
+creative_lenses:
+  source: https://github.com/anon987654321/pub4/blob/ca92b7d2be36c5877d570fc5abbb60f5572d261a/MASTER/data/principle_map.yml
+  centre:
+    laws: [STRONG_CENTERS, VISUAL_HIERARCHY]
+    design: "Name the object of attention; make related information reinforce it, not compete with it."
+    music: "Identify foreground, motif and supporting voices."
+    photography: "Choose the subject, visual centre and frame."
+    cinema: "Direct attention through framing, blocking, sound and cuts."
+    architecture: "Establish a legible centre and meaningful smaller places."
+    writing: "Put the controlling idea before its evidence."
+    software: "Name the owner of each concept and its public boundary."
+  space:
+    lineage: "Ma, kanso and shibui; Tadao Ando's architectural restraint."
+    laws: [DENSITY_ma, DENSITY_kanso, NEGATIVE_SPACE_GROUPING]
+    design: "Whitespace groups related things; remove empty wrappers and decorative divisions."
+    music: "Silence, rests and selective subtraction make the remaining parts meaningful."
+    photography: "Negative space supports subject separation."
+    cinema: "Let an action, reaction or quiet shot breathe where the story needs it."
+    architecture: "Void, light, prospect and refuge shape lived space."
+    writing: "Paragraph breaks separate ideas; omit redundant exposition."
+    software: "Remove duplication and needless indirection, not essential capabilities."
+  development:
+    lineage: "Jo-ha-kyu: beginning, development and acceleration; a lens, not a universal timeline."
+    laws: [LEVELS_OF_SCALE, TRANSFORMATIONS, INTENTIONAL_TEMPORAL_FORM]
+    design: "Reveal information and feedback at the pace of the task; no decorative motion."
+    music: "Relate pulse, phrase and section; create contrast and return, not arbitrary jitter."
+    photography: "Build depth and visual hierarchy; a series develops rather than repeats."
+    cinema: "Use deliberate pacing, tension and release, and motivate transitions."
+    architecture: "Connect human scale, rooms, circulation and the whole site."
+    writing: "Build an argument in coherent stages."
+    software: "Express work as meaningful stages with explicit state."
+  material:
+    laws: [ANALOG_WARMTH, DENSITY_wabi_sabi, DENSITY_form_follows_function]
+    design: "Use native semantics and truthful material; do not imitate another brand."
+    music: "Choose complementary timbres; use selective wear, not indiscriminate distortion."
+    photography: "Preserve identity and optical detail; grain changes texture, not recovered detail."
+    cinema: "Lighting, motion and film treatment must serve the scene."
+    architecture: "Respond to climate, place, material and human needs: daylight, ventilation, passive solar design, durability and resource stewardship. Engineering safety requires separate evidence."
+    writing: "Prefer concrete words, precise claims and honest uncertainty."
+    software: "Prefer native capabilities and explicit invariants over ornamental abstractions."
+  review:
+    laws: [MASS_GENERATE_CURATE, OPERATOR_RENDERED]
+    design: "Compare representative rendered states at phone and desktop widths; preserve approved identity."
+    music: "Compare level-matched audio and arrangement evidence; listening remains human."
+    photography: "Compare original and grade at full size; likeness and aesthetic review remain separate."
+    cinema: "Inspect temporal continuity, edit rhythm, sound sync and operator intent."
+    architecture: "Compare site, circulation, structure and environmental constraints; obtain qualified review."
+    writing: "Read for meaning, economy and factual support; do not optimize a readability number alone."
+    software: "Compare behaviour, dependencies, security and tests; fewer files is not proof of quality."

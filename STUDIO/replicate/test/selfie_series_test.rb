@@ -271,6 +271,80 @@ class TestSelfieSeries < Minitest::Test
     refute_includes models, Studio::Visual::IdeaPicture::FILM, "a series never renders film"
   end
 
+  def test_structured_shot_separates_capture_and_lab
+    shot = { "scene" => "a person beside a window", "framing" => "head and shoulders",
+             "distance" => "3m", "lens" => "85mm", "lighting" => "window",
+             "moment" => "after_laugh", "gaze" => "eyes on the lens",
+             "composition" => "one centre with clear depth", "preset" => "house" }
+    plan = Studio::Lora::Craft.compile_shot(shot)
+    assert_equal "house", plan.fetch("preset")
+    assert_includes plan.fetch("prompt"), "three metres"
+    assert_includes plan.fetch("prompt"), "sharp focus on the nearest eye"
+    refute_includes plan.fetch("prompt"), "Kodak Portra"
+    assert_raises(ArgumentError) { Studio::Lora::Craft.compile_shot(shot.merge("distance" => "selfie")) }
+    assert_raises(ArgumentError) { Studio::Lora::Craft.compile_shot(shot.merge("preset" => "unknown")) }
+  end
+
+  def test_named_series_recipes_are_distinct_and_use_known_lab_presets
+    %w[johann ragnhild merethe].each do |subject|
+      recipes = (1..24).map { |n| Studio::Lora::Selfie.recipe(n, subject:) }
+      assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
+      assert recipes.all? { |recipe| Studio::Lora::Craft::LABORATORY.include?(recipe.fetch("preset")) }
+    end
+  end
+
+  def test_series_records_the_named_laboratory_and_unreviewed_status
+    series.run(count: 1)
+    row = ledger_rows("render").first
+    assert_equal "house", row.fetch("recipe").fetch("preset")
+    assert_equal "NOT_REVIEWED", row.fetch("review")
+    assert_kind_of Integer, row.fetch("grade_seed")
+  end
+
+  def test_refinement_routes_identity_and_exposure_to_responsible_stages
+    report = { "identity" => { "state" => "FAIL" },
+               "faults" => [{ "metric" => "clipping", "remedy" => "inspect exposure" }] }
+    hints = Studio::Lora::Judge.refinement(report)
+    assert_equal %w[capture exposure_and_grade operator], hints.map { |hint| hint.fetch("stage") }
+  end
+
+  def test_generic_series_also_has_twenty_four_distinct_sittings
+    recipes = (1..24).map { |n| Studio::Lora::Selfie.recipe(n) }
+    assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
+  end
+
+  def test_every_art_direction_has_twenty_four_distinct_valid_capture_plans
+    Studio::Lora::Selfie::DIRECTIONS.each_key do |direction|
+      recipes = (1..24).map { |n| Studio::Lora::Selfie.recipe(n, direction:) }
+      assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
+      assert recipes.all? { |recipe| recipe.fetch("direction") == direction }
+    end
+    phone = Studio::Lora::Selfie.recipe(1, direction: "snapshot")
+    assert_equal "selfie", phone.dig("shot", "distance")
+    assert_equal "24mm", phone.dig("shot", "lens")
+  end
+
+  def test_named_render_refuses_invalid_seed_before_prediction
+    picture = Studio::Visual::IdeaPicture.new(subject: "probe", client: @client, directory: @dir)
+    assert_raises(ArgumentError) { picture.write("portrait", film: false, preset: "house", grade_seed: -1) }
+    assert_empty @client.predictions
+  end
+
+  def test_prediction_budget_refuses_extra_dispatches
+    budget = Studio::Visual::PredictionBudget.new(2)
+    budget.consume!
+    budget.consume!
+    assert_equal 2, budget.used
+    assert budget.exhausted?
+    assert_raises(ArgumentError) { budget.consume! }
+    assert_raises(ArgumentError) { Studio::Visual::PredictionBudget.new(9) }
+  end
+
+  def test_grade_only_fault_suggests_regrading_before_paid_capture
+    report = { "faults" => [{ "metric" => "clipping", "origin" => "grade" }] }
+    assert_equal "laboratory", Studio::Lora::Judge.refinement(report).first.fetch("stage")
+  end
+
   def test_count_is_bounded
     error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
     assert_match(/between 1 and/, error.message)

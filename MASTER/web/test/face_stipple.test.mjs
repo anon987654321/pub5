@@ -1112,3 +1112,79 @@ test("stipple lifecycle is observable and reversible", () => {
   assert.match(system, /installing,/);
 });
 
+
+test("mask reliefs are deterministic, bounded and distinct for all sixteen designs", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { runInNewContext } = await import("node:vm");
+  const storage = new Map();
+  const listeners = new Map();
+  const window = {
+    MASTER_FACE_MASK_SESSION: "test-session",
+    MASTER_FACE_MASK_PROFILE: "iatmul-concentric",
+    MASTER_FACE_WORLD: { setSubjectForm() {} },
+    addEventListener(name, callback) { listeners.set(name, callback); },
+    dispatchEvent() {}
+  };
+  const document = { readyState: "complete", documentElement: { dataset: {} },
+    querySelector() { return null; }, getElementById() { return null; } };
+  runInNewContext(readFileSync(new URL("../public/face_mask_profiles.js", import.meta.url), "utf8"), {
+    window, document, sessionStorage: { getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value) },
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
+  });
+  const masks = window.MASTER_FACE_MASKS;
+  assert.equal(masks.profiles.length, 16);
+  assert.equal(masks.rotationProfiles.length, 5);
+  const fingerprints = new Set();
+  for (const profile of masks.profiles) {
+    const points = Array.from({ length: 512 }, (_, index) => masks.sample(profile.id, index));
+    assert.equal(JSON.stringify(points[40]), JSON.stringify(masks.sample(profile.id, 40)));
+    assert.ok(points.every(point => point.every(value => Number.isFinite(value) && Math.abs(value) < 0.8)));
+    fingerprints.add(JSON.stringify(points));
+  }
+  assert.equal(fingerprints.size, 16);
+  assert.equal(masks.sample("unknown", 0), null);
+  listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "elema-hollow" } });
+  assert.equal(masks.current().id, "elema-hollow");
+  assert.equal(masks.descriptor().maskProfile, "elema-hollow");
+  masks.next();
+  assert.equal(masks.current().id, "iatmul-concentric");
+});
+
+test("direct subject mouth deformation is anatomical and mask-only", () => {
+  assert.match(faceSource, /uniform vec4 uMaskMouth/);
+  assert.match(faceSource, /subjectPoint\.y \+= sign\(lip\.y\)/);
+  assert.match(faceSource, /uMaskMouth\.w \* \(1\.0 - localMorph\)/);
+  assert.match(faceWorld, /mouth && nativeSubjectField \? 1 : 0/);
+});
+
+test("mask geometry has enough projected coverage to read at terminal size", () => {
+  const storage = new Map();
+  const window = { MASTER_FACE_MASK_SESSION: "coverage", MASTER_FACE_MASK_PROFILE: "iatmul-concentric",
+    MASTER_FACE_WORLD: { setSubjectForm() {} }, addEventListener() {}, dispatchEvent() {} };
+  const document = { readyState: "complete", documentElement: { dataset: {} },
+    querySelector() { return null; }, getElementById() { return null; } };
+  runInNewContext(readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8"), {
+    window, document, sessionStorage: { getItem: key => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value) },
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
+  });
+  for (const mask of window.MASTER_FACE_MASKS.profiles) {
+    const cells = new Set();
+    const mouth = window.MASTER_FACE_MASKS.mouthGeometry(mask.id);
+    for (let index = 0; index < 4096; index++) {
+      const [x, y] = window.MASTER_FACE_MASKS.sample(mask.id, index);
+      cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
+      const hole = (x / mouth.width) ** 2 + ((y - mouth.y) / mouth.height) ** 2;
+      assert.ok(hole >= .98, mask.id + " mouth is occluded");
+    }
+    assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
+  }
+});
+
+test("mask correspondence uses bounded stable spatial ordering", () => {
+  assert.match(faceWorld, /const MASK_PRIMARY_SCALE = \.92/);
+  assert.match(faceWorld, /function orderMaskPoints/);
+  assert.match(faceWorld, /new Uint32Array\(256\)/);
+  assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
+});

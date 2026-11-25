@@ -1170,3 +1170,5 @@ and event-bus suites, and the check task parses and loads every tool.
 cd MASTER/tools && rake test
 cd MASTER/tools && rake check
 ```
+
+The browser runtime is conversation-only: public web search, scoped dialogue, voice, and the particle face. Operator commands, schedulers and filesystem tools belong to the local CLI. Battery status is local and omitted when unsupported; the camera-shaped control opens the native photo picker, not a live camera. The 16 mask reliefs are deterministic and use one existing particle population.

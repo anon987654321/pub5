@@ -48,7 +48,7 @@ module Master
         return "trace" if ENV["MASTER_CLI_TRACE"] == "1"
         return "verbose" if ENV["MASTER_CLI_VERBOSE"] == "1"
 
-        normalize_verbosity(cfg.fetch("verbosity", "verbose"))
+        normalize_verbosity(cfg.fetch("verbosity", "normal"))
       end
 
       def verbose?
@@ -149,13 +149,19 @@ module Master
         false
       end
 
+      # Boot prints deps0 lines before Master.config_section exists. Caching
+      # that miss pinned the whole session to the fallback, whose verbosity
+      # was "verbose": the full banner, every voice rung and unit chatter.
+      # Only a read config is cached; the fallback is console.yml's default.
+      FALLBACK_CFG = { "enabled" => true, "verbosity" => "normal" }.freeze
+
       def cfg
-        @cfg ||= begin
-          section = Master.config_section("dmesg")
-          section.is_a?(Hash) ? section : { "enabled" => true }
-        rescue StandardError
-          { "enabled" => true }
-        end
+        return @cfg if @cfg
+
+        section = Master.config_section("dmesg")
+        section.is_a?(Hash) ? (@cfg = section) : FALLBACK_CFG
+      rescue StandardError
+        FALLBACK_CFG
       end
 
       def reload!
