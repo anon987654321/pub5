@@ -11,6 +11,7 @@ const F_FACE_TTS = F_FACE_LOOPS.tts || window.tts;
 window._faceMusic = (() => {
   let ctx, master, padFilt, padGain, bassBus, kickBus, shelf, hatGain, conv, convGain;
   let playing = false, barIv = null, duckIv = null;
+  let ownsContext = false, generation = 0;
   let pack = null, artistName = null, bar = 0;
 
   // The pack is the one source; the fetch only decides whether the music
@@ -136,7 +137,7 @@ window._faceMusic = (() => {
 
   // Two bars per chord, the pocket's half-time drift; drums and the swing
   // lag come from the artist pack, not from a hardcoded grid.
-  function scheduleBar(when, chords, bpm, swing) {
+  function scheduleBar(bar, when, chords, bpm, swing) {
     const BEAT = 60 / bpm, BAR = BEAT * 4;
     const chordIdx = (bar >> 1) % chords.length;
     const chord = chords[chordIdx];
@@ -175,21 +176,28 @@ window._faceMusic = (() => {
   }
 
   async function start(wantedArtist) {
+    const request = ++generation;
     try {
       await ensurePack();
     } catch (err) {
       window.MASTER_LOG?.warn?.("face_loops_music:pack", err);
       return false;
     }
-    if (playing && wantedArtist && wantedArtist !== artistName) teardown(false);
+    if (request !== generation) return false;
+    if (playing && wantedArtist && wantedArtist !== artistName) teardown();
     if (playing) return true;
     try {
-      ctx = (F_FACE_LOOPS.actx || window.MASTER_FACE?.actx || window.actx) || new (window.AudioContext || window.webkitAudioContext)();
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const shared = F_FACE_LOOPS.actx || window.MASTER_FACE?.actx || window.actx;
+      ownsContext = !shared;
+      ctx = shared || new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume().catch((err) => {
+        window.MASTER_LOG?.warn?.("face_loops_music:resume", err);
+        if (request === generation) teardown();
+      });
       setupBus();
       const chosen = wantedArtist || artistName || pack?.defaults?.artist || "j_dilla";
       const art = artistPack(chosen);
-      if (!art) { window.MASTER_LOG?.warn?.("face_loops_music:artist", `no pack for ${chosen}`); return false; }
+      if (!art) throw new Error(`no pack for ${chosen}`);
       artistName = chosen;
       const spec = pickProgression(art, chosen);
       const chords = flattenProgression(spec);
@@ -212,23 +220,34 @@ window._faceMusic = (() => {
       master.gain.setValueAtTime(0, ctx.currentTime);
       master.gain.linearRampToValueAtTime(0.14, ctx.currentTime + 5);
       return true;
-    } catch (err) { window.MASTER_LOG?.warn?.("face_loops_music:start", err); return false; }
+    } catch (err) {
+      window.MASTER_LOG?.warn?.("face_loops_music:start", err);
+      return teardown();
+    }
   }
 
-  // teardown ends the scheduled pass. closeAfter is false when the caller is
-  // about to start again on the same context — the ramp still silences the
-  // outgoing pass so no two artists overlap.
-  function teardown(closeAfter) {
+  // Capture the outgoing graph, never the next start's context. The voice
+  // owns shared contexts; only a context created here may be closed here.
+  function teardown() {
     playing = false;
-    try { clearInterval(barIv); clearInterval(duckIv); } catch (err) { window.MASTER_LOG?.warn?.("face_loops_music:stop", err); }
-    try { master?.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.8); } catch (err) { window.MASTER_LOG?.warn?.("face_loops_music:fade_out", err); }
-    if (closeAfter) {
-      setTimeout(() => { try { ctx?.close(); } catch (err) { window.MASTER_LOG?.warn?.("face_loops_music:close", err); } }, 900);
-    }
+    clearInterval(barIv);
+    clearInterval(duckIv);
+    barIv = duckIv = null;
+    const outgoing = ctx, output = master, owned = ownsContext;
+    ctx = master = null;
+    ownsContext = false;
+    if (!outgoing) return false;
+    try { output?.gain.linearRampToValueAtTime(0, outgoing.currentTime + 0.8); } catch (err) { window.MASTER_LOG?.warn?.("face_loops_music:fade_out", err); }
+    setTimeout(() => {
+      try {
+        output?.disconnect();
+        if (owned && outgoing.state !== 'closed') outgoing.close().catch((err) => window.MASTER_LOG?.warn?.("face_loops_music:close", err));
+      } catch (err) { window.MASTER_LOG?.warn?.("face_loops_music:close", err); }
+    }, 900);
     return false;
   }
 
-  function stop() { return teardown(true); }
+  function stop() { generation += 1; return teardown(); }
 
   return {
     start,

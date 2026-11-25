@@ -1710,3 +1710,22 @@ test("the /new command requests a new server transcript and emits the mask event
   assert.match(controller, /httponly: true/);
   assert.match(routes, /post "chat\/new",\s+to: "chat#new_conversation"/);
 });
+
+// These optional modules must retain their explicit-start and resource ownership boundaries.
+test("optional face music passes the bar index and never closes shared speech audio", () => {
+  const source = readFileSync(join(publicDir, "face_loops_music.js"), "utf8");
+  assert.match(source, /function scheduleBar\(bar, when, chords, bpm, swing\)/);
+  assert.match(source, /scheduleBar\(bar\+\+, t0, chords, bpm, swing\)/);
+  assert.match(source, /const outgoing = ctx, output = master, owned = ownsContext/);
+  assert.match(source, /if \(owned && outgoing\.state !== 'closed'\) outgoing\.close/);
+  assert.match(source, /if \(request !== generation\) return false/);
+});
+
+test("optional camera releases tracks and cancels pending permission on hide", () => {
+  const source = readFileSync(join(publicDir, "face_minimal_ui.js"), "utf8");
+  assert.match(source, /disableCam: disableCamTracking/);
+  assert.match(source, /camera\?\.getTracks\(\)\.forEach\(track => track\.stop\(\)\)/);
+  assert.match(source, /if \(request !== cameraRequest \|\| document\.hidden\)/);
+  assert.match(source, /addEventListener\('pagehide', disableCamTracking\)/);
+  assert.match(source, /'pointercancel', 'lostpointercapture'/);
+});

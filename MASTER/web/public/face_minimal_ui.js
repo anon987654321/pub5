@@ -44,29 +44,54 @@ const F_FACE_STATE = F_FACE_MINIMAL.State || window.State;
   if (cvEl) {
     let t = null;
     cvEl.addEventListener('pointerdown', () => {
+      clearTimeout(t);
       t = setTimeout(() => {
         // face.part5 defines _chatSpeakLast; there is no /voice command to
         // fall back to, and the one that was here reached the model as prose.
         window._chatSpeakLast?.();
-        F_FACE_STATE.pulse = 1.1;
+        if (F_FACE_STATE) F_FACE_STATE.pulse = 1.1;
       }, 480);
     });
-    ['pointerup', 'pointerleave'].forEach(ev => cvEl.addEventListener(ev, () => clearTimeout(t)));
+    ['pointerup', 'pointerleave', 'pointercancel', 'lostpointercapture'].forEach(ev => cvEl.addEventListener(ev, () => clearTimeout(t)));
+  }
+
+  let camera = null, cameraTimer = null, cameraVideo = null, cameraRequest = 0;
+  function disableCamTracking() {
+    cameraRequest += 1;
+    clearInterval(cameraTimer);
+    cameraTimer = null;
+    camera?.getTracks().forEach(track => track.stop());
+    camera = null;
+    if (cameraVideo) cameraVideo.srcObject = null;
+    cameraVideo = null;
   }
 
   async function enableCamTracking() {
+    if (!faceLayout() || !F_FACE_STATE || document.hidden) return false;
+    disableCamTracking();
+    const request = cameraRequest;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: 240, height: 180 }
       });
-      const v = document.createElement('video');
-      v.srcObject = stream; v.play();
+      if (request !== cameraRequest || document.hidden) {
+        stream.getTracks().forEach(track => track.stop());
+        return false;
+      }
+      camera = stream;
+      const v = cameraVideo = document.createElement('video');
+      v.muted = true;
+      v.playsInline = true;
+      v.srcObject = stream;
+      await v.play();
+      if (request !== cameraRequest) return false;
       const c = document.createElement('canvas');
       const ctx = c.getContext('2d', { willReadFrequently: true });
       c.width = 120; c.height = 90;
 
-      setInterval(() => {
-        if (!v || v.readyState < 2) return;
+      if (!ctx) throw new Error("camera canvas unavailable");
+      cameraTimer = setInterval(() => {
+        if (document.hidden || v.readyState < 2) return;
         ctx.drawImage(v, 0, 0, c.width, c.height);
         const d = ctx.getImageData(0, 0, c.width, c.height).data;
         let sx = 0, sy = 0, n = 0;
@@ -88,14 +113,24 @@ const F_FACE_STATE = F_FACE_MINIMAL.State || window.State;
           }
         }
       }, 160);
-    } catch (err) { window.MASTER_LOG?.warn?.("face_minimal_ui:cam_tracking", err); }
+      return true;
+    } catch (err) {
+      if (request === cameraRequest) disableCamTracking();
+      window.MASTER_LOG?.warn?.("face_minimal_ui:cam_tracking", err);
+      return false;
+    }
   }
+  window.addEventListener('pagehide', disableCamTracking);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) disableCamTracking();
+  });
   // Only on an explicit call. FAIL_SAFE_DEFAULTS: loading the page on a phone
   // is not consent to the camera, and a permission prompt nobody asked for is
   // denied and then remembered for the origin, as face.part5 says of the mic.
 
   window.MASTERMinimalUI = {
     enableCam: enableCamTracking,
+    disableCam: disableCamTracking,
     revealConsole: () => {
       const z = document.getElementById('prompt-form');
       if (z) z.classList.add('revealed');
