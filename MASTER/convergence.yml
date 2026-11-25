@@ -8,6 +8,110 @@ principles:
   - one_source
   - evidence_over_narrative
   - no_false_green
+# Completion campaign (operator approved 2026-11-25).
+# Sequence only; the referenced workstreams own their states and proof.
+# Continue independent work past external blockers. Leave live deployment
+# to its active operator. Repeat until measured convergence, not a fixed cap.
+# Consult the other owner registries for acceptance; do not duplicate state.
+# 01. Autonomous prerequisite resolution
+#     installation
+# 02. Provider and Git transport resilience
+#     free_compute_design_of_record
+#     model_laboratory
+#     outbound_http_transport
+#     external_git_root_boundary
+# 03. Autonomous task execution
+#     council_readiness_admission
+#     measured_repair_outcomes
+#     inconclusive_aging
+# 04. Mission recovery and concurrent-agent coordination
+#     fix_interruption_restart
+#     shared_checkout_concurrency
+#     cli_session_receipt_observability
+# 05. File and directory consolidation
+#     physical_mass
+#     structural_craft
+#     data_minimization
+# 06. Code and configuration minimalism
+#     redundant_core_require_cleanup
+#     constitution_self_budget
+#     documentation_completeness
+# 07. Law consolidation and refinement
+#     law_reload_diagnosis
+#     security_capability_graph
+#     law_baymard_acceptance
+# 08. Detector accuracy and enforcement
+#     historical_finding_reconciliation
+#     law_baymard_acceptance
+#     rendered_design_threshold_calibration
+# 09. Browser and visual intelligence
+#     browser_proof
+#     rendered_accessibility_acceptance
+#     generated_asset_freshness
+# 10. Voice, semantic face and sensory integration
+#     voice_local_first
+#     face_semantic_motion
+#     master_face_breath
+#     master_voice_browser_dsp
+#     master_voice_cooler_default
+#     personal_companion
+#     unified_command_language
+# 11. RAILS product completion
+#     rails_product_completion
+#     brgen_place_directory
+#     messenger_device_presence
+#     commerce_ledger_first
+#     brgen_cold_start_feed
+#     search_quality
+#     moderation_governance
+#     brgen_feed_ranking_deterministic
+#     amber_similarity_right_sized
+# 12. STUDIO and BIZ completion
+#     studio_provenance
+#     media_effects
+#     dilla_music
+#     dilla_corpus_measures
+#     biz_document_family_pipeline
+# 13. Full regression and acceptance testing
+#     master_current_revision_acceptance
+#     rails_current_revision_acceptance
+#     rails_focused_feature_acceptance
+#     studio_current_revision_acceptance
+#     interaction_campaign_400
+#     openbsd_runner_acceptance
+# 14. Historical TODO reconciliation and registry closure
+#     historical_finding_reconciliation
+#     documentation_completeness
+#     gap_ledger_ideation
+# 15. Repository-wide /fix convergence
+#     whole_repository_fix
+#     fix_interruption_restart
+# 16. Performance and resource optimisation
+#     master_cli_latency_and_input
+#     rails_budgets_and_ratchets
+#     openbsd_appliance
+#     master_fleet_panel
+#     recovery
+#     ops_alert_channel
+# 17. Visual, linguistic and architectural refinement
+#     rendered_accessibility_acceptance
+#     rendered_design_threshold_calibration
+#     conversation_quality_replay
+#     rails_host_seo_indexability
+#     structural_craft
+# 18. Final convergence and MASTER self-sufficiency
+#     whole_repository_fix
+#     task_scoped_prediction
+#     prediction_evaluation
+#     self_model_calibration
+#     cognition_measurement
+#     task_outcome_learning
+#     cognition_learning_benchmark
+#     event_replay
+# Historical reconciliation: account for all 169 unchecked rows of TODO.md
+# at e21213daff7a409aed3372ecd966aa9a0b573936 against current owners,
+# supersession or evidence. Migration is not closure.
+
 workstreams:
   - id: kernel_receipts
     state: landed
