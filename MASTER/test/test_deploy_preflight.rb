@@ -558,6 +558,18 @@ class DeployPreflightTest < Minitest::Test
     assert_includes helper, "File::EXCL, 0o600"
   end
 
+  # MASTER web's successful 3960d7918 deploy exited 1 on a fleet-wide public
+  # canary that failed on amber, bsdports and mrdamascy being down.
+  def test_the_post_deploy_public_canary_is_scoped_to_the_deployed_target
+    source = File.read(File.expand_path("../bin/operator", __dir__))
+    checks = source[/def append_post_deploy_checks\(.*?^end/m]
+    assert_includes checks, '"--public", *canary_scope(app)'
+    assert_includes source, "exit_code = append_post_deploy_checks(log, exit_code, app:)"
+    scope = source[/def canary_scope\(target\).*?^end/m]
+    assert_includes scope, "when :app then [target]"
+    assert_includes scope, "when :group then"
+  end
+
   def test_remote_deploy_refuses_to_run_inline_when_tmux_is_missing
     source = File.read(File.expand_path("../bin/operator", __dir__))
     remote = source[/remote_script = <<~ZSH.*?^  ZSH$/m]

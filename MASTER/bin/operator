@@ -375,14 +375,28 @@ def report_openbsd_receipt(envelope)
        "#{preflight.fetch("manual_pages").size} manuals, #{target}"
 end
 
-def append_post_deploy_checks(log, remote_status)
+# The public canary covers what was deployed: one app, or a group's apps.
+# Fleet-wide after an app deploy, it failed MASTER web's successful 3960d7918
+# deploy on amber, bsdports and mrdamascy being down (vm23, 2026-11-25).
+def canary_scope(target)
+  require "operator/canary"
+  inventory = Deploy::Inventory.new(root: ROOT)
+  apps = case inventory.target_kind(target)
+         when :app then [target]
+         when :group then inventory.ordered_apps(group: target).map(&:name)
+         else []
+         end
+  apps.empty? ? [] : ["--app", apps.join(",")]
+end
+
+def append_post_deploy_checks(log, remote_status, app:)
   code = remote_status
   if code.zero?
     state, ok = ssh_capture(remote_ruby("OPENBSD/bin/vps-state"), attempts: 2)
     log.append("\npost-deploy vps-state (#{ok ? 'captured' : 'unavailable'}):\n#{state}\n")
     begin
       output, status = Master::Io::Exec.capture2e(
-        RUBY, File.join(OPENBSD_OPS, "bin", "canary"), "--public",
+        RUBY, File.join(OPENBSD_OPS, "bin", "canary"), "--public", *canary_scope(app),
         timeout: 600, raise_on_timeout: true
       )
       log.append("\n#{Operator::DeployLog::PUBLIC_CANARY} (#{status.success? ? 'PASS' : 'FAIL'}):\n#{output}\n")
@@ -441,7 +455,7 @@ def collect_remote_deploy(session:, app:, sha:, log:)
   end
 
   ssh_capture(Shellwords.join(["tmux", "kill-session", "-t", session]), attempts: 1)
-  exit_code = append_post_deploy_checks(log, exit_code)
+  exit_code = append_post_deploy_checks(log, exit_code, app:)
   log.finish(status: exit_code.zero? ? "success" : "failure", exit_code:)
   exit_code
 rescue StandardError => error
