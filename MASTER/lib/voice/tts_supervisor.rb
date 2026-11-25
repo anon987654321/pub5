@@ -202,10 +202,10 @@ module Master
       def spawn_daemon(root:, path:, index: 0)
         worker = File.join(root, "bin", "tts-worker")
         env = Master::Io::ProcessSpawn.environment(daemon_env(root))
-        log = log_path(root, index:)
+        log = writable_log(log_path(root, index:))
         pid = Process.spawn(
           env, RbConfig.ruby, worker, "--daemon", path,
-          chdir: root, out: log, err: log, **Master::Io::ProcessSpawn.options
+          chdir: root, out: log, err: [:child, :out], **Master::Io::ProcessSpawn.options
         )
         # Keep the daemon as a waitable child. This reserves its PID until
         # retire_daemon reaps it, preventing PID reuse between validation and kill.
@@ -397,6 +397,17 @@ module Master
       rescue Errno::EEXIST => e
         Master::Ground::Swallow.log(e, context: "TtsSupervisor.lock_directory")
         false
+      end
+
+      # On vm23 both dev (the deploy's CLI) and the master daemon spawn workers
+      # into the same shared .master. A bare path opened the log for truncating
+      # write at 0644, so whichever user created it first locked the other out:
+      # the daemon's spawn raised EACCES, nothing started, and the deploy smoke
+      # failed on "tts_socket false" (2026-11-25). Append, group-writable, and a
+      # log this user cannot write is replaced, which the shared directory allows.
+      def writable_log(path)
+        File.unlink(path) if File.exist?(path) && !File.writable?(path)
+        [path, File::WRONLY | File::CREAT | File::APPEND, 0o660]
       end
 
       def log_path(root, index: 0)

@@ -303,8 +303,17 @@ if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
       logger -t master "container warmup: face page not ready after 120 tries"
     fi
     # Warm TTS with MASTER Gemfile only — never inherit Falcon web/vendor/bundle env.
+    # MASTER's own production bundle path, not none: unsetting BUNDLE_PATH and
+    # BUNDLE_WITHOUT sent Bundler to the system gem dir, where MASTER's gems are
+    # not, so ensure_daemon! never ran and no TTS socket existed after any
+    # restart (vm23, 2026-11-25). Same path and groups as rc_pre above.
     _tts_warm_ok=0
-    if su -m dev -c 'export HOME=/home/dev; unset BUNDLE_PATH GEM_HOME GEM_PATH BUNDLE_BIN_PATH BUNDLE_WITHOUT BUNDLE_DEPLOYMENT RUBYOPT; cd /home/dev/pub5/MASTER && BUNDLE_GEMFILE=/home/dev/pub5/MASTER/Gemfile MASTER_TTS_TIMEOUT=45 '"$_bundle"' exec ruby -Ilib -e "require \"master\"; exit(Master::Voice::TtsSupervisor.ensure_daemon! ? 0 : 1)"' 2>>/var/log/daemon; then
+    if su -m dev -c 'export HOME=/home/dev; \
+        export BUNDLE_PATH=/home/dev/.bundle/master BUNDLE_WITHOUT=development:test; \
+        unset GEM_HOME GEM_PATH BUNDLE_BIN_PATH BUNDLE_DEPLOYMENT RUBYOPT; \
+        cd /home/dev/pub5/MASTER && BUNDLE_GEMFILE=/home/dev/pub5/MASTER/Gemfile MASTER_TTS_TIMEOUT=45 \
+        '"$_bundle"' exec ruby -Ilib \
+        -e "require \"master\"; exit(Master::Voice::TtsSupervisor.ensure_daemon! ? 0 : 1)"' 2>>/var/log/daemon; then
       _l=0
       while [[ "$_l" -lt 30 ]]; do
         [[ -S /home/dev/pub5/MASTER/.master/tts-0.sock ]] && { _tts_warm_ok=1; break; }
