@@ -21,6 +21,7 @@ master_rails_tools = File.expand_path("../MASTER/tools/rails", monorepo_rails)
 master_rails_tools = "/home/dev/pub5/MASTER/tools/rails" unless File.directory?(master_rails_tools)
 require File.join(master_rails_tools, "operator", "ci_guard")
 require File.join(master_rails_tools, "operator", "dmesg")
+require File.join(master_rails_tools, "operator", "ci_step_cache")
 
 vps_host = ENV["PUB5_CI_GUARD"] == "1" || File.exist?("/var/db/pub4_vps") || File.exist?("/etc/relayd.conf")
 
@@ -123,9 +124,14 @@ Operator::CiGuard.run! do
                   "bundle exec rubocop --autocorrect --format quiet #{dirs} > log/rubocop-autocorrect.log 2>&1; " \
                   "git diff --name-only -- #{dirs} 2>/dev/null | " \
                   "while read -r f; do echo \"warn: rubocop autocorrected $f, not in git\"; done; true"
-    step "rubocop_autocorrect", autocorrect
+    # Ruby-reading steps rerun only when the app or __shared changed since a
+    # recorded pass (Operator::CiStepCache); PUB5_CI_NO_CACHE=1 forces them.
+    repo = File.expand_path("..", monorepo_rails)
+    ruby_inputs = ["RAILS/#{app}", "RAILS/__shared"]
+    cached = ->(name, run, inputs) { Operator::CiStepCache.command(repo, { app:, step: name, inputs:, run: }) }
+    step "rubocop_autocorrect", cached.call("rubocop_autocorrect", autocorrect, ruby_inputs)
     rubocop = "bundle exec rubocop #{dirs}"
-    step "rubocop", rubocop
+    step "rubocop", cached.call("rubocop", rubocop, ruby_inputs)
     # --config, because bundler-audit reads .bundler-audit.yml from the
     # directory it runs in and no app has one: the shared ignore list sat in
     # this directory with no reader, so an entry in it changed nothing and
@@ -134,7 +140,8 @@ Operator::CiGuard.run! do
     audit = "bundle exec bundler-audit check --config #{File.join(__dir__, 'bundler-audit.yml')}"
     audit += " --update" if ENV["BUNDLER_AUDIT_UPDATE"] == "1"
     step "bundler_audit", audit
-    step "brakeman", "bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
+    brakeman = "bundle exec brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
+    step "brakeman", cached.call("brakeman", brakeman, ruby_inputs)
     step "test_db_prepare", "env RAILS_ENV=test bin/rails db:test:prepare"
     # bin/rails test globs test/**/*_test.rb from the app root, so the mountable
     # verticals under engines/*/test were invisible to it and to this step. They
@@ -175,7 +182,12 @@ Operator::CiGuard.run! do
     # 8 GB workstation, and audio-sync and Turbo-navigation tests failed at
     # random (2-17 per run in parallel, 0-1 serially, 2026-11-25).
     system_test = "env PARALLEL_WORKERS=1 PUB5_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system"
-    step("system_test", system_test) unless vps_host
+    # Browser tests rerun only when what a browser sees changed: views, assets,
+    # scripts, routes, the engines and the system tests themselves, here or in
+    # __shared. They were the slowest and flakiest step of every deploy's CI.
+    ui = %w[app/views app/assets app/javascript config/routes.rb config/importmap.rb engines test/system]
+    ui_inputs = ui.map { |path| "RAILS/#{app}/#{path}" } + %w[RAILS/__shared/app RAILS/__shared/frontend]
+    step("system_test", cached.call("system_test", system_test, ui_inputs)) unless vps_host
     seed_env = vps_host ? "env RAILS_ENV=test SKIP_BERGEN_DEMO=1" : "env RAILS_ENV=test"
     # bin/rake, not bin/rails.
     #
