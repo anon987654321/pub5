@@ -33,7 +33,7 @@ module Master
         def log_scan_agreement(path, first)
           return unless ENV["MASTER_FIX_SCAN_AGREEMENT"] == "1"
 
-          line = scan_agreement_line(File.basename(path.to_s), first, scan_all(path))
+          line = scan_agreement_line(File.basename(path.to_s), first, fresh_scan(path))
           Master::Trace::Dmesg.status("fix0", line)
           @bus&.publish("repair_loop:scan_agreement", law: @law.id, file: path, summary: line)
         rescue StandardError => e
@@ -88,6 +88,41 @@ module Master
           return if added.empty?
 
           Master::Trace::Dmesg.status("fix0", "semantic findings noted, not gated: #{File.basename(path.to_s)} #{added.first(4).join(", ")}")
+        end
+
+        # A repeat must actually invoke the scanner, not replay its memo.
+        # Corroboration is repeat evidence, not proof of independent models.
+        def fresh_scan(path)
+          result = Master::Result.wrap(@scanner.scan(path))
+          raise "confirmation scan failed for #{path}: #{result.message}" unless result.ok?
+
+          result.value!
+        end
+
+        def semantic_regressions(before, after)
+          known = mechanical_law_ids
+          semantic = ->(rows) do
+            rows.select { |row| model_read?(row) || (!known.empty? && !known.include?(row[:law].to_s)) }
+          end
+          prior = semantic.call(before).map { |row| semantic_identity(row) }.tally
+          semantic.call(after).reject do |row|
+            key = semantic_identity(row)
+            prior[key].to_i.positive? && (prior[key] -= 1) >= 0
+          end
+        end
+
+        def semantic_identity(row)
+          [row[:law].to_s, row[:message].to_s.strip.gsub(/\s+/, " ")]
+        end
+
+        def corroborated_semantic_regressions(path, before, after)
+          candidates = semantic_regressions(before, after).select do |row|
+            %w[warning error critical fatal].include?(row.fetch(:severity, :warning).to_s)
+          end
+          return [] if candidates.empty? || strict_semantic_check?
+
+          repeat = semantic_regressions(before, fresh_scan(path)).map { |row| semantic_identity(row) }
+          candidates.select { |row| repeat.include?(semantic_identity(row)) }
         end
 
         def mechanical_law_ids

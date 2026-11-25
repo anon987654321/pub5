@@ -522,6 +522,18 @@ class TestRepairLoopPolicy < Minitest::Test
 
   # The verifier cannot read files: a changed signature carries its callers, and a partial
   # repair of a group is judged on correctness, not on fixing every finding.
+  def test_repeated_semantic_regression_requires_fresh_corroboration
+    loop = Master::Fix::RepairLoop.allocate
+    finding = { law: "semantic", stream: :semantic, severity: :warning, message: "drops authorization" }
+    loop.stub(:fresh_scan, [finding]) do
+      assert_equal [finding], loop.send(:corroborated_semantic_regressions, "sample.rb", [], [finding])
+      assert_empty loop.send(:corroborated_semantic_regressions, "sample.rb", [finding], [finding])
+    end
+    loop.stub(:fresh_scan, []) do
+      assert_empty loop.send(:corroborated_semantic_regressions, "sample.rb", [], [finding])
+    end
+  end
+
   def test_structural_signature_detects_multiline_changes_and_removal
     loop = Master::Fix::RepairLoop.allocate
     before = "def example(\n  first,\n  second: true\n)\nend\ndef removed = 1\n"

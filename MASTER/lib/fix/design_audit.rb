@@ -75,7 +75,7 @@ module Master
       def spelling_tests(repo_root:)
         tests = Dir.glob(File.join(repo_root, "{MASTER,RAILS,OPENBSD,STUDIO,BIZ}", "**", "test*", "**", "*_test.rb")) +
                 Dir.glob(File.join(repo_root, "MASTER", "test", "test_*.rb"))
-        tests.uniq.filter_map { |path| spelling_row(path) }.first(8)
+        tests.uniq.filter_map { |path| spelling_row(path) }
       end
 
       def spelling_row(path)
@@ -94,7 +94,7 @@ module Master
 
       # A subprocess per item is the cost no one sees until the item count grows.
       def spawn_in_loops(lib)
-        Dir.glob(File.join(lib, "**", "*.rb")).flat_map { |path| spawn_rows(path) }.first(8)
+        Dir.glob(File.join(lib, "**", "*.rb")).flat_map { |path| spawn_rows(path) }
       end
 
       def spawn_rows(path)

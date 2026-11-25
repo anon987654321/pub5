@@ -405,7 +405,7 @@ module Master
           Master::Trace::CausalTrace.step(
             kind: :decision, name: "repair.reflexion",
             input: { law: @law.id, candidate_sha256: Digest::SHA256.hexdigest(source) },
-            output: { verified: verified == true, reason_code: },
+            output: { verified: !!verified, reason_code: },
           )
           unless verified
             RunLedger.reject("reflexion_unsafe", file: violation[:file], law: @law.id, bus: @bus)
@@ -643,6 +643,11 @@ module Master
           raw_after = scan_all(path)
           after = check_findings(raw_after)
           note_semantic_drift(path, raw_before, raw_after)
+          confirmed = corroborated_semantic_regressions(path, raw_before, raw_after)
+          unless confirmed.empty?
+            introduced = confirmed.map { |row| "#{row[:law]}: #{row[:message]}" }.join("; ")
+            return reject_fix(path, old_src, "new_violations", before:, after:, introduced:)
+          end
           return reject_fix(path, old_src, "new_violations", before:, after:, introduced: introduced_summary(before, after, source: new_src)) if after.size > before.size
           if (scouts = boyscout_violations(before, after, scope:)).any?
             grown = scouts.first(3).map { |violation| "#{violation[:law]} line #{violation[:line]}" }.join(", ")
