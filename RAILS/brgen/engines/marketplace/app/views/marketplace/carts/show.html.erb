@@ -51,7 +51,9 @@
   </div>
 
   <aside class="store-buybox cart-summary" aria-label="<%= t("marketplace.payment_methods") %>">
-    <p class="store-buybox-price"><%= tag.strong t("marketplace.cart_total", amount: Shared::MoneyDisplay.format(@cart_total)) %></p>
+    <% @cart_totals.each do |currency, total| %>
+      <p class="store-buybox-price"><%= tag.strong t("marketplace.cart_total", amount: Shared::MoneyDisplay.format(total, currency)) %></p>
+    <% end %>
     <p><%= t("marketplace.cart_pay_hint") %></p>
 
     <%# Paying the whole basket needs somewhere to send it. Shown before the pay
@@ -75,7 +77,9 @@
         the provider's own host, and a fetch cannot follow a cross-origin redirect.
         form-submit#lock disables a button once pressed, as the takeaway order
         form does: a second click started a second payment session. %>
-    <% if dintero_ready || vipps_ready || stripe_ready %>
+    <% if @cart_totals.size > 1 %>
+      <%= tag.p t("marketplace.checkout_errors.mixed_currency"), role: "status" %>
+    <% elsif dintero_ready || vipps_ready || stripe_ready %>
       <div class="cart-pay-actions" role="group" aria-label="<%= t("marketplace.payment_methods") %>">
         <% if dintero_ready %>
           <%= button_to t("marketplace.pay_dintero"), checkout_path,
