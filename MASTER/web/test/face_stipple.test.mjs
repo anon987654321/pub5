@@ -1188,3 +1188,10 @@ test("mask correspondence uses bounded stable spatial ordering", () => {
   assert.match(faceWorld, /new Uint32Array\(256\)/);
   assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
 });
+
+test("mask lighting is driven by local relief normals, not original face zones", () => {
+  assert.match(faceSource, /attribute vec3 subjectNormal/);
+  assert.match(faceSource, /normalMatrix \* reliefNormal/);
+  assert.match(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
+  assert.match(faceSource, /1\.0-reliefBlend/);
+});

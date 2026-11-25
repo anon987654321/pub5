@@ -171,6 +171,8 @@ begin
           return { profile: document.documentElement.dataset.maskProfile,
             points: (window.MASTER_FACE.faceScatter?.length || 0) / 3,
             fps: window.MasterRenderPolicy?.snapshot?.().fps ?? null,
+            normals: (window.MASTER_FACE.faceMat?.uniforms?.uMaskMouth?.value?.w === 1),
+            gpu: window.MASTER_FACE.faceMat?.isShaderMaterial === true,
             width: f.width, height: f.height, disjoint: f.bottom <= l.top + 1 };
         })()
       JS
@@ -178,7 +180,7 @@ begin
       receipt["selected"] = selected
       receipts << receipt
       failures << "mask #{profile} failed projection" unless selected && settled && receipt["profile"] == profile &&
-        receipt["points"].to_i.positive? && receipt["disjoint"]
+        receipt["points"].to_i.positive? && receipt["disjoint"] && receipt["normals"] && receipt["gpu"]
       browser.screenshot(path: File.join(target, "#{profile}.png"))
     end
     browser.evaluate("window.MASTER_FACE_MASKS.select(#{original.to_json})")

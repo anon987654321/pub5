@@ -116,6 +116,7 @@ uniform float uExpressionStrength;
 attribute vec3 scatter;
 attribute float semanticStage;
 attribute vec3 subjectFrom;
+attribute vec3 subjectNormal;
 uniform float uSubjectDirect;
 uniform vec4 uMaskMouth;
 attribute float seed;
@@ -281,13 +282,17 @@ void main(){
   // Treat the point cloud as a shallow physical surface instead of a flat depth gradient.
   // The ellipsoid normal gives the same face genuine key/fill/rim lighting while keeping
   // one-pixel rasterisation. Lighting is computed per vertex, so it adds no extra draw call.
-  vec3 normal = normalize(vec3(p.x / 0.62, p.y / 0.62, p.z / 0.82));
+  vec3 baseNormal = normalize(vec3(p.x / 0.62, p.y / 0.62, p.z / 0.82 + 0.0001));
+  float reliefBlend = uMaskMouth.w * uSubjectDirect * (1.0 - localMorph);
+  vec3 reliefNormal = normalize(mix(baseNormal, subjectNormal, reliefBlend) + vec3(0.0, 0.0, 0.0001));
+  vec3 normal = normalize(normalMatrix * reliefNormal);
   vec3 keyDir = normalize(vec3(-0.48, 0.28, 0.84));
   vec3 fillDir = normalize(vec3(0.34, -0.08, 0.94));
   float keyLight = max(dot(normal, keyDir), 0.0);
   float fillLight = max(dot(normal, fillDir), 0.0);
   float rimLight = pow(1.0 - abs(dot(normal, vec3(0.0, 0.0, 1.0))), 2.0);
-  float sculptLight = 0.60 + (0.46 * keyLight) + (0.18 * fillLight) + (0.16 * rimLight);
+  float sculptLight = mix(0.60 + (0.46 * keyLight) + (0.18 * fillLight) + (0.16 * rimLight),
+    0.32 + 0.65 * keyLight + 0.18 * fillLight, reliefBlend);
   // One point is one pixel. The renderer draws into a FACE_RENDER_SCALE buffer
   // that CSS upscales with image-rendering:pixelated, so a single fragment here
   // IS the visible square block on screen. A point that grew toward the camera
@@ -311,11 +316,11 @@ void main(){
   float eyeDim = 1.0 - uEyeClose * eyeRgn * 0.82 * (1.0-uSubjectActive);
   vAlpha=(hc>0.0?hc:mix(0.28+uIdleDrift*0.08,0.48+depth*0.52,lm)+zoneAudio)*eyeDim;
   float flickerFreq=0.5+seed*1.5;
-  float flicker=1.0+0.08*sin(seed*6.2831+uTime*flickerFreq);
+  float flicker=1.0+0.08*(1.0-reliefBlend)*sin(seed*6.2831+uTime*flickerFreq);
   vAlpha*=flicker*uExposure;
   vAlpha*=1.0-0.45*clamp(uModelSwitch,0.0,1.0);
   vAlpha*=1.0-0.35*clamp(uQuestion,0.0,1.0);
-  vAlpha*=clamp(form*0.42,0.25,1.0);
+  vAlpha*=mix(clamp(form*0.42,0.25,1.0), mix(0.55, 1.0, depth), reliefBlend);
   vAlpha=max(vAlpha,0.08);
   // 0.35 rather than 0.14 at the far end, and the whole term scaled past 1.
   // Receding points were painted at a seventh of full brightness — most of a
@@ -362,6 +367,9 @@ if (_hasWebGL && THREE) {
   faceGeom.setAttribute('position', new THREE.BufferAttribute(faceHome, 3));
   faceGeom.setAttribute('scatter',  new THREE.BufferAttribute(faceScatter, 3));
   faceGeom.setAttribute('subjectFrom', new THREE.BufferAttribute(faceHome.slice(), 3));
+  const subjectNormals = new Float32Array(faceHome.length);
+  for (let i = 2; i < subjectNormals.length; i += 3) subjectNormals[i] = 1;
+  faceGeom.setAttribute('subjectNormal', new THREE.BufferAttribute(subjectNormals, 3));
   faceGeom.setAttribute('semanticStage', new THREE.BufferAttribute(new Float32Array(faceSeeds.length), 1));
   faceGeom.setAttribute('seed',     new THREE.BufferAttribute(faceSeeds, 1));
   faceGeom.setAttribute('curvature', new THREE.BufferAttribute(faceCurvature, 1));

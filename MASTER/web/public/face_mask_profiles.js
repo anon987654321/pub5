@@ -100,6 +100,36 @@
       height: .035 + cheeks * .11 };
   }
 
+  // Local relief derivatives, not normals from the unrelated base portrait.
+  function normalAt(id, x, y) {
+    const p = PROFILES[profileIndex(id)];
+    const shape = RELIEF[id];
+    if (!p || !shape) return [0, 0, 1];
+    const [taper, exponent, forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
+    const eyeY = .15 - forehead * .25;
+    const mouth = mouthGeometry(id);
+    const height = (a, b) => {
+      const v = Math.max(-.999, Math.min(.999, b / p.h));
+      const width = p.w * Math.pow(Math.max(.0001, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent) *
+        (1 - taper * Math.max(0, -v));
+      const edge = Math.min(1, Math.abs((a - p.asym * v * .45) / width));
+      const absX = Math.abs(a);
+      const eye = ((absX - eyeX) / eyeW) ** 2 + ((b - eyeY) / eyeH) ** 2;
+      const lip = (a / mouth.width) ** 2 + ((b - mouth.y) / mouth.height) ** 2;
+      const brow = gaussian(b - eyeY - eyeH * 1.35, .045) * gaussian(absX - eyeX, .15);
+      const bridge = gaussian(a, .035 + noseDepth * .12) * gaussian(b + .025, p.nose * .64);
+      const cheek = gaussian(absX - p.w * .60, .095) * gaussian(b + .12, .18);
+      const rim = gaussian(eye - 1.22, .65) + gaussian(lip - 1.24, .78);
+      return .035 + .11 * Math.sqrt(Math.max(0, 1 - edge * edge)) + noseDepth * bridge +
+        .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
+    };
+    const h = .006;
+    const dx = (height(x + h, y) - height(x - h, y)) / (2 * h);
+    const dy = (height(x, y + h) - height(x, y - h)) / (2 * h);
+    const length = Math.hypot(dx, dy, 1);
+    return [-dx / length, -dy / length, 1 / length];
+  }
+
   function sample(id, index) {
     const p = PROFILES[profileIndex(id)];
     const shape = RELIEF[id];
@@ -298,6 +328,7 @@
     source: () => sourceFor(PROFILES[current]),
     descriptor: () => descriptor(PROFILES[current]),
     sample,
+    normalAt,
     mouthGeometry,
     hasProfile: (id) => profileIndex(id) >= 0,
     applyCurrent: (reason = "restore") => apply(current, reason),

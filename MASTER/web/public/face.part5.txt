@@ -1614,9 +1614,11 @@ window._chatSpeakLast = () => {
   if (text) enqueueSpeech(text);
 };
 
-function setSubjectScatter(positions, stages = null) {
+function setSubjectScatter(positions, stages = null, normals = null) {
   const attribute = faceGeom?.getAttribute?.("scatter");
   const stageAttribute = faceGeom?.getAttribute?.("semanticStage");
+  const normalAttribute = faceGeom?.getAttribute?.("subjectNormal");
+  if (normals && (!normalAttribute || normals.length !== positions?.length || !normals.every(Number.isFinite))) return false;
   if (!faceScatter || !attribute || !stageAttribute || !positions || positions.length !== faceScatter.length) return false;
   if (stages && stages.length !== faceSeeds.length) return false;
   for (let i = 0; i < positions.length; i++) {
@@ -1653,6 +1655,7 @@ function setSubjectScatter(positions, stages = null) {
   faceMat._morphVel = 0;
   faceScatter.set(positions);
   attribute.needsUpdate = true;
+  if (normals) { normalAttribute.array.set(normals); normalAttribute.needsUpdate = true; }
   stageAttribute.array.fill(0);
   if (stages) stageAttribute.array.set(stages);
   stageAttribute.needsUpdate = true;

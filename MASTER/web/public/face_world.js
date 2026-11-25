@@ -636,9 +636,17 @@
       : null;
     const facePositions = form === "face" ? null : primaryGeometry?.positions || buildFaceSubjectPositions(form);
     const faceStages = primaryGeometry?.stages || null;
+    let normals = null;
+    if (semanticDescriptor?.maskProfile && facePositions && window.MASTER_FACE_MASKS?.normalAt) {
+      normals = new Float32Array(facePositions.length);
+      for (let offset = 0; offset < facePositions.length; offset += 3) {
+        normals.set(window.MASTER_FACE_MASKS.normalAt(semanticDescriptor.maskProfile,
+          facePositions[offset] / MASK_PRIMARY_SCALE, facePositions[offset + 1] / MASK_PRIMARY_SCALE), offset);
+      }
+    }
     nativeSubjectField = form === "face"
       ? window.MASTER_FACE?.resetSubjectScatter?.() === true
-      : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions, faceStages) === true);
+      : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions, faceStages, normals) === true);
     const mouth = semanticDescriptor?.maskProfile
       ? window.MASTER_FACE_MASKS?.mouthGeometry?.(semanticDescriptor.maskProfile) : null;
     const mouthUniform = window.MASTER_FACE?.faceMat?.uniforms?.uMaskMouth;
