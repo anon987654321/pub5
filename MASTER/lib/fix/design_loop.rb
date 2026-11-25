@@ -52,6 +52,7 @@ module Master
         @undone = []
         @judged = 0
         @spent = Hash.new(0)
+        @variant_cursor = Hash.new(0)
       end
 
       def run
@@ -171,7 +172,10 @@ module Master
         offered = Array(@world.sources_for.call(@target[:surface]))
         views, sheets = offered.partition { |path| path.end_with?(".erb") }
         sources = sheets.first(4) + views.first(MARKUP_FILES)
-        Array.new(@plan.candidates) { |variant| propose(sources, variant) }.compact.uniq(&:key)
+        id = @target[:surface].id
+        start = @variant_cursor[id]
+        @variant_cursor[id] += @plan.candidates
+        Array.new(@plan.candidates) { |variant| propose(sources, start + variant) }.compact.uniq(&:key)
       end
 
       def propose(sources, variant)
@@ -464,7 +468,7 @@ module Master
         return unless receipt
 
         RepairOutcomes.new(root: @plan.root).record(edit.file, ["RENDERED_VISUAL_REFINEMENT"],
-          { outcome => 1 }, pattern: "design-loop", receipt:)
+          { outcome => 1 }, pattern: "design-loop", receipt:, lesson: @vision)
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "design_loop.remember_comparison")
       end

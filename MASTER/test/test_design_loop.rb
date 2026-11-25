@@ -280,6 +280,19 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_design_rounds_rotate_candidate_scales_even_with_one_candidate
+    with_sheet do |path|
+      prompts = []
+      stub_scoring do
+        loop_for(path, committed: [], vision: NO_DIFFERENCE, prompts:).run
+      end
+
+      requests = prompts.select { |prompt| prompt.include?("Make ONE edit") }
+      assert requests.any? { |prompt| prompt.include?("Macro: strengthen") }
+      assert requests.any? { |prompt| prompt.include?("Meso: refine") }
+    end
+  end
+
   def test_successful_design_candidate_cleans_up_its_transaction
     with_sheet do |path|
       committed = []

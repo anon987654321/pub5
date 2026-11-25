@@ -39,7 +39,7 @@ module Master
       end
 
       # outcomes is a repair's breakdown, { outcome_symbol => count }.
-      def record(path, law_ids, outcomes, pattern: nil, receipt: nil)
+      def record(path, law_ids, outcomes, pattern: nil, receipt: nil, lesson: nil)
         tallies = fold(outcomes)
         return if tallies.empty?
 
@@ -51,7 +51,7 @@ module Master
             next if proof && comparison_seen?(data, key, proof, tallies)
 
             tallies.each { |verdict, reason, count| add(data, key, verdict, reason, count) }
-            remember_receipt(data, key, proof, tallies) if proof
+            remember_receipt(data, key, proof, tallies, lesson) if proof
           end
           prune(data)
           save(data)
@@ -77,6 +77,23 @@ module Master
         lines.join("\n").byteslice(0, SUMMARY_BYTES).scrub("")
       end
 
+      # Observations remain scoped to the source area and tied to comparison receipts.
+      def design_lessons(path)
+        prefix = class_key("RENDERED_VISUAL_REFINEMENT", "design-loop", area(path))
+        row = load.fetch("classes").fetch(prefix, {})
+        return if factor(row["at"]) < MIN_WEIGHT
+
+        lessons = row.fetch("receipts", {}).values.reverse.filter_map do |receipt|
+          next unless receipt["lesson"]
+
+          verdict = receipt.fetch("outcome").first&.first
+          "#{verdict}: #{receipt["lesson"]}"
+        end.uniq.first(SUMMARY_LINES)
+        return if lessons.empty?
+
+        lessons.join("\n").byteslice(0, SUMMARY_BYTES).scrub("")
+      end
+
       def self.summary(root)
         new(root:).summary
       rescue StandardError => e
@@ -94,10 +111,12 @@ module Master
         true
       end
 
-      def remember_receipt(data, key, proof, tallies)
+      def remember_receipt(data, key, proof, tallies, lesson)
         row = data.fetch("classes").fetch(key)
         receipts = row.fetch("receipts", {})
-        receipts[proof.fetch("sha256")] = { "source" => proof.fetch("source"), "outcome" => tallies }
+        entry = { "source" => proof.fetch("source"), "outcome" => tallies }
+        entry["lesson"] = lesson.to_s.gsub(/\s+/, " ").strip.byteslice(0, 240).scrub("") unless lesson.to_s.strip.empty?
+        receipts[proof.fetch("sha256")] = entry
         row["receipts"] = receipts.to_a.last(Cognition::OutcomeModel::MAX_SEEN_RECEIPTS).to_h
       end
 
