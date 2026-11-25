@@ -16,6 +16,11 @@ module Shared
       # an unrelated test failed. Clearing per test keeps rate limiting
       # exercisable instead of silently disabled.
       test_case.setup { Rails.cache.clear }
+      # I18n.locale is per thread and survives a test that sets it, so a test
+      # that switched to :en left the next one in the same worker rendering
+      # English: TypingIndicatorTest got "is typing" for "skriver" and failed
+      # brgen's bin/ci at random (2026-11-25). Every test starts on the default.
+      test_case.setup { I18n.locale = I18n.default_locale }
     end
   end
 end
