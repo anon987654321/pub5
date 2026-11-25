@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="<%= I18n.locale %>">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#000000" data-light-color="#ffffff" data-dark-color="#000000">
-  <meta name="turbo-cache-control" content="no-preview">
   <%= tag.meta name: "turbo-cache-control", content: "no-cache" %>
   <title><%= content_for?(:title) ? "#{yield :title} — Hjerterom Åsane" : "Hjerterom Åsane" %></title>
   <meta name="description" content="<%= content_for?(:description) ? yield(:description) : "Hjerterom Åsane — matredistribusjon og møteplass i Åsane, Bergen. Vi deler ut overskuddsmat, klær og bøker til de som trenger det." %>">
@@ -31,7 +30,7 @@
   <%= yield :head if content_for?(:head) %>
 </head>
 <body class="<%= content_for?(:body_class) ? yield(:body_class) : nil %>" data-pwa-key="hjerterom" data-controller="pwa-standalone">
-<a class="skip-link" href="#main-content">Skip to main content</a>
+<a class="skip-link" href="#main-content"><%= t("a11y.skip_to_content") %></a>
 <%= render "shared/theme_toggle", storage_key: "hjerterom-theme" %>
 
 <div class="theme-root">

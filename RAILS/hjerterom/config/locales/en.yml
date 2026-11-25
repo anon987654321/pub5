@@ -3,6 +3,7 @@ en:
   app:
     name: "Hjerterom Åsane"
   a11y:
+    skip_to_content: Skip to main content
     box_edit_header: Edit box header
     box_new_header: New box header
     box_show_header: Box details header

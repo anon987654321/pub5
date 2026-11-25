@@ -16,6 +16,7 @@
   <meta charset="utf-8">
   <meta name="view-transition" content="same-origin">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <%= render "shared/theme_bootstrap", storage_key: "bsdports-theme" %>
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff" data-light-color="#ffffff" data-dark-color="#000000">
   <title><%= content_for?(:title) ? "#{yield :title} — BSDports" : "BSDports" %></title>

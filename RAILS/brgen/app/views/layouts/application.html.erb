@@ -26,7 +26,7 @@
       follows Brgen's restored dark-blue header on both light and dark themes. %>
   <%= tag.meta name: "color-scheme", content: surface_theme %>
   <%= tag.meta name: "theme-color", content: "#143d5b", data: { light_color: "#143d5b", dark_color: "#143d5b" } %>
-    <%= render "shared/theme_bootstrap", storage_key: "brgen-theme" %>
+  <%= render "shared/theme_bootstrap", storage_key: "brgen-theme" %>
   <%# content_for(:x) with no block is the read form: it already returns nil when unset,
       so content_for?(:x) ? yield(:x) : … was two lookups and the key named twice. %>
   <% page_title = content_for(:title).presence %>

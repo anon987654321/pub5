@@ -3,6 +3,7 @@ nb:
   app:
     name: "Hjerterom Åsane"
   a11y:
+    skip_to_content: Hopp til hovedinnhold
     box_edit_header: Rediger boks – sidehode
     box_new_header: Ny boks – sidehode
     box_show_header: Boksdetaljer – sidehode
