@@ -1198,9 +1198,13 @@ test("mask correspondence uses bounded stable spatial ordering", () => {
   assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
 });
 
-test("mask ink is uniform and geometry retains local normals", () => {
+test("mask uses depth, discrete neutral ink and fixed footprints", () => {
   assert.match(faceSource, /attribute vec3 subjectNormal/);
-  assert.match(faceSource, /vColor=vec3\(0\.9333333\)/);
+  assert.match(faceSource, /vColor=vec3\(ink\)/);
+  assert.match(faceSource, /normalMatrix \* mix/);
+  assert.match(faceSource, /transparent: false, depthWrite: true, depthTest: true/);
+  assert.match(system, /active\.primary\.visible = !showPreview/);
+  assert.match(system, /const showPreview = preview && subject === "face"/);
   assert.match(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
   assert.match(faceSource, /gl_FragColor=vec4\(vColor,1\.0\)/);
 });

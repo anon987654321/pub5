@@ -7,6 +7,7 @@
 
   const params = new URLSearchParams(window.location.search || "");
   const enabled = params.get("stipple") !== "0";
+  const preview = params.get("stipple") === "1" || params.get("playground") === "1";
   const MAX_POINTS = 14_000;
   const FRAME_SAMPLE_LIMIT = 60;
   const MOBILE_FALLBACK = 420;
@@ -925,7 +926,7 @@
     let THREE;
     installing = true;
     try {
-      THREE = await import(new URL(modulePath, document.baseURI).href);
+      if (preview) THREE = await import(new URL(modulePath, document.baseURI).href);
     } catch (error) {
       window.MASTER_LOG?.warn?.("face_stipple:three_import_failed", error);
       return;
@@ -952,22 +953,39 @@
       }
       lastFrameAt = now;
       renderedFrames += 1;
-      if (active?.points) active.points.visible = !document.hidden && contextState !== "lost";
       if (!active && isFaceScene(scene)) {
         const root = scene.children.find(hasFacePoints);
         const facePoints = root?.children?.find((child) => child?.type === "Points");
-        const sampled = samplesFromFaceGeometry(facePoints, pointBudget());
-        active = buildFromSamples(THREE, sampled || defaultSamples(pointBudget()));
-        active.root = root || scene;
-        active.root.add(active.points);
+        if (preview) {
+          const sampled = samplesFromFaceGeometry(facePoints, pointBudget());
+          active = buildFromSamples(THREE, sampled || defaultSamples(pointBudget()));
+          active.root = root || scene;
+          active.root.add(active.points);
+        } else {
+          // Expression state uses the primary uniforms; no second geometry.
+          active = { root: root || scene, material: facePoints?.material, count: 0 };
+        }
+        active.primary = facePoints;
         window.__MASTER_STIPPLE__ = active;
       }
       if (active && (active.root === scene || active.root?.parent === scene)) {
-        tick(active, currentFaceState(), performance.now() * 0.001);
+        const state = currentFaceState();
+        const time = performance.now() * 0.001;
+        syncVisibility();
+        if (active.points?.visible) tick(active, state, time);
+        else updateExpressions(active, time, reducedMotionEnabled(state));
       }
       return previousRender.call(this, scene, camera, ...rest);
     };
     renderer.render = renderWrapper;
+  }
+
+  function syncVisibility() {
+    if (!active?.points) return;
+    const subject = document.documentElement?.dataset?.faceSubject || "face";
+    const showPreview = preview && subject === "face" && !document.hidden && contextState !== "lost";
+    active.points.visible = showPreview;
+    if (active.primary) active.primary.visible = !showPreview;
   }
 
   function onContextLost(event) {
@@ -981,12 +999,12 @@
 
   function onContextRestored() {
     contextState = "ready";
-    if (active?.points) active.points.visible = !document.hidden;
+    syncVisibility();
     window.dispatchEvent?.(new CustomEvent("master:stipple-context", { detail: { state: "restored" } }));
   }
 
   function onVisibilityChange() {
-    if (active?.points) active.points.visible = !document.hidden && contextState !== "lost";
+    syncVisibility();
   }
 
   function uninstall() {
@@ -997,9 +1015,10 @@
     rendererCanvas?.removeEventListener?.("webglcontextlost", onContextLost, false);
     rendererCanvas?.removeEventListener?.("webglcontextrestored", onContextRestored, false);
     document.removeEventListener?.("visibilitychange", onVisibilityChange, false);
+    if (active?.primary) active.primary.visible = true;
     if (active?.root && active.points) active.root.remove?.(active.points);
     active?.geometry?.dispose?.();
-    active?.material?.dispose?.();
+    if (active?.points) active.material?.dispose?.();
     if (window.__MASTER_STIPPLE__ === active) delete window.__MASTER_STIPPLE__;
     active = null;
     wrappedRenderer = null;

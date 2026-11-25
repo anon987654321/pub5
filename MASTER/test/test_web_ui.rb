@@ -779,9 +779,7 @@ class TestWebUI < Minitest::Test
     assert_includes world, 'addEventListener("audio:update"'
   end
 
-  # The runtime is a loader that fetches each source by URL, and the server caches those for a
-  # year, so each source is named by the digest of its content. A runtime naming an old digest
-  # sends browsers back to a stale part: the face stayed blank after the shader fix shipped.
+  # Build receipts record the source digests; the browser imports one module.
   def test_face_runtime_names_every_source_by_its_current_digest
     dir = File.expand_path("../../MASTER/web/public", __dir__)
     missing = FACE_RUNTIME_SOURCES.reject { |name| File.file?(File.join(dir, name)) }

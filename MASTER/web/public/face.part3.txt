@@ -555,12 +555,15 @@ function frame(t) {
       semanticMorphTarget = null;
       semanticMorphRestoreOnSettled = false;
     }
-    // Inspect depth during assembly; return to a still frontal view at rest.
+    // A quiet off-axis pose reveals depth without continuous idle motion.
     if (faceMat.uniforms.uSubjectDirect?.value) {
       const progress = 1-Math.max(0, Math.min(1, morphCurrent));
-      const turn = motionFrozen ? 0 : Math.sin(Math.PI*progress)*0.32;
+      const sculpture = window.MASTER_FACE_CONTRACT?.sculpture || {};
+      const restYaw = Math.max(-.35, Math.min(.35, Number(sculpture.rest_yaw ?? .18) || 0));
+      const turn = motionFrozen ? restYaw :
+        restYaw + Math.sin(Math.PI * progress) * .30 + State.mouseX * .16 + Math.sin(sec * .14) * .055;
       head.rotation.set(0, turn, 0);
-      head.scale.setScalar(1);
+      head.scale.setScalar(motionFrozen ? 1 : 1 + Math.sin(sec * .6) * .006);
       head.position.set(0, 0, 0);
     }
     faceMat.uniforms.uMorph.value = morphCurrent;
@@ -701,7 +704,7 @@ function frame(t) {
   const rasterOnly = renderMode === 'raster' || (!renderer && renderMode !== '3d');
   if (rasterOnly && renderer) renderer.domElement.style.opacity = '0';
   else if (renderer) renderer.domElement.style.opacity = '';
-  const phosphorOn = !faceReducedMotionActive() && FACE_PHOSPHOR_DECAY > 0.12 && FACE_PHOSPHOR_DECAY < 0.98 && renderMode !== 'wireframe';
+  const phosphorOn = !faceMat?.uniforms?.uSubjectDirect?.value && !faceReducedMotionActive() && FACE_PHOSPHOR_DECAY > 0.12 && FACE_PHOSPHOR_DECAY < 0.98 && renderMode !== 'wireframe';
   if (phosphorOn && phosphorFadeMesh && phosphorFadeScene && phosphorFadeCam && faceMat?._phosphorPrimed) {
     let decay = State.coarsePointer ? Math.max(0.55, FACE_PHOSPHOR_DECAY - 0.12) : FACE_PHOSPHOR_DECAY;
     if (tts.playing) decay = Math.max(0.52, decay - 0.05);
@@ -712,9 +715,10 @@ function frame(t) {
     phosphorFadeMesh.material.opacity = 1 - decay;
     renderer.autoClear = false;
     renderer.render(phosphorFadeScene, phosphorFadeCam);
+    renderer.clearDepth?.();
   } else {
     renderer.autoClear = true;
-    renderer.setClearColor(0x050710, 1);
+    renderer.setClearColor(faceMat?.uniforms?.uSubjectDirect?.value ? 0x000000 : 0x050710, 1);
     if (faceMat && phosphorOn) faceMat._phosphorPrimed = true;
   }
   if (window.MASTER_PHOSPHOR_TRAIL?.capture && renderer?.domElement && phosphorOn) {
