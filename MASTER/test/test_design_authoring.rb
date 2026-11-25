@@ -39,6 +39,17 @@ class DesignAuthoringTest < Minitest::Test
     assert_nil language.creative_medium("my music player crashed")
   end
 
+  def test_multidisciplinary_craft_preserves_distinct_lenses
+    language = Master::Design::VisualLanguage
+    assert_equal %w[music cinema], language.creative_media("compose music for a film")
+    assert_equal %w[software design], language.creative_media("refine the Ruby interface")
+    assert_empty language.creative_media("my music player crashed")
+    context = language.creative_context(%w[music cinema music])
+    assert_includes context, "music: Silence, rests"
+    assert_includes context, "cinema: Let an action"
+    assert_equal 1, context.scan("music: Silence, rests").size
+  end
+
   def test_bsdports_is_not_held_to_the_house_typeface
     text = Authoring.context(path: "/repo/RAILS/bsdports/app/assets/stylesheets/application.scss")
 
