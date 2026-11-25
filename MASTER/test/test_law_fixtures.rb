@@ -24,11 +24,12 @@ class TestLawFixtures < Minitest::Test
 
   def test_redundant_core_require_keeps_pathname_library
     law = Master::Review::Scan::LawTree.find(:REDUNDANT_CORE_REQUIRE)
+    definition = law.definition
 
-    assert_equal 1, findings_for(law, law.bad).size
-    assert_empty findings_for(law, law.good)
-    assert_includes law.good, "Pathname.instance_method(:find)"
-    assert_includes law.good, "Pathname.instance_method(:rmtree)"
+    assert_equal 1, findings_for(definition, definition.bad).size
+    assert_empty findings_for(definition, definition.good)
+    assert_includes definition.good, "Pathname.instance_method(:find)"
+    assert_includes definition.good, "Pathname.instance_method(:rmtree)"
   end
 
   def self.fixtured

@@ -196,11 +196,11 @@ module Law
     ask "Review operational logs, boot, status and progress output only. Every event must be one factual line with a lowercase subsystem0: prefix. Reject indentation or whitespace padding used to align fields across events, and reject fixed-width or tabular log columns. Repeat the subsystem prefix on every continuation line. Do not treat a user-requested data table or machine-readable command output as a log."
     fix "For operational logs, emit one factual event per line with a lowercase subsystem0: prefix. Never indent or pad fields to align records, and never use fixed-width or tabular columns. Keep messages ASCII and within 72 characters; split long details at meaningful boundaries."
     bad <<~RUBY
-      Master::Trace::Dmesg.status("mov0", "init     /Users/Mac/Downloads")
+      Master::Trace::Dmesg.status("mov0", "init     $HOME/Downloads")
       Master::Trace::Dmesg.status("disk0", "check    8.4GB available")
     RUBY
     good <<~RUBY
-      Master::Trace::Dmesg.status("mov0", "initializing /Users/Mac/Downloads")
+      Master::Trace::Dmesg.status("mov0", "initializing $HOME/Downloads")
       Master::Trace::Dmesg.status("disk0", "8.4GB available")
     RUBY
     check do |src, file|

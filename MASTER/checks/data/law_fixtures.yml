@@ -456,6 +456,7 @@ laws:
     good: |-
       <input type="text" name="given-name" autocomplete="given-name">
       <input type="text" name="postcode" autocomplete="section-shipping postal-code">
+      <input type="text" name="city" autocomplete="address-level2">
   CLASS_RESTATES_TAG:
     status: fixture
     file: "-"
@@ -1637,6 +1638,8 @@ laws:
     status: docs
   PRESERVE_FIRST:
     status: docs
+  PRESERVE_FIRST_media_provenance:
+    status: docs
   BE_CONCISE:
     status: docs
   REGISTER_STABLE:
@@ -1798,7 +1801,16 @@ laws:
       preserves working behavior while continuously reducing unnecessary
       complexity.
   HTML_HEADING_HIERARCHY:
-    status: docs
+    status: fixture
+    file: "-"
+    bad: |
+      <h1>Orders</h1>
+      <h3>Recent orders</h3>
+      <h4>Today</h4>
+    good: |
+      <h1>Orders</h1>
+      <h2>Recent orders</h2>
+      <h3>Today</h3>
   VISUAL_IDENTITY_SOURCE_OF_TRUTH:
     status: fixture
     file: "-"
@@ -2446,7 +2458,7 @@ laws:
     proof: test/test_lib_root_discipline_law.rb
   SMALL_FILES:
     status: retired
-    file: /repo/app/models/example.rb
+    file: "/repo/app/models/example.rb"
     proof: test/test_scan_law_contracts.rb
   SMALL_FUNCTIONS:
     status: test
@@ -2513,6 +2525,15 @@ laws:
     good: 'attr_reader :user
 
       '
+  PREDICATE_SIDE_EFFECTS:
+    status: test
+    proof: test/test_structural_shape_laws.rb
+    bad: 'def ready?; @ready = true; save!; end
+
+      '
+    good: |
+      def ready?; !!@ready; end
+      def mark_ready; @ready = true; save!; end
   CONFIG_HIERARCHY:
     status: test
     proof: test/test_scan_law_contracts.rb
@@ -3063,6 +3084,15 @@ laws:
       <html>
       <head><link rel="manifest" href="/manifest.json"></head>
       </html>
+  TERMINAL_OUTPUT_TYPOGRAPHY:
+    status: fixture
+    file: "/repo/MASTER/lib/cli/fixture.rb"
+    bad: |
+      Master::Trace::Dmesg.status("mov0", "init     $HOME/Downloads")
+      Master::Trace::Dmesg.status("disk0", "check    8.4GB available")
+    good: |
+      Master::Trace::Dmesg.status("mov0", "initializing $HOME/Downloads")
+      Master::Trace::Dmesg.status("disk0", "8.4GB available")
   QUOTES_BY_LOCALE:
     status: fixture
     file: "/repo/RAILS/brgen/config/locales/nb.yml"
@@ -3275,6 +3305,8 @@ laws:
   EVIDENCE_BY_INTENT:
     status: docs
   DUAL_DETECTION:
+    status: docs
+  INTENTIONAL_TEMPORAL_FORM:
     status: docs
   MASS_GENERATE_CURATE:
     status: docs
@@ -3490,7 +3522,15 @@ laws:
     status: docs
   ROBUSTNESS:
     status: docs
+  ROBUSTNESS_bounded_operation_lifecycle:
+    status: docs
+  ROBUSTNESS_mutation_requires_explicit_authorization:
+    status: docs
+  ROBUSTNESS_autonomous_triggers_are_bounded:
+    status: docs
   PROXIMITY:
+    status: docs
+  PROXIMITY_local_visual_audio_ownership:
     status: docs
   ABSTRACTION:
     status: docs
@@ -3614,6 +3654,30 @@ laws:
     good: |
       bus.subscribe("tool:before") { |e| record(e) }
       File.open(@path, "a") { |f| f.puts(line) }
+  SINGULARITY_architectural_tangle:
+    status: docs
+  SINGULARITY_architectural_coherence:
+    status: docs
+  TRUTHFUL_STATUS_causal_trace_is_evidence:
+    status: docs
+  TRUTHFUL_STATUS_profile_is_not_intent:
+    status: docs
+  TRUTHFUL_STATUS_test_precedes_report:
+    status: docs
+  ROBUSTNESS_least_authority_tracing:
+    status: docs
+  ROBUSTNESS_immune_pattern:
+    status: docs
+  ROBUSTNESS_homeostasis:
+    status: docs
+  ROBUSTNESS_morphological_exploration:
+    status: docs
+  ROBUSTNESS_antigen_memory:
+    status: docs
+  ROBUSTNESS_sclerotium:
+    status: docs
+  ROBUSTNESS_outbound_fetch_is_pinned:
+    status: docs
   veto_patterns:
     status: test
     proof: test/test_veto_pattern_law.rb
