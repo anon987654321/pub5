@@ -268,6 +268,9 @@ void main(){
   float envelope = 4.0 * travel * (1.0 - travel);
   float signal = sin(semanticStage * 6.283185 - morphProgress * 6.283185);
   subjectPoint.z += signal * envelope * 0.025;
+  float turn = envelope * (0.22 + 0.12 * signal);
+  float ct = cos(turn), st = sin(turn);
+  subjectPoint.xz = mat2(ct, -st, st, ct) * subjectPoint.xz;
   // The old viseme deformation above is overwritten by a direct subject.
   // Articulate mask geometry after interpolation, never an unrelated object.
   vec2 lip = vec2(subjectPoint.x / max(uMaskMouth.y, 0.01),
@@ -279,60 +282,11 @@ void main(){
   p = mix(p, subjectPoint, uSubjectDirect);
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
-  // Treat the point cloud as a shallow physical surface instead of a flat depth gradient.
-  // The ellipsoid normal gives the same face genuine key/fill/rim lighting while keeping
-  // one-pixel rasterisation. Lighting is computed per vertex, so it adds no extra draw call.
-  vec3 baseNormal = normalize(vec3(p.x / 0.62, p.y / 0.62, p.z / 0.82 + 0.0001));
-  float reliefBlend = uMaskMouth.w * uSubjectDirect * (1.0 - localMorph);
-  vec3 reliefNormal = normalize(mix(baseNormal, subjectNormal, reliefBlend) + vec3(0.0, 0.0, 0.0001));
-  vec3 normal = normalize(normalMatrix * reliefNormal);
-  vec3 keyDir = normalize(vec3(-0.48, 0.28, 0.84));
-  vec3 fillDir = normalize(vec3(0.34, -0.08, 0.94));
-  float keyLight = max(dot(normal, keyDir), 0.0);
-  float fillLight = max(dot(normal, fillDir), 0.0);
-  float rimLight = pow(1.0 - abs(dot(normal, vec3(0.0, 0.0, 1.0))), 2.0);
-  float sculptLight = mix(0.60 + (0.46 * keyLight) + (0.18 * fillLight) + (0.16 * rimLight),
-    0.32 + 0.65 * keyLight + 0.18 * fillLight, reliefBlend);
-  // One point is one pixel. The renderer draws into a FACE_RENDER_SCALE buffer
-  // that CSS upscales with image-rendering:pixelated, so a single fragment here
-  // IS the visible square block on screen. A point that grew toward the camera
-  // stopped being a pixel and became a blob, and a field of overlapping blobs is
-  // what read as a lit wireframe mass rather than a face built out of pixels.
+  // One opaque bitmap mark; all depth is expressed by geometry.
   gl_PointSize=1.0;
   gl_Position=projectionMatrix*mv;
-  // Curvature, depth and silhouette used to scale point SIZE. A pixel has no
-  // size to give, so they scale brightness instead — which is how a 1-bit image
-  // has always carried form. This is now the only 3D cue, so it does the work
-  // the deleted glow pass and fresnel rim were doing, without softening an edge.
-  float form=0.78+curvature*0.62+depth*1.22+boundary*0.42;
-  float hc=uHc;
-  float zoneAudio=0.0;
-  if(zone<0.1) zoneAudio=uBass*0.18;
-  else if(zone<0.3) zoneAudio=uMids*0.12;
-  else if(zone<0.5) zoneAudio=uBass*0.08;
-  else if(zone<0.7) zoneAudio=uHighs*0.14;
-  else zoneAudio=uMids*0.10;
-  float eyeRgn = smoothstep(0.30,0.50,zone) * (1.0 - smoothstep(0.50,0.65,zone));
-  float eyeDim = 1.0 - uEyeClose * eyeRgn * 0.82 * (1.0-uSubjectActive);
-  vAlpha=(hc>0.0?hc:mix(0.28+uIdleDrift*0.08,0.48+depth*0.52,lm)+zoneAudio)*eyeDim;
-  float flickerFreq=0.5+seed*1.5;
-  float flicker=1.0+0.08*(1.0-reliefBlend)*sin(seed*6.2831+uTime*flickerFreq);
-  vAlpha*=flicker*uExposure;
-  vAlpha*=1.0-0.45*clamp(uModelSwitch,0.0,1.0);
-  vAlpha*=1.0-0.35*clamp(uQuestion,0.0,1.0);
-  vAlpha*=mix(clamp(form*0.42,0.25,1.0), mix(0.55, 1.0, depth), reliefBlend);
-  vAlpha=max(vAlpha,0.08);
-  // 0.35 rather than 0.14 at the far end, and the whole term scaled past 1.
-  // Receding points were painted at a seventh of full brightness — most of a
-  // head turned even slightly — which is half of why the face read as a shadow;
-  // the other half is exposure, in part3. vColor is clamped in the fragment
-  // shader, so the scale saturates the mid-depth points to white and leaves the
-  // far ones a real gradient rather than a run to almost nothing. Depth is the
-  // only 3D cue a 1px field has, and it survives this.
-  float shade = sculptLight * mix(0.78, 1.08, depth);
-  // Neutral depth tone keeps the point-cloud monochrome; normals carry the sculpting.
-  vec3 depthTone=mix(vec3(0.74),vec3(1.0),depth);
-  vColor=(hc>0.0?vec3(1.0,1.0,1.0):uColor*depthTone*shade);
+  vAlpha=1.0;
+  vColor=vec3(0.9333333);
   vDepth=depth;
   vZoneVal=zone;
 }`;
@@ -344,17 +298,7 @@ varying float vDepth;
 varying float vZoneVal;
 uniform float uFocusDim;
 void main(){
-  // No gl_PointCoord shaping. At gl_PointSize 1.0 a point is a single fragment,
-  // so there is no interior to carve a disc out of — the mask only ever cost an
-  // interpolation and rounded the one pixel it was drawing.
-  float alpha=vAlpha*uFocusDim;
-  float eyeRgn=smoothstep(0.30,0.50,vZoneVal)*(1.0-smoothstep(0.50,0.65,vZoneVal));
-  float mouthRgn=smoothstep(0.68,0.82,vZoneVal);
-  float zoneDim=mix(1.0,mix(0.82,0.96,mouthRgn),eyeRgn*0.48);
-  alpha*=zoneDim;
-  // No fresnel rim. A rim light is soft-glow shading under another name, and the
-  // silhouette term folded into vAlpha already states the edge as brightness.
-  gl_FragColor=vec4(clamp(vColor,0.0,1.0),max(0.0,alpha));
+  gl_FragColor=vec4(vColor,1.0);
 }`;
 
 // No edge lines. The face is points, and nothing else: operator decision
