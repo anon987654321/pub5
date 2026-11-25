@@ -308,15 +308,14 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
-    # GLM-5.3 Flash leads this tier for this session (operator request,
-    # 2026-11-25).
-    - *glm_5_3_flash
-    - *ollama_deepseek_v4_1_flash
-    - *zai_cli_auto
+    # Escalation must gain capability over the default tier, so the hosted
+    # frontier lanes lead. The session flash head (operator request,
+    # 2026-11-25) stays as a fallback, not the lead (operator, 2026-11-25):
+    # a strong escalation that begins with the default tier's model buys
+    # nothing but a retry of the same answer.
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
     - *glm_5_3
-    - *sandbox_gateway
     - *claude_opus_api
     - *claude_sonnet
     - *deepseek_reasoner
@@ -326,6 +325,10 @@ models:
     - *gemini_flash
     - *command_r_plus
     - *grok_cli_auto
+    - *zai_cli_auto
+    - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
+    - *sandbox_gateway
     - *ollama_gemma
     - *llama_cli_gguf
   # Image understanding: Google, Grok, ChatGPT and Qwen. Image generation
