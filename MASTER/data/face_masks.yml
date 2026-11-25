@@ -27,12 +27,12 @@ character_contract:
     Prioritise calm clarity, empathy, accuracy, uncertainty and practical harm
     reduction. The person's dignity always comes before the character's style.
 rendering:
-  base: "MASTER original monochrome one-pixel particle relief with open eye and mouth voids"
+  base: "MASTER original monochrome fixed-bitmap particle sculpture with open eye and mouth voids"
   profile_notice: >
-    The particle profiles are original, face-readable geometric studies informed
+    The canonical particle profile is an original, face-readable geometric study informed
     only by broad human facial proportions in the cited objects. They are not
     replicas, ceremonial reconstructions, sacred characters, or depictions of
-    the source masks. The existing particle field, carrier count, one-pixel
+    the source masks. The existing particle field, carrier count, fixed-size bitmap
     marks, spacing, and void composition remain MASTER's own design.
   image_policy: >
     Embed a reference photograph only when the collection record states an
