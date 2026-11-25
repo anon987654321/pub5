@@ -1634,7 +1634,8 @@ BRINGHURST:
     rhythm, alignment and contrast as relationships; refine optical balance,
     letterspacing, numerals and punctuation for the language and medium.
     Judge reading and meaning, not numerical conformity alone.
-    Source: Robert Bringhurst, The Elements of Typographic Style.
+    At detail scale inspect glyph, word, line and column spacing separately;
+    at composition scale inspect their hierarchy and relationship to images.
   severity: info
   resolution: review
   mechanical: Master::Law::Typography#all
@@ -2083,7 +2084,8 @@ PROPORTION:
     Give each part a scale appropriate to its purpose and relationships.
     Use declared scales for coherence; justify optical corrections by
     observed improvement. Preserve meaningful differences in magnitude,
-    grouping and visual weight. A number without derivation cannot be
+    grouping and visual weight. Measure geometry, but judge perceived balance
+    and preserve deliberate asymmetry. A number without derivation cannot be
     checked or changed as a set.
   severity: warning
   resolution: review

@@ -441,7 +441,7 @@ module Master
 
         gain = now[:score] - @target[:score]
         notes = problems(before, after)
-        better = notes.empty? && (gain >= margin || (gain >= -margin && looks_better?(now)))
+        better = notes.empty? && gain >= -margin && looks_better?(now)
         { ok: better, gain:, text: summary(now, notes), comparison: }
       end
 
@@ -500,7 +500,7 @@ module Master
         order = @judged.odd? ? [@before_shot, now[:shot]] : [now[:shot], @before_shot]
         verdict = JSON.parse(@world.ask.call(vision_prompt, order)[/\{.*\}/m].to_s)
         @vision = "vision: #{verdict['better']}, #{verdict['why']}".strip
-        verdict["better"].to_s.upcase == (order.first == now[:shot] ? "A" : "B")
+        !verdict["why"].to_s.strip.empty? && verdict["better"].to_s.upcase == (order.first == now[:shot] ? "A" : "B")
       rescue JSON::ParserError, StandardError
         @vision = "vision: no verdict"
         false

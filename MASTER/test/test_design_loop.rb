@@ -197,7 +197,7 @@ class TestDesignLoop < Minitest::Test
   def world_for(path, committed:, **options)
     drop = options.fetch(:other_drop, 0)
     flat = options.fetch(:flat, false)
-    vision = options.fetch(:vision, NO_DIFFERENCE)
+    vision = options.fetch(:vision, flat ? NO_DIFFERENCE : '{"better":"B","why":"clearer grouping"}')
     built = options.fetch(:built, [])
     seen = options.fetch(:seen, [])
     prompts = options.fetch(:prompts, [])
@@ -263,6 +263,19 @@ class TestDesignLoop < Minitest::Test
         assert_includes File.read(path), "padding: 16px;"
         assert_equal [path], committed.map(&:first)
         assert_match(/layout score 40\.0 -> 60\.0/, committed.first.last)
+      end
+    end
+  end
+
+  def test_score_gain_without_visual_improvement_is_not_kept
+    with_sheet do |path|
+      committed = []
+      stub_scoring do
+        rounds = loop_for(path, committed:, vision: NO_DIFFERENCE).run
+
+        assert_empty rounds.select { |round| round.outcome == :kept }
+        assert_empty committed
+        assert_includes File.read(path), "padding: 4px;"
       end
     end
   end
@@ -546,7 +559,7 @@ class TestDesignLoop < Minitest::Test
     with_sheet do |path|
       committed = []
       stub_scoring do
-        world = world_for(path, committed:)
+        world = world_for(path, committed:, vision: NO_DIFFERENCE)
         calls = 0
         inner = world.measure
         noisy = lambda do |surfaces|

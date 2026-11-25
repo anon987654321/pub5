@@ -43,7 +43,7 @@ module Master
           Which better serves the content and task through optical balance, relative scale, typographic hierarchy,
           alignment, grouping, deliberate whitespace and a clear focal point? Do not reward uniformity for its
           own sake. Reject clipped, cramped or less legible content and lost interaction affordances.
-          Say "same" if you cannot tell them apart.
+          Name the specific visible relationship that improves. Say "same" if neither is demonstrably better.
           Return only JSON: {"better": "A" or "B" or "same", "why": "<one short sentence>"}.
         TEXT
       end
