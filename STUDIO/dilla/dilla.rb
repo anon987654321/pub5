@@ -3184,7 +3184,8 @@ module Dilla
       "metrics" => metrics, "stem_energy_share" => quality["stem_energy_share"],
       "form" => session.dig("composition", "form") || "unchanged",
       "composition" => session["composition"], "seed" => session["seed"],
-      "listening" => provenance.dig("human_acceptance", "listening") || "not_reviewed",
+      "listening" => provenance.dig("human_acceptance", "sha256") == digest ?
+        provenance.dig("human_acceptance", "listening") : "not_reviewed",
       "reviewed_sha256" => provenance.dig("human_acceptance", "sha256") }
   rescue JSON::ParserError => error
     raise ArgumentError, "invalid take receipt: #{error.message}"
@@ -3471,9 +3472,12 @@ module Dilla
     while i < n
       left = mix.l[i]
       right = mix.r[i]
-      peak = [peak, left.abs, right.abs].max
-      clipped += 1 if left.abs > 1.0
-      clipped += 1 if right.abs > 1.0
+      left_peak = left.abs
+      right_peak = right.abs
+      peak = left_peak if left_peak > peak
+      peak = right_peak if right_peak > peak
+      clipped += 1 if left_peak > 1.0
+      clipped += 1 if right_peak > 1.0
       sum += left * left + right * right
       i += 1
     end

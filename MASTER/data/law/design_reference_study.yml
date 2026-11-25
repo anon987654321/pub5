@@ -230,6 +230,7 @@ creative_lenses:
     writing: "Put the controlling idea before its evidence."
     software: "Name the owner of each concept and its public boundary."
   space:
+    lineage: "Ma, kanso and shibui; Tadao Ando's architectural restraint."
     laws: [DENSITY_ma, DENSITY_kanso, NEGATIVE_SPACE_GROUPING]
     design: "Whitespace groups related things; remove empty wrappers and decorative divisions."
     music: "Silence, rests and selective subtraction make the remaining parts meaningful."
@@ -239,7 +240,8 @@ creative_lenses:
     writing: "Paragraph breaks separate ideas; omit redundant exposition."
     software: "Remove duplication and needless indirection, not essential capabilities."
   development:
-    laws: [LEVELS_OF_SCALE, TRANSFORMATIONS]
+    lineage: "Jo-ha-kyu: beginning, development and acceleration; a lens, not a universal timeline."
+    laws: [LEVELS_OF_SCALE, TRANSFORMATIONS, INTENTIONAL_TEMPORAL_FORM]
     design: "Reveal information and feedback at the pace of the task; no decorative motion."
     music: "Relate pulse, phrase and section; create contrast and return, not arbitrary jitter."
     photography: "Build depth and visual hierarchy; a series develops rather than repeats."
@@ -253,7 +255,7 @@ creative_lenses:
     music: "Choose complementary timbres; use selective wear, not indiscriminate distortion."
     photography: "Preserve identity and optical detail; grain changes texture, not recovered detail."
     cinema: "Lighting, motion and film treatment must serve the scene."
-    architecture: "Respond to climate, place, material and human needs; engineering safety requires separate evidence."
+    architecture: "Respond to climate, place, material and human needs: daylight, ventilation, passive solar design, durability and resource stewardship. Engineering safety requires separate evidence."
     writing: "Prefer concrete words, precise claims and honest uncertainty."
     software: "Prefer native capabilities and explicit invariants over ornamental abstractions."
   review:

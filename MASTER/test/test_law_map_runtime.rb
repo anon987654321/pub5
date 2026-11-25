@@ -21,6 +21,14 @@ class TestLawMapRuntime < Minitest::Test
     assert_match(/1 unmapped/, map.summary_line)
   end
 
+  def test_recovered_craft_maps_to_existing_or_explicit_temporal_laws
+    map = Master::Ground::Map::LawMap.load(root: @root)
+    assert_equal ["INFORMATION_HIDING"], map["hide_implementation_details"].law_ids
+    assert_equal ["NO_MAGIC"], map["replace_magic_numbers"].law_ids
+    assert_equal ["INTENTIONAL_TEMPORAL_FORM"], map["jo_ha_kyu"].law_ids
+    assert_empty map["natural_ventilation"].law_ids, "physical performance needs separate evidence"
+  end
+
   def test_mode_posture_defaults_and_set
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "data"))

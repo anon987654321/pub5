@@ -29,6 +29,16 @@ class DesignAuthoringTest < Minitest::Test
     assert_equal "", Master::Design::VisualLanguage.creative_context("unknown")
   end
 
+  def test_creative_medium_routes_explicit_craft_requests
+    language = Master::Design::VisualLanguage
+    assert_equal "architecture", language.creative_medium("what makes good architecture good?")
+    assert_equal "software", language.creative_medium("improve the software architecture")
+    assert_equal "music", language.creative_medium("compose a beautiful beat")
+    assert_equal "photography", language.creative_medium("improve the portrait")
+    assert_equal "writing", language.creative_medium("write a letter")
+    assert_nil language.creative_medium("my music player crashed")
+  end
+
   def test_bsdports_is_not_held_to_the_house_typeface
     text = Authoring.context(path: "/repo/RAILS/bsdports/app/assets/stylesheets/application.scss")
 

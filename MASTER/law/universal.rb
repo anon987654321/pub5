@@ -569,6 +569,14 @@ Law.define(:DUAL_DETECTION) do
   X
 end
 
+Law.define(:INTENTIONAL_TEMPORAL_FORM) do
+  source "Jo-ha-kyu as an aesthetic lens; pub4 Dilla Beauty Engine, 2026-10-08"
+  ask "In a work meant to develop through time, do phrases, scenes, transitions or foreground changes serve its stated intent, or are they merely arbitrary repetition and effects? Is deliberate stasis or repetition part of the brief?"
+  fix "Name the intended temporal form; preserve anchors and motifs, vary density and attention at meaningful boundaries, and allow silence or repose. Compare the actual performance or rendered sequence, not a numerical beauty proxy. Do not impose a dramatic arc on intentionally static, ambient or repetitive work."
+  bad "A dramatic musical brief repeats a dense unchanged pattern with random effects."
+  good "A motif returns through distinct phrases; deliberate subtraction creates room for its return."
+end
+
 Law.define(:MASS_GENERATE_CURATE) do
   source "MASTER-native (generate then curate)"
   ask "Is a high-stakes creative or design decision accepting the first plausible draft without exploring alternatives?"

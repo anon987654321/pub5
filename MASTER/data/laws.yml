@@ -3181,6 +3181,7 @@ law_catalogue:
     INTEGRATED_SYSTEMS: {definition_sources: [MASTER/law/universal.rb], severity: info, languages: [ruby]}
     INTER_MODEL_CONTRACT: {definition_sources: [MASTER/law/inter_model.rb], severity: error, languages: [ruby]}
     INTERACTION_PERFORMANCE: {definition_sources: [MASTER/law/css.rb], severity: warning, mode: opportunity, languages: [css, scss]}
+    INTENTIONAL_TEMPORAL_FORM: {definition_sources: [MASTER/law/universal.rb], severity: info, lifecycle: advisory, mode: opportunity, autofix: never}
     INTERACTION_SEMANTICS: {definition_sources: [MASTER/law/recovered_design_semantics.rb], severity: warning, mode: opportunity, languages: [html]}
     interconnect: {definition_sources: [MASTER/law/graph.rb], severity: warning}
     INTERFACE_SEGREGATION: {definition_sources: [MASTER/law/structural.rb], severity: warning}
@@ -4956,8 +4957,8 @@ law_map:
       "meaning": "Relationships and psychology of color  ", "operation": "simplify", "severity": "medium",
       "law_ids": [], "status": "gap", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     color_with_purpose: {"confidence": 0.75, "detects": "unclear_intent", "meaning": "Meaningful color application  ",
-      "operation": "simplify", "severity": "medium", "law_ids": [], "status": "gap", "tags": ["visual_design"],
-      "source": "master.yml@30dad7ead"}
+      "operation": "simplify", "severity": "medium", "law_ids": ["SIGNAL_COLOR_IS_SEMANTIC","COLOR_NOT_SOLE_SIGNAL"],
+      "status": "covered", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     command_query_separation: {"meaning": "separate actions from queries", "detects": "mixed_concerns",
       "severity": "medium", "confidence": 0.75, "operation": "separate", "law_ids": ["CQS", "PREDICATE_SIDE_EFFECTS"],
       "status": "covered", "root": "one_responsibility", "tags": ["code"]}
@@ -4991,7 +4992,8 @@ law_map:
       "root": "reach", "tags": ["ui"]}
     convention_over_configuration: {"meaning": "sensible defaults reduce decisions",
       "detects": "excessive_configuration", "severity": "medium", "confidence": 0.8, "operation": "simplify",
-      "law_ids": [], "status": "gap", "tags": ["engineering"], "source": "master.yml@30dad7ead"}
+      "law_ids": ["CONVENTION_OVER_CONFIG"], "status": "covered", "tags": ["engineering"],
+      "source": "master.yml@30dad7ead"}
     correlation_ids: {"meaning": "trace requests across service boundaries", "detects": "untraceable_requests",
       "severity": "high", "confidence": 0.8, "operation": "add_tracing", "law_ids": [], "status": "gap",
       "tags": ["code"]}
@@ -5008,7 +5010,8 @@ law_map:
       "meaning": "Break complex conditionals into named functions  ", "operation": "rename", "severity": "medium",
       "law_ids": [], "status": "gap", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
     deference: {"meaning": "Interface recedes, content advances  ", "detects": "unclear_intent", "severity": "medium",
-      "confidence": 0.75, "operation": "introduce_interface", "law_ids": [], "status": "gap", "root": "stable_contract",
+      "confidence": 0.75, "operation": "introduce_interface",
+      "law_ids": ["AESTHETIC_RAMS_SEMANTIC","CHROME_AREA_BUDGET"], "status": "covered", "root": "stable_contract",
       "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     dependency_inversion: {"meaning": "depend on abstractions, not concretions", "detects": "concrete_dependency",
       "severity": "high", "confidence": 0.8, "operation": "introduce_interface", "law_ids": ["DEPENDENCY_INVERSION"],
@@ -5067,8 +5070,8 @@ law_map:
       "meaning": "Protect direct access to data  ", "operation": "simplify", "severity": "medium", "law_ids": [],
       "status": "gap", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
     encapsulate_what_changes: {"meaning": "isolate variation points", "detects": "exposed_variation",
-      "severity": "medium", "confidence": 0.75, "operation": "encapsulate", "law_ids": [], "status": "gap",
-      "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
+      "severity": "medium", "confidence": 0.75, "operation": "encapsulate", "law_ids": ["INFORMATION_HIDING"],
+      "status": "covered", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
     energy_efficiency: {"confidence": 0.75, "detects": "unclear_intent", "meaning": "Minimize resource consumption  ",
       "operation": "simplify", "severity": "medium", "law_ids": [], "status": "gap", "tags": ["architecture"],
       "source": "master.yml@30dad7ead"}
@@ -5142,11 +5145,11 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "root": "reach", "tags": ["aesthetic"]}
     flush_left_alignment: {"meaning": "Asymmetric, readable text  ", "detects": "poor_alignment", "severity": "medium",
-      "confidence": 0.75, "operation": "align", "law_ids": [], "status": "gap", "tags": ["visual_design"],
-      "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "align", "law_ids": ["ALIGNMENT_NEAR_MISS"], "status": "covered",
+      "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     focus_on_content: {"meaning": "Content is primary  ", "detects": "unclear_intent", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "tags": ["visual_design"],
-      "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["VISUAL_HIERARCHY","AESTHETIC_RAMS_SEMANTIC"],
+      "status": "covered", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     form_follows_function: {"meaning": "design prioritizes purpose over decoration", "detects": "decorative_code",
       "severity": "medium", "confidence": 0.75, "operation": "remove_decoration", "law_ids": ["FORM_FOLLOWS_FUNCTION"],
       "status": "covered", "tags": ["aesthetic", "ui"]}
@@ -5165,11 +5168,11 @@ law_map:
       "confidence": 0.75, "operation": "improve", "law_ids": ["NO_DECORATIVE_FX", "FORM_FOLLOWS_FUNCTION",
       "AESTHETIC_MINIMALISM"], "status": "covered", "tags": ["aesthetic"]}
     functional_typography: {"meaning": "Type as functional tool  ", "detects": "decorative_type", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "root": "proportion",
-      "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["TYPE_HIERARCHY","TYPEFACE_PER_ROLE","MEASURE_OPTIMUM"],
+      "status": "covered", "root": "proportion", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     functionality_over_aesthetics: {"meaning": "Honest expression of purpose  ", "detects": "form_over_function",
-      "severity": "medium", "confidence": 0.75, "operation": "improve", "law_ids": [], "status": "gap",
-      "root": "visible_state", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
+      "severity": "medium", "confidence": 0.75, "operation": "improve", "law_ids": ["AESTHETIC_RAMS_SEMANTIC"],
+      "status": "covered", "root": "visible_state", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     gaman: {"meaning": "Enduring with dignity  ", "detects": "premature_abandonment", "severity": "medium",
       "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "tags": ["japanese_aesthetics"],
       "source": "master.yml@30dad7ead"}
@@ -5216,8 +5219,8 @@ law_map:
       "confidence": 0.8, "operation": "reduce_choices", "law_ids": ["CHOICE_OVERLOAD"], "status": "covered",
       "root": "bounded_load", "tags": ["ui"]}
     hide_implementation_details: {"meaning": "expose only necessary interfaces", "detects": "leaky_abstraction",
-      "severity": "medium", "confidence": 0.75, "operation": "encapsulate", "law_ids": [], "status": "gap",
-      "root": "stable_contract", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
+      "severity": "medium", "confidence": 0.75, "operation": "encapsulate", "law_ids": ["INFORMATION_HIDING"],
+      "status": "covered", "root": "stable_contract", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     hierarchy: {"meaning": "clear structure and organization", "detects": "flat_hierarchy", "severity": "medium",
       "confidence": 0.75, "operation": "establish_hierarchy", "law_ids": ["TYPE_HIERARCHY"], "status": "covered",
       "tags": ["ui"]}
@@ -5254,8 +5257,8 @@ law_map:
       "detects": "artificial_isolation", "severity": "medium", "confidence": 0.75, "operation": "simplify",
       "law_ids": [], "status": "gap", "tags": ["architecture"], "source": "master.yml@30dad7ead"}
     intentional_typography: {"meaning": "Purposeful type choices  ", "detects": "arbitrary_type", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "root": "proportion",
-      "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["TYPEFACE_PER_ROLE","TYPE_HIERARCHY"],
+      "status": "covered", "root": "proportion", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     internalize_before_writing: {"meaning": "understand existing code before modifying",
       "detects": "blind_modification", "severity": "high", "confidence": 0.85, "operation": "analyze_first",
       "law_ids": [], "status": "gap", "root": "stewardship", "tags": ["code"]}
@@ -5270,8 +5273,8 @@ law_map:
       "law_ids": [], "status": "gap", "root": "stable_contract", "tags": ["engineering"],
       "source": "master.yml@30dad7ead"}
     jo_ha_kyu: {"meaning": "Beginning, break, rapid conclusion rhythm  ", "detects": "unclear_intent",
-      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
-      "tags": ["japanese_aesthetics"], "source": "master.yml@30dad7ead"}
+      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": ["INTENTIONAL_TEMPORAL_FORM"],
+      "status": "covered", "tags": ["japanese_aesthetics"], "source": "master.yml@30dad7ead"}
     job_idempotency: {"meaning": "background jobs safe to retry", "detects": "non_idempotent_job", "severity": "high",
       "confidence": 0.85, "operation": "add_idempotency", "law_ids": ["IDEMPOTENT"], "status": "covered",
       "tags": ["code"]}
@@ -5505,8 +5508,8 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "root": "visible_state", "tags": ["architecture"], "source": "master.yml@30dad7ead"}
     readability_first: {"meaning": "Legibility paramount  ", "detects": "poor_readability", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "tags": ["clean_code"],
-      "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["SQUINT_TEST","MEANINGFUL_NAMES"], "status": "covered",
+      "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     reduce_cognitive_load: {"meaning": "Don't make users think unnecessarily  ", "detects": "cognitive_overload",
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "root": "bounded_load", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
@@ -5550,8 +5553,8 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "add_whitespace", "law_ids": [], "status": "gap",
       "tags": ["aesthetic"]}
     sans_serif_typography: {"meaning": "Clean, modern typefaces  ", "detects": "unclear_intent", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "tags": ["visual_design"],
-      "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["TYPEFACE_PER_ROLE"], "status": "covered",
+      "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     secrets_encryption: {"meaning": "never store secrets in plaintext", "detects": "plaintext_secrets",
       "severity": "critical", "confidence": 1.0, "operation": "encrypt", "law_ids": ["SECRET_PROXIMITY", "VETO_PATTERNS"],
       "status": "covered", "root": "least_authority", "tags": ["code"]}
@@ -5720,8 +5723,8 @@ law_map:
       "severity": "medium", "confidence": 0.8, "operation": "clarify", "law_ids": ["TYPE_HIERARCHY", "NO_EYEBROW_LABEL"
       ], "status": "covered", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     visual_weight: {"meaning": "Perceived heaviness of elements  ", "detects": "unbalanced_weight", "severity": "low",
-      "confidence": 0.75, "operation": "improve", "law_ids": [], "status": "gap", "root": "proportion",
-      "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
+      "confidence": 0.75, "operation": "improve", "law_ids": ["VISUAL_HIERARCHY"], "status": "covered",
+      "root": "proportion", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     von_restorff_effect: {"meaning": "Distinctive items are remembered  ", "detects": "uniform_presentation",
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "root": "reach", "tags": ["ux_laws"], "source": "master.yml@30dad7ead"}

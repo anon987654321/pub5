@@ -289,6 +289,21 @@ module Master
 
       # Use the same recovered vocabulary for authoring and rendered critique.
       # Domain-specific questions are evidence prompts, not objective verdicts.
+      # Route explicit craft requests, not incidental domain mentions.
+      def creative_medium(text)
+        value = text.to_s
+        return unless value.match?(/\b(?:what makes|how to|how (?:can|do) (?:we|i)|compose|create|design|critique|refine|improve|write|draft|beauty|craft|beautiful)\b/i)
+        case value
+        when /\b(?:software|code|repository|refactor|ruby)\b/i then "software"
+        when /\b(?:architecture|architectural|courtyard|interior design)\b/i then "architecture"
+        when /\b(?:music|song|beat|groove|harmony|dilla|sound design)\b/i then "music"
+        when /\b(?:photograph\w*|portrait|selfie|camera)\b/i then "photography"
+        when /\b(?:film|cinema\w*|video|cinematic)\b/i then "cinema"
+        when /\b(?:writing|prose|essay|letter|story|poem|copy)\b/i then "writing"
+        when /\b(?:design|typography|layout|interface|ui)\b/i then "design"
+        end
+      end
+
       def creative_context(domain, study: reference_study)
         lenses = study.fetch("creative_lenses", {})
         return "" unless lenses.is_a?(Hash)
