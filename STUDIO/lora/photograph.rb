@@ -168,7 +168,7 @@ def studio_photograph_options(argv)
     parser.on("--selfie-series", "render portraits using the subject's references when present, otherwise the pinned LoRA") { options[:series] = true }
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
-    parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental, snapshot, shoots, warp or best") { |value| options[:direction] = value }
+    parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental, snapshot, shoots, warp, best or scenarios") { |value| options[:direction] = value }
     parser.on("--preset NAME", "named laboratory grade for a single photograph (default house)") { |value| options[:preset] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
@@ -267,13 +267,11 @@ if $PROGRAM_NAME == __FILE__
       puts "Earlier portraits are always retained."
     when :picture
       options[:prompt] = wizard.ask("Describe the picture")
-      options[:engine] = studio_engine_choice(wizard)
       options[:film] = wizard.confirm("Also render the short film?", default: false)
     when :animate
       options[:animate] = wizard.ask("Path to the still to animate")
       options[:prompt] = wizard.ask("Motion direction")
       options[:duration] = wizard.number("Duration in seconds", default: 5, range: 1..10)
-      options[:film_engine] = studio_film_engine_choice(wizard)
     end
   end
 
@@ -327,7 +325,7 @@ if $PROGRAM_NAME == __FILE__
       abort "usage: ruby STUDIO/lora/photograph.rb [--subject NAME] [--film] PROMPT" if prompt.empty?
 
       Studio::Visual::IdeaPicture.new(
-        subject: options[:subject], film_engine: options[:film_engine],
+        subject: options[:subject], engine: options[:engine], film_engine: options[:film_engine],
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
         prompt, film: options[:film], duration: options[:duration],
