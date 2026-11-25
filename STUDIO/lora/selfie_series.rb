@@ -31,7 +31,7 @@ module Studio
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @direction = direction.to_s
-        unless @direction == "varied" || Studio::Lora::Selfie::DIRECTIONS.key?(@direction)
+        unless @direction == "varied" || Studio::Lora::Selfie::DIRECTIONS.key?(@direction) || %w[shoots warp best].include?(@direction)
           raise ArgumentError, "unknown photographic direction"
         end
         @scenes = scenes.nil? ? nil : Array(scenes)
