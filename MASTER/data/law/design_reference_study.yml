@@ -267,3 +267,67 @@ creative_lenses:
     architecture: "Compare site, circulation, structure and environmental constraints; obtain qualified review."
     writing: "Read for meaning, economy and factual support; do not optimize a readability number alone."
     software: "Compare behaviour, dependencies, security and tests; fewer files is not proof of quality."
+
+  scale:
+    laws: [LEVELS_OF_SCALE]
+    design: "Relate detail, component, page and product; preserve hierarchy across viewport sizes."
+    music: "Relate individual attacks, measures, phrases and sections."
+    photography: "Balance fine texture, subject and overall silhouette."
+    cinema: "Relate shot scale, scene and narrative structure."
+    architecture: "Relate construction detail, human body, room, building and site."
+    writing: "Make sentence, paragraph and section serve the whole."
+    software: "Keep method, module and system responsibilities legible."
+  rhythm:
+    laws: [INTENTIONAL_TEMPORAL_FORM, CONSISTENCY]
+    design: "Use recurring alignment and spacing; vary them for meaningful emphasis."
+    music: "Preserve groove anchors while allowing expressive timing."
+    photography: "Use recurring shapes and intervals to guide the eye."
+    cinema: "Let shot duration and movement follow the scene, not a fixed tempo."
+    architecture: "Use recurring bays, openings and intervals with meaningful variation."
+    writing: "Vary sentence length deliberately; read aloud when cadence matters."
+    software: "Keep related interfaces and control flow predictable."
+  contrast:
+    laws: [VISUAL_HIERARCHY, INTENTIONAL_TEMPORAL_FORM]
+    design: "Differentiate importance, state and action without relying on color alone."
+    music: "Use contrasts in register, density and dynamics without masking the foreground."
+    photography: "Use tonal separation and selective detail without losing important information."
+    cinema: "Use light, sound and pacing contrasts to clarify dramatic intent."
+    architecture: "Use light and shadow, enclosure and openness to support inhabitation."
+    writing: "Distinguish claims, counterarguments and examples."
+    software: "Make exceptional behavior visibly distinct from normal flow."
+  coherence:
+    laws: [CONSISTENCY, STRONG_CENTERS]
+    design: "Make components reinforce a shared interaction language."
+    music: "Relate motifs, harmony, timbre and groove to the intended whole."
+    photography: "Align framing, lighting and grade with the subject."
+    cinema: "Maintain motivated continuity across picture, sound and narrative."
+    architecture: "Resolve circulation, structure and spatial relationships together."
+    writing: "Keep terminology and argument consistent."
+    software: "Align ownership, contracts and dependencies; avoid competing authorities."
+  character:
+    laws: [VISUAL_IDENTITY_SOURCE_OF_TRUTH, STRONG_CENTERS]
+    design: "Protect distinctive approved identity instead of imposing generic templates."
+    music: "Preserve the intended performer or production character."
+    photography: "Preserve likeness and meaningful individual detail."
+    cinema: "Preserve the work's visual and narrative voice."
+    architecture: "Respond to local place, use and material traditions."
+    writing: "Preserve the author's register and meaningful idiosyncrasies."
+    software: "Respect established project conventions without preserving defects."
+  adaptation:
+    laws: [FORM_FOLLOWS_FUNCTION, CONVENTION_OVER_CONFIG]
+    design: "Adapt to real devices, tasks and accessibility needs."
+    music: "Adapt arrangement to the brief, available voices and listening context."
+    photography: "Adapt exposure and treatment to actual light and subject."
+    cinema: "Adapt coverage and pacing to performance and story."
+    architecture: "Respond to site, climate and occupants; verify physical performance separately."
+    writing: "Adapt vocabulary and structure to audience and purpose."
+    software: "Prefer sensible defaults and native platform capabilities; verify fallbacks."
+  economy:
+    laws: [ECONOMY_OF_MECHANISM, FORM_FOLLOWS_FUNCTION]
+    design: "Remove chrome that does not support orientation, action or identity."
+    music: "Prefer fewer complementary voices over unnecessary layering."
+    photography: "Remove distractions without erasing meaningful context."
+    cinema: "Keep shots and effects that serve the scene."
+    architecture: "Seek material and structural efficiency without compromising safety or use."
+    writing: "Omit words that contribute neither meaning nor necessary nuance."
+    software: "Remove redundant machinery while retaining behavior and safeguards."
