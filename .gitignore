@@ -400,3 +400,8 @@ STUDIO/**/dilla-renders*/
 /DEPLOY/dilla/*.wav
 /DEPLOY/dilla/*.mp3
 /DEPLOY/rails/*/vendor/bundle/
+STUDIO/lora/postpro_*.png
+STUDIO/lora/postpro_*.png.json
+STUDIO/lora/*_promo.mp4
+STUDIO/lora/*_promo.promo.json
+STUDIO/lora/*_promo_clips.json
