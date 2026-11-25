@@ -49,6 +49,164 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 
 `bin/master` is the interactive assistant and command entrypoint. From the `pub5/` repository root, start it with `MASTER/bin/master`; from inside `MASTER/`, use `bin/master`. The tracked launcher already has executable mode, so a normal checkout does not need `chmod`. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
+## Web face: sculptural particle stipple
+
+A benevolent, otherworldly intelligence embodied by independent particles acting as one. Pluribus informs collective emergence and signal motion; Papuan sculpture informs essential form; speculative future-human anatomy informs the approachable proportions. This is original geometry, not a museum scan, ceremonial replica or prediction of human evolution.
+
+### Aesthetic
+
+- **Material:** identical solid off-white bitmap marks on absolute black. The primary and stipple shaders use a fixed 3 × 3 raster with two opposite corner cells removed, not hollow diamonds, beads, glow or depth-dependent ink. The apparent CSS size depends on render scale and device. Never enlarge marks with perspective.
+- **Form:** genuinely spatial, rounded cranial volume, generous dark eye wells, relaxed brows, short nose, full cheeks, small gently smiling mouth, soft chin and restrained asymmetry. Preserve the sculptural Sepik character without ornament. Read as curious, intelligent and approachable, not cartoonish.
+- **Composition:** void is structural. Prefer organic separation, curved relationships, sparse peripheral marks and the fewest anatomical cues that preserve recognition from front, profile, rear and three-quarter views. No fingerprint decoration, solid skin, wireframe, gradients, glossy surfaces or decorative glow.
+- **Motion:** organic flow, bounded rotational flow, travelling signals and staggered cohort convergence. Stable carriers retain identity through transformations; a temporary subject returns to the canonical portrait. Gesture, gaze, blinking, nods and soft settling should communicate intent, not perpetual activity. Reduced motion resolves to the same meaningful form.
+- **Acceptance:** these are design requirements, not claims that every adapter or behavior already conforms. Compare actual multi-angle browser captures against the operator-approved reference, including mobile scale; reject flat relief, excessive detail, occluded apertures, mechanical rows, noisy idle behavior and unmeasured performance claims.
+
+The browser catalogue currently selects one canonical study, `iatmul-river`. The five conversational characters remain independent of its geometry. Retired masks and exploratory geometry catalogues remain in Git history. Do not restore them as defaults without operator approval.
+
+### Runtime and ownership
+
+FaceState drives FaceWorld, CLI, 2D/ASCII fallback and voice timing. `data/tokens.yml#tokens.face_interface` owns visual and semantic parameters; Ruby reads them through `lib/face.rb` and the browser receives `MASTER_FACE_CONTRACT`. Dynamic state belongs to `MASTER_FACE_STATE`. `data/face_masks.yml` owns selection and character metadata; `data/laws.yml` owns aesthetic constraints.
+
+`web/public/face_mask_profiles.js` samples deterministic front and rear geometry. `face_world.js` maps semantic subjects into the existing carrier field and orders arrival stages. `face.part2.txt` and `face_stipple_system.js` implement the primary and stipple material. The existing asset manifest and `FaceAssets.versioned` fingerprint public assets. Do not introduce a second state vocabulary, unbounded population, independent animation clock or product-wide particle treatment. Existing sparse/proxy adapters must be audited for material and carrier-budget conformity; their presence is not proof of single-population rendering.
+
+The web runtime is conversation-only. The independent terminal retains OpenBSD-style factual output. Operator commands, scheduling and filesystem access remain local CLI concerns.
+
+### State and movement
+
+| State | Membership | Force |
+|---|---|---|
+| idle | transitional | residual |
+| listening | transitional | ripple |
+| thinking | turned | gather |
+| working | turned | gather |
+| speaking | turned | ripple |
+| warning | transitional | residual |
+| error | unturned | fragment |
+| ready | locked | settle |
+| sleeping | unturned | residual |
+
+State supplies the cause of motion. Listening receives a signal; thinking gathers; speaking sends a signal from the mouth; warning loosens cohesion; error fragments; recovery restores the portrait. The canonical settle interval and device budgets live in tokens, not new constants. Reduced motion and visibility policy apply to all adapters. No autonomous ornamental movement in the accepted resting pose.
+
+### Semantic subjects
+
+The face is the opening identity and the resting state. A completed assistant
+reply is sent through the canonical `assistant:visual-subject` event. The event
+may contain a `visual_subject` descriptor, or the renderer may infer one of the
+small set of supported object kinds from the finished reply. For inferred
+subjects, repeated mentions rank ahead of one-off mentions and first mention
+breaks ties. An explicit descriptor always wins. A descriptor is accepted only
+when its kind is in
+`face_interface.spatial.semantic_subject.kinds`; its confidence is bounded,
+its label is sanitized, and its ordered feature list is intersected with that
+kind's allowlist. Unknown or low-confidence subjects leave the portrait intact
+instead of inventing a shape.
+
+Example event payload:
+
+```json
+{
+  "text": "A suspension bridge carries traffic across a wide span.",
+  "visual_subject": {
+    "kind": "bridge",
+    "confidence": 0.91,
+    "sequence": ["deck", "towers", "cables", "piers"]
+  }
+}
+```
+
+For subjects outside the built-in catalogue, the same event accepts
+`kind: "custom"` with up to eight named parts. Each part selects one of five
+bounded primitives — `box`, `sphere`, `ring`, `cylinder`, or `beam` — and
+may supply a centre and half-size vector in normalized face space. The browser
+sanitizes names, rejects duplicate/unknown keys and unsupported primitives,
+clamps centre and size values to the token-defined bounds, and accepts only
+the three fixed beam axes. It never evaluates model code or arbitrary geometry.
+The part sequence is the reveal sequence, so an unfamiliar explanation can
+still resolve as a small, ordered construction rather than an unstructured
+cloud.
+
+Example: a bicycle is represented as a frame beam, two wheel rings, and a
+handlebar beam:
+
+```json
+{
+  "text": "A bicycle balances on two wheels with a frame, fork and handlebar.",
+  "visual_subject": {
+    "kind": "custom",
+    "label": "bicycle",
+    "confidence": 0.88,
+    "sequence": ["frame", "rear-wheel", "front-wheel", "handlebar"],
+    "parts": [
+      { "key": "frame", "primitive": "beam", "axis": "x",
+        "center": [0, 0, 0], "size": [0.42, 0.035, 0.035] },
+      { "key": "rear-wheel", "primitive": "ring",
+        "center": [-0.38, -0.18, 0], "size": [0.20, 0.20, 0.025] },
+      { "key": "front-wheel", "primitive": "ring",
+        "center": [0.40, -0.18, 0], "size": [0.20, 0.20, 0.025] },
+      { "key": "handlebar", "primitive": "beam", "axis": "z",
+        "center": [0.30, 0.36, 0], "size": [0.035, 0.035, 0.22] }
+    ]
+  }
+}
+```
+
+The primary face field receives the object coordinates in its existing
+`scatter` attribute and uses a per-carrier `semanticStage` to reveal features
+in sequence. It does not allocate another renderer, animation loop, or particle
+pool. The bounded FaceWorld proxy is a compatibility path only when the primary
+scatter interface is unavailable; it consumes the existing world-point share.
+Normal motion stages the transition. Reduced motion resolves directly to the
+same final geometry without an animation. After the configured quiet interval,
+the subject restores to the selected conversation mask, or the carved-field portrait when no mask is available. Unknown or rejected subject descriptors restore that same identity. The canonical face persists across conversations. Subject geometry is schematic unless backed by measured data.
+
+This separation is deliberate: identity is stable, the subject is temporary,
+and movement has a reason. The face must remain readable before, during and
+after an explanation; an unknown object is not an excuse to replace it with
+decorative noise.
+
+
+
+### ASCII controls
+
+## ASCII sculpt controls
+
+The terminal and browser render the same perspective-correct, lit triangle mesh as
+ASCII, with the contract's character ramps ordered by measured ink density. The
+browser keeps the existing single frame loop and offers the same practical controls
+as the STL-to-ASCII reference:
+
+- `c`: cycle the contract's sculpt, high-contrast and fine-detail character ramps.
+- `m`: reverse or restore the ASCII tone ramp. This does not invert the page or
+  recolour the underlying WebGL scene.
+- `r`: pause or resume automatic rotation; dragging horizontally on the face
+  canvas manually changes the ASCII head's viewing angle.
+- `?face_ramp=high_contrast`, `?face_ink=light` and `?face_rotate=0`: set those
+  preferences directly; `?face_chars=MASTER` supplies a custom printable-ASCII ramp.
+
+In the terminal, `MASTER_FACE_RAMP=high_contrast`, `MASTER_FACE_CHARS=MASTER`,
+`MASTER_FACE_MODE=light` (reverse the tone ramp), `MASTER_FACE_ROTATE=0`, and
+`MASTER_REDUCED_MOTION=1` select the equivalent appearance options. Named ramps live in `MASTER/data/tokens.yml`; the browser and
+Ruby renderer do not carry separate copies of the ramp definitions. The ordinary
+ramp, default ink and pose remain unchanged so the existing golden frames stay valid.
+
+
+
+### Verification
+
+From the repository root:
+
+```sh
+node --test MASTER/web/test/face_boot.test.mjs MASTER/web/test/face_stipple.test.mjs
+```
+
+From `MASTER/`, run `bundle exec rake test` and `bin/check --profile=operator`. Capture default, `?stipple=0` and `?playground=1` at narrow and wide viewports, with reduced motion on and off. Inspect front, three-quarter, side and rear geometry; shader compilation, console errors, context recovery, speech, subject morphs, cohort continuity and actual point budgets. The playground snapshot distinguishes JavaScript render-call cadence from GPU completion or validated FPS. The existing council should critique form, spacing, friendliness, state communication, accessibility and cost through convergent deliberation; missing reviewers or captures are inconclusive. A source commit is not deployment evidence.
+
+### Research references
+
+
+
+
+
 ## Terminal type and accessibility
 
 MASTER does not set the terminal emulator's font size. PuTTY and Termux own
@@ -1171,7 +1329,7 @@ cd MASTER/tools && rake test
 cd MASTER/tools && rake check
 ```
 
-The browser runtime is conversation-only: public web search, scoped dialogue, voice, and the particle face. Operator commands, schedulers and filesystem tools belong to the local CLI. Battery status is local and omitted when unsupported; the camera-shaped control opens the native photo picker, not a live camera. The 16 mask reliefs are deterministic and use one existing particle population.
+The browser runtime is conversation-only: public web search, scoped dialogue, voice, and the particle face. Operator commands, schedulers and filesystem tools belong to the local CLI. Battery status is local and omitted when unsupported; the camera-shaped control opens the native photo picker, not a live camera. The canonical face uses deterministic particle geometry; see [Web face](#web-face-sculptural-particle-stipple).
 
 Native OpenBSD web sealing is available for rehearsal with `MASTER_WEB_NATIVE_SANDBOX=1`: `unveil(2)` limits paths and `pledge(2)` removes process execution. It requires a provisioned web auth token and an independently supervised TTS socket (the web process cannot restart the voice worker after sealing). It remains disabled until the production Falcon, SQLite, pairing, provider and voice paths pass on-host verification. `/health` reports observed native sandbox state.
 
