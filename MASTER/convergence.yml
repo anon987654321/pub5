@@ -263,6 +263,18 @@ workstreams:
     title: One-command host-aware installation and truthful doctor output
     implementation: MASTER/bin
     proof: MASTER/bin/doctor
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/bin/dev-bootstrap
+        - MASTER/bin/ruby
+        - MASTER/bin/doctor
+        - MASTER/lib/operator/ruby_runner.rb
+        - MASTER/test/test_bin_scripts.rb
+        - MASTER/test/test_bin_ruby.rb
+      done_when: "cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test"
   - id: snapshot_exchange
     state: landed
     title: Bounded share-safe provenance-carrying snapshots
@@ -551,6 +563,16 @@ workstreams:
     title: Interruption, rollback, durable Mission resumption and orphan receipt recovery survive process restart
     implementation: MASTER/lib/fix; MASTER/lib/convergence; MASTER/test/test_fix_interruption_restart.rb
     proof: Restart suite, checkpoint hashes, orphan receipt recovery and budget boundary evidence on one revision
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/lib/fix/transaction.rb
+        - MASTER/lib/fix/run_journal.rb
+        - MASTER/lib/fix/fix_loop.rb
+        - MASTER/test/test_fix_interruption_restart.rb
+      done_when: "cd MASTER && ruby test/test_fix_interruption_restart.rb"
   - id: whole_repository_fix
     state: evidence
     title: One genuine four-report /fix over MASTER, RAILS, OPENBSD and STUDIO with BIZ document review
@@ -566,6 +588,18 @@ workstreams:
     title: Candidate-level consensus protects high-risk repairs without gating deterministic work
     implementation: MASTER/lib/fix/lane_preflight.rb; MASTER/lib/fix/fix_loop/pass_runner.rb; MASTER/lib/fix/kernel/repair_adapter.rb; MASTER/lib/review/consensus.rb
     proof: MASTER/test/test_fix_lane_preflight.rb (no run-wide jury/provider probe); MASTER/test/test_consensus.rb (independent quorum and author exclusion); full Ruby execution NOT_RUN
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/lib/fix/lane_preflight.rb
+        - MASTER/lib/fix/fix_loop/pass_runner.rb
+        - MASTER/lib/fix/kernel/repair_adapter.rb
+        - MASTER/lib/review/consensus.rb
+        - MASTER/test/test_fix_lane_preflight.rb
+        - MASTER/test/test_consensus.rb
+      done_when: "cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test"
   - id: law_reload_diagnosis
     state: partial
     title: Law reload records its reason, resolved root and changed paths before reload semantics are altered
