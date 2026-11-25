@@ -214,7 +214,7 @@ apps:
       active_storage/disk#show:
       - "/rails/active_storage/disk/:encoded_key/*filename"
   brgen:
-    digest: 7f9d027a6b08dec6
+    digest: 911c51b89a37c110
     routes:
       shared/changelog#show:
       - "/changelog"
@@ -537,6 +537,10 @@ apps:
       - "/sets/:id/edit"
       playlist/sets#show:
       - "/sets/:id"
+      playlist/hosted_tracks#audio:
+      - "/hosted_tracks/:id/audio"
+      playlist/hosted_tracks#version_audio:
+      - "/hosted_tracks/:id/versions/:version_id/audio"
       playlist/hosted_tracks#index:
       - "/hosted_tracks"
       playlist/hosted_tracks#new:
