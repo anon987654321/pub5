@@ -113,8 +113,10 @@ class TestSelfieSeries < Minitest::Test
       ledger_path: File.join(@dir, "ledger.jsonl"),
       inference_profile:,
       # These tests exercise the series loop against a fake provider; the house
-      # chain needs a real frame for Postpro, so it is covered separately.
+      # chain and the Replicate development chain need a real frame, so both are
+      # covered separately.
       chain_presets: [],
+      chain: nil,
     )
   end
 
@@ -150,6 +152,7 @@ class TestSelfieSeries < Minitest::Test
       recipe = Studio::Lora::Selfie.recipe(1, subject: "probe")
       assert_equal recipe.fetch("preset"), written.first.fetch(:preset)
       assert_equal Studio::Lora::Craft::HOUSE_CHAIN, written.first.fetch(:chain_presets)
+      assert_equal Studio::Lora::Craft::STILL_CHAIN, written.first.fetch(:chain)
       assert_equal 1, discarded.length
     end
   end
@@ -281,7 +284,7 @@ class TestSelfieSeries < Minitest::Test
 
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
-      chain_presets: [],
+      chain_presets: [], chain: nil,
     )
     rendered = run_series(box, count: 1, replace: true)
 
@@ -303,7 +306,7 @@ class TestSelfieSeries < Minitest::Test
     File.symlink(outside, "#{old}.json")
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: @client, directory:, ledger_path: File.join(@dir, "ledger.jsonl"),
-      chain_presets: [],
+      chain_presets: [], chain: nil,
     )
 
     rendered = run_series(box, count: 1, replace: true)
@@ -327,7 +330,7 @@ class TestSelfieSeries < Minitest::Test
 
     box = Studio::Visual::SelfieSeries.new(
       subject: "probe", client: FakeClient.new(fail_download_at: 2), directory:,
-      ledger_path: File.join(@dir, "ledger.jsonl"), chain_presets: [],
+      ledger_path: File.join(@dir, "ledger.jsonl"), chain_presets: [], chain: nil,
     )
     rendered = run_series(box, count: 3, replace: true)
 

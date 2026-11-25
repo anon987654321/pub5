@@ -63,7 +63,8 @@ def studio_photograph_actions
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
         preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"],
-        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true,
+        chain: Studio::Lora::Craft::STILL_CHAIN
       )
     end,
     "series" => lambda do |request|
@@ -331,7 +332,8 @@ if $PROGRAM_NAME == __FILE__
       ).write(
         prompt, film: options[:film], duration: options[:duration],
         preset: options.fetch(:preset, "house"),
-        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true,
+        chain: Studio::Lora::Craft::STILL_CHAIN
       )
     end
   end

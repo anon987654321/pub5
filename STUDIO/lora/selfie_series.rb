@@ -26,7 +26,8 @@ module Studio
 
       def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil,
                      inference_profile: nil, subjects_root: nil, direction: "varied",
-                     discard_raw: true, chain_presets: Studio::Lora::Craft::HOUSE_CHAIN)
+                     discard_raw: true, chain_presets: Studio::Lora::Craft::HOUSE_CHAIN,
+                     chain: Studio::Lora::Craft::STILL_CHAIN)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @direction = direction.to_s
@@ -37,6 +38,7 @@ module Studio
         raise ArgumentError, "selfie series needs at least one scene" if @scenes&.empty?
         @discard_raw = discard_raw ? true : false
         @chain_presets = Array(chain_presets).map(&:to_s)
+        @chain = chain
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @subjects_root = File.expand_path(subjects_root || IdeaPicture::SUBJECTS)
@@ -79,7 +81,7 @@ module Studio
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             result = @series.write(scene, film: false, output_stem: stem, grade_seed:,
                                    preset: recipe.fetch("preset"), compiled: recipe.key?("shot"),
-                                   chain_presets: @chain_presets)
+                                   chain_presets: @chain_presets, chain: @chain)
             path = result.fetch("still")
             likeness = Studio::Lora::Judge.likeness(reference: reference, candidate: path)
             quality = Studio::Lora::Judge.assess(candidate: path, original: result.dig("capture", "original"), likeness:)

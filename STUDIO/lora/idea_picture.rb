@@ -11,6 +11,7 @@ require "uri"
 require_relative "../replicate/output_paths"
 require_relative "../replicate/client"
 require_relative "../replicate/models"
+require_relative "../replicate/chain"
 require_relative "../replicate/subprocess"
 require_relative "consent"
 require_relative "../lora/lora"
@@ -124,7 +125,7 @@ module Studio
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false,
-                prediction_budget: nil, chain_presets: [], discard_raw: false)
+                prediction_budget: nil, chain_presets: [], discard_raw: false, chain: nil)
         lint_prompt!(words)
         if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
           raise ArgumentError, "unknown laboratory preset"
@@ -149,9 +150,11 @@ module Studio
         @prediction_budget = prediction_budget
         @capture_receipt = nil
         @last_capture_model = @last_capture_input = nil
+        @chain_steps = nil
+        @chain_intermediates = []
         grade_seed ||= SecureRandom.random_number(2_147_483_647) if preset
-        still = render_still(words, stem, grade_seed:, preset:)
-        intermediates = []
+        still = render_still(words, stem, grade_seed:, preset:, chain:)
+        intermediates = Array(@chain_intermediates)
         Array(chain_presets).each do |extra|
           intermediates << still
           still = grade_named(still, extra, seed: grade_seed)
@@ -378,7 +381,7 @@ module Studio
         raise ArgumentError, "prompt works against itself: #{reasons}"
       end
 
-      def render_still(words, stem, grade_seed: nil, preset: nil)
+      def render_still(words, stem, grade_seed: nil, preset: nil, chain: nil)
         base_path = File.join(@directory, safe_stem(stem))
         existing = %w[.png .jpg .jpeg .webp].map { |extension| "#{base_path}#{extension}" }
                                               .find { |candidate| File.exist?(candidate) || File.symlink?(candidate) }
@@ -390,6 +393,7 @@ module Studio
 
         client.download_url(first_url(output), path)
         File.chmod(0o600, path)
+        path = develop_through_chain(path, chain) if chain
         graded = preset ? grade(path, seed: grade_seed, preset:) : grade(path, seed: grade_seed)
         File.chmod(0o600, graded)
         if preset
@@ -400,6 +404,7 @@ module Studio
             "grade_sha256" => Digest::SHA256.file(graded).hexdigest,
             "preset" => preset, "grade_seed" => grade_seed, "review" => "NOT_REVIEWED"
           }
+          @capture_receipt["chain"] = @chain_steps if @chain_steps
           # Postpro already owns the grade sidecar. Record capture provenance
           # beside the ungraded original without modifying the lab receipt.
           write_capture_receipt(path, @capture_receipt)
@@ -407,6 +412,18 @@ module Studio
         # The provider original and its grade are separate project assets.
         # Keep both; grading must never destroy the original still.
         graded
+      end
+
+      # Repair, sharpen and emulate stock on Replicate before any local grade, so
+      # the grade works on a finished frame rather than on a raw prediction.
+      def develop_through_chain(path, definition)
+        developed = Studio::ReplicateClient::Chain.run(
+          client:, frame: path, definition:, subject: @subject, directory: @directory,
+          budget: @prediction_budget
+        )
+        @chain_steps = developed.fetch("steps")
+        @chain_intermediates.concat(developed.fetch("intermediates"))
+        developed.fetch("path")
       end
 
       # Keep only the developed frames. The capture receipt already carries both

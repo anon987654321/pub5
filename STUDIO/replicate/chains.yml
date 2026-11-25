@@ -1,0 +1,27 @@
+# Long development chains.
+#
+# Every step is a different Replicate model and each one feeds the next, so the
+# order is the craft decision: repair before sharpening (sharpening a broken
+# frame sharpens the breakage), sharpen before film emulation (grain should sit
+# on real detail, not on upscaled mush), and grade last, locally, where a pass
+# costs nothing and can be stacked.
+#
+# The frame is always handed to whichever image input the model declares
+# (`image`, `input_image`, `start_image`, `first_frame_image`), so a step only
+# names the inputs it actually decides.
+#
+# There is no video chain yet: the catalogue has no video-to-video stage, so
+# motion is one image-to-video call followed by the local video grade.
+
+stills:
+  - model: flux-kontext-apps/restore-image
+    inputs:
+      prompt: "repair compression artefacts and keep the likeness, the skin and the expression exactly as they are"
+  - model: philz1337x/clarity-pro-upscaler
+    inputs:
+      upscale_factor: 2
+      prompt: "natural skin detail, no smoothing, no retouching"
+  - model: levelsio/analog-film
+    inputs:
+      prompt: "ANLG 35mm colour negative emulation, gentle halation, fine grain, honest skin"
+      prompt_strength: 0.3

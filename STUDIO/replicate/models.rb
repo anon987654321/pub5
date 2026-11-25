@@ -141,6 +141,22 @@ module Studio
       def with_likeness(kind) = engines.select { |_, spec| spec["likeness"] == kind }
 
       def inputs_for(name) = engine(name).fetch("inputs")
+
+      # A chain reaches across stages (repair, upscale, film emulation), so it
+      # looks a model up by name rather than by the stage a renderer happens to
+      # use. Only real model rows count: the budget block is a hash of numbers.
+      def any_engine(name)
+        key = name.to_s
+        catalogue.each_value do |stage|
+          next unless stage.is_a?(Hash)
+
+          spec = stage[key]
+          return spec if spec.is_a?(Hash) && spec.key?("inputs")
+        end
+        raise ArgumentError, "unknown engine #{name}; not in the catalogue"
+      end
+
+      def any_inputs_for(name) = any_engine(name).fetch("inputs")
     end
   end
 end

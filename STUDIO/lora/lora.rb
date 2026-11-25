@@ -292,6 +292,10 @@ module Studio
       # the series together, and only the developed frame is kept. Change the
       # look here, once, rather than at each call site.
       HOUSE_CHAIN = %w[aged_kodachrome].freeze
+
+      # The Replicate development chain run before any local grade: repair, then
+      # sharpen, then emulate stock. Declared in STUDIO/replicate/chains.yml.
+      STILL_CHAIN = "stills".freeze
       SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
       SHOT_OPTIONAL = %w[preset key_side catchlight focus].freeze
       KEY_SIDE = {

@@ -17,6 +17,21 @@ LoRA upload and training calls require a subject owner. They must pass the subje
 
 Provider calls can incur charges. Preflight the exact model schema and declared budget before upload or prediction; distinguish catalogue estimates from actual provider-reported cost. Missing cost data is unknown, not zero.
 
+## Development chains
+
+A still is not finished by one model. `chains.yml` declares a chain of
+different Replicate models, and `chain.rb` runs it over the frame before any
+local grade: each step uploads the previous step's output and hands it to
+whichever image input that model declares. The house chain repairs, then
+upscales, then emulates stock, so sharpening works on real detail and grain
+sits on a repaired frame rather than on a raw prediction.
+
+The chain is a default, not a flag. `Craft::STILL_CHAIN` names it, the series
+and the CLI both pass it, and the capture receipt records each step's model and
+the inputs it decided, never an uploaded URL. Every step is a paid prediction,
+so a three-step chain costs three calls per frame; `--free` still applies to
+the first render only.
+
 ## Verify
 
 From the repository root:
