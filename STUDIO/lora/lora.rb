@@ -133,6 +133,7 @@ module Studio
           "geometry" => Studio::Lora::Craft::GEOMETRY,
           "scenes" => Studio::Lora::Selfie::SCENES,
           "subject_scenes" => Studio::Lora::Selfie::SUBJECT_SCENES,
+          "historical_sittings" => Studio::Lora::Guides.load.fetch("historical_sittings"),
         }
       end
 
@@ -640,6 +641,41 @@ module Studio
         "a record-shop entrance", "an old building's open arcade"
       ].freeze
 
+      # The historical briefs retain their authored light, distance and lens.
+      # Unlike the modern selfie default, they may deliberately obscure a face.
+      def self.historical_recipe(number, direction:)
+        archive = Guides.load.fetch("historical_sittings")
+        rows = archive.fetch("ideas")
+        if direction == "best"
+          rows = archive.fetch("best").map do |reference|
+            rows.find { |row| row.fetch("set") == reference.fetch("from") && row.fetch("n") == reference.fetch("n") } ||
+              raise(ArgumentError, "missing historical sitting")
+          end
+        else
+          rows = rows.select { |row| row.fetch("set") == direction }
+        end
+        n = Integer(number)
+        raise ArgumentError, "historical sitting out of range" unless n.between?(1, rows.size)
+        row = rows.fetch(n - 1)
+        stock = row.fetch("stock").downcase
+        preset = case stock
+                 when /tri-x|trix/ then "silver_gelatin"
+                 when /hp5/ then "reportage"
+                 when /cinestill|vision3/ then "neon_night"
+                 when /400h|superia/ then "pastel_portrait"
+                 when /gold|ektar/ then "golden_age"
+                 when /kodachrome/ then "aged_kodachrome"
+                 when /polaroid|instax/ then "instant_pack"
+                 else "house"
+                 end
+        prompt = [row.fetch("scene"), "key light: #{'#{row.fetch("key")}'}",
+                  "camera distance: #{'#{row.fetch("distance")}'}", row.fetch("lens"),
+                  "natural skin texture"].join(", ")
+        { "scene" => prompt, "preset" => preset, "sitting" => n,
+          "direction" => direction, "historical_title" => row.fetch("title"),
+          "shot" => row }
+      end
+
       def self.directional_recipe(number, direction:)
         treatments = DIRECTIONS.fetch(direction) { raise ArgumentError, "unknown photographic direction" }
         index = Integer(number) - 1
@@ -661,6 +697,7 @@ module Studio
       end
 
       def self.recipe(number, subject: nil, direction: "varied")
+        return historical_recipe(number, direction:) if %w[shoots warp best].include?(direction)
         return directional_recipe(number, direction:) unless direction == "varied"
 
         n = Integer(number)
