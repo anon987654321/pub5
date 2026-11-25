@@ -1158,6 +1158,12 @@ if (( lock_owner )); then
   export VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_RECOVERY
   print "vps-deploy: started before this deploy: $VPS_DEPLOY_STARTED"
   set_stage snapshot
+else
+  # A child (all -> master) holds no lock and never runs the pin block above,
+  # so `pin` was unset and set -u killed it in ensure_host_admission (vm23,
+  # 2026-11-25). It deploys exactly what its parent pinned and exported.
+  pin=${VPS_DEPLOY_SHA:-}
+  [[ -n $pin ]] || deploy_refuse "child deploy inherited no pinned SHA from its parent"
 fi
 
   # Resolve against the inventory in the checkout after it has been fast-forwarded

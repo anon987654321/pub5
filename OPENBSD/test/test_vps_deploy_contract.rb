@@ -1214,6 +1214,13 @@ class VpsDeployContractTest < Minitest::Test
 
   # A child deploy inherits the run id, so its first receipt write happens at
   # `set_stage start`; records_call must already be defined by then.
+  # A child deploy owns no lock and skips the pin block; it must still know
+  # the pin its parent exported, or set -u kills it at host admission.
+  def test_a_child_deploy_takes_its_pin_from_the_parent
+    assert_source SOURCE, "pin=${VPS_DEPLOY_SHA:-}"
+    assert_source SOURCE, "child deploy inherited no pinned SHA from its parent"
+  end
+
   def test_records_call_is_defined_before_the_first_receipt_write
     assert_operator SOURCE.index("\nrecords_call() {"), :<, SOURCE.index("\nset_stage start")
   end
