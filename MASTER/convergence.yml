@@ -300,11 +300,19 @@ workstreams:
     title: One semantic command surface across CLI web voice and device
     implementation: MASTER/lib/cli
     proof: MASTER/test
+  # Historical TODO.md (e21213da, line 1074): studio_perceptual_reference_suite.
+  # Folded into this existing owner, not closed or duplicated in gaps.yml.
   - id: media_effects
     state: partial
     title: Ruby-native analog audio and image processing
     implementation: STUDIO
-    proof: STUDIO/replicate/test
+    proof: >-
+      STUDIO/replicate/test; STUDIO/postpro/lib/quality_analyzer.rb and
+      postpro_quality_test.rb own the CIEDE2000 reference-pair and aligned-image
+      comparison primitives. Calibrated rights-cleared natural-image references,
+      explicit skin/highlight bounds and independently measured regional specular
+      uniformity remain open; private source photographs and masks stay outside
+      Git. Human full-size review and supported-runtime acceptance remain required.
   - id: outbound_http_transport
     state: partial
     title: >-
