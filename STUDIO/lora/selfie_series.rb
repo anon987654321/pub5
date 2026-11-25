@@ -7,6 +7,7 @@ require "securerandom"
 require "digest"
 require_relative "idea_picture"
 require_relative "judge"
+require_relative "quality"
 require_relative "lora"
 
 module Studio
@@ -57,6 +58,7 @@ module Studio
         raise ArgumentError, "count must be between 1 and #{LIMIT}" unless total.between?(1, LIMIT)
 
         preflight!
+        reference = review_reference
         rendered = []
         series_id = SecureRandom.hex(8)
         record("series_start", series_id:, count: total, inference_profile: @series.inference_profile,
@@ -74,7 +76,7 @@ module Studio
             result = @series.write(scene, film: false, output_stem: stem, grade_seed:,
                                    preset: recipe.fetch("preset"), compiled: recipe.key?("shot"))
             path = result.fetch("still")
-            likeness = Studio::Lora::Judge.likeness(reference: @reference_files.first, candidate: path)
+            likeness = Studio::Lora::Judge.likeness(reference: reference, candidate: path)
             quality = Studio::Lora::Judge.assess(candidate: path, original: result.dig("capture", "original"), likeness:)
             record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness,
                    recipe: recipe, grade_seed: grade_seed, review: "NOT_REVIEWED",
@@ -124,6 +126,17 @@ module Studio
 
       private
 
+      # Review is separately authorized; generation inputs are not independent
+      # evaluation evidence. Without a private holdout, no face scoring runs.
+      def review_reference
+        directory = File.join(@subjects_root, @subject)
+        Studio::Lora::Consent.require!(subject: @subject, subject_directory: directory,
+                                      action: :likeness_review, required_sources: ["evaluation_photographs"])
+        Studio::Lora::Quality.evaluation_files(subject: @subject, root: @subjects_root).first
+      rescue Studio::Lora::Consent::Error, Studio::Lora::Quality::Error, SystemCallError
+        nil
+      end
+
       def preference_path
         File.join(@subjects_root, @subject, ".cache", "photographic_preferences.jsonl")
       end
@@ -137,9 +150,19 @@ module Studio
 
       def private_rows(path)
         return [] unless File.exist?(path) || File.symlink?(path)
+        [@subjects_root, File.join(@subjects_root, @subject), File.dirname(path)].each do |parent|
+          raise ArgumentError, "refusing symlinked photographic record" if File.symlink?(parent)
+        end
         private_file!(path)
-        raise ArgumentError, "photographic ledger is too large" if File.size(path) > 16 * 1024 * 1024
-        File.foreach(path).map { |line| JSON.parse(line) }
+        File.open(path, File::RDONLY | File::NOFOLLOW) do |file|
+          stat = file.stat
+          unless stat.file? && stat.uid == Process.uid && stat.nlink == 1 && (stat.mode & 0o077).zero?
+            raise ArgumentError, "photographic record must be private and singly linked"
+          end
+          raise ArgumentError, "photographic ledger is too large" if stat.size > 16 * 1024 * 1024
+          file.flock(File::LOCK_SH)
+          file.each_line.map { |line| JSON.parse(line) }
+        end
       end
 
       def append_preference(event)

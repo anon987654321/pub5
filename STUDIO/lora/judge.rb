@@ -362,8 +362,15 @@ module Studio
 
       def assess(candidate:, original: nil, likeness: nil)
         reading = Postpro::Uncanny.read(candidate)
-        faults = faults_for(reading, load_thresholds)
+        thresholds = load_thresholds
+        faults = faults_for(reading, thresholds)
         before = original && Postpro::Uncanny.read(original)
+        if before
+          original_faults = faults_for(before, thresholds).map { |fault| fault.fetch(:metric) }
+          faults = faults.map do |fault|
+            fault.merge(origin: original_faults.include?(fault.fetch(:metric)) ? "capture_or_grade" : "grade")
+          end
+        end
         delta = before && reading.to_h.to_h do |key, value|
           earlier = before.public_send(key)
           [key, value && earlier ? value - earlier : nil]
@@ -377,6 +384,7 @@ module Studio
                       "PASS"
                     end
         { "technical" => technical, "identity" => identity, "measurements" => reading.to_h,
+          "original_measurements" => before&.to_h,
           "grade_delta" => delta, "faults" => faults, "review" => "NOT_REVIEWED",
           "delivery" => identity["state"] == "FAIL" || technical == "FAIL" ? "REJECTED_CANDIDATE" : "AWAITING_OPERATOR" }
       rescue StandardError => error
@@ -395,6 +403,10 @@ module Studio
         Array(report["faults"]).each do |fault|
           metric = (fault[:metric] || fault["metric"]).to_s
           remedy = fault[:remedy] || fault["remedy"]
+          if (fault[:origin] || fault["origin"]) == "grade"
+            hints << { "stage" => "laboratory", "action" => "compare the retained original and try a less destructive grade before paying for another capture", "metric" => metric }
+            next
+          end
           stage = case metric
                   when "clipping", "tonal_range" then "exposure_and_grade"
                   when "texture" then "capture_and_optical_signature"

@@ -92,6 +92,11 @@ module Contracts
       photograph_api("action" => "render_shot", "shot" => shot, "subject" => subject, "grade_seed" => grade_seed)
     end
 
+    def photograph_candidates(shots:, subject:, max_predictions:)
+      photograph_api("action" => "render_candidates", "shots" => shots, "subject" => subject,
+                     "max_predictions" => max_predictions)
+    end
+
     def photograph_api(request)
       script = photograph_script or raise "STUDIO photograph entrypoint is unavailable"
       output, status = run_bounded([RbConfig.ruby, script, "api", JSON.generate(request)], chdir: root)

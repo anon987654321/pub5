@@ -324,6 +324,21 @@ class TestSelfieSeries < Minitest::Test
     assert_equal "24mm", phone.dig("shot", "lens")
   end
 
+  def test_prediction_budget_refuses_extra_dispatches
+    budget = Studio::Visual::PredictionBudget.new(2)
+    budget.consume!
+    budget.consume!
+    assert_equal 2, budget.used
+    assert budget.exhausted?
+    assert_raises(ArgumentError) { budget.consume! }
+    assert_raises(ArgumentError) { Studio::Visual::PredictionBudget.new(9) }
+  end
+
+  def test_grade_only_fault_suggests_regrading_before_paid_capture
+    report = { "faults" => [{ "metric" => "clipping", "origin" => "grade" }] }
+    assert_equal "laboratory", Studio::Lora::Judge.refinement(report).first.fetch("stage")
+  end
+
   def test_count_is_bounded
     error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
     assert_match(/between 1 and/, error.message)

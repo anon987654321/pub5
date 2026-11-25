@@ -32,6 +32,7 @@ def studio_photograph_actions
       result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     end,
     "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
+    "render_candidates" => ->(request) { studio_render_candidates(request) },
     "series_plan" => lambda do |request|
       count = Integer(request.fetch("count", 4))
       raise ArgumentError, "count must be between 1 and 24" unless count.between?(1, 24)
@@ -89,6 +90,34 @@ def studio_photograph_actions
         "model" => Studio::Visual::IdeaPicture.new(subject: request.fetch("subject", "ragnhild")).validate_model! }
     end,
   }
+end
+
+# A bounded comparison of operator-chosen shots. All plans are validated
+# before the first provider prediction; failed and skipped takes remain visible.
+def studio_render_candidates(request)
+  shots = request.fetch("shots")
+  unless shots.is_a?(Array) && shots.size.between?(1, 4)
+    raise ArgumentError, "candidate batch needs 1 to 4 shots"
+  end
+  shots.each { |shot| Studio::Lora::Craft.compile_shot(shot) }
+  budget = Studio::Visual::PredictionBudget.new(request.fetch("max_predictions"))
+  picture = Studio::Visual::IdeaPicture.new(
+    subject: request.fetch("subject"), engine: request["engine"],
+    inference_profile: request["inference_profile"]
+  )
+  results = shots.map.with_index do |shot, index|
+    next { "index" => index, "state" => "SKIPPED_BUDGET" } if budget.exhausted?
+    begin
+      result = picture.write_shot(shot, grade_seed: request["grade_seed"], prediction_budget: budget)
+      quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      result.merge("index" => index, "state" => quality.fetch("delivery"),
+                   "quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
+    rescue StandardError => error
+      { "index" => index, "state" => "FAILED", "reason" => "#{error.class}: #{error.message[0, 200]}" }
+    end
+  end
+  { "prediction_limit" => budget.limit, "predictions_dispatched_or_reserved" => budget.used,
+    "candidates" => results, "review" => "AWAITING_OPERATOR" }
 end
 
 # The engine question, shared by the wizard branches below. The catalogue is the

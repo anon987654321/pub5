@@ -17,6 +17,28 @@ require_relative "../lora/lora"
 
 module Studio
   module Visual
+    # Bounds calls into the prediction client across a whole refinement batch,
+    # including fallback engines. Provider-internal HTTP retries remain the
+    # responsibility of the client.
+    class PredictionBudget
+      attr_reader :remaining, :limit
+
+      def initialize(limit)
+        @limit = Integer(limit)
+        raise ArgumentError, "prediction budget must be between 1 and 8" unless @limit.between?(1, 8)
+        @remaining = @limit
+      end
+
+      def exhausted? = remaining.zero?
+      def used = limit - remaining
+
+      def consume!
+        raise ArgumentError, "prediction budget exhausted" if exhausted?
+
+        @remaining -= 1
+      end
+    end
+
     class IdeaPicture
       # Highspeed is the default everyday 768P film engine. H3 Lite remains the
       # lower-cost drafting option at 480P or 768P; both accept 4-15 seconds.
@@ -101,7 +123,7 @@ module Studio
         @inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")
       end
 
-      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false)
+      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false, prediction_budget: nil)
         lint_prompt!(words)
         if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
           raise ArgumentError, "unknown laboratory preset"
@@ -115,6 +137,7 @@ module Studio
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
         @compiled_capture = compiled
+        @prediction_budget = prediction_budget
         @capture_receipt = nil
         @last_capture_model = @last_capture_input = nil
         grade_seed ||= SecureRandom.random_number(2_147_483_647) if preset
@@ -126,14 +149,15 @@ module Studio
         result
       ensure
         @compiled_capture = false
+        @prediction_budget = nil
       end
 
       # Explicit structured shots use the same inference and consent boundary
       # as free-form requests. The compiled prompt already owns camera geometry.
-      def write_shot(shot, grade_seed: nil)
+      def write_shot(shot, grade_seed: nil, prediction_budget: nil)
         plan = Studio::Lora::Craft.compile_shot(shot)
         result = write(plan.fetch("prompt"), film: false, output_stem: "#{@subject}_selfie_shot",
-                       grade_seed:, preset: plan.fetch("preset"), compiled: true)
+                       grade_seed:, preset: plan.fetch("preset"), compiled: true, prediction_budget:)
         result.merge("plan" => plan)
       ensure
         @compiled_capture = false
@@ -387,6 +411,7 @@ module Studio
         chain = render_chain
         failures = []
         chain.each_with_index do |candidate, index|
+          @prediction_budget&.consume!
           model = resolve_engine(candidate)
           begin
             input = still_input(words, candidate)

@@ -2884,6 +2884,10 @@ SELFIE_CONTACT_REVIEW:
     supported inference parameters, original and final hashes, laboratory
     preset and seed; a missing measurement is inconclusive. A failed
     identity check remains a rejected candidate, not an aesthetic penalty.
+    Review requires separately authorized independent reference evidence;
+    preference learning uses explicit human decisions. Paid refinement has a
+    bounded prediction budget, and a grade-induced fault is corrected in the
+    laboratory before a new capture is considered.
   severity: warning
   resolution: review
 
