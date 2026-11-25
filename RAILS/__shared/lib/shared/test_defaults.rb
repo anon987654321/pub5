@@ -1,11 +1,16 @@
 # frozen_string_literal: true
 
+require "etc"
+
 module Shared
   # Test-suite defaults every pub4 app shares. `require "shared/test_defaults"`
   # from an app's test_helper after `rails/test_help`.
   module TestDefaults
     def self.install!(test_case)
-      test_case.parallelize(workers: :number_of_processors)
+      # At most four workers: one per core on the 8 GB workstation starved it,
+      # and CI then ran alongside other jobs at load 15 (operator, 2026-11-25).
+      # PARALLEL_WORKERS still overrides, as Rails reads it before this value.
+      test_case.parallelize(workers: [Etc.nprocessors, 4].min)
       test_case.fixtures :all
       # Rails.cache is process-wide and survives the transactional rollback that
       # isolates everything else, so anything cache-backed leaks between tests.

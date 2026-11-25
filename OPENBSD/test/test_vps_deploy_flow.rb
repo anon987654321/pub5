@@ -396,6 +396,46 @@ class VpsDeployFlowTest < Minitest::Test
     end
   end
 
+  # Admission waits out a busy host instead of refusing at once (vm23,
+  # 2026-11-25): a load over 2.0 that falls is admitted; one that never falls
+  # is refused when the wait is spent. sleep is stubbed, so no time passes.
+  LOAD_GATE = SOURCE[/^read_load_five\(\) \{.*?^\}\n.*?^admit_load_five\(\) \{.*?^\}/m]
+
+  # The gate reads the load in a subshell, so the fake counts in a file.
+  def load_gate_run(loads, wait:)
+    counter = File.join(Dir.mktmpdir, "n")
+
+    zsh(<<~ZSH)
+      RUBY=#{RbConfig.ruby}; VPS_DEPLOY_ADMISSION_WAIT=#{wait}
+      loads=(#{loads.join(" ")}); print 0 > #{counter}
+      fake_sysctl() {
+        local i=$(( $(<#{counter}) + 1 )); print $i > #{counter}
+        print -r -- "{ 0.10 ${loads[$i]} 0.10 }"
+      }
+      VPS_DEPLOY_SYSCTL=fake_sysctl
+
+      sleep() { : }
+      log() { print -r -- "$*" }
+      deploy_refuse() { print -u2 "refused: $1"; exit 1 }
+      #{LOAD_GATE}
+      admit_load_five
+    ZSH
+  end
+
+  def test_admission_waits_for_a_busy_host_to_calm
+    refute_nil LOAD_GATE, "the load gate functions are missing"
+    out, status = load_gate_run(%w[3.50 2.40 1.20], wait: 900)
+    assert_equal 0, status, out
+    assert_includes out, "waiting for it to fall below 2.0"
+    assert_match(/^1\.20$/, out)
+  end
+
+  def test_admission_refuses_when_the_wait_is_spent
+    out, status = load_gate_run(%w[3.50 3.40 3.30], wait: 60)
+    refute_equal 0, status
+    assert_includes out, "is not below 2.0 after waiting 60s"
+  end
+
   # the rest of the sequence
 
   def test_heavy_builds_are_not_part_of_the_remote_deploy_flow

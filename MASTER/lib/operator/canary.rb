@@ -9,6 +9,7 @@ require "yaml"
 require_relative "../fix/routes_manifest"
 require_relative "../io/exec"
 require_relative "../io/ssrf_guard"
+require_relative "ci_receipt"
 require_relative "ruby_runner"
 require_relative "../../../OPENBSD/lib/deploy_inventory"
 
@@ -512,16 +513,37 @@ module Operator
         preflight_word = "VPS_DEPLOY_PREFLIGHT_SHA=#{sha}"
       end
 
-      run_ci = lambda do |ci_app|
-        out.puts("ci0: #{ci_app} bin/ci on #{sha[0, 9]} here; vm23 will only verify the installed bundle")
-        ci_runner.call(root:, app: ci_app)
-      end
+      ci_run = CiRun.new(root:, sha:, out:, runner: ci_runner)
+      run_ci = ->(ci_app) { attested_ci(ci_app, ci_run) }
       ok, ci_word = ci_attestation(root:, target: app, sha:, run: run_ci)
       return [false, ci_word] unless ok
 
       [true, [lead, preflight_word, ci_word, tail].compact.join(" ")]
     rescue GitCommandError => error
       [false, "repository preflight failed: #{error.message}; nothing was sent to vm23"]
+    end
+
+    # One app's bin/ci, or its recorded pass when nothing CI reads has changed
+    # since (Operator::CiReceipt). A fresh pass is recorded for the next deploy.
+    CiRun = Struct.new(:root, :sha, :out, :runner, keyword_init: true)
+
+    def attested_ci(app, run)
+      key = CiReceipt.key(root: run.root, app:, ruby_version: ruby_version(run.root))
+      if (prior = CiReceipt.reusable(app:, key:))
+        run.out.puts("ci0: #{app} unchanged since #{prior['sha'][0, 9]}; reusing its bin/ci pass")
+        return true
+      end
+
+      run.out.puts("ci0: #{app} bin/ci on #{run.sha[0, 9]} here; vm23 verifies only the installed bundle")
+      passed = run.runner.call(root: run.root, app:)
+      CiReceipt.record!(app:, key:, sha: run.sha) if passed
+      passed
+    end
+
+    def ruby_version(root)
+      output, = Master::Io::Exec.capture2(RubyRunner.ruby_cmd(root:), "-e", "print RUBY_VERSION",
+                                          timeout: 30, raise_on_timeout: true)
+      output.strip
     end
 
     # CI scope follows the canonical inventory. A batch runs each selected Rails

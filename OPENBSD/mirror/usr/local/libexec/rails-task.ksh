@@ -266,6 +266,10 @@ export BUNDLE_WITHOUT=development:test
 # YJIT off, as rc.d runs the apps: a db:prepare with it on, beside a running
 # brgen, grew until vm23 ran out of swap and stalled for 46 minutes (2026-11-25).
 export RUBY_YJIT_ENABLE=0
+# Bounded: 1 GB of data and 30 CPU minutes. The unbounded db:prepare above
+# would have been stopped at the cap, not left to exhaust swap beside brgen.
+ulimit -d 1048576
+ulimit -t 1800
 cd /home/$app/app
 $command"
 exec /usr/bin/su -m "$app" -c "$script"

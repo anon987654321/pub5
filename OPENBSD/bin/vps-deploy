@@ -1071,16 +1071,41 @@ fi
 # runtime-check skip, needs the human-only I_UNDERSTAND_FAST_DEPLOY=1.
 deploy_refuse() { log "refused: $1"; print -u2 "vps-deploy: refused - $1"; print -u2 "            Nothing was stopped."; exit 1 }
 
+# The five-minute load, or a fail-closed refusal when it cannot be read.
+read_load_five() {
+  local load_raw
+  load_raw=$(${VPS_DEPLOY_SYSCTL:-sysctl} -n vm.loadavg 2>/dev/null) \
+    || deploy_refuse "cannot read vm.loadavg; admission is fail-closed"
+  "$RUBY" -e '
+    values = ARGV.fetch(0).scan(/[0-9]+(?:[.][0-9]+)?/)
+    abort "bad vm.loadavg" unless values.length == 3
+    print values[1]' "$load_raw" 2>/dev/null \
+    || deploy_refuse "cannot parse five-minute load; admission is fail-closed"
+}
+
+# A busy host is waited for, not refused at once: a refusal right after a heavy
+# step left an unattended deploy with nothing to do but fail (vm23,
+# 2026-11-25). VPS_DEPLOY_ADMISSION_WAIT seconds (default 900) bound the wait;
+# swap, CPU pressure and unreadable values still refuse immediately.
+admit_load_five() {
+  local load_five waited=0
+  load_five=$(read_load_five)
+  until "$RUBY" -e 'exit(Float(ARGV.fetch(0)) < 2.0 ? 0 : 1)' "$load_five" >/dev/null 2>&1; do
+    (( waited < ${VPS_DEPLOY_ADMISSION_WAIT:-900} )) \
+      || deploy_refuse "five-minute load $load_five is not below 2.0 after waiting ${waited}s"
+    log "admission: five-minute load $load_five, waiting for it to fall below 2.0" >&2
+    sleep 60
+    waited=$(( waited + 60 ))
+    load_five=$(read_load_five)
+  done
+  print -r -- "$load_five"
+}
+
 admit_host_load() {
-  local sample load_raw load_five swap_output swap_blocks free_swap
+  local sample load_five swap_output swap_blocks free_swap
   local pressure_file=/var/db/pub5/cpu-pressure pressure_stamp pressure_busy now started
   for sample in 1 2; do
-    load_raw=$(${VPS_DEPLOY_SYSCTL:-sysctl} -n vm.loadavg 2>/dev/null) \
-      || deploy_refuse "cannot read vm.loadavg; admission is fail-closed"
-    load_five=$("$RUBY" -e 'values = ARGV.fetch(0).scan(/[0-9]+(?:[.][0-9]+)?/); abort "bad vm.loadavg" unless values.length == 3; print values[1]' "$load_raw" 2>/dev/null) \
-      || deploy_refuse "cannot parse five-minute load; admission is fail-closed"
-    "$RUBY" -e 'n = Float(ARGV.fetch(0)); exit(n < 2.0 ? 0 : 1)' "$load_five" >/dev/null 2>&1 \
-      || deploy_refuse "five-minute load $load_five is not below 2.0"
+    load_five=$(admit_load_five) || exit 1
     swap_output=$(${VPS_DEPLOY_SWAPCTL:-swapctl} -s 2>/dev/null) \
       || deploy_refuse "cannot read swap status"
     swap_blocks=$("$RUBY" -e 'match = ARGV.fetch(0).match(/([0-9]+)\s+available/i); abort "missing available count" unless match; print match[1]' "$swap_output" 2>/dev/null) \
