@@ -119,13 +119,32 @@ class TestRestructurePackPlan < Minitest::Test
   def test_the_plan_names_the_merge_operation_from_the_repository_root
     packed_face_body
 
+    plans = PackPlan.plans(plan_root: @root, scan_root: @lib)
     plan = PackPlan.plan_text(plan_root: @root, scan_root: @lib)
 
+    assert_equal 1, plans.size
     assert plan
-    assert_includes plan, "SUMMARY: Pack 1 single-file directory into its parent namespace file"
+    assert_includes plan, "SUMMARY: Pack swarm into face.rb"
     assert_includes plan, "OPERATIONS: merge"
     assert_includes plan, "=== WRITE lib/face.rb"
+    assert_equal 1, plan.scan(/^=== DELETE /).size, "one explicit delete per restructure"
     assert_includes plan, "=== DELETE lib/face/swarm.rb"
+  end
+
+  def test_each_candidate_travels_as_its_own_plan_with_one_delete
+    write("face.rb", PARENT)
+    write("face/swarm.rb", CHILD)
+    write("voice/boot_sound.rb", VOICE_PARENT)
+    write("voice/boot_sound/dsp.rb", VOICE_CHILD)
+
+    plans = PackPlan.plans(plan_root: @root, scan_root: @lib)
+
+    assert_equal 2, plans.size
+    plans.each do |plan|
+      assert_equal 1, plan.scan(/^=== DELETE /).size
+      assert_equal 1, plan.scan(/^=== WRITE /).size
+      assert_includes plan, "OPERATIONS: merge"
+    end
   end
 
   def test_a_child_chain_that_does_not_extend_the_parent_chain_is_skipped

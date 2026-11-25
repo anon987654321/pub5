@@ -69,35 +69,34 @@ module Master
           files.fetch(0) if files.size == 1 && dir.children.none?(&:directory?)
         end
 
-        # The full Restructure plan text over the candidates, with paths
-        # named from plan_root (the repository root the engine validates
-        # against), or nil when nothing qualifies.
-        def plan_text(plan_root:, scan_root:)
-          found = candidates(scan_root)
-          return if found.empty?
-
-          root = Pathname.new(plan_root.to_s)
-          writes = found.map { |candidate| write_entry(root, candidate) }
-          deletes = found.map { |candidate| "=== DELETE #{candidate.file.relative_path_from(root)}" }
-
-          <<~PLAN
-            SUMMARY: #{summary_for(found)}
-            OPERATIONS: merge
-            #{writes.join("\n")}
-            #{deletes.join("\n")}
-          PLAN
+        # One Restructure plan per candidate, with paths named from
+        # plan_root: the engine allows one explicit delete per restructure,
+        # so each pack travels alone. Empty when nothing qualifies.
+        def plans(plan_root:, scan_root:)
+          candidates(scan_root).map { |candidate| plan_text(plan_root:, scan_root:, candidate:) }
         end
 
-        def summary_for(found)
-          if found.size == 1
-            "Pack 1 single-file directory into its parent namespace file"
-          else
-            "Pack #{found.size} single-file directories into their parent namespace files"
-          end
+        # The Restructure plan text for one candidate (the first by
+        # default), or nil when nothing qualifies.
+        def plan_text(plan_root:, scan_root:, candidate: nil)
+          candidate ||= candidates(scan_root).first
+          return unless candidate
+
+          root = Pathname.new(plan_root.to_s)
+          <<~PLAN
+            SUMMARY: Pack #{candidate.child_name} into #{candidate.parent_file.basename}
+            OPERATIONS: merge
+            #{write_entry(root, candidate)}
+            #{delete_entry(root, candidate)}
+          PLAN
         end
 
         def write_entry(plan_root, candidate)
           "=== WRITE #{candidate.parent_file.relative_path_from(plan_root)}\n#{candidate.packed_body}"
+        end
+
+        def delete_entry(plan_root, candidate)
+          "=== DELETE #{candidate.file.relative_path_from(plan_root)}"
         end
 
         # The parent file's body with the child appended inside its chain,
