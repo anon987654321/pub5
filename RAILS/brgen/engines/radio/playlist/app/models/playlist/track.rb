@@ -48,9 +48,16 @@ class Playlist::Track < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   def visible_to?(viewer)
-    level = privacy.to_s
-    return true if level.blank? || level == "public"
-    viewer.present? && user_id == viewer.id
+    return true if viewer.present? && user_id == viewer.id
+    return false if expired? || review_held_at.present?
+
+    privacy.to_s.in?(["", "public"])
+  end
+
+  def playable_by?(viewer, direct_link: false)
+    return false if expired? || review_held_at.present?
+
+    visible_to?(viewer) || (direct_link && privacy == "unlisted")
   end
 
   def duration_formatted

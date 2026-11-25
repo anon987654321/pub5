@@ -85,6 +85,41 @@ class PlaylistRefinementsTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "expired and held tracks cannot be opened or counted by other listeners" do
+    expired = track_for(@owner, title: "Expired recording")
+    held = track_for(@owner, title: "Held recording", privacy: "unlisted")
+    expired.update_columns(expires_at: 1.minute.ago)
+    held.update_columns(review_held_at: Time.current)
+    sign_in_as(@friend)
+
+    [ expired, held ].each do |track|
+      get playlist.hosted_track_path(track)
+      assert_response :not_found
+      assert_no_difference -> { Playlist::Listen.count } do
+        post playlist.listens_path, params: { track_id: track.id }
+      end
+      assert_response :not_found
+    end
+  end
+
+  test "public collections do not publish private tracks" do
+    hidden = track_for(@owner, title: "Private recording marker", privacy: "private")
+    public_track = track_for(@owner, title: "Public recording marker")
+    list = Playlist::Playlist.create!(name: "Privacy list", user: @owner, public_access: true)
+    set = Playlist::Set.create!(name: "Privacy set", user: @owner, privacy: "public")
+    [ list, set ].each do |collection|
+      [ hidden, public_track ].each { |track| collection.add_track!(track, user: @owner) }
+    end
+    sign_in_as(@friend)
+
+    [ playlist.playlist_path(list), playlist.set_path(set) ].each do |path|
+      get path
+      assert_response :success
+      assert_includes response.body, public_track.title
+      assert_not_includes response.body, hidden.title
+    end
+  end
+
   test "a playlist page loads every track's comments in one query" do
     list = Playlist::Playlist.create!(name: "Kveld #{SecureRandom.hex(3)}", user: @owner, public_access: true)
     3.times do |i|

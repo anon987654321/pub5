@@ -10,7 +10,7 @@ class PlaylistTimestampedCommentsReflex < ApplicationReflex
 
     comment = comment.to_h.stringify_keys
     track = Playlist::Track.find_by(id: comment["track_id"])
-    return unless track&.visible_to?(Current.user)
+    return unless track&.playable_by?(Current.user, direct_link: true)
 
     saved = track.timestamped_comments.build(
       user: Current.user,

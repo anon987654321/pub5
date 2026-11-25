@@ -45,6 +45,12 @@ class Dating::BaseController < ApplicationController
   # Hoisted out of HomeController when the daily picks became a second reader.
   # Two copies of "who may this person be shown" is two places for orientation
   # or a block to stop being honoured.
+  def dating_blocked_users
+    outgoing = Block.where(blocker_id: Current.user.id).select(:blocked_id)
+    incoming = Block.where(blocked_id: Current.user.id).select(:blocker_id)
+    User.where(id: outgoing).or(User.where(id: incoming)).select(:id)
+  end
+
   def candidate_scope
     # joins(:user) drops orphan profiles (visible but user deleted) that crash the card.
     scope = Dating::Profile.visible.with_photos.joins(:user).includes(:user, :neighborhood, :prompts, photos_attachments: :blob)
@@ -60,6 +66,7 @@ class Dating::BaseController < ApplicationController
     # Orientation: mutual gender preference, so it's a dating app rather than a
     # random-person feed. See Dating::Profile.oriented_for.
     scope = scope.oriented_for(profile) if profile
+    scope = scope.where.not(user_id: dating_blocked_users)
     if (neigh = profile&.neighborhood)
       scope = scope.in_neighborhood(neigh)
     end

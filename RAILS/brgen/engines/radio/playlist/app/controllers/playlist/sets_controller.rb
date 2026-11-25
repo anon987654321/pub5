@@ -21,7 +21,7 @@ class Playlist::SetsController < ApplicationController
       # sets reach tracks through playlist_set_tracks. The previous raw query
       # named both missing columns, so any non-blank search raised
       # "no such column: playlist_set_id".
-      matching_tracks = Playlist::Track
+      matching_tracks = Playlist::Track.publicly_visible.unexpired
                         .where("title LIKE :q OR artist LIKE :q", q: "%#{ActiveRecord::Base.sanitize_sql_like(live_search_query)}%")
                         .select(:id)
       track_set_ids = Playlist::SetTrack.where(playlist_track_id: matching_tracks).pluck(:playlist_set_id)
@@ -40,6 +40,7 @@ class Playlist::SetsController < ApplicationController
     # Tracks come off the preloaded rows rather than @set.tracks: the set is
     # strict-loaded, so reading the through association raises.
     @set_tracks = @set.set_tracks.includes(:user, track: [ { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
+    @set_tracks = @set_tracks.select { |entry| entry.track.playable_by?(Current.user) }
     @tracks = @set_tracks.map(&:track)
     @dilla_sketches = @set.dilla_sketches.recent.includes(:user)
     # Prepare full waveform player + per-track timestamp comments on collection

@@ -11,7 +11,7 @@ class Dating::LikesController < Dating::BaseController
   def create
     # Only someone the deck could have shown: a paused or under-age profile, or
     # an account with no profile at all, is not somebody to like by id.
-    profile = Dating::Profile.visible.includes(:user).find_by!(user_id: params[:user_id])
+    profile = Dating::Profile.visible.with_photos.includes(:user).find_by!(user_id: params[:user_id])
     user = profile.user
     if Current.user.respond_to?(:blocking?) && (Current.user.blocking?(user) || user.blocking?(Current.user))
       redirect_back fallback_location: root_path, alert: t("shared.flash.not_authorized")
@@ -32,6 +32,8 @@ class Dating::LikesController < Dating::BaseController
   # people who have not seen you.
   def index
     @likes = Dating::Like.waiting_on(Current.user)
+                         .where(liker_id: Dating::Profile.visible.with_photos.select(:user_id))
+                         .where.not(liker_id: dating_blocked_users)
                          .includes(:dating_prompt, liker: { dating_profile: { photos_attachments: :blob } })
                          .order(created_at: :desc)
                          .limit(50)

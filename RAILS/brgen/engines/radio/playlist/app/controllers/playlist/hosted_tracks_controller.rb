@@ -77,15 +77,9 @@ class Playlist::HostedTracksController < Playlist::BaseController
   end
 
   def track_visible_to_viewer?
-    # Held for review after a copyright, abuse or illegal-content report: only
-    # the owner still sees it, with a notice saying why.
-    return Current.user && @track.user_id == Current.user.id if @track.review_held_at
+    return true if Current.user && @track.user_id == Current.user.id
 
-    case @track.privacy.to_s
-    when "", "public", "unlisted" then true
-    # Anything not named public is private, so a stray value hides the track.
-    else Current.user && @track.user_id == Current.user.id
-    end
+    @track.playable_by?(Current.user, direct_link: true)
   end
 
   def build_upload(file)
