@@ -21,6 +21,15 @@ presets:
       - noise=alls=6:allf=t+u
       - unsharp=5:5:0.42:5:5:0
       - vignette=PI/5
+  dilla_print:
+    description: print film through the house LUT, halation glow, low grain
+    lut: STUDIO/lora/house.cube
+    filters:
+      - eq=contrast=1.08:saturation=1.1:gamma=1.0
+      - rgbashift=rh=1:rv=-1:gh=-1:gv=1:bh=1:bv=1
+      - noise=alls=4:allf=t+u
+      - unsharp=5:5:0.3:5:5:0
+      - vignette=PI/5.5
   none:
     description: no post-capture look filters
     filters: []

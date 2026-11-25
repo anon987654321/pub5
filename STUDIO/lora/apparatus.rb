@@ -9,6 +9,12 @@ require "vips"
 
 require_relative "../replicate/subprocess"
 
+begin
+  require_relative "../postpro/depth"
+rescue LoadError
+  # Without the depth binding the warp falls back to postpro's own cues.
+end
+
 module Studio
   module Visual
     # Operations no camera performs, run on a subject's filmed clips with
@@ -43,6 +49,10 @@ module Studio
       # shear destroys anyway.
       ASSEMBLY = 0.25
       AUDIO = File.expand_path("../dilla/dilla.wav", __dir__)
+      # How far the depth warp pushes in, as a fraction of frame width, and how
+      # many poses a chronophotograph holds.
+      PUSH = 0.30
+      POSES = 12
 
       def initialize(subject:, directory: nil, audio: AUDIO, seconds: SECONDS, shear: SHEAR)
         @subject = subject.to_s
@@ -56,15 +66,29 @@ module Studio
         clips = source_clips
         raise "no filmed clips for #{@subject} in #{@directory}" if clips.empty?
 
-        {
+        pieces = {
           "slit_scan" => slit_scan(clips.first),
+          "dual_slit" => dual_slit(clips.first, clips.last),
           "motion_draw" => motion_draw(clips.first),
+          "chronophoto" => chronophoto(clips.first),
           "envelope_cut" => envelope_cut(clips),
         }
+        still = latest_still
+        pieces["depth_warp"] = depth_warp(still) if still
+        pieces
       end
 
+      # The newest developed still for this subject, if one is on disk.
+      def latest_still
+        Dir.glob(File.join(@directory, "postpro_*#{@subject}*.png")).max_by { |path| File.mtime(path) }
+      end
+
+      # The newest four takes, in the order they were filmed. Older takes stay
+      # on disk for comparison and must not enter a new piece.
       def source_clips
-        Dir.glob(File.join(@directory, "#{@subject}_film_*.mp4")).sort
+        Dir.glob(File.join(@directory, "#{@subject}_film_*.mp4"))
+           .sort_by { |path| File.mtime(path) }
+           .last(4)
       end
 
       # A moving slit: output frame t takes column x from frame t plus the
@@ -96,6 +120,92 @@ module Studio
           encode(File.join(shots, "o_%05d.png"), out, upscale: true)
         end
         finish("slit_scan", out, "shear" => @shear, "strip" => STRIP, "clip" => clip)
+      end
+
+      # A camera that never existed. One still plus a depth plane yields
+      # parallax as the lens pushes in: near pixels move further than far ones,
+      # which a still cannot do and a flat zoom cannot fake.
+      def depth_warp(still, out: output_path("depth_warp"))
+        image = Vips::Image.new_from_file(still, access: :random)
+        base = fitted(image)
+        plane = depth_plane(base)
+        coords = Vips::Image.xyz(base.width, base.height)
+        x = coords[0].cast("float")
+        y = coords[1].cast("float")
+        centre_x = base.width / 2.0
+        centre_y = base.height / 2.0
+        frames = (@seconds * FPS).round
+
+        Dir.mktmpdir("warp") do |tmp|
+          shots = Dir.mktmpdir("frames", tmp)
+          frames.times do |index|
+            phase = index.to_f / frames
+            push = 0.02 + (PUSH * phase**2)
+            sway = 0.015 * Math.sin(phase * 2 * Math::PI)
+            dx = ((x - centre_x) * push * plane) + (plane * (sway * base.width))
+            dy = (y - centre_y) * push * plane * 0.35
+            index_image = Vips::Image.bandjoin([x + dx, y + dy]).cast("float")
+            base.mapim(index_image).write_to_file(File.join(shots, format("o_%05d.png", index)))
+          end
+          encode(File.join(shots, "o_%05d.png"), out)
+        end
+        finish("depth_warp", out, "still" => still, "push" => PUSH)
+      end
+
+      # Two takes, one surface. Columns left of a sweeping edge read from the
+      # first clip, columns right read from the second, and both are sheared
+      # through time. Neither take survives as itself.
+      def dual_slit(first, second, out: output_path("dual_slit"))
+        size = [(WIDTH * ASSEMBLY).round, (HEIGHT * ASSEMBLY).round]
+        width, height = size
+        steps = (width.to_f / STRIP).ceil
+
+        Dir.mktmpdir("dual") do |tmp|
+          left = extract_frames(first, tmp, size)
+          right = extract_frames(second, tmp, size)
+          frames = [left.length, right.length].min
+          raise "no frames decoded for the dual slit" if frames.zero?
+
+          shots = File.join(tmp, "out")
+          FileUtils.mkdir_p(shots)
+          frames.times do |index|
+            edge = 0.15 + (0.70 * index / frames)
+            image = vips_image(left[index])
+            steps.times do |step|
+              x = step * STRIP
+              take = [STRIP, width - x].min
+              source = (x.to_f / width) < edge ? left : right
+              frame = vips_image(source[(index + (step * @shear / steps)) % frames])
+              image = image.insert(frame.crop(x, 0, take, height), x, 0)
+            end
+            image.write_to_file(File.join(shots, format("o_%05d.png", index)))
+          end
+          encode(File.join(shots, "o_%05d.png"), out, upscale: true)
+        end
+        finish("dual_slit", out, "first" => first, "second" => second, "shear" => @shear)
+      end
+
+      # Marey's plate: one surface, many moments. Each sampled pose is stacked
+      # only where the subject moved, so the body repeats and the room stays
+      # still. A single frame that holds twelve seconds.
+      def chronophoto(clip, out: output_path("chronophoto", ext: "png"), poses: POSES)
+        Dir.mktmpdir("chrono") do |tmp|
+          frames = extract_frames(clip, tmp, [(WIDTH * ASSEMBLY).round, (HEIGHT * ASSEMBLY).round])
+          raise "no frames decoded from #{clip}" if frames.empty?
+
+          picks = (0...poses).map { |i| frames[(i * frames.length / poses).floor] }
+          base = vips_image(picks.first)
+          plate = base
+          picks.drop(1).each do |path|
+            frame = vips_image(path)
+            moved = (frame - base).abs.colourspace("b-w").linear(1.0 / 24.0, 0.0)
+            mask = (moved > 0.06).ifthenelse(1.0, 0.0).gaussblur(0.8)
+            seen = frame * mask.bandjoin([mask, mask])
+            plate = (plate > seen).ifthenelse(plate, seen)
+          end
+          plate.resize(WIDTH.to_f / plate.width).write_to_file(out)
+        end
+        finish("chronophoto", out, "clip" => clip, "poses" => poses)
       end
 
       # Exposure that never closes. `tblend=average` keeps the running mean, so
@@ -221,12 +331,36 @@ module Studio
         ])
       end
 
+      # Depth 0-1 with near bright, at the delivery size, from the local
+      # estimator or postpro's cues when the model is absent.
+      def depth_plane(image)
+        return nil unless defined?(Postpro::Depth)
+
+        plane = Postpro::Depth.near(image)
+        return nil unless plane
+
+        plane = plane.resize(WIDTH.to_f / plane.width) if plane.width < WIDTH
+        # The estimator returns 0..1 floats, not 0..255 samples. Normalising by
+        # its own range keeps the warp correct whichever scale it hands back.
+        low = plane.min
+        span = plane.max - low
+        span = 1.0 if span.abs < 1e-6
+        plane.linear(1.0 / span, -low / span).copy(interpretation: :"b-w")
+      end
+
+      # Scale and crop to the delivery frame without letterboxing.
+      def fitted(image)
+        scale = [WIDTH.to_f / image.width, HEIGHT.to_f / image.height].max
+        scaled = image.resize(scale)
+        scaled.crop((scaled.width - WIDTH) / 2, (scaled.height - HEIGHT) / 2, WIDTH, HEIGHT)
+      end
+
       def vips_image(path)
         Vips::Image.new_from_file(path, access: :sequential)
       end
 
-      def output_path(name)
-        path = File.join(@directory, "#{@subject}_#{name}.mp4")
+      def output_path(name, ext: "mp4")
+        path = File.join(@directory, "#{@subject}_#{name}.#{ext}")
         raise "refusing to overwrite #{path}" if File.exist?(path)
 
         path

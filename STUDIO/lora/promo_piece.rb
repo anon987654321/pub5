@@ -16,7 +16,7 @@ module Studio
       # the shortest that clears thirty seconds after the crossfades.
       CLIPS = 4
       SECONDS = 10
-      LOOK = "dilla_heavy"
+      LOOK = "dilla_print"
       AUDIO = File.expand_path("../dilla/dilla.wav", __dir__)
 
       def initialize(subject:, audio: AUDIO, series: nil)

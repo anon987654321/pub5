@@ -63,6 +63,21 @@ module Studio
           raise ArgumentError, "video preset #{name.inspect} needs a list of non-empty filter strings"
         end
 
+        # A preset may name a .cube in the repository. Resolving it here keeps
+        # the path out of the filter string, where a relative path would depend
+        # on the caller's working directory.
+        lut = spec["lut"]
+        if lut
+          raise ArgumentError, "video preset #{name.inspect} names an unreadable LUT" unless lut.is_a?(String)
+
+          path = File.expand_path(lut, File.expand_path("../..", __dir__))
+          raise ArgumentError, "video preset #{name.inspect} LUT is missing: #{path}" unless File.file?(path)
+
+          # This build of ffmpeg names the option `file`; newer ones rename it
+          # `filename`, and the older name is accepted by neither.
+          filters += ["lut3d=file=#{path}:interp=tetrahedral"]
+        end
+
         result[name] = filters.freeze
       end.freeze
     rescue Psych::Exception => error

@@ -50,15 +50,31 @@ rather than three-channel approximations.
 alternative for computer-generated images: a picture-formation transform rather
 than a stock emulation, and the current state of the art for CG.
 
-Our chain does the opposite: `levelsio/analog-film` as a black box, then hand
-rolled `vips` curves inside `house_v1`. The order is wrong — halation lands
-after the print instead of before the negative — and the curves are guesses
-where measured data exists.
+**Correction, 2026-11-25.** An earlier draft of this note said the repo ran
+halation after the print. That is wrong for Postpro. `STUDIO/postpro/lib/effects_finish.rb`
+places `halation` before `film_curve` in the `house` chain, and
+`effects_print.rb` applies measured density curves through `HD.channel_curve`
+for 2383 and 2393. The critique applies to the model-side chain instead:
+`levelsio/analog-film` is a black box, and the `house_v1` curves in
+`selfie_series.rb` are hand-tuned. Postpro's effect order is already right.
 
 The fix costs nothing. A `.cube` LUT applies in ffmpeg through `lut3d` and in
 the still path through the same filter, at 16-bit, deterministically, offline.
 Halation becomes a separate pre-LUT pass: threshold the highlights, blur the red
 channel wide, screen it back. That is three `vips` operations and no model.
+
+## 2b. The still look now travels to the cut
+
+`postpro.rb --export-lut house` bakes the whole `house` chain into a 17³
+`.cube`: 4913 lattice points, 130 KB, written to `STUDIO/lora/house.cube`. The
+video path reads it through ffmpeg `lut3d`, so a cut carries the same print
+look as the stills it was filmed from. `STUDIO/postpro/video.yml` gains the
+`dilla_print` look, which names the LUT under a new `lut:` key; `promo.rb`
+resolves that path against the repository root, because a relative path in a
+filter string breaks whenever the cut is run from another directory.
+
+This build of ffmpeg spells the option `file=`, not `filename=`. Newer builds
+rename it. The code and its test use `file=`.
 
 ## 3. Depth for video must be temporally consistent
 
@@ -92,6 +108,35 @@ grain plate once and composite it. The expensive one is FGS synthesis.
 transfer functions and chromatic adaptation that our hand-written curves
 approximate. Use it when a transform has a name.
 
+## 6. Round two: what else the survey turned up
+
+Six more techniques, read against what this repo can actually run.
+
+- **Datamosh.** [moshpit](https://github.com/CrushedPixel/moshpit) and
+  [python-moshion](https://github.com/rjmoggach/python-moshion) drop I-frames so
+  motion vectors keep painting over a stale image. Cheap and violent, and the
+  look is well worn. Not adopted: the effect is a decoding accident, hard to
+  repeat, and it fights the print pipeline.
+- **Dual-source slit.** [TimeSlice-Nodes](https://github.com/systms-ai/TimeSlice-Nodes)
+  slices two clips against each other. Adopted as `dual_slit`: columns left of a
+  sweeping edge read from take one, columns right read from take four, and both
+  are sheared through time.
+- **Depth parallax.** [depth-parallax](https://github.com/Lakshaaysharma/depth-parallax)
+  turns one photo into a 2.5D camera move with a monocular depth map. Adopted as
+  `depth_warp`: the local estimator supplies the plane, `vips` `mapim` remaps
+  each frame, and the camera pushes in with parallax that a flat zoom cannot
+  fake. This is a camera that never existed, made from a still that was never
+  photographed.
+- **Chronophotography.** [chronophotography](https://github.com/EmaBO97/chronophotography)
+  composites motion trails. Adopted as `chronophoto`: twelve poses stacked only
+  where the subject moved, so the body repeats and the room holds still.
+- **Seamless loops.** [PerfectLoop](https://github.com/SherLock707/PerfectLoop)
+  morphs a clip into its own start. Not adopted yet: the cut ends on the bed,
+  not on the loop.
+- **Scanimation.** [scanix](https://github.com/NancyTana/scanix) builds
+  barrier-grid animations, where a striped overlay reveals motion as it slides.
+  Not adopted: it is a print artifact, and it needs the viewer's hand.
+
 ## What this changes, by cost
 
 | change | cost | why |
@@ -117,6 +162,14 @@ Film and print emulation: [filmlab-resolve](https://github.com/peterskotte123/fi
 [OpenDRT config](https://github.com/chrisbrejon/OpenDRT-OCIO-Config),
 [OpenDRT source](https://github.com/jedypod/open-display-transform).
 
+Round two: [moshpit](https://github.com/CrushedPixel/moshpit),
+[python-moshion](https://github.com/rjmoggach/python-moshion),
+[depth-parallax](https://github.com/Lakshaaysharma/depth-parallax),
+[chronophotography](https://github.com/EmaBO97/chronophotography),
+[PerfectLoop](https://github.com/SherLock707/PerfectLoop),
+[scanix](https://github.com/NancyTana/scanix),
+[video-2-slit-scan](https://github.com/andrewringler/video-2-slit-scan).
+
 Depth: [Video-Depth-Anything](https://github.com/DepthAnything/Video-Depth-Anything),
 [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2).
 
@@ -129,3 +182,27 @@ Colour: [colour-science](https://github.com/colour-science/colour).
 Software cited by those projects but not yet read here: vkdt's Vulkan film
 simulation, ART's LUT bridge, spektrafilm-rs. Their claims rest on the
 reference implementation above, and none of them has been tested in this repo.
+
+## 7. The 2026-11-25 run, measured
+
+Three sitting-3 stills went first (`--selfie-series --count 3`). The three
+promos then filmed four takes each and cut them through `dilla_print`: 37.000 s,
+1080x1920, audio intact. The rig produced six pieces per subject — fifteen clips
+and three plates — at no model cost.
+
+Two measurements keep the pieces honest.
+
+- **Depth warp moves.** Mean absolute difference between frame 0 and frame 235
+  reads 28.3 (johann), 27.5 (merethe), 18.5 (ragnhild) on a 0-255 scale. Before
+  the fix below it read 0.55, which is a still pretending to be a camera.
+- **Plates hold many poses.** `chronophoto` reads YAVG 92 against 54 for a single
+  source frame, and YHIGH 193 against 113. The extra light is the stacked bodies.
+
+Three gotchas worth keeping.
+
+1. `Postpro::Depth.near` returns 0..1 **floats**, not 0..255 samples. Dividing by
+   255 flattens the plane to 0.002 and the parallax disappears.
+2. This `ruby-vips` build rejects enum keywords on `mapim` and `resize`
+   (`interpolate:`, `kernel:`) with `:pointer argument is not a valid pointer`.
+   Defaults are the same interpolations, so omit the keywords.
+3. `:b-w` must be written `:"b-w"`. Unquoted, Ruby parses it as `:b - w`.

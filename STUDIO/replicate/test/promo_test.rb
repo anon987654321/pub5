@@ -39,6 +39,17 @@ class TestPromo < Minitest::Test
     assert_equal "out.mp4", args.last
   end
 
+  def test_a_look_may_name_a_lut_and_the_path_is_resolved_absolutely
+    looks = Studio::Promo.looks
+    assert_includes looks.keys, "dilla_print"
+    filter = looks["dilla_print"].find { |entry| entry.start_with?("lut3d=") }
+
+    assert filter, "the print look must carry a lut3d filter"
+    path = filter[/file=([^:]+)/, 1]
+    assert File.file?(path), "#{path} must exist"
+    assert path.start_with?("/"), "the LUT path must not depend on the caller's directory"
+  end
+
   def test_the_look_is_read_from_video_yml
     looks = Studio::Promo.looks
     assert_same Studio::Promo::LOOKS, looks, "the compatibility constant must alias the canonical catalogue"

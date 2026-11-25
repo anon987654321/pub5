@@ -31,7 +31,8 @@ class TestStudioApparatus < Minitest::Test
     pieces = Studio::Visual::Apparatus.new(subject: "probe", directory: @dir, audio: @audio,
                                            seconds: 2, shear: 4).run
 
-    assert_equal %w[envelope_cut motion_draw slit_scan], pieces.keys.sort
+    assert_equal %w[chronophoto dual_slit envelope_cut motion_draw slit_scan], pieces.keys.sort,
+                 "the rig now renders five clip pieces (the depth warp needs a still)"
     pieces.each_value do |path|
       assert File.file?(path), "#{path} must exist"
       assert File.file?("#{path}.json"), "#{path} must carry a sidecar"
@@ -64,7 +65,35 @@ class TestStudioApparatus < Minitest::Test
     assert_match(/refusing to overwrite/, error.message)
   end
 
+  def test_the_new_pieces_are_written_from_the_same_clips
+    rig = Studio::Visual::Apparatus.new(subject: "probe", directory: @dir, audio: @audio,
+                                        seconds: 1, shear: 4)
+    dual = rig.dual_slit(@clips[0], @clips[1])
+    plate = rig.chronophoto(@clips[2], poses: 6)
+    still = File.join(@dir, "postpro_probe_selfie_01_house.png")
+    vips_still(@clips[0], still)
+    warp = rig.depth_warp(still)
+
+    assert_equal [WIDTH, HEIGHT], probe(dual, "width,height").map(&:to_i)
+    assert_equal 24, probe(dual, "nb_frames").first.to_i
+    assert_equal [WIDTH, HEIGHT], probe(plate, "width,height").map(&:to_i)
+    assert_equal [WIDTH, HEIGHT], probe(warp, "width,height").map(&:to_i)
+    assert_equal 24, probe(warp, "nb_frames").first.to_i
+    assert_equal [WIDTH, HEIGHT],
+                 JSON.parse(File.read("#{warp}.json")).fetch("size")
+  end
+
+  def test_depth_warp_refuses_to_claim_motion_without_a_still
+    rig = Studio::Visual::Apparatus.new(subject: "probe", directory: @dir, audio: @audio,
+                                        seconds: 1, shear: 4)
+    assert_nil rig.latest_still
+  end
+
   private
+
+  def vips_still(clip, path)
+    run_ffmpeg(["-i", clip, "-frames:v", "1", "-f", "image2", path])
+  end
 
   def ffmpeg?
     _, status = Open3.capture2e("ffmpeg", "-version")
