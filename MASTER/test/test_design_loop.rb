@@ -450,6 +450,46 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_missing_guard_render_cannot_prove_an_improvement
+    with_sheet do |path|
+      committed = []
+      stub_scoring do
+        world = world_for(path, committed:)
+        measure = world.measure
+        calls = 0
+        partial = lambda do |surfaces|
+          calls += 1
+          rows = measure.call(surfaces)
+          calls >= 4 ? rows.reject { |surface, _, _| surface.id == "brgen/feed" } : rows
+        end
+        plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
+        rounds = LOOP.new(plan:, world: world.with(measure: partial)).run
+        assert_empty rounds.select { |round| round.outcome == :kept }
+        assert_empty committed
+        assert_includes File.read(path), "padding: 4px;"
+      end
+    end
+  end
+
+  def test_missing_noise_capture_refuses_to_invent_a_baseline
+    with_sheet do |path|
+      committed = []
+      stub_scoring do
+        world = world_for(path, committed:)
+        measure = world.measure
+        calls = 0
+        missing = lambda do |surfaces|
+          calls += 1
+          calls == 3 ? [] : measure.call(surfaces)
+        end
+        plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
+        rounds = LOOP.new(plan:, world: world.with(measure: missing)).run
+        assert_equal :none, rounds.first.outcome
+        assert_empty committed
+      end
+    end
+  end
+
   def test_an_edit_that_hurts_another_surface_is_undone_and_not_committed
     with_sheet do |path|
       committed = []

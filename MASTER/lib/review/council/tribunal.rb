@@ -21,8 +21,8 @@ module Master
           bundle = normalize(evidence)
           return inconclusive(bundle, "no evidence") if bundle.empty?
 
-          if bundle.none?(&:actionable?) && bundle.all?(&:inconclusive?)
-            return inconclusive(bundle, "all probes are inconclusive")
+          if bundle.none?(&:actionable?) && bundle.none? { |item| item.status == :observed }
+            return inconclusive(bundle, "all probes failed or are inconclusive")
           end
 
           payload = bundle.map(&:prompt).join("\n\n")

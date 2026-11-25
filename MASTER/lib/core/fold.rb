@@ -50,7 +50,11 @@ module Master::Core
 
         proof_scope = @memory.proof.scope
         proof_scope = proof_scope.merge(git_operations: @world.git_operations) if @world.respond_to?(:git_operations)
-        effect = @model.propose(@memory.context, verbs: @world.verbs, scope: proof_scope)
+        begin
+          effect = @model.propose(@memory.context, verbs: @world.verbs, scope: proof_scope)
+        rescue Model::Recipe::Stopped => error
+          return Done.new(reason: :blocked, turns: turn, summary: error.message)
+        end
         return cancellation_done(turn + 1) if cancellation_requested?
 
         verdict = @law.admit(effect, @memory)

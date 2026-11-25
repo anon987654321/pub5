@@ -37,6 +37,17 @@ class TestCognitionOutcomeModel < Minitest::Test
     assert_operator prediction[:success_probability], :>, 0.8
   end
 
+  def test_alternatives_rank_measured_history_without_hiding_unknown_actions
+    state = { "records" => {} }
+    6.times do |index|
+      model.observe!(state, context: "task", action: "known", outcome: "success",
+                     evidence: evidence("known:#{index}"))
+    end
+    ranked = model.alternatives(state, context: "task", actions: %w[unknown known])
+    assert_equal %w[known unknown], ranked.map { |row| row[:action] }
+    assert_equal :insufficient_data, ranked.last[:status]
+  end
+
   def test_a_receipt_is_counted_once_and_cannot_be_relabelled
     state = { "records" => {} }
     receipt = evidence("test:receipt", "same output")

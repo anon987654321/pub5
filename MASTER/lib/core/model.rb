@@ -18,6 +18,38 @@ module Master::Core
     # requiring a funded OpenRouter account.
     DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
+    # Deterministic proposals share the same constitutional execution spine.
+    # A recipe is not permission, and its observations are never cached as proof.
+    class Recipe
+      Stopped = Class.new(StandardError)
+
+      def self.steps(effects)
+        steps = Array(effects)
+        unless steps.any? && steps.all? { |effect| effect.is_a?(Effect) && %i[read probe].include?(effect.verb) }
+          raise ArgumentError, "offline recipes require read or guarded probe effects"
+        end
+        steps.dup.freeze
+      end
+
+      def initialize(effects)
+        @steps = self.class.steps(effects)
+        @index = 0
+      end
+
+      def turns = @steps.size + 1
+
+      def propose(context, verbs:, scope: nil)
+        last = Array(context).reverse.find { |entry| entry.role == :obs }
+        raise Stopped, "offline recipe stopped after a failed observation" if last&.text&.start_with?("ERR")
+
+        effect = @steps[@index] || Effect.done("offline inspection complete; observations recorded")
+        raise Stopped, "recipe verb unavailable: #{effect.verb}" unless verbs.include?(effect.verb)
+
+        @index += 1
+        effect
+      end
+    end
+
     # Built from Memory's evidence policy so the numbers the model is told match
     # the numbers the Constitution enforces — one source, no prose drift.
     EVIDENCE_WEIGHTS = Proof::SCORING.map { |k, v| "#{k}=#{v}" }.join(", ").freeze

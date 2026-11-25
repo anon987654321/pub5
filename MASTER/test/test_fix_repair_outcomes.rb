@@ -26,6 +26,16 @@ class TestFixRepairOutcomes < Minitest::Test
     assert_match(/works GUARD \| rb \| RAILS\/amber: 3 accepted/, text)
   end
 
+  def test_comparison_receipts_are_not_counted_twice
+    content = "comparison observation"
+    receipt = { source: "comparison:design", content:, sha256: Digest::SHA256.hexdigest(content) }
+    path = "#{@root}/x/a.rb"
+    2.times { outcomes.record(path, %w[L], { applied: 1 }, receipt:) }
+    assert_nil outcomes.summary
+    state = JSON.parse(File.read(File.join(@root, Outcomes::PATH)))
+    assert_equal 1.0, state.fetch("classes").values.first.fetch("accepted")
+  end
+
   def test_reverts_count_against_a_class
     3.times { outcomes.record("#{@root}/x/a.rb", %w[L], { rejected: 1 }) }
 

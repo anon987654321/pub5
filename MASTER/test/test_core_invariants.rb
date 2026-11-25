@@ -78,6 +78,32 @@ class TestTripleMemory < Minitest::Test
     @memory.procedural.register_recipe("simple_fix", steps)
     assert_equal steps, @memory.procedural.find_recipe("simple_fix")
   end
+
+  def test_offline_recipe_runs_through_the_constitution_without_an_llm
+    core = Master::Core
+    Dir.mktmpdir do |root|
+      File.write(File.join(root, "README.md"), "verified observation\n")
+      capabilities = core::Capabilities.read_only
+      constitution = core::Constitution.load(data_dir: File.expand_path("../data", __dir__), workspace_root: root, capabilities:)
+      world = core::World.new(root:, capabilities:)
+      @memory.procedural.register_effect_recipe("inspect", [core::Effect.read("README.md")])
+      model = @memory.procedural.replay("inspect")
+      result = core::Fold.new(model:, constitution:, world:, memory: @memory, max_turns: model.turns).run("inspect README")
+      assert_equal :complete, result.reason
+      assert @memory.proof.scope[:answerable]
+    end
+  end
+
+  def test_offline_recipe_cannot_mutate_and_stops_on_refused_effects
+    core = Master::Core
+    assert_raises(ArgumentError) do
+      @memory.procedural.register_effect_recipe("mutate", [core::Effect.write("x", "y")])
+    end
+    model = core::Model::Recipe.new([core::Effect.read("README.md")])
+    assert_raises(core::Model::Recipe::Stopped) do
+      model.propose([core::Memory::Entry.new(role: :obs, text: "ERR: refused")], verbs: core::VERBS)
+    end
+  end
 end
 
 class VerbClosureTest < Minitest::Test

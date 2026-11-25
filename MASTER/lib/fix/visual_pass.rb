@@ -286,6 +286,7 @@ module Master
       def review_captures(captures, sources, anchors, pass, graph:, coverage:)
         critique, image = run_critique(captures, sources, anchors, graph:)
         return inconclusive("#{critique.message}") if critique.err?
+        return inconclusive("council did not complete") if critique.value![:status].to_s == "inconclusive"
 
         artifact = keep_artifact(captures, image, pass)
         findings = anchored_findings(critique, sources, anchors)

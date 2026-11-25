@@ -9,6 +9,9 @@ require_relative "design_edit"
 require_relative "design_prompts"
 require_relative "layout_score_store"
 require_relative "visual_quality_checks"
+require_relative "../review/council/evidence"
+require_relative "repair_outcomes"
+require "digest"
 
 module Master
   module Fix
@@ -54,6 +57,7 @@ module Master
       def run
         recover_design_transactions!
         @state = measured(@plan.surfaces)
+        raise "design baseline incomplete" unless complete_capture?(@plan.surfaces, @state)
         survey
         stalls = 0
         results = []
@@ -70,13 +74,24 @@ module Master
       private
 
       def measured(surfaces)
-        @world.measure.call(surfaces).map { |surface, payload, shot| row(surface:, payload:, shot:) }
+        @world.measure.call(surfaces).filter_map { |surface, payload, shot| row(surface:, payload:, shot:) }
       end
 
       def row(surface:, payload:, shot:)
+        value = score(payload)
+        return unless value.is_a?(Numeric) && value.real? && value.finite?
+        return unless shot && File.file?(shot) && File.size(shot).positive?
+
         found = VisualQualityChecks.measure(surface, payload)["offenders"]
         counts = found.transform_values(&:size).reject { |_, count| count.zero? }
-        { surface:, payload:, shot:, score: score(payload), offenders: counts, offender_keys: found.reject { |_, keys| keys.empty? } }
+        { surface:, payload:, shot:, score: value, shot_sha256: Digest::SHA256.file(shot).hexdigest,
+          offenders: counts, offender_keys: found.reject { |_, keys| keys.empty? } }
+      end
+
+      def complete_capture?(surfaces, rows)
+        expected = surfaces.map(&:id).sort
+        actual = rows.map { |row| row[:surface].id }.sort
+        expected == actual && actual.uniq == actual
       end
 
       def score(payload) = LayoutScoreStore.measure(@plan.root, payload).score
@@ -110,20 +125,32 @@ module Master
       # score taken minutes ago, or cold, is not comparable with one taken after an edit,
       # and that gap once passed for an improvement.
       def refresh
-        @fresh = measured(guards.map { |row| row[:surface] })
-        merge(@fresh)
-        @target = @fresh.find { |row| row[:surface].id == @target[:surface].id }
-        @page_tokens = @target ? page_tokens_of(@target) : []
-        keep_before_shot if @target
+        surfaces = guards.map { |row| row[:surface] }
+        fresh = measured(surfaces)
+        return false unless complete_capture?(surfaces, fresh)
+
+        target = fresh.find { |row| row[:surface].id == @target[:surface].id }
+        return false unless target
+
+        @fresh = fresh
+        @target = target
+        @page_tokens = page_tokens_of(@target)
+        keep_before_shot
         @noise = noise
-        @target
+        return false unless @noise
+
+        @experiment = SecureRandom.hex(16)
+        merge(@fresh)
+        true
       end
 
-      # How far the target's score moves when nothing changed: a second capture of it. A
-      # gain smaller than twice that is not a gain.
+      # A failed second capture is unknown noise, not zero noise.
       def noise
-        again = measured([@target[:surface]]).first
-        again ? (again[:score] - @target[:score]).abs : 0.0
+        surfaces = [@target[:surface]]
+        rows = measured(surfaces)
+        return unless complete_capture?(surfaces, rows)
+
+        (rows.first[:score] - @target[:score]).abs
       end
 
       def margin = [TIE, 2 * @noise.to_f].max
@@ -224,6 +251,7 @@ module Master
       def trial(edit)
         transaction = nil
         candidate = nil
+        verdict = nil
         begin
           transaction = begin_candidate_transaction(edit)
           original = edit.apply!
@@ -249,6 +277,9 @@ module Master
           if transaction
             cleanup = restore_candidate_transaction(transaction, edit)
             candidate = nil unless cleanup == :restored
+            if cleanup == :restored && verdict && !verdict[:ok] && verdict[:comparison]
+              remember_comparison(edit, verdict[:comparison], :rejected)
+            end
             raise "design candidate rollback or rebuild failed; inspect the transaction before retrying" if cleanup == :failed
             @say.call("#{@target[:surface].id}: candidate left untouched after a concurrent source change") if cleanup == :conflict
           end
@@ -399,13 +430,43 @@ module Master
       end
 
       def judge(before, after)
+        @vision = nil
+        return { ok: false, text: "incomplete re-render" } unless complete_capture?(before.map { |row| row[:surface] }, after)
+
         now = after.find { |row| row[:surface].id == @target[:surface].id }
         return { ok: false, text: "not re-rendered" } unless now
+
+        comparison = comparison_evidence(before).comparison_receipt(comparison_evidence(after))
+        return { ok: false, text: "comparison inconclusive" } unless comparison[:status] == :observed
 
         gain = now[:score] - @target[:score]
         notes = problems(before, after)
         better = notes.empty? && (gain >= margin || (gain >= -margin && looks_better?(now)))
-        { ok: better, gain:, text: summary(now, notes) }
+        { ok: better, gain:, text: summary(now, notes), comparison: }
+      end
+
+      def comparison_evidence(rows)
+        shots = rows.to_h { |row| [row[:surface].id, row[:shot_sha256]] }
+        measurements = rows.to_h { |row| [row[:surface].id, row[:score]] }
+        Master::Review::Council::Evidence.new(
+          artifact: @target[:surface].id, domain: :design,
+          observations: ["layout measurements from one design-loop experiment"],
+          anchors: shots.keys.sort, measurements:, structure: { screenshots: shots },
+          provenance: { probe: "layout-score", conditions: { experiment: @experiment, surfaces: shots.keys.sort },
+                        artifact_sha256: Digest::SHA256.hexdigest(JSON.generate(shots.sort)) },
+        )
+      end
+
+      # Mechanical acceptance is not operator taste. Learn only after a confirmed
+      # delivery or a restored, measured rejection, using the existing memory.
+      def remember_comparison(edit, comparison, outcome)
+        receipt = comparison && comparison[:receipt]
+        return unless receipt
+
+        RepairOutcomes.new(root: @plan.root).record(edit.file, ["RENDERED_VISUAL_REFINEMENT"],
+          { outcome => 1 }, pattern: "design-loop", receipt:)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "design_loop.remember_comparison")
       end
 
       def summary(now, notes)
@@ -445,14 +506,17 @@ module Master
         false
       end
 
-      # "name +n" for each offender kind that grew between two sets of rows.
+      # A repair on one page must not hide a new offender on another page.
       def new_offenders(before, after)
-        base = tally(before)
-        tally(after).filter_map { |name, count| "#{name} +#{count - base[name]}" if count > base[name] }
-      end
-
-      def tally(rows)
-        rows.each_with_object(Hash.new(0)) { |row, all| row[:offenders].each { |name, count| all[name] += count } }
+        base = before.to_h { |row| [row[:surface].id, row[:offender_keys]] }
+        after.flat_map do |row|
+          id = row[:surface].id
+          prior = base.fetch(id, {})
+          row[:offender_keys].filter_map do |name, keys|
+            added = Array(keys) - Array(prior[name])
+            "#{id}:#{name} +#{added.size}" unless added.empty?
+          end
+        end
       end
 
       def keep(number, best)
@@ -514,6 +578,7 @@ module Master
             return round(number:, why: edit.why, outcome:, after: @target[:score])
           end
 
+          remember_comparison(edit, verification[:comparison], :applied)
           merge(verified)
           round(number:, why: edit.why, outcome: :kept, after:)
         rescue StandardError => e

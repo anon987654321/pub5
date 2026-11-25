@@ -98,6 +98,26 @@ class TestCouncilTribunal < Minitest::Test
     assert_equal :inconclusive, before.compare(after.with(provenance: {}))[:status]
   end
 
+  def test_comparison_receipt_requires_fingerprints_and_binds_observations
+    conditions = { sample_rate: 48000 }
+    base = { artifact: "mix", domain: :sound, observations: ["measured"], anchors: ["mix"] }
+    provenance = { probe: "peak", conditions: }
+    before = Evidence.new(**base, measurements: { peak: 0.9 }, provenance: provenance.merge(artifact_sha256: "a" * 64))
+    after = Evidence.new(**base, measurements: { peak: 0.8 }, provenance: provenance.merge(artifact_sha256: "b" * 64))
+    result = before.comparison_receipt(after)
+    assert_equal :observed, result[:status]
+    assert_equal Digest::SHA256.hexdigest(result[:receipt][:content]), result[:receipt][:sha256]
+    assert_equal :inconclusive, before.comparison_receipt(after.with(provenance:))[:status]
+    refute result.key?(:winner)
+  end
+
+  def test_failed_probes_do_not_convene_the_council
+    evidence = Evidence.new(artifact: "render", domain: :design, status: :failed)
+    result = Master::Review::Council::Tribunal.new(agent: Object.new).review(evidence:, personas: [], context: "test")
+    assert result.ok?
+    assert_equal :inconclusive, result.value![:status]
+  end
+
   def test_hash_evidence_is_normalized
     result = Master::Review::Council::Tribunal.new(agent: Object.new).send(
       :normalize,

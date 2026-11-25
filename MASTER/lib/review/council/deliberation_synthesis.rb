@@ -60,7 +60,7 @@ module Master
 
         def finding_signature(entry)
           entry[:structured_findings].map do |finding|
-            %w[location claim severity proposed_repair].map { |key| finding.fetch(key, "").to_s.gsub(/\\s+/, " ").strip }
+            %w[location evidence claim severity proposed_repair].map { |key| finding.fetch(key, "").to_s.gsub(/\s+/, " ").strip }
           end.sort
         end
 

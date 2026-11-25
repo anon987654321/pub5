@@ -3,6 +3,7 @@
 require "fileutils"
 require "json"
 require "time"
+require_relative "../cognition/outcome_model"
 
 module Master
   module Fix
@@ -38,15 +39,19 @@ module Master
       end
 
       # outcomes is a repair's breakdown, { outcome_symbol => count }.
-      def record(path, law_ids, outcomes, pattern: nil)
+      def record(path, law_ids, outcomes, pattern: nil, receipt: nil)
         tallies = fold(outcomes)
         return if tallies.empty?
 
+        proof = Cognition::OutcomeModel.validate_evidence!(receipt) if receipt
         LOCK.synchronize do
           data = load
           law_ids.each do |law|
             key = class_key(law, pattern || extension(path), area(path))
+            next if proof && comparison_seen?(data, key, proof, tallies)
+
             tallies.each { |verdict, reason, count| add(data, key, verdict, reason, count) }
+            remember_receipt(data, key, proof, tallies) if proof
           end
           prune(data)
           save(data)
@@ -80,6 +85,21 @@ module Master
       end
 
       private
+
+      def comparison_seen?(data, key, proof, tallies)
+        old = data.dig("classes", key, "receipts", proof.fetch("sha256"))
+        return false unless old
+        raise ArgumentError, "comparison receipt reused with a different outcome" unless old["outcome"] == tallies
+
+        true
+      end
+
+      def remember_receipt(data, key, proof, tallies)
+        row = data.fetch("classes").fetch(key)
+        receipts = row.fetch("receipts", {})
+        receipts[proof.fetch("sha256")] = { "source" => proof.fetch("source"), "outcome" => tallies }
+        row["receipts"] = receipts.to_a.last(Cognition::OutcomeModel::MAX_SEEN_RECEIPTS).to_h
+      end
 
       def fold(outcomes)
         outcomes.to_h.filter_map do |outcome, count|

@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+require "digest"
+require "json"
+
 module Master
   module Review
     module Council
@@ -77,6 +80,22 @@ module Master
             [key, delta] if delta.finite?
           end.to_h
           { status: :observed, deltas:, before: to_h, after: candidate.to_h }
+        end
+
+        # Bind observations to producer-supplied artifact fingerprints. The
+        # envelope digest protects the record, not the truth of its observations.
+        def comparison_receipt(candidate)
+          result = compare(candidate)
+          return result unless result[:status] == :observed
+
+          digests = [provenance, candidate.provenance].map { |row| row[:artifact_sha256].to_s }
+          unless digests.all? { |digest| digest.match?(/\A[0-9a-f]{64}\z/) }
+            return { status: :inconclusive, reason: "missing artifact fingerprints" }
+          end
+
+          content = JSON.generate(result)
+          source = "comparison:#{domain}:#{Digest::SHA256.hexdigest(artifact)[0, 16]}"
+          result.merge(receipt: { source:, content:, sha256: Digest::SHA256.hexdigest(content) })
         end
 
         def to_h

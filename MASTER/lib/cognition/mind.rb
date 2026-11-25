@@ -119,6 +119,10 @@ module Master
         @mutex.synchronize { @outcome_model.predict(@state.outcomes, context:, action:) }
       end
 
+      def rank_outcomes(context:, actions:)
+        @mutex.synchronize { @outcome_model.alternatives(@state.outcomes, context:, actions:) }
+      end
+
       # The write path for outcome learning. Evidence must identify an artifact
       # and its SHA-256; raw event payloads are not accepted as verified outcomes.
       def record_task_result(context:, action:, outcome:, evidence:, predicted_probability: nil)

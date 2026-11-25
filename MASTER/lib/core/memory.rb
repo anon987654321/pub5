@@ -243,6 +243,14 @@ module Master::Core
         def find_recipe(name)
           @recipes[name]
         end
+
+        def register_effect_recipe(name, effects)
+          register_recipe(name, Model::Recipe.steps(effects))
+        end
+
+        def replay(name)
+          Model::Recipe.new(find_recipe(name))
+        end
       end
     end
 

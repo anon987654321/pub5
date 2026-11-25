@@ -179,7 +179,7 @@ module Master
         row = value.is_a?(Hash) ? value : { purpose: value }
         canonical = %i[purpose intent inputs outputs side_effects invariants boundary]
                     .each_with_object({}) do |key, out|
-          source = row[key] || row[key.to_s]
+          source = row.key?(key) ? row[key] : row[key.to_s]
           out[key] = canonicalize(source) unless source.nil?
         end
         Digest::SHA256.hexdigest(JSON.generate(canonical))[0, 24]

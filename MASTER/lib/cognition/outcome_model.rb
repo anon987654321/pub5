@@ -93,7 +93,7 @@ module Master
           record["brier_count"] = record.fetch("brier_count", 0).to_i + 1
         end
 
-        stamp = Time.now.utc.iso8601
+        stamp = Time.now.utc.iso8601(6)
         record["observations"] = (
           Array(record["observations"]) + [{
             "outcome" => outcome,
@@ -208,8 +208,8 @@ module Master
         excess = records.size - MAX_RECORDS
         return unless excess.positive?
 
-        records.keys.sort_by { |key| [records[key]["updated_at"].to_s, key] }
-               .first(excess).each { |key| records.delete(key) }
+        records.keys.each_with_index.sort_by { |key, index| [records[key]["updated_at"].to_s, index] }
+               .first(excess).each { |key, _index| records.delete(key) }
       end
     end
   end

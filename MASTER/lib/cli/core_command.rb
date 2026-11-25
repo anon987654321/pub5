@@ -11,7 +11,7 @@ module Master
     # runtime (soul, scan, voice); this drives lib/core.rb with a scripted model
     # unless --real. A missing goal exits 64 with the usage.
     module CoreCommand
-      USAGE = "usage: bin/master core [--root PATH] [--max-turns N] [--real [--model ID]] GOAL"
+      USAGE = "usage: bin/master core [--root PATH] [--max-turns N] [--real [--model ID] GOAL | --offline-inspect]"
       REAL = "drive a live LLM (needs a provider key); default is the scripted constitution check"
 
       # Two successful but unrecognised commands, then a deliberately refused done.
@@ -45,6 +45,7 @@ module Master
           opts.on("--max-turns N", Integer) { |n| options[:max_turns] = n }
           opts.on("--real", REAL) { options[:real] = true }
           opts.on("--model ID") { |id| options[:model] = id }
+          opts.on("--offline-inspect", "inspect Git status and HEAD without an LLM") { options[:offline_inspect] = true }
         end
       end
 
@@ -53,6 +54,13 @@ module Master
         opts = parser(options)
         opts.parse!(argv)
         goal = argv.join(" ").strip
+        if options[:offline_inspect]
+          if options[:real] || options[:model] || !goal.empty?
+            Master::Trace::Dmesg::Report.print("/help", "offline inspection does not accept a model or arbitrary goal", io: $stderr)
+            return 64
+          end
+          goal = "inspect repository"
+        end
 
         if goal.empty?
           Master::Trace::Dmesg::Report.print("/help", opts.to_s, io: $stderr)
@@ -64,34 +72,48 @@ module Master
 
       def fold(goal, options, master_root:)
         root = File.expand_path(options.fetch(:root))
-        model = model_for(goal, options)
+        memory = Master::Core::Memory.new
+        model = model_for(goal, options, memory:)
         refusals = []
         probe_policy = Master::CLI::CoreBridge.read_only_probe(root:)
+        capabilities = options[:offline_inspect] ? Master::Core::Capabilities.read_only : Master::Core::Capabilities.for(:fix)
 
         result = Master::CLI::CoreBridge.build_fold(
-          root:, data_dir: File.join(master_root, "data"), model:,
+          root:, data_dir: File.join(master_root, "data"), model:, capabilities:,
           world: Master::CLI::CoreBridge.build_world(
-            root:, container: nil, capabilities: Master::Core::Capabilities.for(:fix), probe: probe_policy,
+            root:, container: nil, capabilities:, probe: probe_policy,
           ),
-          memory: Master::Core::Memory.new, max_turns: turn_budget(model, options),
-          observer: refusal_recorder(refusals),
+          memory:, max_turns: turn_budget(model, options),
+          observer: refusal_recorder(refusals, display: options[:offline_inspect]),
           effect_observer: Master::Trace::EffectObserver.new(bus: event_bus(root)),
           probe: probe_policy,
         ).run(goal)
-        verdict(result, refusals, real: options[:real])
+        verdict(result, refusals, real: options[:real] || options[:offline_inspect])
       end
 
       # Each refused `done` leaves its reason, which the verdict reads.
-      def refusal_recorder(refusals)
+      def refusal_recorder(refusals, display: false)
         lambda do |turn:, effect:, observation:|
           refusals << observation.detail if effect.done? && !observation.ok?
+          Master::Trace::Dmesg.status("core0", observation.message) if display && %i[read probe].include?(effect.verb)
         end
       end
 
       # The scripted run ends when its script does; a real model gets --max-turns.
-      def turn_budget(model, options) = options[:real] ? options.fetch(:max_turns) : model.turns
+      def turn_budget(model, options)
+        return options.fetch(:max_turns) if options[:real]
+        return [model.turns, options.fetch(:max_turns)].min if options[:offline_inspect]
 
-      def model_for(goal, options)
+        model.turns
+      end
+
+      def model_for(goal, options, memory: nil)
+        if options[:offline_inspect]
+          memory ||= Master::Core::Memory.new
+          effects = [%w[git status --short], %w[git log -1 --oneline]].map { |argv| Master::Core::Effect.probe(argv) }
+          memory.procedural.register_effect_recipe("inspect_repository", effects)
+          return memory.procedural.replay("inspect_repository")
+        end
         return NullModel.new(goal) unless options[:real]
 
         Master::Core::Model.new(**{ model_id: options[:model] }.compact)
