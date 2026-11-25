@@ -123,10 +123,14 @@ module Studio
         @inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")
       end
 
-      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false, prediction_budget: nil)
+      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false,
+                prediction_budget: nil, chain_presets: [], discard_raw: false)
         lint_prompt!(words)
         if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
           raise ArgumentError, "unknown laboratory preset"
+        end
+        Array(chain_presets).each do |extra|
+          raise ArgumentError, "unknown laboratory preset" unless Studio::Lora::Craft::LABORATORY.include?(extra)
         end
         unless grade_seed.nil?
           grade_seed = Integer(grade_seed)
@@ -147,8 +151,15 @@ module Studio
         @last_capture_model = @last_capture_input = nil
         grade_seed ||= SecureRandom.random_number(2_147_483_647) if preset
         still = render_still(words, stem, grade_seed:, preset:)
-        result = { "still" => still }
+        intermediates = []
+        Array(chain_presets).each do |extra|
+          intermediates << still
+          still = grade_named(still, extra, seed: grade_seed)
+          File.chmod(0o600, still)
+        end
+        result = { "still" => still, "intermediates" => intermediates }
         result["capture"] = @capture_receipt if @capture_receipt
+        discard_raw_renders(result) if discard_raw
         @compiled_capture = false
         result["clip"] = render_film(words, still, stem, duration) if film
         result
@@ -397,6 +408,27 @@ module Studio
         # Keep both; grading must never destroy the original still.
         graded
       end
+
+      # Keep only the developed frames. The capture receipt already carries both
+      # hashes, so provenance survives the deletion of the ungraded original.
+      def discard_raw_renders(result)
+        paths = [result.dig("capture", "original"), *Array(result["intermediates"])]
+        paths.compact.map(&:to_s).reject(&:empty?).uniq.each { |path| discard_render(path) }
+        result["discarded_raw"] = true
+        result
+      end
+
+      def discard_render(path)
+        absolute = File.expand_path(path)
+        root = File.join(@directory, "")
+        raise "refusing to discard #{absolute}: outside #{@directory}" unless absolute.start_with?(root)
+        return false unless File.file?(absolute) && !File.symlink?(absolute)
+
+        File.unlink(absolute)
+        true
+      end
+
+      public :discard_raw_renders
 
       def write_capture_receipt(path, receipt)
         destination = "#{path}.json"

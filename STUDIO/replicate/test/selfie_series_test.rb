@@ -117,6 +117,39 @@ class TestSelfieSeries < Minitest::Test
 
   # --heavy opts a series back into the legacy random pass, so every frame is
   # developed without a recipe preset; the default keeps the named grade.
+  # The ungraded original is read for the grade delta, then discarded; only the
+  # developed frame survives.
+  def test_series_discards_the_ungraded_original_when_asked
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      FileUtils.mkdir_p(File.join(subject_root, "probe", "references"))
+      File.write(File.join(subject_root, "probe", "references", "01.jpg"), "reference")
+      raw = File.join(dir, "raw.png")
+      graded = File.join(dir, "postpro_raw_house_v1.png")
+      [raw, graded].each { |path| File.write(path, "render") }
+
+      discarded = []
+      recorder = Object.new
+      recorder.define_singleton_method(:inference_profile) { nil }
+      recorder.define_singleton_method(:engine) { "probe/engine" }
+      recorder.define_singleton_method(:validate_model!) { {} }
+      recorder.define_singleton_method(:write) do |_words, **|
+        { "still" => graded, "intermediates" => [], "capture" => { "original" => raw } }
+      end
+      recorder.define_singleton_method(:discard_raw_renders) { |result| discarded << result }
+
+      series = Studio::Visual::SelfieSeries.new(
+        subject: "probe", directory: dir, subjects_root: subject_root,
+        ledger_path: File.join(dir, "ledger.jsonl"), discard_raw: true
+      )
+      series.instance_variable_set(:@series, recorder)
+      series.run(count: 1)
+
+      assert_equal 1, discarded.length
+      assert_equal raw, discarded.first.dig("capture", "original")
+    end
+  end
+
   def test_series_sends_recipe_presets_unless_heavy_is_requested
     Dir.mktmpdir do |dir|
       subject_root = File.join(dir, "subjects")

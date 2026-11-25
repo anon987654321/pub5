@@ -59,14 +59,16 @@ def studio_photograph_actions
         inference_profile: request["inference_profile"]
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
-        preset: request["heavy"] ? nil : request.fetch("preset", "house"), grade_seed: request["grade_seed"]
+        preset: request["heavy"] ? nil : request.fetch("preset", "house"), grade_seed: request["grade_seed"],
+        chain_presets: Array(request["chain_presets"]), discard_raw: request["discard_raw"] ? true : false
       )
     end,
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(
         subject:, engine: request["engine"], inference_profile: request["inference_profile"],
-        direction: request.fetch("direction", "varied"), heavy: request["heavy"] ? true : false
+        direction: request.fetch("direction", "varied"), heavy: request["heavy"] ? true : false,
+        chain_presets: Array(request["chain_presets"]), discard_raw: request["discard_raw"] ? true : false
       ).run(
         count: request.fetch("count", 4)
       )
@@ -150,6 +152,7 @@ end
 def studio_photograph_options(argv)
   options = {
     film: false, duration: 5, count: 4, all_subjects: false, inference_profile: nil, heavy: false,
+    chain_presets: [], discard_raw: false,
     subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild")
   }
   OptionParser.new do |parser|
@@ -165,6 +168,10 @@ def studio_photograph_options(argv)
     parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental or snapshot") { |value| options[:direction] = value }
     parser.on("--preset NAME", "named laboratory grade (default house); \"heavy\" is the legacy random pass") { |value| options[:preset] = value }
     parser.on("--heavy", "develop with the legacy random heavy pass instead of the recipe's named grade") { options[:heavy] = true }
+    parser.on("--chain-preset NAME", "stack another laboratory grade after the first; repeatable") do |value|
+      options[:chain_presets] << value
+    end
+    parser.on("--discard-raw", "keep only the developed frames, not the ungraded originals") { options[:discard_raw] = true }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -182,8 +189,11 @@ end
 # All-subject generation is independent per person. Every subject is preflighted
 # before the first prediction, but one person's missing permission/model must not
 # prevent another subject with a complete, valid preflight from proceeding.
-def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil, heavy: false)
-  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:, inference_profile:, heavy:) }
+def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil, heavy: false,
+                               chain_presets: [], discard_raw: false)
+  factory = series_factory || lambda { |subject|
+    Studio::Visual::SelfieSeries.new(subject:, inference_profile:, heavy:, chain_presets:, discard_raw:)
+  }
   prepared = subjects.map do |subject|
     begin
       series = factory.call(subject)
@@ -294,7 +304,8 @@ if $PROGRAM_NAME == __FILE__
 
       studio_all_subjects_render(
         subjects: %w[johann ragnhild merethe], count: options[:count] || 4,
-        inference_profile: options[:inference_profile], heavy: options[:heavy]
+        inference_profile: options[:inference_profile], heavy: options[:heavy],
+        chain_presets: options[:chain_presets], discard_raw: options[:discard_raw]
       )
     elsif options[:series]
       # A series uses the subject's references and the catalogue default
@@ -303,7 +314,8 @@ if $PROGRAM_NAME == __FILE__
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
         subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile],
-        direction: options.fetch(:direction, "varied"), heavy: options[:heavy]
+        direction: options.fetch(:direction, "varied"), heavy: options[:heavy],
+        chain_presets: options[:chain_presets], discard_raw: options[:discard_raw]
       ).run(
         count: options[:count] || 4
       )
@@ -327,7 +339,8 @@ if $PROGRAM_NAME == __FILE__
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
         prompt, film: options[:film], duration: options[:duration],
-        preset: options[:heavy] ? nil : options.fetch(:preset, "house")
+        preset: options[:heavy] ? nil : options.fetch(:preset, "house"),
+        chain_presets: options[:chain_presets], discard_raw: options[:discard_raw]
       )
     end
   end
