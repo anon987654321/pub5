@@ -86,6 +86,7 @@ module Operator
       /(?:vendor|node_modules|site-packages|assets/builds|public/assets)/
       |/\.?venv[-/]
       |/db/(?:schema|cable_schema|cache_schema|queue_schema)\.rb\z
+      |/RAILS/__shared/design_tokens\.yml\z
       |/(?:cable|cache|queue)_migrate/
       |/service-worker\.js\z
       |\.min\.(?:js|css)\z
