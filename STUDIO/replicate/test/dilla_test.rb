@@ -917,6 +917,27 @@ class TestDillaIndustrialTechno < Minitest::Test
 end
 
 class TestDillaArrangementAndOfflineExport < Minitest::Test
+  def test_recovered_form_spans_the_score_and_retains_anchors
+    form = Dilla::CompositionForm.new("arc", bars: 16)
+    assert_equal %w[intimate pocket statement expansion peak subtraction afterglow return], form.plan.map { |row| row.fetch("name") }.uniq
+    events = { drum: 16.times.flat_map { |bar| [Dilla::Event.new(bar * 2.0, 0, :kick, nil, 0.8, nil), Dilla::Event.new(bar * 2.0 + 1, 0, :hats, nil, 0.6, nil)] },
+               melody: 16.times.map { |bar| Dilla::Event.new(bar * 2.0, 0.25, :melody, 72 + bar % 3, 0.7, nil) } }
+    shaped = form.apply(events, bar_seconds: 2.0, seed: 7)
+    assert_equal shaped, form.apply(events, bar_seconds: 2.0, seed: 7)
+    assert_equal events[:drum].select { |ev| ev.lane == :kick }.map(&:time), shaped[:drum].select { |ev| ev.lane == :kick }.map(&:time)
+    assert_equal events[:melody].map(&:midi), shaped[:melody].map(&:midi)
+    assert_equal 0.7, events[:melody].first.vel
+    assert_operator shaped[:melody][10].vel, :<, shaped[:melody][4].vel
+    assert_equal "NOT_REVIEWED", Dilla::CompositionForm.evidence(shaped, bars: 16, bar_seconds: 2.0, form: "arc").fetch("listening")
+  end
+
+  def test_composition_form_is_an_explicit_replayable_option
+    opts = Dilla.parse_cli(%w[--form arc --bars 16])
+    assert_equal "arc", Dilla.resolve_render_plan(opts).fetch(:form)
+    assert_nil Dilla.resolve_render_plan(Dilla::Options.new).fetch(:form)
+    assert_raises(ArgumentError) { Dilla.resolve_render_plan(Dilla.parse_cli(%w[--form unknown])) }
+  end
+
   def test_showcase_is_a_real_24_bar_multi_progression_arrangement
     show = Dilla.showcase_data
     plan = Dilla.resolve_render_plan(Dilla::Options.new, showcase: show)

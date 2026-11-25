@@ -129,7 +129,7 @@ module Dilla
     attr_accessor :mode, :source, :out, :progression, :drums, :profile, :groove, :bpm,
                   :kit, :voice, :rig, :sonitex, :sonitex_instances, :vcs, :drum_balance,
                   :chord_balance, :bars, :seed, :performer, :style, :no_stems, :max_duration,
-                  :video, :mp3, :midi, :midi_out, :foley, :sample_vol, :sample_weight,
+                  :video, :mp3, :midi, :midi_out, :foley, :sample_vol, :sample_weight, :form,
                   :sample_slices, :sample_loop, :extra, :output_at, :overwrite
 
     def initialize
@@ -212,6 +212,7 @@ module Dilla
       when "--seed" then value_flag.call(:seed)
       when "--performer" then value_flag.call(:performer)
       when "--style" then value_flag.call(:style)
+      when "--form" then value_flag.call(:form)
       when "--max-duration" then value_flag.call(:max_duration)
       when "--sample-vol" then value_flag.call(:sample_vol)
       when "--sample-weight" then value_flag.call(:sample_weight)
@@ -246,6 +247,7 @@ module Dilla
         ruby dilla.rb --progression N|--id --out PATH
             [--drums ID] [--profile P] [--groove 0.85-1.25] [--bpm X] [--bars N]
             [--kit K] [--voice V] [--rig R] [--sonitex P] [--sonitex-instances N]
+            [--form arc|unchanged]  intentional musical development or original score
             [--vcs 0.0-1.0] [--drum-balance ±dB] [--chord-balance ±dB]
             [--seed N] [--performer ID] [--mp3] [--midi] [--midi-out PATH] [--foley]
             [--overwrite]  replace existing regular output files deliberately
@@ -298,6 +300,7 @@ module Dilla
   def api_actions
     {
       "list" => ->(_request) { api_catalogue },
+      "form_plan" => ->(request) { CompositionForm.new(request.fetch("form", "arc"), bars: request.fetch("bars", 16)).plan },
       "render" => ->(request) { dispatch(parse_cli(Array(request["args"]).map(&:to_s))) },
       "reference" => ->(request) { dispatch(parse_cli(["reference", *Array(request["args"]).map(&:to_s)])) },
       "output_path" => ->(request) { api_output_path(request) },
@@ -313,6 +316,7 @@ module Dilla
       "voices" => catalogue.fetch("voices").keys,
       "rigs" => catalogue.fetch("rigs").keys.reject { |k| k == "comment" },
       "styles" => %w[j_dilla flying_lotus jazz_soul funk ambient drum_and_bass noise_sound_design royksopp industrial_techno],
+      "forms" => ["unchanged", *catalogue.fetch("composition_forms").keys],
     }
   end
 
@@ -846,6 +850,92 @@ module Dilla
 
     def anticipation_s
       @profile.fetch("anticipation", 0.0).to_f / 1000.0
+    end
+  end
+
+  # The recovered musical arc governs event density and attention, not the
+  # measured lane timing or the notes in a sourced voicing. No new RNG draws:
+  # the unshaped performance remains a reproducible A/B control.
+  class CompositionForm
+    attr_reader :name, :bars
+
+    def initialize(name, bars:)
+      @name = name.to_s
+      @bars = Integer(bars)
+      raise ArgumentError, "form needs 1..128 bars" unless @bars.between?(1, 128)
+      @phases = Dilla.catalogue.fetch("composition_forms").fetch(@name) do
+        raise ArgumentError, "unknown composition form #{@name.inspect}"
+      end.fetch("phases")
+    end
+
+    def phase(bar)
+      @phases.fetch(([bar.to_i, 0].max * @phases.length / bars).clamp(0, @phases.length - 1))
+    end
+
+    def plan
+      (0...bars).map { |bar| phase(bar).merge("bar" => bar + 1) }
+    end
+
+    def apply(events, bar_seconds:, seed:)
+      events.transform_values do |notes|
+        notes.each_with_index.filter_map do |event, index|
+          bar = (event.time / bar_seconds).floor.clamp(0, bars - 1)
+          row = phase(bar)
+          next unless keep?(event, row, index, seed)
+
+          take = event.dup
+          take.vel = (event.vel * weight(event.lane, row)).clamp(0.01, 1.0)
+          take
+        end
+      end
+    end
+
+    def keep?(event, row, index, seed)
+      return true if %i[kick snare chord bass].include?(event.lane)
+      # Retain a supplied or generated melodic phrase's notes; shape its
+      # foreground by articulation instead of randomly deleting its contour.
+      return true if event.lane == :melody
+
+      threshold = (0.70 + row.fetch("density") * 0.30 - row.fetch("space") * 0.45).clamp(0.35, 1.0)
+      value = Digest::SHA256.hexdigest([seed, event.lane, index].join(":"))[0, 8].to_i(16) / 4_294_967_296.0
+      value < threshold
+    end
+
+    def weight(lane, row)
+      foreground = row.fetch("foreground")
+      group = case lane
+              when :chord, :bass then "harmony"
+              when :melody then "melody"
+              when :foley then "counterpoint"
+              else "drums"
+              end
+      featured = group == foreground ||
+                 (group == "drums" && %w[rhythm groove].include?(foreground)) ||
+                 (group == "melody" && foreground == "upper_voice")
+      return 1.0 if featured
+      return 0.85 if %i[kick snare bass].include?(lane) && foreground == "space"
+
+      level = 0.70 + row.fetch("density") * 0.25
+      level *= 0.65 if foreground == "space"
+      level *= 0.82 if group == "melody" && row.fetch("response") == "answer"
+      level
+    end
+
+    def self.evidence(events, bars:, bar_seconds:, form: nil)
+      rows = Array.new(bars) { |bar| { "bar" => bar + 1, "onsets" => {}, "velocity_sum" => {} } }
+      events.each do |group, notes|
+        notes.each do |event|
+          bar = (event.time / bar_seconds).floor.clamp(0, bars - 1)
+          row = rows.fetch(bar)
+          key = group.to_s
+          row["onsets"][key] = row["onsets"].fetch(key, 0) + 1
+          row["velocity_sum"][key] = row["velocity_sum"].fetch(key, 0.0) + event.vel
+        end
+      end
+      rows.each { |row| row["velocity_sum"].transform_values! { |value| value.round(3) } }
+      { "form" => form || "unchanged", "planned_phases" => form ? new(form, bars: bars).plan : [],
+        "bars" => rows, "listening" => "NOT_REVIEWED",
+        "interpretation" => "score onset and velocity proxies; not acoustic loudness, perceived tension or beauty" }
     end
   end
 
@@ -2629,6 +2719,11 @@ module Dilla
     # An explicit recording's own tempo outranks the generic style preset.
     bpm = (opts.bpm || prog["bpm"] || style["bpm"]).to_f.clamp(50.0, 200.0)
     arrangement = showcase && Array(showcase["arrangement"]).any? ? showcase["arrangement"] : nil
+    form = opts.form.to_s
+    form = nil if form.empty? || form == "unchanged"
+    if form && !catalogue.fetch("composition_forms").key?(form)
+      raise ArgumentError, "unknown composition form #{form.inspect}"
+    end
     arrangement_bars = Array(arrangement).sum { |section| section.fetch("bars", 0).to_i }
     bars = (opts.bars || (arrangement_bars.positive? ? arrangement_bars : nil) ||
             prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
@@ -2644,7 +2739,7 @@ module Dilla
     {
       progression: prog, drums: drums, kit: kit, voice: voice, rig: rig, sonitex: sonitex,
       bpm: bpm, bars: bars, profile: groove_profile, swing: swing, performer_id: performer,
-      arrangement: arrangement,
+      arrangement: arrangement, form: form,
       vcs: (opts.vcs || 0.54).to_f.clamp(0.0, 1.0),
       groove_scale: opts.groove ? opts.groove.to_f.clamp(0.85, 1.25) : 1.0,
       sonitex_instances: (opts.sonitex_instances || 1).to_i.clamp(1, 6)
@@ -2683,6 +2778,9 @@ module Dilla
       opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley }
     )
     events = seq.events
+    if plan[:form]
+      events = CompositionForm.new(plan[:form], bars: bar_count).apply(events, bar_seconds: groove.bar_s, seed: rng.seed)
+    end
 
     # --- drums & sub
     drum_buf = Hash.new { |_h, k| raise KeyError, "no drum #{k}" }
@@ -3249,6 +3347,7 @@ module Dilla
       "kit" => plan[:kit], "voice" => plan[:voice], "rig" => plan[:rig], "bars" => plan[:bars],
       "performer" => performer.slice("id", "name"),
       "event_counts" => events.transform_values(&:length),
+      "composition" => CompositionForm.evidence(events, bars: plan[:bars], bar_seconds: 240.0 / plan[:bpm], form: plan[:form]),
       "sample_flip" => sample_report
     }
     Dilla.atomic_write("#{base}.session.json", JSON.pretty_generate(data))
@@ -3324,7 +3423,7 @@ module Dilla
         "out" => opts.out, "progression" => opts.progression, "drums" => opts.drums,
         "midi" => opts.midi, "midi_out" => opts.midi_out, "mp3" => opts.mp3,
         "video" => opts.video, "foley" => opts.foley,
-        "profile" => opts.profile, "groove" => opts.groove, "bpm" => opts.bpm, "bars" => opts.bars,
+        "profile" => opts.profile, "groove" => opts.groove, "bpm" => opts.bpm, "bars" => opts.bars, "form" => opts.form,
         "kit" => opts.kit, "voice" => opts.voice, "rig" => opts.rig, "sonitex" => opts.sonitex,
         "sonitex_instances" => opts.sonitex_instances, "vcs" => opts.vcs,
         "drum_balance" => opts.drum_balance, "chord_balance" => opts.chord_balance,
@@ -3487,6 +3586,7 @@ module Dilla
     # from the same seeded stream; an explicitly selected performer stays fixed.
     opts.performer = flags["performer"] unless flags["performer"].nil?
     opts.foley = flags["foley"] == true
+    opts.form = flags["form"]
     opts.sample_loop = "" # suppress ambient SAMPLE_LOOP so replay inputs stay explicit
     opts.sample_vol = nil
     opts.sample_weight = nil

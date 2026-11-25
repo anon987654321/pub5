@@ -579,3 +579,7 @@ Honest gaps:
 - Levels not compared; canon rows are transcoded previews.
 - `sample_flip=null`: no Dilla audio material is used. The claim is measured
   groove, band balance and harmony, not sample identity.
+
+## Composition and listening
+
+The recovered eight-stage musical arc is an optional composition form: `--form arc` (MASTER: “compose a beat with an emotional arc”). The offline `form_plan` API accepts a form and 1–128 bars. It shapes the score's foreground, optional percussion density and articulation over the whole duration, preserving kick/snare anchors, supplied notes, lane timing and the existing measured-canon showcase. `--form unchanged` is the A/B control. The phase targets are authored heuristics from [pub4's Beauty Engine](https://github.com/anon987654321/pub4/commit/d70c1a4fb11bdbc920ce68cec8d553a9f4d2e13e), not measured listener preferences. The session records planned phases and actual per-bar score onset counts and velocity sums; these are not audio loudness, perceived tension or artistic approval. The form is recorded in replay flags.

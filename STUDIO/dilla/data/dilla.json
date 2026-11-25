@@ -2290,4 +2290,77 @@
       }
     }
   }
+,
+  "composition_forms": {
+    "arc": {
+      "source": "https://github.com/anon987654321/pub4/commit/d70c1a4fb11bdbc920ce68cec8d553a9f4d2e13e",
+      "status": "historical authored arrangement heuristics; not measured listener preferences",
+      "phases": [
+        {
+          "name": "intimate",
+          "density": 0.32,
+          "tension": 0.14,
+          "foreground": "harmony",
+          "space": 0.36,
+          "response": "question"
+        },
+        {
+          "name": "pocket",
+          "density": 0.54,
+          "tension": 0.28,
+          "foreground": "drums",
+          "space": 0.18,
+          "response": "answer"
+        },
+        {
+          "name": "statement",
+          "density": 0.62,
+          "tension": 0.46,
+          "foreground": "melody",
+          "space": 0.12,
+          "response": "question"
+        },
+        {
+          "name": "expansion",
+          "density": 0.72,
+          "tension": 0.64,
+          "foreground": "counterpoint",
+          "space": 0.08,
+          "response": "answer"
+        },
+        {
+          "name": "peak",
+          "density": 0.82,
+          "tension": 0.82,
+          "foreground": "rhythm",
+          "space": 0.04,
+          "response": "question"
+        },
+        {
+          "name": "subtraction",
+          "density": 0.42,
+          "tension": 0.58,
+          "foreground": "space",
+          "space": 0.48,
+          "response": "answer"
+        },
+        {
+          "name": "afterglow",
+          "density": 0.24,
+          "tension": 0.3,
+          "foreground": "upper_voice",
+          "space": 0.58,
+          "response": "question"
+        },
+        {
+          "name": "return",
+          "density": 0.48,
+          "tension": 0.22,
+          "foreground": "groove",
+          "space": 0.22,
+          "response": "answer"
+        }
+      ]
+    }
+  }
 }

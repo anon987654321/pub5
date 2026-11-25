@@ -668,7 +668,8 @@ module Master
         pattern = dilla_pattern_selection(text, choices, reference, dilla_pocket)
         groove = dilla_groove_selection(choices, reference, dilla_pocket)
         tuning = dilla_reference_settings(text, reference, dilla_pocket)
-        { progression:, pattern:, groove:, dilla_pocket:, **tuning }
+        form = text.match?(/\b(?:emotional arc|musical arc|tension and release|composed|developing arrangement|musical development)\b/i) ? "arc" : nil
+        { progression:, pattern:, groove:, dilla_pocket:, form:, **tuning }
       end
 
       def dilla_request_reference(text)
@@ -718,6 +719,7 @@ module Master
       def dilla_render_arguments(settings, output)
         argv = ["--progression", settings[:progression], "--out", output]
         argv.concat(["--drums", settings[:pattern]]) if settings[:pattern]
+        argv.concat(["--form", settings[:form]]) if settings[:form]
         argv.concat(["--profile", settings[:groove]]) if settings[:groove]
         argv.concat(["--groove", settings[:groove_scale].to_s]) unless settings[:groove_scale].nil?
         argv.concat(["--bpm", settings[:bpm].to_s]) if settings[:bpm]
