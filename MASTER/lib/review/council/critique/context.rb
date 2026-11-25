@@ -79,10 +79,15 @@ module Master
               Deliberation.quality_brief(@quality_kind),
               briefs,
               principle_brief,
+              craft_brief,
             ].compact.join("\n")
           end
 
           private
+
+          def craft_brief
+            "CRAFT REVIEW: Identify intent and preserve successful qualities. Separate observed defects from taste and hypotheses. Compare materially different repairs against the same evidence; prefer the smallest compatible improvement. State missing perceptual evidence and do not infer artistic approval from technical checks. Retain verified outcomes, not untested recommendations."
+          end
 
           def briefs
             return platform_profile_brief if @preset_key == "ui_critique"
