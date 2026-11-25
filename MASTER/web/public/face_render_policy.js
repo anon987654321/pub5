@@ -10,7 +10,7 @@
   const MAIN_THREAD_BUDGET_MS = Number(PERFORMANCE.main_thread_budget_ms) || 8;
   const GPU_BUDGET_MB = Number(PERFORMANCE.gpu_budget_mb) || 128;
   const MEMORY_BUDGET_MB = Number(PERFORMANCE.memory_budget_mb) || 192;
-  const HYSTERESIS = Object.freeze({ down: 0.82, up: 1.28 });
+  const HYSTERESIS = Object.freeze({ down: 0.82, up: 0.95 });
 
   const capabilities = Object.freeze({
     webgl: (() => {
@@ -27,9 +27,10 @@
   });
 
   const state = {
-    lastFrame: 0, frameCount: 0, sampleStart: 0, fps: 0, frameMs: 0,
+    lastFrame: null, frameCount: 0, sampleStart: null, fps: 0, frameMs: 0,
+    runtimeFps: TARGET_FPS,
     quality: "auto", degraded: false, longTasks: 0, resourceBytes: 0,
-    renderer: capabilities.webgpu ? "webgl" : "webgl",
+    renderer: capabilities.webgl ? "webgl" : "text",
     transitions: 0,
     boot: {}, timestamps: {},
   };
@@ -60,9 +61,18 @@
 
   function recordFrame(now) {
     const t = Number(now);
-    if (!Number.isFinite(t)) return;
-    if (!state.sampleStart) state.sampleStart = t;
-    if (state.lastFrame) state.frameMs = t - state.lastFrame;
+    if (!Number.isFinite(t) || document.hidden) return;
+    const target = Number(window.MASTER_VISUAL_LIMITS?.maxFps) || TARGET_FPS;
+    // Discard suspended-tab gaps and samples spanning a change of frame cap.
+    // A sample starts with an anchor, then counts intervals, not endpoints.
+    if (state.lastFrame === null || t <= state.lastFrame || t - state.lastFrame > 1000 || target !== state.runtimeFps) {
+      state.sampleStart = state.lastFrame = t;
+      state.frameCount = 0;
+      state.frameMs = 0;
+      state.runtimeFps = target;
+      return;
+    }
+    state.frameMs = t - state.lastFrame;
     state.lastFrame = t;
     state.frameCount += 1;
     const elapsed = t - state.sampleStart;
@@ -70,11 +80,12 @@
       state.fps = state.frameCount * 1000 / elapsed;
       state.frameCount = 0;
       state.sampleStart = t;
-      state.runtimeFps = Number(window.MASTER_VISUAL_LIMITS?.maxFps || 0) || TARGET_FPS;
-      state.degraded = state.fps > 0 && state.fps < state.runtimeFps * HYSTERESIS.down;
+      state.degraded = state.quality === "reduced"
+        ? state.fps < state.runtimeFps * HYSTERESIS.up
+        : state.fps < state.runtimeFps * HYSTERESIS.down;
       document.documentElement.dataset.faceFps = state.fps.toFixed(1);
       const next = state.degraded ? "reduced" : "auto";
-      if (next !== state.quality && (next === "reduced" || state.fps > state.runtimeFps * HYSTERESIS.up)) {
+      if (next !== state.quality) {
         state.quality = next;
         state.transitions += 1;
         window.MasterInteraction?.emit?.("render:quality", { quality: next, fps: state.fps });
@@ -144,6 +155,12 @@
       profile: profile()
     });
   }
+
+  document.addEventListener("visibilitychange", () => {
+    state.lastFrame = state.sampleStart = null;
+    state.frameCount = 0;
+    state.frameMs = 0;
+  });
 
   chooseRenderer();
   installObservers();

@@ -167,7 +167,7 @@ module Master
                      when "auto" then %w[less more]
                      when "less", "more" then [selected]
                      else
-                       Master::Trace::Dmesg.status("pager0", "unsupported MASTER_PAGER value; use auto, less, more or 0")
+                       Master::Trace::Dmesg.once("pager0", "unsupported MASTER_PAGER value; use auto, less, more or 0")
                        return
                      end
 
@@ -232,7 +232,7 @@ module Master
       end
 
       def complete_command_argument(line, target)
-        command = line.split.first.to_s
+        command = line.split.first.to_s.downcase
         case command
         when "/model"
           model_completion(target)
@@ -240,8 +240,6 @@ module Master
           SLASH_COMMANDS.map { |name| name.delete_prefix("/") }.select { |name| name.start_with?(target.to_s) }
         when "/deploy"
           deploy_completion(line, target)
-        when "/fix"
-          complete_paths(target, base: completion_root)
         else
           complete_paths(target, base: completion_root)
         end

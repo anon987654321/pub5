@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dashboard = readFileSync(join(root, "app", "views", "dashboard", "index.html.erb"), "utf8");
@@ -77,6 +78,43 @@ test("render policy exposes a 60fps target and adaptive hysteresis without a sec
   assert.match(render, /function recordFrame/);
   assert.match(render, /PerformanceObserver/);
   assert.doesNotMatch(render, /requestAnimationFrame\(/);
+});
+
+test("render quality recovers at the target cap and ignores suspended intervals", () => {
+  const listeners = new Map();
+  const document = {
+    hidden: false,
+    documentElement: { dataset: {} },
+    createElement: () => ({ getContext: () => null }),
+    addEventListener: (name, callback) => listeners.set(name, callback),
+  };
+  const window = { addEventListener() {}, MASTER_VISUAL_LIMITS: { maxFps: 50 } };
+  runInNewContext(render, {
+    window, document, navigator: {}, location: { search: "" },
+    devicePixelRatio: 1, performance: { mark() {}, now: () => 0 },
+    matchMedia: () => ({ matches: false }),
+  });
+  const policy = window.MasterRenderPolicy;
+  for (let time = 0; time <= 1000; time += 40) policy.recordFrame(time);
+  assert.equal(policy.snapshot().quality, "reduced");
+  for (let time = 1020; time <= 2000; time += 20) policy.recordFrame(time);
+  assert.equal(policy.snapshot().quality, "auto");
+  assert.equal(policy.snapshot().fps, 50);
+  assert.equal(policy.snapshot().transitions, 2);
+
+  document.hidden = true;
+  listeners.get("visibilitychange")();
+  policy.recordFrame(3000);
+  document.hidden = false;
+  listeners.get("visibilitychange")();
+  policy.recordFrame(12000);
+  assert.equal(policy.snapshot().frameMs, 0);
+  assert.equal(policy.snapshot().quality, "auto");
+
+  window.MASTER_VISUAL_LIMITS.maxFps = 25;
+  for (let time = 12040; time <= 13040; time += 40) policy.recordFrame(time);
+  assert.equal(policy.snapshot().fps, 25);
+  assert.equal(policy.snapshot().quality, "auto");
 });
 
 test("voice surface coordinates typing suspension and explicit recovery", () => {
