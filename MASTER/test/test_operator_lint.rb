@@ -125,4 +125,20 @@ class TestOperatorLintStaged < Minitest::Test
     assert_equal [@path], lint.targets
     assert_equal 1, complexity(lint).size
   end
+
+  # Rails writes db/schema.rb; its version literal and array style are Rails's,
+  # and the pre-commit hook refused a migration commit for them (2026-11-25).
+  def test_a_generated_schema_file_is_never_judged
+    schema = File.join(@dir, "db", "schema.rb")
+    FileUtils.mkdir_p(File.dirname(schema))
+    commit("class Branchy\nend\n")
+    File.write(schema, branchy(BRANCHY))
+    stage(branchy(BRANCHY))
+    git("add", "--", schema)
+
+    lint = Operator::Lint.new(root: @dir, scanner:, staged: true, changed_only: true)
+    judged = lint.findings(lint.targets).map(&:first).uniq
+    assert_includes judged, @path
+    refute_includes judged, schema
+  end
 end

@@ -3,6 +3,7 @@
 require "fix/change_scope"
 require "fix/method_debt"
 require "fix/scan/source_override"
+require_relative "self_findings"
 
 module Operator
 
@@ -45,8 +46,10 @@ module Operator
     end
 
     # [[path, finding], ...] for +files+, each finding kept as the mode says.
+    # Generated and vendored files (db/schema.rb, precompiled assets) are not
+    # judged: SelfFindings::THIRD_PARTY is the one list of code nobody typed.
     def findings(files)
-      files.flat_map do |path|
+      files.reject { |path| path.match?(SelfFindings::THIRD_PARTY) }.flat_map do |path|
         source = staged_source(path)
         rows = scan(path, source)
         rows = in_diff(path, rows, source:) if @changed_only
