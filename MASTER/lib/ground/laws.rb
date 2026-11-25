@@ -132,16 +132,11 @@ module Master
       # The kernel is projected from the ordered invariant nodes plus the
       # preservation Law referenced by Soul. No tier or source string defines it.
       def kernel
-        @kernel ||= begin
-          law_text = laws
-          rows = Master.law_entries(root: @root)
-          selected = rows.select { |row| row["node"] || row["id"] == "PRESERVE_FIRST" }
-          selected.to_h do |row|
-            id = row.fetch("id")
-            text = law_text[id] || row.fetch("statement")
-            [id, text.to_s.gsub(/\s+/, " ").strip]
-          end.freeze
-        end
+        golden_id = soul_data.fetch("references").fetch("golden_law")
+        rows = Master.law_entries(root: @root)
+        rows.select { |row| row["node"] || row["id"] == golden_id }.to_h do |row|
+          [row.fetch("id"), row.fetch("statement").gsub(/\s+/, " ").strip]
+        end.freeze
       end
 
       def philosophy(limit: nil)
