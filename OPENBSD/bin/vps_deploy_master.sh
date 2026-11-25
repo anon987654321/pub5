@@ -165,6 +165,17 @@ doas /bin/ksh -c '
     find "$path" -type d -exec chmod 2775 {} +
   done
 '
+# MASTER/.master is shared the same way (rc.d/master documents it), but nothing
+# enforced it: a boot left it 0700 and root left files in it, so the restarted
+# daemon could not make its TTS sockets and the smoke failed on "tts_socket
+# false" (2026-11-25). Group gets it, others never do. OpenBSD's chown -R and
+# chmod -R follow no symlinks inside the tree (-P is their default).
+state="$ROOT/MASTER/.master"
+[[ ! -L $state ]] || { echo "refusing symlinked state directory: $state" >&2; exit 1; }
+[[ -d $state ]] || doas install -d -o dev -g master -m 2770 "$state"
+doas chown -R dev:master "$state"
+doas chmod -R u+rwX,g+rwX,o-rwx "$state"
+doas chmod 2770 "$state"
 echo "==> sync rc.d master"
 if [ -f "$ROOT/OPENBSD/mirror/etc/rc.d/master" ]; then
   if ! cmp -s "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master; then

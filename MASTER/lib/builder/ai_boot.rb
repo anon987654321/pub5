@@ -124,7 +124,10 @@ module Master
       stat = File.lstat(directory)
       raise IOError, "self-test report directory is not owned by this user" unless stat.uid == Process.uid
       raise IOError, "self-test report directory is not a directory" unless stat.directory? && !stat.symlink?
-      File.chmod(0o700, directory)
+      # Tightened, not clamped to 0700: MASTER/.master is shared with the master
+      # daemon through its group on vm23, and a plain 0700 here locked it out of
+      # its TTS sockets after every dev boot (2026-11-25).
+      MasterPaths.tighten_private_dir(directory)
 
       result = self_test.err? ? nil : self_test.value!
       payload = {
