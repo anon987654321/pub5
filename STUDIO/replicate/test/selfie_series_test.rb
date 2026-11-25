@@ -271,6 +271,36 @@ class TestSelfieSeries < Minitest::Test
     refute_includes models, Studio::Visual::IdeaPicture::FILM, "a series never renders film"
   end
 
+  def test_structured_shot_separates_capture_and_lab
+    shot = { "scene" => "a person beside a window", "framing" => "head and shoulders",
+             "distance" => "3m", "lens" => "85mm", "lighting" => "window",
+             "moment" => "after_laugh", "gaze" => "eyes on the lens",
+             "composition" => "one centre with clear depth", "preset" => "house" }
+    plan = Studio::Lora::Craft.compile_shot(shot)
+    assert_equal "house", plan.fetch("preset")
+    assert_includes plan.fetch("prompt"), "three metres"
+    assert_includes plan.fetch("prompt"), "sharp focus on the nearest eye"
+    refute_includes plan.fetch("prompt"), "Kodak Portra"
+    assert_raises(ArgumentError) { Studio::Lora::Craft.compile_shot(shot.merge("distance" => "selfie")) }
+    assert_raises(ArgumentError) { Studio::Lora::Craft.compile_shot(shot.merge("preset" => "unknown")) }
+  end
+
+  def test_named_series_recipes_are_distinct_and_use_known_lab_presets
+    %w[johann ragnhild merethe].each do |subject|
+      recipes = (1..24).map { |n| Studio::Lora::Selfie.recipe(n, subject:) }
+      assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
+      assert recipes.all? { |recipe| Studio::Lora::Craft::LABORATORY.include?(recipe.fetch("preset")) }
+    end
+  end
+
+  def test_series_records_the_named_laboratory_and_unreviewed_status
+    series.run(count: 1)
+    row = ledger_rows("render").first
+    assert_equal "house", row.fetch("recipe").fetch("preset")
+    assert_equal "NOT_REVIEWED", row.fetch("review")
+    assert_kind_of Integer, row.fetch("grade_seed")
+  end
+
   def test_count_is_bounded
     error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
     assert_match(/between 1 and/, error.message)

@@ -101,8 +101,11 @@ module Studio
         @inference_profile || Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference").fetch("profile")
       end
 
-      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil)
+      def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false)
         lint_prompt!(words)
+        if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
+          raise ArgumentError, "unknown laboratory preset"
+        end
         validate_model!
         if film
           validate_film_model!
@@ -111,10 +114,22 @@ module Studio
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
-        still = render_still(words, stem, grade_seed:)
+        @compiled_capture = compiled
+        still = render_still(words, stem, grade_seed:, preset:)
+        @compiled_capture = false
         return { "still" => still } unless film
 
         { "still" => still, "clip" => render_film(words, still, stem, duration) }
+      end
+
+      # Explicit structured shots use the same inference and consent boundary
+      # as free-form requests. The compiled prompt already owns camera geometry.
+      def write_shot(shot, grade_seed: nil)
+        plan = Studio::Lora::Craft.compile_shot(shot)
+        result = write(plan.fetch("prompt"), film: false, grade_seed:, preset: plan.fetch("preset"), compiled: true)
+        result.merge("plan" => plan)
+      ensure
+        @compiled_capture = false
       end
 
       # Animate an existing LoRA still; never regenerate or overwrite its source.
@@ -316,7 +331,7 @@ module Studio
         raise ArgumentError, "prompt works against itself: #{reasons}"
       end
 
-      def render_still(words, stem, grade_seed: nil)
+      def render_still(words, stem, grade_seed: nil, preset: nil)
         base_path = File.join(@directory, safe_stem(stem))
         existing = %w[.png .jpg .jpeg .webp].map { |extension| "#{base_path}#{extension}" }
                                               .find { |candidate| File.exist?(candidate) || File.symlink?(candidate) }
@@ -328,7 +343,7 @@ module Studio
 
         client.download_url(first_url(output), path)
         File.chmod(0o600, path)
-        graded = grade(path, seed: grade_seed)
+        graded = preset ? grade(path, seed: grade_seed, preset:) : grade(path, seed: grade_seed)
         File.chmod(0o600, graded)
         # The provider original and its grade are separate project assets.
         # Keep both; grading must never destroy the original still.
@@ -640,7 +655,8 @@ module Studio
         env = subject_env
         trigger = env["TRIGGER"].to_s.strip
         trigger = training_trigger if trigger.empty?
-        [trigger, env["DESCRIPTOR"], words, PHOTOGRAPHIC_CRAFT].compact.reject(&:empty?).join(", ")
+        capture = @compiled_capture ? words : Studio::Lora::Craft.photographic(words)
+        [trigger, env["DESCRIPTOR"], capture].compact.reject(&:empty?).join(", ")
       end
 
       # subject.env is a private operator record, never a second secret store.
@@ -770,7 +786,9 @@ module Studio
       end
 
       # postpro writes its grade beside the still it was given.
-      def grade(path, seed: nil)
+      def grade(path, seed: nil, preset: nil)
+        return grade_named(path, preset, seed:) if preset
+
         run_postpro(path, seed:)
         graded = Dir[graded_pattern(path)].max_by { |file| File.mtime(file) }
         raise "postpro succeeded but produced no graded still under #{File.dirname(path)}" unless graded
@@ -778,6 +796,23 @@ module Studio
 
         File.chmod(0o600, graded)
         graded
+      end
+
+      def grade_named(path, preset, seed: nil)
+        script = File.join(ROOT, "postpro", "postpro.rb")
+        extension = File.extname(path)
+        stem = File.basename(path, extension)
+        output = File.join(File.dirname(path), "postpro_#{stem}_#{preset}_v1#{extension}")
+        raise "refusing to replace an existing grade" if File.exist?(output) || File.symlink?(output)
+        env = seed ? { "POSTPRO_SEED" => seed.to_s } : {}
+        stdout, stderr, status = Studio::Subprocess.capture3(
+          env, RbConfig.ruby, script, "--input", path, "--output", output, "--preset", preset, timeout: 600
+        )
+        raise "postpro failed: #{[stdout, stderr].compact.join("\n").lines.last.to_s.strip}" unless status.success?
+        raise "postpro produced no regular grade" unless File.file?(output) && !File.symlink?(output)
+
+        File.chmod(0o600, output)
+        output
       end
 
       def run_postpro(path, seed: nil)

@@ -57,19 +57,22 @@ module Studio
         record("series_start", series_id:, count: total, inference_profile: @series.inference_profile,
                engine: @series.engine, reference_photographs: @reference_files.length)
         total.times do |index|
-          scene = if @scenes
-                    @scenes[index % @scenes.size]
-                  else
-                    Studio::Lora::Selfie.scene(index + 1, subject: @subject)
-                  end
+          recipe = if @scenes
+                     { "scene" => @scenes[index % @scenes.size], "preset" => "house", "sitting" => index + 1 }
+                   else
+                     Studio::Lora::Selfie.recipe(index + 1, subject: @subject)
+                   end
+          scene = recipe.fetch("scene")
+          grade_seed = Studio::Lora::Selfie.grade_seed(index + 1, @subject)
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             path = @series.write(
               scene, film: false, output_stem: stem,
-              grade_seed: Studio::Lora::Selfie.grade_seed(index + 1, @subject)
+              grade_seed:, preset: recipe.fetch("preset")
             ).fetch("still")
             likeness = Studio::Lora::Judge.likeness(reference: @reference_files.first, candidate: path)
-            record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness)
+            record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness,
+                   recipe: recipe, grade_seed: grade_seed, review: "NOT_REVIEWED")
             rendered << path
           rescue StandardError => error
             record("render_attempt", series_id:, index: index, scene: scene,

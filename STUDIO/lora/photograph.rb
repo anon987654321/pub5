@@ -19,6 +19,15 @@ def studio_photograph_actions
           "default" => name == default, "inputs" => Array(spec["inputs"]) }
       end
     end,
+    "plan" => ->(request) { Studio::Lora::Craft.compile_shot(request.fetch("shot")) },
+    "render_shot" => lambda do |request|
+      shot = request.fetch("shot")
+      Studio::Lora::Craft.compile_shot(shot)
+      Studio::Visual::IdeaPicture.new(
+        subject: request.fetch("subject", "ragnhild"), engine: request["engine"],
+        inference_profile: request["inference_profile"]
+      ).write_shot(shot, grade_seed: request["grade_seed"])
+    end,
     "render" => lambda do |request|
       prompt = request["prompt"].to_s
       raise ArgumentError, "render needs a prompt" if prompt.empty?

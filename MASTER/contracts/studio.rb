@@ -82,6 +82,25 @@ module Contracts
       JSON.parse(output)
     end
 
+    # MASTER sends a structured capture plan to the same STUDIO boundary used
+    # for rendering. Planning is local and never starts a provider prediction.
+    def photograph_plan(shot:)
+      photograph_api("action" => "plan", "shot" => shot)
+    end
+
+    def photograph_shot(shot:, subject:, grade_seed: nil)
+      photograph_api("action" => "render_shot", "shot" => shot, "subject" => subject, "grade_seed" => grade_seed)
+    end
+
+    def photograph_api(request)
+      script = photograph_script or raise "STUDIO photograph entrypoint is unavailable"
+      output, status = run_bounded([RbConfig.ruby, script, "api", JSON.generate(request)], chdir: root)
+      response = JSON.parse(output)
+      raise "STUDIO photograph failed: #{response['error'] || status.exitstatus}" unless status.success? && response["ok"]
+
+      response.fetch("result")
+    end
+
     def run_bounded(argv, chdir:, timeout: PHOTOGRAPH_TIMEOUT)
       Master::Io::Exec.capture2e(*argv, chdir:, timeout:)
     end

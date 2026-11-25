@@ -274,7 +274,46 @@ module Studio
       PHOTOGRAPHIC_CRAFT = [GEOMETRY, LIGHT, SKIN, FOCUS, COMPOSITION, "no text in the frame"].join(", ")
 
       def self.photographic(words)
-        [words, PHOTOGRAPHIC_CRAFT].compact.join(", ")
+        # Phone perspective is an intentional alternative, not a contradiction
+        # appended to portrait-distance geometry.
+        tail = words.to_s.include?("24mm-equivalent phone lens") ? [LIGHT, SKIN, FOCUS, COMPOSITION] : [PHOTOGRAPHIC_CRAFT]
+        [words, *tail].compact.join(", ")
+      end
+
+      # A shot is a capture plan and a single laboratory decision, not a stack
+      # of filters. These are existing Postpro presets, not new film stocks.
+      LABORATORY = %w[house portrait cinematic neon_night reportage silver_gelatin
+                      pastel_portrait instant_pack aged_kodachrome street noir
+                      saturated_negative golden_age contact_print analog_scan
+                      vhs_tape crt_broadcast].freeze
+      SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
+      CAMERA_DISTANCES = %w[1m 2m 3m 5m selfie].freeze
+
+      def self.compile_shot(shot)
+        raise ArgumentError, "shot must be an object" unless shot.is_a?(Hash)
+        unknown = shot.keys - (SHOT_AXES + %w[preset])
+        raise ArgumentError, "unknown shot fields: #{unknown.join(', ')}" unless unknown.empty?
+        SHOT_AXES.each do |axis|
+          value = shot.fetch(axis, nil)
+          raise ArgumentError, "shot needs #{axis}" unless value.is_a?(String) && !value.strip.empty? && value.bytesize <= 2000
+        end
+        distance = shot.fetch("distance")
+        lens = shot.fetch("lens")
+        preset = shot.fetch("preset", "house")
+        raise ArgumentError, "unknown camera distance" unless CAMERA_DISTANCES.include?(distance)
+        raise ArgumentError, "unknown lens" unless LENS.key?(lens)
+        raise ArgumentError, "unknown lighting" unless LIGHTING.key?(shot.fetch("lighting"))
+        raise ArgumentError, "unknown moment" unless MOMENT.key?(shot.fetch("moment"))
+        raise ArgumentError, "unknown laboratory preset" unless LABORATORY.include?(preset)
+        raise ArgumentError, "phone distance conflicts with a portrait lens" if distance == "selfie" && lens != "24mm"
+        raise ArgumentError, "portrait distance conflicts with phone perspective" if distance != "selfie" && lens == "24mm" && shot.fetch("framing").include?("phone")
+        clauses = [shot.fetch("scene"), shot.fetch("framing"), SUBJECT_DISTANCE.fetch(distance),
+                   LENS.fetch(lens), LIGHTING.fetch(shot.fetch("lighting")), MOMENT.fetch(shot.fetch("moment")),
+                   shot.fetch("gaze"), shot.fetch("composition"), SKIN, FOCUS, "no text in the frame"]
+        prompt = clauses.join(", ")
+        hits = backfiring_words(prompt)
+        raise ArgumentError, "prompt works against itself: #{hits.keys.join(', ')}" unless hits.empty?
+        { "shot" => shot.merge("preset" => preset), "prompt" => prompt, "preset" => preset }
       end
 
       # Where the camera stands, which is the axis that decides distortion. The
@@ -503,6 +542,52 @@ module Studio
 
         stock = Studio::Lora::Craft::STOCK.fetch(stocks.fetch(index))
         "#{body}, #{stock}"
+      end
+
+      # Only name stocks that the current laboratory can actually develop.
+      # The legacy scene API still exposes its original prompt vocabulary.
+      PRESET_BY_STOCK = {
+        "portra" => "house", "portra800" => "cinematic", "gold" => "golden_age",
+        "ultramax" => "saturated_negative", "fuji400h" => "pastel_portrait",
+        "superia" => "pastel_portrait", "cinestill" => "neon_night",
+        "hp5" => "reportage", "trix" => "silver_gelatin",
+        "instax" => "instant_pack", "polaroid" => "instant_pack"
+      }.freeze
+      # Different environments first; then genuinely different photographic
+      # treatments, rather than silently repeating the first six sittings.
+      ALTERNATE_TREATMENTS = [
+        ["clinical frontal composition, institutional practical lighting", "contact_print"],
+        ["documentary hard-light portrait, decisive gesture and clean frame edges", "street"],
+        ["oblique reflection through glass, foreground obstruction and layered depth", "aged_kodachrome"],
+        ["graphic silhouette, negative space and a clear shadow side", "noir"],
+        ["found-media framing, an unguarded expression and a real practical source", "analog_scan"],
+        ["editorial close-up, one visual centre and a sculptural shadow", "portrait"],
+        ["observational photograph from a low vantage point, deliberate negative space", "cinematic"],
+        ["frontal documentary portrait, direct gaze and clean silhouette", "reportage"]
+      ].freeze
+
+      def self.recipe(number, subject: nil)
+        n = Integer(number)
+        raise ArgumentError, "sitting must be positive" unless n.positive?
+        scenes = SUBJECT_SCENES.fetch(subject.to_s, [])
+        stocks = SUBJECT_SCENE_STOCKS.fetch(subject.to_s, [])
+        index = n - 1
+        if index < scenes.size
+          body = scenes.fetch(index)
+          preset = PRESET_BY_STOCK.fetch(stocks.fetch(index))
+        elsif index < scenes.size + SCENES.size
+          general = index - scenes.size
+          body = SCENES.fetch(general).gsub(/\bher\b/, "the subject's")
+          preset = PRESET_BY_STOCK.fetch(SCENE_STOCKS.fetch(general))
+        else
+          alternate = index - scenes.size - SCENES.size
+          treatment, preset = ALTERNATE_TREATMENTS.fetch(alternate % ALTERNATE_TREATMENTS.size)
+          body = SCENES.fetch(alternate % SCENES.size).gsub(/\bher\b/, "the subject's")
+          body = "#{body}, #{treatment}"
+        end
+        # Keep capture neutral; the authoritative laboratory develops it once.
+        body = body.gsub(/, (?:documentary colour-negative photography|rich Tri-X silver tones|tactile HP5 documentary grain|muted Fuji colour|natural colour-negative film)/i, "")
+        { "scene" => body, "preset" => preset, "sitting" => n }
       end
 
       # A distinct postpro heavy look per frame, and per subject. postpro deals

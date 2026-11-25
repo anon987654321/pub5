@@ -311,6 +311,12 @@ generation, consent check or gallery rebuild from a checkout, run:
 
 The committed renders and `selfies/manifest.js` are static and need no gate.
 
+## Structured capture and laboratory
+
+The photograph API accepts `action: plan` (no provider call) or `action: render_shot` with a `shot` object: scene, framing, distance (1m, 2m, 3m, 5m or selfie), lens, lighting, moment, gaze, composition and optional preset (house by default). Craft compiles the capture independently of the named Postpro laboratory preset. A structured render develops the retained original once. MASTER can call `Contracts::Studio.photograph_plan` or `photograph_shot` through the same API boundary. No model invocation is needed for planning.
+
+The selfie series now selects distinct sittings and named grades rather than an opaque random heavy pass. The existing ledger records the selected recipe, grade seed, likeness verdict and unreviewed status. Named laboratory presets are actual available Postpro looks, not a claim that unavailable consumer stocks have been physically reproduced. The historical research and its provenance live in guides.yml.
+
 ## Default selfie route
 
 `ruby STUDIO/lora/photograph.rb --selfie-series --subject NAME` uses the
