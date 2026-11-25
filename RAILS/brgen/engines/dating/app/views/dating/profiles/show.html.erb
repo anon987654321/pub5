@@ -51,6 +51,8 @@
       <span><%= t("dating.age") %> · <%= @profile.age || "—" %></span>
       <span><%= t("dating.gender") %> · <%= @profile.gender_label || "—" %></span>
       <span><%= t("dating.looking_for") %> · <%= @profile.looking_for_label || "—" %></span>
+      <span><%= t("dating.partner_age_range") %> · <%= @profile.minimum_partner_age %>–<%= @profile.maximum_partner_age %></span>
+      <span><%= t("dating.relationship_goal") %> · <%= @profile.relationship_goal_label || "—" %></span>
     </p>
   </article>
 

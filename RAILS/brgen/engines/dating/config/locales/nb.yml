@@ -65,6 +65,15 @@ nb:
       woman: "Kvinne"
       nonbinary: "Ikke-binær"
       other: "Annet"
+    minimum_partner_age: "Nedre aldersgrense for partner"
+    maximum_partner_age: "Øvre aldersgrense for partner"
+    partner_age_range: "Ønsket aldersspenn"
+    relationship_goal: "Hva søker du?"
+    relationship_goals:
+      long_term: "Langvarig forhold"
+      short_term: "Kortvarig dating"
+      friendship: "Vennskap"
+      exploring: "Finner det ut underveis"
     looking_for_options:
       man: "Menn"
       woman: "Kvinner"

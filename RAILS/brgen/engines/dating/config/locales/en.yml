@@ -65,6 +65,15 @@ en:
       woman: "Woman"
       nonbinary: "Non-binary"
       other: "Other"
+    minimum_partner_age: "Minimum partner age"
+    maximum_partner_age: "Maximum partner age"
+    partner_age_range: "Preferred age range"
+    relationship_goal: "What are you looking for?"
+    relationship_goals:
+      long_term: "Long-term relationship"
+      short_term: "Short-term dating"
+      friendship: "Friendship"
+      exploring: "Still figuring it out"
     looking_for_options:
       man: "Men"
       woman: "Women"

@@ -53,6 +53,18 @@
     <details class="dating-profile-more">
       <summary><%= t("dating.more_details") %></summary>
       <div class="field"><%= f.label :gender, t("dating.gender") %><%= f.select :gender, Dating::Profile.gender_options, { include_blank: "—" } %></div>
+      <div class="field">
+        <%= f.label :minimum_partner_age, t("dating.minimum_partner_age") %>
+        <%= f.number_field :minimum_partner_age, min: 18, max: 99, required: true, inputmode: "numeric" %>
+      </div>
+      <div class="field">
+        <%= f.label :maximum_partner_age, t("dating.maximum_partner_age") %>
+        <%= f.number_field :maximum_partner_age, min: 18, max: 99, required: true, inputmode: "numeric" %>
+      </div>
+      <div class="field">
+        <%= f.label :relationship_goal, t("dating.relationship_goal") %>
+        <%= f.select :relationship_goal, Dating::Profile.relationship_goal_options, { include_blank: "—" } %>
+      </div>
       <div class="field"><%= f.label :location, t("dating.location") %><%= f.text_field :location %></div>
       <div class="field">
         <%= f.label :neighborhood_id, t("dating.neighborhood") %>

@@ -22,10 +22,17 @@ class Dating::Profile < ApplicationRecord
 
   GENDERS = %w[man woman nonbinary other].freeze
   LOOKING_FOR = (GENDERS + ["everyone"]).freeze
+  RELATIONSHIP_GOALS = %w[long_term short_term friendship exploring].freeze
 
   # The stored values are English identifiers; every surface shows the label.
   def self.gender_options = GENDERS.map { |value| [ I18n.t("dating.genders.#{value}"), value ] }
   def self.looking_for_options = LOOKING_FOR.map { |value| [ I18n.t("dating.looking_for_options.#{value}"), value ] }
+  def self.relationship_goal_options = RELATIONSHIP_GOALS.map { |goal| [I18n.t("dating.relationship_goals.#{goal}"), goal] }
+
+  def relationship_goal_label
+    I18n.t("dating.relationship_goals.#{relationship_goal}") if relationship_goal.present?
+  end
+
   def gender_label = gender.present? ? I18n.t("dating.genders.#{gender}") : nil
   def looking_for_label = looking_for.present? ? I18n.t("dating.looking_for_options.#{looking_for}") : nil
 
@@ -40,6 +47,17 @@ class Dating::Profile < ApplicationRecord
     relation
   }
 
+  # Both people must fit each other's adult age range; a preference is not
+  # a score. Existing profiles default to the full adult range.
+  scope :compatible_ages_for, ->(viewer) {
+    if viewer&.age.present?
+      where(age: viewer.minimum_partner_age..viewer.maximum_partner_age)
+        .where("dating_profiles.minimum_partner_age <= :age AND dating_profiles.maximum_partner_age >= :age", age: viewer.age)
+    else
+      all
+    end
+  }
+
   include Shared::RichTextLength
 
   # bio holds Tiptap's HTML; the maximum measures the text inside it.
@@ -47,6 +65,9 @@ class Dating::Profile < ApplicationRecord
   validates :age, numericality: { only_integer: true, greater_than_or_equal_to: 18, less_than: 100 }
   validates :gender,      inclusion: { in: GENDERS },     allow_nil: true
   validates :looking_for, inclusion: { in: LOOKING_FOR }, allow_nil: true
+  validates :minimum_partner_age, :maximum_partner_age, numericality: { only_integer: true, greater_than_or_equal_to: 18, less_than: 100 }
+  validates :relationship_goal, inclusion: { in: RELATIONSHIP_GOALS }, allow_blank: true
+  validate :partner_age_range_ordered
   validate :photos_present_when_visible
 
   has_many :prompts, class_name: "Dating::Prompt", dependent: :destroy,
@@ -105,7 +126,8 @@ class Dating::Profile < ApplicationRecord
     order(Arel.sql(<<~SQL.squish))
       #{RECENCY_SQL} ASC,
       dating_profiles.prompts_count DESC,
-      ((dating_profiles.id * #{multiplier}) % #{modulus}) ASC
+      ((dating_profiles.id * #{multiplier}) % #{modulus}) ASC,
+      dating_profiles.id ASC
     SQL
   end
 
@@ -154,6 +176,12 @@ class Dating::Profile < ApplicationRecord
   end
 
   private
+
+  def partner_age_range_ordered
+    return if minimum_partner_age.nil? || maximum_partner_age.nil? || minimum_partner_age <= maximum_partner_age
+
+    errors.add(:maximum_partner_age, :greater_than_or_equal_to, count: minimum_partner_age)
+  end
 
   def photos_present_when_visible
     return unless visible?

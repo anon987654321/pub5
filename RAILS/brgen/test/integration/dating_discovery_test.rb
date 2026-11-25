@@ -64,6 +64,23 @@ class DatingDiscoveryTest < ActiveSupport::TestCase
     assert_equal [ third.user_id ], Dating::Match.active.visible_to(viewer.user).pluck(:receiver_id)
   end
 
+  test "both adult age preferences must agree" do
+    viewer = profile("woman", "everyone")
+    viewer.update!(minimum_partner_age: 28, maximum_partner_age: 45)
+    compatible = profile("man", "everyone")
+    too_young = profile("man", "everyone")
+    too_young.update!(age: 26)
+    excludes_viewer = profile("man", "everyone")
+    excludes_viewer.update!(minimum_partner_age: 35)
+
+    ids = Dating::Profile.compatible_ages_for(viewer).ids
+    assert_includes ids, compatible.id
+    assert_not_includes ids, too_young.id
+    assert_not_includes ids, excludes_viewer.id
+    refute viewer.update(minimum_partner_age: 17)
+    refute viewer.update(minimum_partner_age: 50, maximum_partner_age: 40)
+  end
+
   test "a dating profile requires an adult age" do
     u = User.create!(email_address: "age-#{SecureRandom.hex(4)}@brgen.no",
                      password: "password12345", username: "a_#{SecureRandom.hex(3)}", city: @city)

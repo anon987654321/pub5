@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_25_180000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_25_190000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -486,8 +486,11 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_25_180000) do
     t.boolean "location_discovery_enabled", default: false, null: false
     t.decimal "longitude"
     t.string "looking_for"
+    t.integer "maximum_partner_age", default: 99, null: false
+    t.integer "minimum_partner_age", default: 18, null: false
     t.integer "neighborhood_id"
     t.integer "prompts_count", default: 0, null: false
+    t.string "relationship_goal"
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.datetime "verified_at"

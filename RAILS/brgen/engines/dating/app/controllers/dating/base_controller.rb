@@ -54,7 +54,7 @@ class Dating::BaseController < ApplicationController
     return scope unless Current.user
 
     scope = scope.where.not(user_id: Current.user.id).where.not(user_id: dating_blocked_users)
-    current_dating_profile ? scope.oriented_for(current_dating_profile) : scope
+    current_dating_profile ? scope.oriented_for(current_dating_profile).compatible_ages_for(current_dating_profile) : scope
   end
 
   def candidate_scope
