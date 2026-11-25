@@ -46,6 +46,46 @@ class TestDillaCliContract < Minitest::Test
     assert_includes profiles, "dilla_shadow"
   end
 
+  def test_stereo_peak_cannot_disappear_in_a_mono_sum_or_stride
+    Dir.mktmpdir do |dir|
+      mix = Dilla::Stereo.new(4)
+      mix.l[1] = 1.1
+      mix.r[1] = -1.1
+      data = Dilla.write_quality(File.join(dir, "quality"), mix, -18.0, {}, 0.01, {})
+      assert_equal 2, data.fetch("clipped_samples")
+      assert_operator data.fetch("peak_dbfs"), :>, 0.0
+      assert_match(/not true peak/, data.fetch("peak_basis"))
+    end
+  end
+
+  def test_comparison_and_listening_review_are_bound_to_audio_and_receipts
+    Dir.mktmpdir do |dir|
+      paths = [0, 1].map do |index|
+        base = File.join(dir, "take#{index}")
+        wav = "#{base}.wav"
+        Dilla::Wav.write_16bit(wav, Dilla::Stereo.new(16))
+        quality = { "duration_s" => 0.0, "lufs_estimate" => -18.0 + index * 3 }
+        Dilla.atomic_write("#{base}.quality.json", JSON.generate(quality))
+        Dilla.atomic_write("#{base}.session.json", JSON.generate("seed" => index))
+        Dilla.write_provenance(base, Dilla::Options.new, { progression: { "id" => "fixture" } },
+                               { "id" => "fixture" }, wav, {}, quality, seed: index)
+        wav
+      end
+      report = Dilla.compare_takes(paths)
+      assert_equal [0.0, -3.0], report.fetch("takes").map { |row| row.fetch("suggested_playback_gain_db") }
+      assert_equal "AWAITING_OPERATOR", report.fetch("selection")
+      hash = Digest::SHA256.file(paths.first).hexdigest
+      assert_raises(ArgumentError) { Dilla.record_listening_review(paths.first, decision: "approve", sha256: "0" * 64) }
+      Dilla.record_listening_review(paths.first, decision: "approve", sha256: hash)
+      Dilla.record_listening_review(paths.first, decision: "reject", sha256: hash)
+      receipt = JSON.parse(File.read(paths.first.delete_suffix(".wav") + ".provenance.json"))
+      assert_equal %w[approved rejected], receipt.dig("human_acceptance", "history").map { |event| event.fetch("listening") }
+      assert_equal hash, Digest::SHA256.file(paths.first).hexdigest
+      File.open(paths.last.delete_suffix(".wav") + ".session.json", "a") { |file| file.write(" ") }
+      assert_raises(ArgumentError) { Dilla.compare_takes(paths) }
+    end
+  end
+
   def test_help_lists_the_reference_pipeline
     out, _err, status = run_dilla("--help")
     assert status.success?

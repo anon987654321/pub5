@@ -162,6 +162,15 @@ module Dilla
       opts.mode = :audit
       args.shift
       opts.source = args.shift or abort "audit: provide the rendered WAV path"
+    when "compare"
+      opts.mode = :compare
+      args.shift
+      opts.extra["paths"] = args.dup
+      args.clear
+    when "review"
+      opts.mode = :review
+      args.shift
+      opts.source = args.shift or abort "review: provide a rendered WAV"
     when "reproduce"
       opts.mode = :reproduce
       args.shift
@@ -213,6 +222,9 @@ module Dilla
       when "--performer" then value_flag.call(:performer)
       when "--style" then value_flag.call(:style)
       when "--form" then value_flag.call(:form)
+      when "--decision", "--sha256"
+        abort "dilla: #{flag} is only valid with review" unless opts.mode == :review
+        opts.extra[flag.delete_prefix("--")] = args.shift or abort "dilla: #{flag} needs a value"
       when "--max-duration" then value_flag.call(:max_duration)
       when "--sample-vol" then value_flag.call(:sample_vol)
       when "--sample-weight" then value_flag.call(:sample_weight)
@@ -259,6 +271,9 @@ module Dilla
         ruby dilla.rb output-path dilla-render-directory [ISO8601]
         ruby dilla.rb output-path reference-root
       ruby dilla.rb audit PATH.wav              verify sidecars, WAV structure and checksums
+      ruby dilla.rb compare TAKE.wav TAKE2.wav  compare verified take evidence, no edits
+      ruby dilla.rb review TAKE.wav --decision approve|reject --sha256 HASH
+                                                 explicitly record operator listening decision
       ruby dilla.rb reproduce TAKE.provenance.json --out replay.wav
                                                  rerender the WAV only; verify source/runtime fingerprints
         ruby dilla.rb demo-each                  catalogue, one mp3 per track
@@ -282,6 +297,9 @@ module Dilla
     when :help then puts help_text
     when :output_path then output_path(opts)
     when :audit then puts JSON.pretty_generate(audit_render(opts.source, overwrite: opts.overwrite))
+    when :compare then puts JSON.pretty_generate(compare_takes(opts.extra.fetch("paths")))
+    when :review
+      puts JSON.pretty_generate(record_listening_review(opts.source, decision: opts.extra["decision"], sha256: opts.extra["sha256"]))
     when :reproduce
       puts JSON.pretty_generate(reproduce_render(opts.source, out: opts.out, overwrite: opts.overwrite))
     when :list then print_list
@@ -306,7 +324,12 @@ module Dilla
         form = request.fetch("form", "arc")
         form == "unchanged" ? [] : CompositionForm.new(form, bars:).plan
       end,
-      "render" => ->(request) { dispatch(parse_cli(Array(request["args"]).map(&:to_s))) },
+      "compare_takes" => ->(request) { compare_takes(request.fetch("paths")) },
+      "render" => lambda do |request|
+        opts = parse_cli(Array(request["args"]).map(&:to_s))
+        raise ArgumentError, "listening decisions require the explicit operator CLI" if opts.mode == :review
+        dispatch(opts)
+      end,
       "reference" => ->(request) { dispatch(parse_cli(["reference", *Array(request["args"]).map(&:to_s)])) },
       "output_path" => ->(request) { api_output_path(request) },
     }
@@ -3121,6 +3144,99 @@ module Dilla
   # Inspect a delivery without pretending software can listen to it. Structural
   # checks are machine-verifiable; the overall state remains INCONCLUSIVE until
   # a person has auditioned the render against the checklist.
+  # Compare adjacent, hash-bound receipts rather than arbitrary paths from
+  # their contents. This is a read-only technical comparison, not an audition.
+  def read_take_evidence(path)
+    wav = File.expand_path(path.to_s)
+    raise ArgumentError, "expected a WAV take" unless wav.end_with?(".wav")
+    raise ArgumentError, "WAV missing or unsafe" unless File.file?(wav) && !File.symlink?(wav)
+    raise ArgumentError, "WAV exceeds comparison bound" if File.size(wav) > 512 * 1024 * 1024
+    info = audit_wav_file(wav)
+    base = wav.delete_suffix(".wav")
+    documents = %w[provenance quality session].to_h do |kind|
+      file = "#{base}.#{kind}.json"
+      unless File.file?(file) && !File.symlink?(file) && File.size(file) <= 2 * 1024 * 1024
+        raise ArgumentError, "missing or unsafe #{kind} receipt"
+      end
+      bytes = File.binread(file)
+      parsed = JSON.parse(bytes)
+      raise ArgumentError, "invalid #{kind} receipt" unless parsed.is_a?(Hash)
+      [kind, [parsed, bytes]]
+    end
+    provenance = documents.fetch("provenance").first
+    raise ArgumentError, "not a Dilla render" unless provenance["engine"] == "dilla"
+    digest = Digest::SHA256.file(wav).hexdigest
+    unless provenance.dig("render", "sha256") == digest &&
+           provenance.dig("render", "bytes") == File.size(wav)
+      raise ArgumentError, "WAV does not match its receipt"
+    end
+    %w[quality session].each do |kind|
+      bytes = documents.fetch(kind).last
+      unless provenance.dig("files", kind, "sha256") == Digest::SHA256.hexdigest(bytes) &&
+             provenance.dig("files", kind, "bytes") == bytes.bytesize
+        raise ArgumentError, "#{kind} does not match its receipt"
+      end
+    end
+    quality = documents.fetch("quality").first
+    session = documents.fetch("session").first
+    metrics = quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "clipped_samples", "peak_basis")
+    { "path" => wav, "sha256" => digest, "duration_s" => info.fetch("duration_s"),
+      "metrics" => metrics, "stem_energy_share" => quality["stem_energy_share"],
+      "form" => session.dig("composition", "form") || "unchanged",
+      "composition" => session["composition"], "seed" => session["seed"],
+      "listening" => provenance.dig("human_acceptance", "listening") || "not_reviewed",
+      "reviewed_sha256" => provenance.dig("human_acceptance", "sha256") }
+  rescue JSON::ParserError => error
+    raise ArgumentError, "invalid take receipt: #{error.message}"
+  end
+
+  def compare_takes(paths)
+    unless paths.is_a?(Array) && paths.length.between?(2, 8)
+      raise ArgumentError, "compare needs two to eight WAV takes"
+    end
+    takes = paths.map { |path| read_take_evidence(path) }
+    levels = takes.map { |take| take.dig("metrics", "lufs_estimate") }
+    if levels.all? { |value| value.is_a?(Numeric) && value.finite? }
+      target = levels.min
+      takes.each_with_index { |take, index| take["suggested_playback_gain_db"] = (target - levels[index]).round(1) }
+    end
+    { "takes" => takes, "selection" => "AWAITING_OPERATOR",
+      "note" => "Estimated level-matching gains are suggestions only; no audio was changed or auditioned. Compare motif, groove, arrangement, timbre and defects by listening." }
+  end
+
+  # Only the explicit CLI action records a human decision. Never change the
+  # audio or its quality/session receipts; retain prior human decisions.
+  def record_listening_review(path, decision:, sha256:)
+    raise ArgumentError, "decision must be approve or reject" unless %w[approve reject].include?(decision)
+    raise ArgumentError, "expected an explicit WAV SHA-256" unless sha256.to_s.match?(/\A[0-9a-f]{64}\z/)
+    wav = File.expand_path(path.to_s)
+    receipt = "#{wav.delete_suffix(".wav")}.provenance.json"
+    raise ArgumentError, "missing or unsafe provenance" unless File.file?(receipt) && !File.symlink?(receipt)
+    File.open(receipt, File::RDONLY | File::NOFOLLOW) do |file|
+      file.flock(File::LOCK_EX)
+      stat = file.stat
+      unless stat.file? && stat.uid == Process.uid && stat.nlink == 1 && stat.size <= 2 * 1024 * 1024
+        raise ArgumentError, "provenance must be singly-linked and owned by the operator"
+      end
+      evidence = read_take_evidence(wav)
+      raise ArgumentError, "reviewed WAV hash differs" unless evidence.fetch("sha256") == sha256
+      provenance = JSON.parse(file.read)
+      raise ArgumentError, "provenance changed" unless provenance.dig("render", "sha256") == sha256
+      previous = provenance.fetch("human_acceptance", {})
+      history = Array(previous["history"])
+      raise ArgumentError, "listening review history limit reached" if history.length >= 128
+      event = { "listening" => decision == "approve" ? "approved" : "rejected",
+                "reviewer" => "operator", "reviewed_at" => Time.now.utc.iso8601, "sha256" => sha256 }
+      current = File.lstat(receipt)
+      unless current.file? && !current.symlink? && [current.dev, current.ino] == [stat.dev, stat.ino]
+        raise ArgumentError, "provenance changed during review"
+      end
+      provenance["human_acceptance"] = event.merge("history" => history + [event])
+      Dilla.atomic_write(receipt, JSON.pretty_generate(provenance))
+      event
+    end
+  end
+
   def audit_render(path, overwrite: false)
     wav_path = File.expand_path(path.to_s)
     raise ArgumentError, "audit expects a .wav file" unless wav_path.match?(/\.wav\z/i)
@@ -3266,7 +3382,8 @@ module Dilla
         "arrangement" => session["arrangement"], "performer" => session.dig("performer", "id"),
         "drums" => session["drums"], "groove_profile" => session["groove_profile"]
       },
-      "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share"),
+      "quality" => quality && quality.slice("peak_dbfs", "rms_dbfs", "crest_db", "lufs_estimate", "stem_energy_share", "clipped_samples", "peak_basis"),
+      "recorded_listening" => provenance.is_a?(Hash) ? provenance["human_acceptance"] : nil,
       "files" => file_records.transform_values do |record|
         record.is_a?(Hash) ? record.slice("path", "bytes", "sha256") : {}
       end,
@@ -3346,23 +3463,29 @@ module Dilla
   def write_quality(base, mix, lufs, stem_shares, duration, plan)
     peak = 0.0
     sum = 0.0
+    clipped = 0
     n = mix.l.length
     i = 0
+    # Stereo sample peaks must not cancel in the mono sum or disappear
+    # between subsampled positions. This is not oversampled true peak.
     while i < n
-      v = (mix.l[i] + mix.r[i]) * 0.5
-      a = v.abs
-      peak = a if a > peak
-      sum += v * v
-      i += 4
+      left = mix.l[i]
+      right = mix.r[i]
+      peak = [peak, left.abs, right.abs].max
+      clipped += 1 if left.abs > 1.0
+      clipped += 1 if right.abs > 1.0
+      sum += left * left + right * right
+      i += 1
     end
-    rms = Math.sqrt(sum / [n / 4, 1].max)
+    rms = Math.sqrt(sum / [n * 2, 1].max)
     total = stem_shares.values.sum
     shares = stem_shares.transform_values { |v| total.positive? ? (v / total).round(3) : 0.0 }
     data = {
       "engine" => "dilla #{VERSION}", "duration_s" => duration.round(2),
-      "peak_dbfs" => (20.0 * Math.log10(peak.clamp(1e-9, 1.0))).round(2),
-      "rms_dbfs" => (20.0 * Math.log10(rms.clamp(1e-9, 1.0))).round(2),
-      "crest_db" => (20.0 * Math.log10([peak, 1e-9].max / rms.clamp(1e-9, 1.0))).round(2),
+      "peak_dbfs" => (20.0 * Math.log10([peak, 1e-9].max)).round(2),
+      "rms_dbfs" => (20.0 * Math.log10([rms, 1e-9].max)).round(2),
+      "crest_db" => (20.0 * Math.log10([peak, 1e-9].max / [rms, 1e-9].max)).round(2),
+      "clipped_samples" => clipped, "peak_basis" => "all stereo samples before PCM quantization; not true peak",
       "lufs_estimate" => lufs.round(1),
       "stem_energy_share" => shares,
       "sonitex" => plan[:sonitex], "swing" => plan[:swing]
