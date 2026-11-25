@@ -1011,6 +1011,27 @@ class TestCommandRegistryDispatch < Minitest::Test
     refute Registry.send(:deploy_success_receipt?, output + "post-deploy public canary (PASS):\n", status, "all")
   end
 
+  def test_deploy_ticker_prints_each_stage_once_across_transcript_rewrites
+    Dir.mktmpdir("deploy-ticker") do |dir|
+      path = File.join(dir, "deploy-20261125T000000Z-all-aaaaaaaaaaaa-1-abcdef.log")
+      first = "2026-11-25T00:00:01Z host=b pid=1 app=all stage=openbsd-mirror enter\nvps-deploy: all -> master\n"
+      File.write(path, first)
+      started = File.mtime(path) - 5
+      seen = { lines: {}, last: nil }
+      io = StringIO.new
+      ENV["PUB5_DEPLOY_LOG_DIR"] = dir
+
+      Registry.send(:deploy_tick, started, seen, io:)
+      File.write(path, "#{first}2026-11-25T00:00:02Z host=b pid=2 app=master stage=master enter\n" \
+                       "2026-11-25T00:00:03Z host=b pid=3 app=brgen stage=start enter\n")
+      Registry.send(:deploy_tick, started, seen, io:)
+
+      assert_equal ["deploy0: openbsd-mirror", "deploy0: master", "deploy0: brgen start"], io.string.lines.map(&:strip)
+    ensure
+      ENV.delete("PUB5_DEPLOY_LOG_DIR")
+    end
+  end
+
   def test_deploy_state_payload_ignores_status_lines_around_the_json
     output = "deps0: checking pinned Ruby, Bundler and gem dependencies\n" \
              "{\n  \"host\": \"vm23\",\n  \"apps\": []\n}\n"

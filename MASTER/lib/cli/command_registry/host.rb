@@ -830,11 +830,7 @@ module Master
         inventory = Deploy::Inventory.new(root: MasterPaths.repo)
         return "deploy: unknown target #{target.inspect}; no registered app or deployment group matched" if inventory.target_kind(target) == :unknown
 
-        operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
-        output, status = Master::Io::Exec.capture2e(
-          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
-          chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
-        )
+        output, status = deploy_capture(target)
         summary = deploy_summary(output, status, target)
         return Result.err("deploy: #{summary}", category: :infrastructure) if deploy_preflight_blocked?(output)
         if status.respond_to?(:cancelled?) && status.cancelled?
@@ -869,6 +865,58 @@ module Master
                   { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
                 end
         Result.err(["deploy: #{summary}", state[:summary], advice].join("\n"), category: :infrastructure)
+      end
+
+      # The operator's output is captured whole, so a 20-minute run printed
+      # nothing. On a terminal, a ticker reads the local transcript as it
+      # grows and prints each stage the run enters as one deploy0 line.
+      def deploy_capture(target)
+        ticker = deploy_ticker(Time.now) if $stdout.tty?
+        operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
+        Master::Io::Exec.capture2e(
+          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
+          chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
+        )
+      ensure
+        ticker&.kill
+      end
+
+      DEPLOY_TICK_SECONDS = 5
+
+      def deploy_ticker(started, io: $stdout)
+        seen = { lines: {}, last: nil }
+        Thread.new do
+          loop do
+            sleep DEPLOY_TICK_SECONDS
+            deploy_tick(started, seen, io:)
+          end
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.deploy_ticker")
+        end
+      end
+
+      # The collector may rewrite the transcript, so lines are remembered by
+      # content, not offset; a label repeated back to back prints once.
+      def deploy_tick(started, seen, io:)
+        path = deploy_transcript_since(started)
+        return unless path
+
+        File.foreach(path, chomp: true) do |line|
+          next if seen[:lines].key?(line)
+
+          seen[:lines][line] = true
+          label = ::Operator::DeployLog.stage_label(line)
+          next if label.nil? || label == seen[:last]
+
+          seen[:last] = label
+          Master::Trace::Dmesg.status("deploy0", label, io:)
+        end
+      end
+
+      def deploy_transcript_since(started)
+        directory = File.expand_path(ENV.fetch("PUB5_DEPLOY_LOG_DIR", ::Operator::DeployLog::DEFAULT_DIRECTORY))
+        newest = Dir.glob(File.join(directory, "deploy-*.log")).max_by { |path| File.basename(path) }
+        newest if newest && File.mtime(newest) >= started - 1
       end
 
       # A zero exit is not enough. The canonical waiter must report the exact
