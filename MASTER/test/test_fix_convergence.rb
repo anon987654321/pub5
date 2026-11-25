@@ -2533,6 +2533,33 @@ end
     assert_equal 20, persisted.fetch("checked_count")
   end
 
+  def test_wishlist_leaves_proposals_unclaimed_without_a_runnable_budget
+    wishlist = Object.new
+    wishlist.define_singleton_method(:call) { |**| "wishlist: drafted 1" }
+    wishlist.define_singleton_method(:pending_count) { |**| 1 }
+    wishlist.define_singleton_method(:claimable) { |**| raise "must not claim unavailable work" }
+
+    loop = build_loop([])
+    loop.instance_variable_set(:@wishlist, wishlist)
+    loop.define_singleton_method(:wishlist_rounds) { 1 }
+    journal = loop.instance_variable_get(:@run_journal)
+    journal.define_singleton_method(:remaining_seconds) { |_run_id| 1 }
+    result = loop.send(
+      :continue_with_wishlist, Master::Result.ok("DONE: clean"),
+      files: [], target: @root, max_passes: 3, budget_seconds: 1, run_id: "r1",
+    )
+    assert_match(/\APLATEAU: /, result.value!)
+
+    journal.define_singleton_method(:remaining_seconds) { |_run_id| 600 }
+    journal.define_singleton_method(:history) { |limit:| [{ "id" => "r1" }] }
+    journal.define_singleton_method(:next_pass) { |_record| Master::Fix::FixLoop::ABSOLUTE_MAX_PASSES + 1 }
+    result = loop.send(
+      :continue_with_wishlist, Master::Result.ok("DONE: clean"),
+      files: [], target: @root, max_passes: 3, budget_seconds: 600, run_id: "r1",
+    )
+    assert_match(/\APLATEAU: /, result.value!)
+  end
+
   def test_wishlist_open_proof_downgrades_done_to_plateau
     proposal = { "uid" => "wish-open", "status" => "claimed" }
     wishlist = Object.new

@@ -24,6 +24,7 @@ module Master
       LEVELS = %w[quiet normal verbose trace everything].freeze
       TERMINAL_WRITE_MUTEX = Mutex.new
       DETAIL_IO_MUTEX = Mutex.new
+      ONCE_MUTEX = Mutex.new
       ACTIVITY_SINK_MUTEX = Mutex.new
       @draft_guard = nil
 
@@ -255,11 +256,8 @@ module Master
       end
 
       def block(unit, text, io: $stdout)
-        lines = collapse_blank_lines(text).scrub.delete("\r").lines(chomp: true)
-        lines.each_with_index do |line, index|
-          body = line.strip
-          next if body.empty?
-
+        lines = collapse_blank_lines(text).scrub.delete("\r").lines(chomp: true).map(&:strip).reject(&:empty?)
+        lines.each_with_index do |body, index|
           if index.zero?
             status(unit, body, io:)
           else
@@ -390,12 +388,16 @@ module Master
 
       # Once per process, for a fact every lane would otherwise repeat.
       def once(unit, msg, io: $stdout)
-        @once ||= {}
-        line = "#{unit}: #{msg}"
-        return if @once[line]
+        return unless enabled?
 
-        @once[line] = true
-        emit(line, io:)
+        line = "#{unit}: #{msg}"
+        first = ONCE_MUTEX.synchronize do
+          @once ||= {}
+          next false if @once[line]
+
+          @once[line] = true
+        end
+        emit(line, io:) if first
       end
 
       # The one terminal write coordinator. Plain output, IRC notices, unit

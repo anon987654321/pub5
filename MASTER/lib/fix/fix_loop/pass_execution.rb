@@ -126,19 +126,21 @@ module Master
           while rounds < wishlist_rounds
             return cancellation_terminal if cancellation_requested?
 
+            remaining = @run_journal.remaining_seconds(run_id)
+            break if remaining < WISHLIST_MIN_REMAINING_SECONDS
+
+            run_record = @run_journal.history(limit: Master::Fix::Kernel::LifecycleJournal::MAX_RUNS).find { |row| row["id"] == run_id }
+            start_pass = @run_journal.next_pass(run_record)
+            round_passes = [WISHLIST_MAX_PASSES, max_passes, ABSOLUTE_MAX_PASSES - start_pass + 1].min
+            break unless round_passes.positive?
+
             pending = @wishlist.claimable(target:, limit: Wishlist::BATCH_SIZE, run_id:)
             break if pending.empty?
 
             claimed = @wishlist.claim(pending, run_id:)
             break if claimed.empty?
 
-            remaining = @run_journal.remaining_seconds(run_id)
-            break if remaining < WISHLIST_MIN_REMAINING_SECONDS
-
-            run_record = @run_journal.history(limit: Master::Fix::Kernel::LifecycleJournal::MAX_RUNS).find { |row| row["id"] == run_id }
-            start_pass = @run_journal.next_pass(run_record)
             refreshed = @file_collector.collect(target)
-            round_passes = [WISHLIST_MAX_PASSES, max_passes].min
             round_max_pass = start_pass + round_passes - 1
             deadline = Ground::Reliability::Deadline.new(remaining)
 

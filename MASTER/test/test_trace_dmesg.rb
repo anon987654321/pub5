@@ -27,6 +27,28 @@ class TraceDmesgTest < Minitest::Test
     assert_equal "err0: first line\nerr0: second line\n", block_output("\nfirst line\n\nsecond line\n")
   end
 
+  def test_once_is_thread_safe_and_quiet_does_not_consume_a_diagnostic
+    dmesg = Master::Trace::Dmesg
+    io = StringIO.new
+    message = "concurrent diagnostic #{object_id}"
+    dmesg.stub(:enabled?, false) { dmesg.once("test0", message, io:) }
+    dmesg.stub(:enabled?, true) do
+      dmesg.stub(:narrate, nil) do
+        16.times.map { Thread.new { dmesg.once("test0", message, io:) } }.each(&:join)
+      end
+    end
+    assert_equal "test0: #{message}\n", io.string
+  end
+
+  def test_first_nonempty_block_line_uses_the_normal_status_path
+    dmesg = Master::Trace::Dmesg
+    calls = []
+    dmesg.stub(:status, ->(unit, body, io:) { calls << [unit, body] }) do
+      dmesg.stub(:emit, nil) { dmesg.block("test0", "\n \nfirst\nsecond") }
+    end
+    assert_equal [["test0", "first"]], calls
+  end
+
   def test_collapse_writer_never_writes_two_consecutive_newlines
     io = StringIO.new
     Master::Trace::Dmesg.terminal_write(io:) do |target|
