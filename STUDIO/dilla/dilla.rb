@@ -300,7 +300,12 @@ module Dilla
   def api_actions
     {
       "list" => ->(_request) { api_catalogue },
-      "form_plan" => ->(request) { CompositionForm.new(request.fetch("form", "arc"), bars: request.fetch("bars", 16)).plan },
+      "form_plan" => lambda do |request|
+        bars = Integer(request.fetch("bars", 16))
+        raise ArgumentError, "form needs 1..128 bars" unless bars.between?(1, 128)
+        form = request.fetch("form", "arc")
+        form == "unchanged" ? [] : CompositionForm.new(form, bars:).plan
+      end,
       "render" => ->(request) { dispatch(parse_cli(Array(request["args"]).map(&:to_s))) },
       "reference" => ->(request) { dispatch(parse_cli(["reference", *Array(request["args"]).map(&:to_s)])) },
       "output_path" => ->(request) { api_output_path(request) },
@@ -918,7 +923,22 @@ module Dilla
       level = 0.70 + row.fetch("density") * 0.25
       level *= 0.65 if foreground == "space"
       level *= 0.82 if group == "melody" && row.fetch("response") == "answer"
+      level *= 0.85 + row.fetch("tension") * 0.15 if group == "counterpoint"
       level
+    end
+
+    # Original melodic phrases reuse a small contour; adapt each target to
+    # the allowed pitch set of the current chord. Contrary motion is a
+    # preference, never an excuse to introduce a disallowed pitch.
+    MOTIF = [0, 2, 5, 2, 0, -2, 2, 0].freeze
+
+    def self.motif_note(candidates, anchor:, index:, previous:, bass_motion:)
+      target = anchor + MOTIF.fetch(index % MOTIF.size)
+      candidates.min_by do |pitch|
+        motion = previous ? pitch - previous : 0
+        same_direction = motion * bass_motion > 0 ? 1 : 0
+        [(pitch - target).abs + same_direction, same_direction, motion.abs, pitch]
+      end
     end
 
     def self.evidence(events, bars:, bar_seconds:, form: nil)
@@ -983,7 +1003,7 @@ module Dilla
         child = self.class.new(
           progress: progression, groove: @groove, drums: drums, rig: @rig,
           rng: @rng, performer: @performer,
-          opts: { bars: bars, foley: active.include?("foley") }
+          opts: { bars: bars, foley: active.include?("foley"), form: @opts[:form] }
         )
         rendered = child.events
         lane_names = { drum: "drums", chord: "chords", bass: "bass", melody: "melody", foley: "foley" }
@@ -1224,6 +1244,9 @@ module Dilla
       base = slot[:start_bar] * @groove.bar_s
       span = slot[:bars] * @groove.bar_s
       last_midi = @last_melody_midi
+      bass = bass_note_for_pc(chord[:bass] || chord[:root])
+      @bass_motion = @last_melody_bass ? bass - @last_melody_bass : 0
+      @last_melody_bass = bass
       motif_index = (slot[:start_bar].to_f * rhythm.length).round
       slot[:bars].ceil.times do |bar_offset|
         rhythm.each do |step, length|
@@ -1255,6 +1278,15 @@ module Dilla
       scale_tones = scale.map { |degree| (root_pc + degree) % 12 }.uniq
       pitch_classes = (strong || @rng.chance(0.35)) ? chord_tones : scale_tones
       candidates = (72..83).select { |midi| pitch_classes.include?(midi % 12) }
+
+      if @opts[:form] == "arc"
+        @motif_anchor ||= @rng.pick(candidates)
+        @motif_position ||= 0
+        pitch = CompositionForm.motif_note(candidates, anchor: @motif_anchor,
+                                         index: @motif_position, previous: previous, bass_motion: @bass_motion || 0)
+        @motif_position += 1
+        return pitch
+      end
 
       # Move by step when the scale offers a nearby choice; never invent a
       # passing note outside the chord or scale just to smooth the line.
@@ -2725,8 +2757,9 @@ module Dilla
       raise ArgumentError, "unknown composition form #{form.inspect}"
     end
     arrangement_bars = Array(arrangement).sum { |section| section.fetch("bars", 0).to_i }
+    default_form_bars = form == "arc" ? 16 : nil
     bars = (opts.bars || (arrangement_bars.positive? ? arrangement_bars : nil) ||
-            prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
+            default_form_bars || prog["bars"] || catalogue.dig("defaults", "bars")).to_i.clamp(1, 128)
     feel = prog["feel"] || {}
     groove_profiles = catalogue.fetch("groove_profiles")
     groove_candidate = opts.profile || style["groove_profile"] || "dilla_shadow"
@@ -2775,7 +2808,7 @@ module Dilla
     drum_kit = DrumKit.new(kit, rng: Random.new(rng.seed ^ 0xD11A))
     seq = Sequencer.new(
       progress: plan[:progression], groove:, drums: drums_cfg, rig:, rng:, performer:,
-      opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley }
+      opts: { bars: bar_count, arrangement: plan[:arrangement], foley: opts.foley, form: plan[:form] }
     )
     events = seq.events
     if plan[:form]

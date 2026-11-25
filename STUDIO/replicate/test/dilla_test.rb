@@ -931,6 +931,15 @@ class TestDillaArrangementAndOfflineExport < Minitest::Test
     assert_equal "NOT_REVIEWED", Dilla::CompositionForm.evidence(shaped, bars: 16, bar_seconds: 2.0, form: "arc").fetch("listening")
   end
 
+  def test_original_motif_adapts_to_the_chord_and_prefers_contrary_motion
+    form = Dilla::CompositionForm
+    assert_equal 72, form.motif_note([72, 76, 79], anchor: 72, index: 0, previous: nil, bass_motion: 0)
+    assert_equal 77, form.motif_note([72, 77, 79], anchor: 72, index: 2, previous: 74, bass_motion: -3)
+    assert_equal 74, form.motif_note([74, 76], anchor: 75, index: 0, previous: 75, bass_motion: 2)
+    assert_includes [73, 76, 81], form.motif_note([73, 76, 81], anchor: 72, index: 2, previous: 75, bass_motion: 4)
+    assert_equal 16, Dilla.resolve_render_plan(Dilla.parse_cli(%w[--form arc])).fetch(:bars)
+  end
+
   def test_composition_form_is_an_explicit_replayable_option
     opts = Dilla.parse_cli(%w[--form arc --bars 16])
     assert_equal "arc", Dilla.resolve_render_plan(opts).fetch(:form)

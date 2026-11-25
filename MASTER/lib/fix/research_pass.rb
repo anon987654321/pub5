@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "uri"
+require_relative "../design/visual_language"
 
 module Master
   module Fix
@@ -131,6 +132,26 @@ module Master
         "engineering"
       end
 
+      # Local craft lenses are not external source coverage. Keep the
+      # all-repository brief bounded and choose the relevant medium for focused repairs.
+      def craft_context(domain, target)
+        return "" if domain == "all"
+
+        medium = case domain
+                 when "music" then "music"
+                 when "visual" then "photography"
+                 when "rails" then "design"
+                 when "studio"
+                   target.to_s.match?(/(?:lora|photo)/i) ? "photography" :
+                     (target.to_s.match?(/(?:cinema|video|mov)/i) ? "cinema" : nil)
+                 when "conversation" then "writing"
+                 when "engineering", "openbsd" then "software"
+                 end
+        return "" unless medium
+
+        Master::Design::VisualLanguage.creative_context(medium)
+      end
+
       def format_brief(status:, domain:, target:, records:, fetched:, independent_hosts:, minimum:, eligible_files:, coverage:)
         max_chars = 8_000
         lines = [
@@ -141,6 +162,8 @@ module Master
         coverage.each do |name, row|
           lines << "Coverage #{name}: #{row.fetch(:pages)} pages, #{row.fetch(:hosts)} independent hosts, #{row.fetch(:pass) ? "PASS" : "INCONCLUSIVE"}."
         end
+        craft = craft_context(domain, target)
+        lines << craft unless craft.empty?
 
         excerpts = records.filter_map do |row|
           record_status = row["status"].to_s
