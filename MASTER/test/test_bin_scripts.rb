@@ -195,7 +195,10 @@ class TestBinScripts < Minitest::Test
       FileUtils.cp(File.join(ROOT, "bin", "dev-bootstrap"), File.join(bin_dir, "dev-bootstrap"))
       File.write(File.join(tools_bin, "ruby"), <<~SH)
         #!/bin/sh
-        echo "BUILT-RUBY ld=$LD_LIBRARY_PATH args=$*"
+        case "$1" in
+          -e) printf "3.3.8" ;;
+          *) echo "BUILT-RUBY ld=$LD_LIBRARY_PATH args=$*" ;;
+        esac
       SH
       File.chmod(0o755, File.join(tools_bin, "ruby"))
 
@@ -206,6 +209,34 @@ class TestBinScripts < Minitest::Test
       assert status.success?, out
       assert_includes out, "BUILT-RUBY"
       assert_includes out, "ld=#{File.join(master, '.tools', 'ruby', 'lib')}"
+    end
+  end
+
+  def test_dev_bootstrap_rejects_broken_local_ruby_before_exec
+    Dir.mktmpdir do |dir|
+      script = copied_bootstrap(dir)
+      tools_bin = File.join(dir, "MASTER", ".tools", "ruby", "bin")
+      FileUtils.mkdir_p(tools_bin)
+      fake = File.join(tools_bin, "ruby")
+      ["printf 3.1.9", "printf garbage", "exit 1", "printf 3.3.8; exit 1"].each do |probe|
+        File.write(fake, <<~SH)
+          #!/bin/sh
+          if [ "$1" = -e ]; then
+            #{probe}
+          else
+            echo INVALID-RUBY-EXECUTED
+          fi
+        SH
+        File.chmod(0o755, fake)
+        out, status = Open3.capture2e(
+          { "PUB5_RUBY" => nil, "MASTER_RUBY_CANDIDATES" => "",
+            "MASTER_DEV_BOOTSTRAP_BUILD" => "0" }, script, "hello",
+        )
+        refute status.success?, out
+        assert_includes out, "ignoring"
+        assert_includes out, "no Ruby >= 3.2"
+        refute_includes out, "INVALID-RUBY-EXECUTED"
+      end
     end
   end
 
@@ -238,6 +269,8 @@ class TestBinScripts < Minitest::Test
     assert status.success?, "bin/dev-bootstrap is not valid POSIX sh: #{syntax}"
     assert_includes source, "cache.ruby-lang.org/pub/ruby/$series/ruby-$RUBY_VER.tar.gz"
     assert_includes source, "--with-yaml-dir"
+    assert_includes source, "--connect-timeout 15 --max-time 300"
+    assert_includes source, "--timeout=30 --tries=2"
     code = source.lines.reject { |line| line.strip.start_with?("#") }.join
     refute_includes code, "sudo", "the bootstrap must never need root"
   end
