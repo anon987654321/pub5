@@ -63,9 +63,9 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.match(system, /vSolo = aSolo;/);
   assert.equal((system.match(/varying float vSolo;/g) || []).length, 2);
   assert.match(system, /gl_PointSize = 1\.5;/);
-  assert.match(system, /if \(vSolo < 0\.5 && \(vThreshold > uDensity \|\| length\(p\) > 0\.5\)\) discard;/);
-  assert.match(system, /vec3 ink = mix\(uColor \* zoneTone \* depthTone, vec3\(1\.0\), solo\)/);
-  assert.match(system, /float alpha = mix\(vAlpha \* uOpacity, 1\.0, solo\)/);
+  assert.match(system, /if \(vSolo < 0\.5 && vThreshold > uDensity\) discard;/);
+  assert.match(system, /gl_FragColor = vec4\(vec3\(0\.9333333\), 1\.0\)/);
+  assert.match(system, /vAlpha = 1\.0/);
 
   const window = {
     location: { search: "" },
@@ -578,13 +578,11 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.match(sparseField, /stillAfter = Number\(window\.MASTER_FACE_STATE\?\.stillAfterActivityMs \?\? 700\)/);
   assert.match(system, /buildFromSamples/);
   assert.match(system, /uDepthReferenceDistance: \{ value: clamp\(depth\.reference_distance/);
-  assert.match(system, /float depthScale = clamp\(uDepthReferenceDistance/);
+  assert.doesNotMatch(system, /float depthScale = clamp/);
   assert.doesNotMatch(tokens, /point_size:\s*$/m);
-  // Depth scales alpha; point size stays fixed.
-  // The clamp folds in every brightness factor — depth and, since faa8e102's
-  // contour ridges, the ridge tone — but never a size.
+  // Geometry carries depth; ink and point size stay fixed.
   assert.match(system, /gl_PointSize = 1\.5;/);
-  assert.match(system, /vAlpha = clamp\([^;]*\* depthScale[^;]*, 0\.0, 1\.0\)/);
+  assert.match(system, /vAlpha = 1\.0/);
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
@@ -1113,14 +1111,14 @@ test("stipple lifecycle is observable and reversible", () => {
 });
 
 
-test("mask reliefs are deterministic, bounded and distinct for all sixteen designs", async () => {
+test("canonical mask relief is deterministic and bounded", async () => {
   const { readFileSync } = await import("node:fs");
   const { runInNewContext } = await import("node:vm");
   const storage = new Map();
   const listeners = new Map();
   const window = {
     MASTER_FACE_MASK_SESSION: "test-session",
-    MASTER_FACE_MASK_PROFILE: "iatmul-concentric",
+    MASTER_FACE_MASK_PROFILE: "iatmul-river",
     MASTER_FACE_WORLD: { setSubjectForm() {} },
     addEventListener(name, callback) { listeners.set(name, callback); },
     dispatchEvent() {}
@@ -1133,8 +1131,8 @@ test("mask reliefs are deterministic, bounded and distinct for all sixteen desig
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
   });
   const masks = window.MASTER_FACE_MASKS;
-  assert.equal(masks.profiles.length, 16);
-  assert.equal(masks.rotationProfiles.length, 5);
+  assert.equal(masks.profiles.length, 1);
+  assert.equal(masks.rotationProfiles.length, 1);
   const fingerprints = new Set();
   for (const profile of masks.profiles) {
     const points = Array.from({ length: 512 }, (_, index) => masks.sample(profile.id, index));
@@ -1142,13 +1140,13 @@ test("mask reliefs are deterministic, bounded and distinct for all sixteen desig
     assert.ok(points.every(point => point.every(value => Number.isFinite(value) && Math.abs(value) < 0.8)));
     fingerprints.add(JSON.stringify(points));
   }
-  assert.equal(fingerprints.size, 16);
+  assert.equal(fingerprints.size, 1);
   assert.equal(masks.sample("unknown", 0), null);
-  listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "elema-hollow" } });
-  assert.equal(masks.current().id, "elema-hollow");
-  assert.equal(masks.descriptor().maskProfile, "elema-hollow");
+  listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "iatmul-river" } });
+  assert.equal(masks.current().id, "iatmul-river");
+  assert.equal(masks.descriptor().maskProfile, "iatmul-river");
   masks.next();
-  assert.equal(masks.current().id, "iatmul-concentric");
+  assert.equal(masks.current().id, "iatmul-river");
 });
 
 test("direct subject mouth deformation is anatomical and mask-only", () => {
@@ -1160,7 +1158,7 @@ test("direct subject mouth deformation is anatomical and mask-only", () => {
 
 test("mask geometry has enough projected coverage to read at terminal size", () => {
   const storage = new Map();
-  const window = { MASTER_FACE_MASK_SESSION: "coverage", MASTER_FACE_MASK_PROFILE: "iatmul-concentric",
+  const window = { MASTER_FACE_MASK_SESSION: "coverage", MASTER_FACE_MASK_PROFILE: "iatmul-river",
     MASTER_FACE_WORLD: { setSubjectForm() {} }, addEventListener() {}, dispatchEvent() {} };
   const document = { readyState: "complete", documentElement: { dataset: {} },
     querySelector() { return null; }, getElementById() { return null; } };
@@ -1182,7 +1180,8 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
       assert.ok([x, y, z, ...normal].every(Number.isFinite), mask.id + " invalid relief");
       assert.ok((z < 0 ? normal[2] < 0 : normal[2] > 0) && Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
       cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
-      const hole = (x / mouth.width) ** 2 + ((y - mouth.y) / mouth.height) ** 2;
+      const smile = .018 * Math.min(1, (x / mouth.width) ** 2);
+      const hole = (x / mouth.width) ** 2 + ((y - mouth.y - smile) / mouth.height) ** 2;
       assert.ok(hole >= .98, mask.id + " mouth is occluded");
     }
     assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
@@ -1197,9 +1196,9 @@ test("mask correspondence uses bounded stable spatial ordering", () => {
   assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
 });
 
-test("mask lighting is driven by local relief normals, not original face zones", () => {
+test("mask ink is uniform and geometry retains local normals", () => {
   assert.match(faceSource, /attribute vec3 subjectNormal/);
-  assert.match(faceSource, /normalMatrix \* reliefNormal/);
+  assert.match(faceSource, /vColor=vec3\(0\.9333333\)/);
   assert.match(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
-  assert.match(faceSource, /1\.0-reliefBlend/);
+  assert.match(faceSource, /gl_FragColor=vec4\(vColor,1\.0\)/);
 });
