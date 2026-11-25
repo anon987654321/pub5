@@ -9,6 +9,12 @@ class Block < ApplicationRecord
   validates :blocker_id, uniqueness: { scope: :blocked_id }
   validate :no_self_block
 
+  def self.counterparts_for(user)
+    outgoing = where(blocker_id: user.id).select(:blocked_id)
+    incoming = where(blocked_id: user.id).select(:blocker_id)
+    User.where(id: outgoing).or(User.where(id: incoming)).select(:id)
+  end
+
   private
 
   def no_self_block

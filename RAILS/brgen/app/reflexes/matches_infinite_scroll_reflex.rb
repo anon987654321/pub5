@@ -6,8 +6,9 @@ class MatchesInfiniteScrollReflex < Shared::InfiniteScrollReflex
   private
 
   def scope
-    Dating::Match.active
-      .where("initiator_id = ? OR receiver_id = ?", Current.user.id, Current.user.id)
-      .includes(:initiator, :receiver)
+    Dating::Match.active.visible_to(Current.user)
+      .includes(initiator: { dating_profile: { photos_attachments: :blob } },
+                receiver: { dating_profile: { photos_attachments: :blob } })
+      .order(created_at: :desc, id: :desc)
   end
 end

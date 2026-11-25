@@ -1,5 +1,9 @@
 <% content_for :title, @track.title %>
 
+<% if @track.user_id && @track.playable_by?(nil) %>
+  <p class="radio-back-link"><%= link_to t("playlist.more_from_creator"), hosted_tracks_path(creator: @track.user_id) %></p>
+<% end %>
+
 <%= render "playlist/playlists/player",
       playlist: @track,
       playlist_name: @track.title,

@@ -26,6 +26,7 @@ class Playlist::TrackImportTest < ActiveSupport::TestCase
     assert_equal %w[youtube spotify soundcloud direct], results.map { |r| r.track.source_type }
     assert results.all?(&:created)
     assert_equal "Regn Over Byen", results[2].track.title
+    assert_equal "artist", results[2].track.artist
     assert_equal 4, @playlist.tracks.count
   end
 
@@ -53,8 +54,14 @@ class Playlist::TrackImportTest < ActiveSupport::TestCase
     ).call(source).first
 
     assert result.created
+    assert_equal "private", result.track.privacy
     assert_equal embed, result.track.embed_url
     assert_equal embed, result.track.external_embed_url
+  end
+
+  test "imports ignore local files and credential-bearing URLs" do
+    importer = Playlist::TrackImport.new(user: @user, playlist: @playlist)
+    assert_empty importer.call("file:///tmp/audio.mp3\nhttps://user:secret@example.com/a.mp3\njavascript:alert(1)")
   end
 
   test "each provider plays through its own embed player" do

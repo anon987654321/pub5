@@ -134,6 +134,26 @@ class MarketplaceCheckoutTest < ActiveSupport::TestCase
   # nil stock is one of a kind, which is what a classifieds listing is. A number
   # is a shop. Defaulting to 1 would have made every private sale read as a shop
   # with one left.
+  test "a one-off listing cannot be ordered in multiples or with a nonpositive quantity" do
+    item = listing
+    [ 0, -1, 2 ].each do |quantity|
+      order = Marketplace::Order.new(buyer: @buyer, listing: item, quantity: quantity, price_cents: item.price_cents)
+      refute order.valid?
+      assert order.errors[:quantity].present?
+    end
+  end
+
+  test "variant stock controls order quantity and is rechecked before payment" do
+    item = listing(stock: 10)
+    variant = Marketplace::Variant.create!(listing: item, stock: 2)
+    order = Marketplace::Order.create!(buyer: @buyer, listing: item, variant: variant, quantity: 2, price_cents: item.price_cents)
+    assert order.startable?
+    refute order.update(quantity: 3)
+    order.reload
+    variant.update!(stock: 1)
+    refute order.reload.startable?
+  end
+
   test "stock separates a one-off from a shop" do
     unique = listing
     assert unique.one_of_a_kind?

@@ -30,12 +30,12 @@
           <% end %>
           <%# A one-of-a-kind listing has one to buy, so only stocked lines get a
               quantity to change. %>
-          <% if item.listing.one_of_a_kind? %>
-            <div><%= item.listing.price_display %> × <%= item.quantity || 1 %></div> <%# scan: intentional — a line of text inside the item block %>
+          <% if !item.variant_id && item.listing.one_of_a_kind? %>
+            <div><%= Shared::MoneyDisplay.format(item.unit_price_cents, item.payment_currency) %> × <%= item.quantity || 1 %></div> <%# scan: intentional — a line of text inside the item block %>
           <% else %>
             <%= form_with url: cart_item_path(item), method: :patch, class: "cart-quantity" do |f| %>
-              <span><%= item.listing.price_display %> ×</span>
-              <%= f.number_field :quantity, value: item.quantity || 1, min: 1, max: item.listing.available_quantity,
+              <span><%= Shared::MoneyDisplay.format(item.unit_price_cents, item.payment_currency) %> ×</span>
+              <%= f.number_field :quantity, value: item.quantity || 1, min: 1, max: item.available_quantity,
                     inputmode: "numeric", aria: { label: t("marketplace.order_quantity") } %>
               <%= f.submit t("marketplace.update_quantity"), class: "button button-ghost" %>
             <% end %>
@@ -51,7 +51,9 @@
   </div>
 
   <aside class="store-buybox cart-summary" aria-label="<%= t("marketplace.payment_methods") %>">
-    <p class="store-buybox-price"><%= tag.strong t("marketplace.cart_total", amount: Shared::MoneyDisplay.format(@cart_total)) %></p>
+    <% @cart_totals.each do |currency, total| %>
+      <p class="store-buybox-price"><%= tag.strong t("marketplace.cart_total", amount: Shared::MoneyDisplay.format(total, currency)) %></p>
+    <% end %>
     <p><%= t("marketplace.cart_pay_hint") %></p>
 
     <%# Paying the whole basket needs somewhere to send it. Shown before the pay
@@ -75,7 +77,9 @@
         the provider's own host, and a fetch cannot follow a cross-origin redirect.
         form-submit#lock disables a button once pressed, as the takeaway order
         form does: a second click started a second payment session. %>
-    <% if dintero_ready || vipps_ready || stripe_ready %>
+    <% if @cart_totals.size > 1 %>
+      <%= tag.p t("marketplace.checkout_errors.mixed_currency"), role: "status" %>
+    <% elsif dintero_ready || vipps_ready || stripe_ready %>
       <div class="cart-pay-actions" role="group" aria-label="<%= t("marketplace.payment_methods") %>">
         <% if dintero_ready %>
           <%= button_to t("marketplace.pay_dintero"), checkout_path,

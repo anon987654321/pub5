@@ -56,6 +56,11 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
       return
     end
 
+    if payable.is_a?(Array) && payable.map(&:payment_currency).uniq.size > 1
+      redirect_to cart_path, alert: t("marketplace.checkout_errors.mixed_currency")
+      return
+    end
+
     # The cart lanes' provider check sits here — after empty-cart, before the
     # address check — so an unconfigured PSP still fails closed with its reason
     # instead of sending the buyer to the address form for a payment that

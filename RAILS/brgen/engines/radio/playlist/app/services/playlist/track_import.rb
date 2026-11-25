@@ -25,7 +25,7 @@ module Playlist
     def import_line(line)
       attrs = attributes_for(line)
       existing = ::Playlist::Track.find_by(source_url: attrs[:source_url])
-      track = existing if existing&.visible_to?(user)
+      track = existing if existing&.visible_to?(user) && (attrs[:privacy] != "private" || (existing.user_id == user.id && existing.privacy == "private"))
       created = track.nil?
       track ||= ::Playlist::Track.new(attrs.merge(user: user))
       if created
@@ -42,16 +42,18 @@ module Playlist
 
     def attributes_for(line)
       uri = URI.parse(line)
+      raise URI::InvalidURIError unless uri.is_a?(URI::HTTP) && uri.host.present? && uri.userinfo.nil?
+
       host = uri.host.to_s.downcase
       source_type = source_type_for(host)
       title = title_for(uri, source_type)
 
       attributes = {
         title: title,
-        artist: "Imported",
+        artist: artist_for(uri, source_type),
         source_type: source_type,
         source_url: line,
-        privacy: "public",
+        privacy: private_whyp_link?(uri, source_type) ? "private" : "public",
       }
       if source_type == "whyp"
         embed_url = whyp_embed_resolver.call(line)
@@ -75,6 +77,16 @@ module Playlist
       return "whyp" if WHYP_HOSTS.include?(host)
 
       "direct"
+    end
+
+    def private_whyp_link?(uri, source_type)
+      source_type == "whyp" && Rack::Utils.parse_query(uri.query)["token"].present?
+    end
+
+    def artist_for(uri, source_type)
+      return "" unless source_type == "soundcloud"
+
+      uri.path.split("/").reject(&:blank?).first.to_s.tr("-", " ")
     end
 
     def title_for(uri, source_type)

@@ -10,10 +10,26 @@
       <%= link_to t("playlist.browse_playlists"), root_path, class: "radio-home-link" %>
       <%= link_to t("playlist.sets"), sets_path, class: "radio-home-link" %>
       <% if authenticated? %>
+        <%= link_to t(@mine ? "playlist.all_recordings" : "playlist.my_recordings"), hosted_tracks_path(mine: @mine ? nil : "1"), class: "radio-home-link" %>
         <%= link_to t("playlist.upload_track"), new_hosted_track_path, class: "radio-home-link radio-home-link--primary" %>
       <% end %>
     </nav>
   </header>
+
+  <%= form_with url: hosted_tracks_path, method: :get, class: "cluster", data: { turbo: false } do |f| %>
+    <%= f.hidden_field :mine, value: "1" if @mine %>
+    <%= f.hidden_field :creator, value: @creator if @creator %>
+    <div class="field">
+      <%= f.label :q, t("playlist.recording_search") %>
+      <%= f.search_field :q, value: @query %>
+    </div>
+    <div class="field">
+      <%= f.label :genre, t("playlist.genre_filter") %>
+      <%= f.text_field :genre, value: @genre %>
+    </div>
+    <%= f.submit t("playlist.filter_recordings"), class: "button" %>
+    <%= link_to t("playlist.clear_recording_filters"), hosted_tracks_path(mine: @mine ? "1" : nil), class: "button button-ghost" %>
+  <% end %>
 
   <% if @tracks.any? %>
     <section class="radio-discovery" aria-label="<%= t("playlist.hosted_tracks") %>">
@@ -22,6 +38,7 @@
           <%= render "playlist/playlists/radio_track_card", track: track %>
         <% end %>
       </div>
+      <%= render "shared/pager", pagy: @pagy %>
     </section>
   <% else %>
     <div id="hosted_tracks">

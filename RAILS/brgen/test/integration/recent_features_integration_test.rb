@@ -204,6 +204,8 @@ class RecentFeaturesIntegrationTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, "Bergen track"
     assert_includes response.body, "2"
+    assert_select "[data-metric=unique-listeners]", text: "1"
+    assert_select "[data-metric=unique-recent]", text: "1"
 
     outsider = User.create!(
       email_address: "radio-outsider@brgen.no",

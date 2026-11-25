@@ -32,14 +32,14 @@ class Marketplace::Return < ApplicationRecord
   def refunded? = refunded_at.present?
 
   def approve!(by:, note: nil)
-    resolve!("approved", by: by, note: note)
+    return false unless resolve!("approved", by: by, note: note)
     deliver_notification(order_buyer, title: I18n.t("marketplace.return_approved_title"),
                                       body: note.presence || I18n.t("marketplace.return_approved_body"),
                                       source: self, kind: "order")
   end
 
   def refuse!(by:, note: nil)
-    resolve!("refused", by: by, note: note)
+    return false unless resolve!("refused", by: by, note: note)
     deliver_notification(order_buyer, title: I18n.t("marketplace.return_refused_title"),
                                       body: note.presence || I18n.t("marketplace.return_refused_body"),
                                       source: self, kind: "order")
@@ -51,6 +51,7 @@ class Marketplace::Return < ApplicationRecord
   def receive!(by:)
     transitioned = false
     with_lock do
+      return false if status == "refused"
       unless status == "received"
         update!(status: "received", resolved_by: by, resolved_at: Time.current)
         order_record&.restock_returned!
@@ -70,7 +71,11 @@ class Marketplace::Return < ApplicationRecord
   private
 
   def resolve!(status, by:, note:)
-    update!(status: status, resolved_by: by, resolved_at: Time.current, resolution_note: note.presence)
+    with_lock do
+      return false unless self.status == "requested"
+
+      update!(status: status, resolved_by: by, resolved_at: Time.current, resolution_note: note.presence)
+    end
   end
 
   def order_record = strict_safe(:order)

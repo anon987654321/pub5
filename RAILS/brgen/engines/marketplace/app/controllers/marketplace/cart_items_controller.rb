@@ -9,9 +9,9 @@ class Marketplace::CartItemsController < Marketplace::BaseController
 
   def update
     quantity = params[:quantity].to_i
-    available = @item.listing.available_quantity
+    available = @item.available_quantity
 
-    if @item.open_offer? && quantity.between?(1, available)
+    if @item.open_offer? && @item.quantity_available?(quantity)
       @item.update!(quantity: quantity)
       redirect_to cart_path, notice: t("marketplace.cart_quantity_updated")
     else
@@ -29,6 +29,6 @@ class Marketplace::CartItemsController < Marketplace::BaseController
   private
 
   def set_item
-    @item = Current.user.marketplace_orders.includes(:listing).find(params[:id])
+    @item = Current.user.marketplace_orders.includes(:listing, :variant).find(params[:id])
   end
 end

@@ -179,6 +179,7 @@ en:
       vipps: Vipps
       dintero: Dintero
     checkout_errors:
+      mixed_currency: Pay for items in each currency separately.
       not_configured: Payment with %{provider} is not set up here yet.
       provider_failed: "%{provider} did not answer as expected. Nothing was charged — try again shortly."
   activerecord:

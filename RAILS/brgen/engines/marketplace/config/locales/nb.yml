@@ -179,6 +179,7 @@ nb:
       vipps: Vipps
       dintero: Dintero
     checkout_errors:
+      mixed_currency: Betal for varer i hver valuta separat.
       not_configured: Betaling med %{provider} er ikke satt opp her ennå.
       provider_failed: "%{provider} svarte ikke som ventet. Ingenting er trukket — prøv igjen om litt."
   activerecord:

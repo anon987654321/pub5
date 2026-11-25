@@ -21,7 +21,7 @@ class Dating::Profile < ApplicationRecord
   }
 
   GENDERS = %w[man woman nonbinary other].freeze
-  LOOKING_FOR = %w[man woman everyone].freeze
+  LOOKING_FOR = (GENDERS + ["everyone"]).freeze
 
   # The stored values are English identifiers; every surface shows the label.
   def self.gender_options = GENDERS.map { |value| [ I18n.t("dating.genders.#{value}"), value ] }
@@ -35,7 +35,7 @@ class Dating::Profile < ApplicationRecord
   # an empty deck by leaving a preference unset.
   scope :oriented_for, lambda { |viewer|
     relation = all
-    relation = relation.where(gender: viewer.looking_for) if %w[man woman].include?(viewer&.looking_for)
+    relation = relation.where(gender: viewer.looking_for) if GENDERS.include?(viewer&.looking_for)
     relation = relation.where(looking_for: [ viewer.gender, "everyone", nil ]) if viewer&.gender.present?
     relation
   }
@@ -44,7 +44,7 @@ class Dating::Profile < ApplicationRecord
 
   # bio holds Tiptap's HTML; the maximum measures the text inside it.
   validates_rich_text_length :bio, maximum: 500
-  validates :age, numericality: { greater_than_or_equal_to: 18, less_than: 100 }
+  validates :age, numericality: { only_integer: true, greater_than_or_equal_to: 18, less_than: 100 }
   validates :gender,      inclusion: { in: GENDERS },     allow_nil: true
   validates :looking_for, inclusion: { in: LOOKING_FOR }, allow_nil: true
   validate :photos_present_when_visible

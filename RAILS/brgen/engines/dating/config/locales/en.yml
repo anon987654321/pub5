@@ -62,6 +62,8 @@ en:
     looking_for_options:
       man: "Men"
       woman: "Women"
+      nonbinary: "Non-binary people"
+      other: "Other genders"
       everyone: "Everyone"
     path_crossings_title: "Crossed paths"
     path_crossings_intro: "People who opted in and were nearby while you were nearby. Exact locations are never shown."

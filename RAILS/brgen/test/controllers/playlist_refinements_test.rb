@@ -66,6 +66,29 @@ class PlaylistRefinementsTest < ActionDispatch::IntegrationTest
     assert_equal "first.mp3", Playlist::Track.find(track.id).audio_file.filename.to_s
   end
 
+  test "the recording library filters title and genre and keeps private recordings owner-only" do
+    public_track = track_for(@owner, title: "Synth marker")
+    public_track.update!(genre: "Techno")
+    hidden = track_for(@owner, title: "Hidden marker", privacy: "private")
+    track_for(@friend, title: "Other marker").update!(genre: "Jazz")
+    sign_in_as(@friend)
+
+    get playlist.hosted_tracks_path, params: { q: "marker", genre: "techno" }
+    assert_response :success
+    assert_select ".radio-track-card", count: 1
+    assert_includes response.body, public_track.title
+    assert_not_includes response.body, hidden.title
+
+    get playlist.hosted_tracks_path, params: { mine: "1" }
+    assert_not_includes response.body, hidden.title
+    assert_not_includes response.body, public_track.title
+
+    sign_in_as(@owner)
+    get playlist.hosted_tracks_path, params: { mine: "1" }
+    assert_includes response.body, hidden.title
+    assert_select ".radio-track-card-share", count: 1
+  end
+
   test "a replay inside the window is not a second play" do
     track = track_for(@owner)
     sign_in_as(@friend)

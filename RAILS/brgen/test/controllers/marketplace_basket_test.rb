@@ -75,6 +75,27 @@ class MarketplaceBasketTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("flash.marketplace.cart_not_payable"), flash[:alert]
   end
 
+  test "a mixed currency basket cannot create a payment" do
+    foreign = listing
+    foreign.update_columns(currency: "EUR")
+    [ listing, foreign ].each do |item|
+      Marketplace::Order.create!(buyer: @buyer, listing: item, quantity: 1, price_cents: item.price_cents)
+    end
+    sign_in_as(@buyer)
+    in_market
+
+    get marketplace.cart_path
+    assert_response :success
+    assert_select ".cart-summary .store-buybox-price", count: 2
+    assert_select ".cart-pay-actions", count: 0
+
+    assert_no_difference -> { Marketplace::Checkout.count } do
+      post marketplace.checkout_path, params: { provider: "stripe" }
+    end
+    assert_redirected_to marketplace.cart_path
+    assert_equal I18n.t("marketplace.checkout_errors.mixed_currency"), flash[:alert]
+  end
+
   test "an unknown provider is refused without assembling a basket" do
     Marketplace::Order.create!(buyer: @buyer, listing: listing, quantity: 1, price_cents: 20_000)
     sign_in_as(@buyer)

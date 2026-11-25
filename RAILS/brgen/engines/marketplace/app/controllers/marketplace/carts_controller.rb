@@ -49,10 +49,10 @@ class Marketplace::CartsController < Marketplace::BaseController
   def load_cart
     @cart_items = Current.user.marketplace_orders
                          .where(status: "pending")
-                         .includes(listing: [ :user, { photos_attachments: :blob } ])
+                         .includes(:variant, listing: [ :user, { photos_attachments: :blob } ])
                          .order(created_at: :desc)
 
-    @cart_total = @cart_items.sum(&:total_cents)
+    @cart_totals = @cart_items.group_by(&:payment_currency).transform_values { |orders| orders.sum(&:total_cents) }
     # Shown before the pay buttons, not discovered after the money has moved.
     @delivery_address = Current.user.marketplace_addresses.default_first.first
   end

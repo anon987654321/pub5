@@ -15,6 +15,14 @@
       <dt><%= t("playlist.last_seven_days") %></dt>
       <dd><strong><%= number_with_delimiter(@listen_recent) %></strong></dd>
     </div>
+    <div>
+      <dt><%= t("playlist.unique_listeners") %></dt>
+      <dd><strong data-metric="unique-listeners"><%= number_with_delimiter(@unique_listeners) %></strong></dd>
+    </div>
+    <div>
+      <dt><%= t("playlist.unique_recent") %></dt>
+      <dd><strong data-metric="unique-recent"><%= number_with_delimiter(@unique_recent) %></strong></dd>
+    </div>
   </dl>
 
   <h2><%= t("playlist.track_breakdown") %></h2>
