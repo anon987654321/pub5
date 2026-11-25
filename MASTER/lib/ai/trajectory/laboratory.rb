@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require_relative "benchmark"
 
 module Master
   module AI
@@ -38,7 +39,12 @@ module Master
         def read(path)
           File.foreach(path).filter_map do |line|
             next if line.strip.empty?
-            JSON.parse(line)
+            row = JSON.parse(line)
+            next unless row.is_a?(Hash)
+            events = row["events"]
+            next unless events.nil? || (events.is_a?(Array) && events.all? { |event| event.is_a?(Hash) })
+
+            row
           rescue JSON::ParserError
             nil
           end
@@ -46,7 +52,10 @@ module Master
 
         def summarize_model(records)
           scores = records.map { |record| Benchmark.score(record) }
-          latencies = records.filter_map { |record| value_ms(record["latency_ms"] || record.dig("metrics", "latency_ms")) }
+          latencies = records.filter_map do |record|
+            metrics = record["metrics"]
+            value_ms(record["latency_ms"] || (metrics["latency_ms"] if metrics.is_a?(Hash)))
+          end
           outcomes = records.group_by { |record| record["outcome"].to_s.empty? ? "unknown" : record["outcome"].to_s }
           verified = records.count { |record| record["verified"] == true }
           {

@@ -197,6 +197,24 @@ class TestCognition < Minitest::Test
     assert_equal 32, scoped[:attempts]
   end
 
+  def test_walk_forward_uses_the_same_normalized_context_as_the_predictor
+    training = [{ context: "task-a", event: "start" }, { context: "task-a", event: "done" },
+                { context: "task-a", event: "start" }]
+    result = Cognition::Prediction.evaluate(training:, testing: [{ context: " task-a ", event: "done" }])
+    assert_equal 1, result[:attempts]
+    assert_equal 1, result[:correct]
+  end
+
+  def test_walk_forward_does_not_score_an_evicted_stream
+    training = [{ context: "old", event: "start" }]
+    Cognition::Prediction::MAX_STREAMS.times do |index|
+      training << { context: "new-#{index}", event: "start" }
+    end
+    result = Cognition::Prediction.evaluate(training:, testing: [{ context: "old", event: "done" }])
+    assert_equal :inconclusive, result[:state]
+    assert_equal 0, result[:attempts]
+  end
+
   def test_walk_forward_evaluation_is_inconclusive_without_predictive_context
     report = Cognition::Prediction.evaluate(training: [], testing: [{ context: "task-a", event: "repair:start" }])
 

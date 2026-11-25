@@ -32,20 +32,21 @@ module Master
         data[:trees].each do |name, row|
           lines << "converge0: #{name} files=#{row[:files]} bytes=#{row[:bytes]} ruby_lines=#{row[:ruby_lines]}"
         end
-        largest = data[:trees].flat_map do |tree, row|
-          row[:largest].map { |entry| [tree, entry] }
-        end.sort_by { |_tree, entry| -entry[:bytes] }.first(10)
-        largest.each do |tree, entry|
-          lines << "converge0: largest #{tree}/#{entry[:path]} bytes=#{entry[:bytes]}"
+        largest = data[:trees].values.flat_map { |row| row[:largest] }
+                      .sort_by { |entry| [-entry[:bytes], entry[:path]] }.first(10)
+        largest.each do |entry|
+          lines << "converge0: largest #{entry[:path]} bytes=#{entry[:bytes]}"
         end
         lines.join("\n")
       end
 
       def tree_inventory(root, tree)
+        root = File.expand_path(root)
         base = File.join(root, tree)
-        return { files: 0, bytes: 0, ruby_lines: 0, largest: [] } unless File.directory?(base)
+        return { files: 0, bytes: 0, ruby_lines: 0, largest: [] } unless File.directory?(base) && !File.symlink?(base)
 
-        files = Dir.glob(File.join(base, "**", "*"), File::FNM_DOTMATCH).select { |path| File.file?(path) }
+        files = Dir.glob(File.join(base, "**", "*"), File::FNM_DOTMATCH)
+                   .select { |path| !File.symlink?(path) && File.file?(path) }
         entries = files.map do |path|
           [path.delete_prefix("#{root}/"), File.size(path)]
         end
@@ -53,7 +54,7 @@ module Master
           files: entries.size,
           bytes: entries.sum { |_path, bytes| bytes },
           ruby_lines: files.select { |path| ruby?(path) }.sum { |path| File.foreach(path).count },
-          largest: entries.sort_by { |_path, bytes| -bytes }.first(12).map { |path, bytes| { path:, bytes: } },
+          largest: entries.sort_by { |path, bytes| [-bytes, path] }.first(12).map { |path, bytes| { path:, bytes: } },
         }
       end
 
