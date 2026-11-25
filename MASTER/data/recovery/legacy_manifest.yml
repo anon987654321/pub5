@@ -973,7 +973,7 @@ legacy_cli_reviews:
       - "8c6f9be76341"
     value: "Legacy three.js face modules: state, renderer, shaders, pixel diff, point renderer and offscreen ecology."
     disposition: "retired-by-consolidation"
-    current_mapping: "MASTER/web/public/face_world.js and MASTER/FACE_WORLD.md preserve the canonical face state, repository geometry, semantic camera and renderer contract."
+    current_mapping: "MASTER/web/public/face_world.js and MASTER/README.md#web-face-sculptural-particle-stipple preserve the canonical face state, repository geometry, semantic camera and renderer contract."
     reason: "Git history explicitly records each legacy module as dead or obsolete; the current FaceWorld is the consolidated successor."
 
 master_json_v43_review:
