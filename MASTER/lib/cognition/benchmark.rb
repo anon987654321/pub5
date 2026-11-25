@@ -15,6 +15,8 @@ module Master
         model = OutcomeModel.new
         state = { "records" => {} }
         scored = []
+        seen = {}
+        duplicates = 0
 
         inputs.each_with_index do |input, index|
           row = input.respond_to?(:to_h) ? input.to_h : nil
@@ -28,6 +30,15 @@ module Master
           receipt = OutcomeModel.validate_evidence!(evidence, root:)
 
           prediction = model.predict(state, context:, action:)
+          identity = [prediction.fetch(:key), receipt.fetch("source"), receipt.fetch("sha256")]
+          if seen.key?(identity)
+            raise ArgumentError, "row #{index + 1} reuses evidence with a different outcome" unless seen[identity] == outcome
+
+            duplicates += 1
+            next
+          end
+          seen[identity] = outcome
+
           if %w[success failure].include?(outcome)
             actual = outcome == "success" ? 1.0 : 0.0
             scored << {
@@ -56,6 +67,7 @@ module Master
         {
           "mode" => learn ? "learning" : "ablation_no_learning",
           "observations" => inputs.size,
+          "duplicate_receipts" => duplicates,
           "scored_outcomes" => scored.size,
           "learned_brier_score" => learned_brier,
           "constant_baseline_brier_score" => baseline_brier,

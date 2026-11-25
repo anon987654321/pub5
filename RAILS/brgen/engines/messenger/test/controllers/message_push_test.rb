@@ -231,6 +231,25 @@ class MessagePushTest < ActionDispatch::IntegrationTest
     assert_includes source, 'this.#send("DELETE", this.#payload())'
   end
 
+  test "push presence refuses malformed conversation, user and device identities" do
+    identity = { conversation_id: @group.id, user_id: @reader.id,
+                 device_type: "web", device_id: 1 }
+
+    [:conversation_id, :user_id, :device_id].each do |field|
+      [nil, 0, -1, "01", "1:2"].each do |invalid|
+        params = identity.merge(field => invalid)
+        assert_not ChannelPresence.touch_push_device!(**params)
+        assert_not ChannelPresence.push_device_active?(**params)
+        assert_not ChannelPresence.leave_push_device!(**params)
+      end
+    end
+
+    assert ChannelPresence.touch_push_device!(**identity)
+    assert ChannelPresence.push_device_active?(**identity)
+    assert_not ChannelPresence.push_device_active?(**identity.merge(user_id: @sender.id))
+    assert_not ChannelPresence.push_device_active?(**identity.merge(device_type: "native"))
+  end
+
   test "a device presence lease expires without requiring an explicit unload event" do
     subscription = PushSubscription.create!(
       user: @reader, endpoint: "https://push.example/ttl",
