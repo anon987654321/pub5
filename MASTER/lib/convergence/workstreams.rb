@@ -66,11 +66,24 @@ module Master
         format("%-28s %-11s %s", item[:id], item[:state], item[:title])
       end
 
-      def path_present?(_root, implementation)
-        return true if %w[RAILS OPENBSD STUDIO].include?(implementation)
+      # Registry implementations may name several concrete paths. Prose
+      # descriptions are not filesystem evidence, and a missing tree is not
+      # present merely because it has a known name.
+      def path_present?(root, implementation)
+        repository = File.realpath(File.join(root, ".."))
+        paths = implementation.to_s.split(/\s*;\s*|\s+\+\s+/, -1)
+        return false if paths.empty?
 
-        path = File.expand_path(implementation, Master::REPO_ROOT)
-        File.exist?(path)
+        paths.all? do |relative|
+          relative = relative.strip
+          next false unless relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO|BIZ)(?:/[^\s*?{}\[\]]+)*\z})
+          next false if relative.split("/").any? { |part| %w[. ..].include?(part) }
+
+          path = File.realpath(File.join(repository, relative))
+          path.start_with?(repository + File::SEPARATOR)
+        end
+      rescue SystemCallError, ArgumentError
+        false
       end
     end
   end
