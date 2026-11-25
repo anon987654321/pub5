@@ -57,7 +57,7 @@ module Master
             value_ms(record["latency_ms"] || (metrics["latency_ms"] if metrics.is_a?(Hash)))
           end
           outcomes = records.group_by { |record| record["outcome"].to_s.empty? ? "unknown" : record["outcome"].to_s }
-          verified = records.count { |record| record["verified"] == true }
+          verified = scores.count { |score| score["verified"] == true }
           {
             model: records.first["model"].to_s,
             calls: records.size,

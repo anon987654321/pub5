@@ -105,6 +105,25 @@ class TestAiTrajectory < Minitest::Test
     refute Master::AI::Trajectory::Benchmark.score(record)["checks"]["evidence"]
   end
 
+  def test_failed_reads_and_verification_do_not_count_as_proof
+    benchmark = Master::AI::Trajectory::Benchmark
+    events = [
+      { "tool" => "Tree", "ok" => true },
+      { "tool" => "ReadFile", "path" => "lib/a.rb", "ok" => false },
+      { "tool" => "WriteFile", "path" => "lib/a.rb", "ok" => true },
+      { "tool" => "verify", "ok" => false },
+    ]
+    record = { "events" => events, "verified" => true }
+    score = benchmark.score(record)
+    refute score["checks"]["evidence"]
+    refute score["checks"]["verification"]
+    refute score["verified"]
+
+    events[1]["ok"] = true
+    events[3]["ok"] = true
+    assert benchmark.score(record)["verified"]
+  end
+
   def test_verified_trajectory_round_trips
     Dir.mktmpdir("trajectory") do |dir|
       path = File.join(dir, "trajectory.ndjson")
@@ -189,7 +208,7 @@ class TestAiTrajectory < Minitest::Test
       good = {
         "task" => "inspect",
         "model" => "small-model",
-        "events" => [{ "tool" => "Tree", "ok" => true }, { "tool" => "verify" }],
+        "events" => [{ "tool" => "Tree", "ok" => true }, { "tool" => "verify", "ok" => true }],
         "outcome" => "complete",
         "verified" => true,
       }

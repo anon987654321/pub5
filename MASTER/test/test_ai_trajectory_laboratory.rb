@@ -25,7 +25,7 @@ class TestTrajectoryLaboratory < Minitest::Test
         {
           "task" => "good",
           "model" => "model-a",
-          "events" => [{ "tool" => "Tree" }, { "tool" => "verify" }],
+          "events" => [{ "tool" => "Tree", "ok" => true }, { "tool" => "verify", "ok" => true }],
           "outcome" => "complete",
           "verified" => true,
         },

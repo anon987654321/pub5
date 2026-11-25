@@ -46,15 +46,37 @@ class TestCatalogCache < Minitest::Test
     FileUtils.rm_rf(dir)
   end
 
-  def test_store_never_records_an_empty_listing
-    dir = Dir.mktmpdir
-    CACHE.path = File.join(dir, "hosted_models.json")
-    # An empty live answer is the failure shape the cache exists to paper
-    # over, not a fact worth keeping.
-    refute CACHE.store("https://x/v1", "keyless", [])
-    assert_nil CACHE.load_for("https://x/v1", "keyless")
-  ensure
-    FileUtils.rm_rf(dir)
+  def test_successful_empty_listing_replaces_stale_ids
+    Dir.mktmpdir do |dir|
+      CACHE.path = File.join(dir, "hosted_models.json")
+      CACHE.store("https://x/v1", "keyless", ["retired"])
+      assert_empty CACHE.ids_for("https://x/v1", "keyless") { [] }
+      assert_empty CACHE.ids_for("https://x/v1", "keyless") { raise Errno::ECONNREFUSED }
+      assert_empty CACHE.load_for("https://x/v1", "keyless")
+      assert_equal 0o600, File.stat(CACHE.path).mode & 0o777
+    end
+  end
+
+  def test_concurrent_stores_preserve_distinct_endpoints
+    Dir.mktmpdir do |dir|
+      CACHE.path = File.join(dir, "hosted_models.json")
+      threads = 8.times.map do |index|
+        Thread.new { CACHE.store("https://host#{index}/v1", "keyless", ["model#{index}"]) }
+      end
+      threads.each { |thread| assert thread.value }
+      8.times do |index|
+        assert_equal ["model#{index}"], CACHE.load_for("https://host#{index}/v1", "keyless")
+      end
+    end
+  end
+
+  def test_empty_allowlist_admits_nothing_and_invalid_listing_raises
+    router = Object.new.extend(Master::CLI::Routing::ModelRouter::HostedEndpoints)
+    spec = { "base" => "https://x/v1", "keyless" => { "allow" => [] } }
+    router.define_singleton_method(:get_json) { |*_, **_| '{"data":[{"id":"model"}]}' }
+    assert_empty router.send(:live_hosted_ids, spec, nil)
+    router.define_singleton_method(:get_json) { |*_, **_| '{"data":[{}]}' }
+    assert_raises(ArgumentError) { router.send(:live_hosted_ids, spec, nil) }
   end
 
   # An offline router rebuild answers the ids the endpoint listed the last

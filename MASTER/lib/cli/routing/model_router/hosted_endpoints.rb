@@ -125,7 +125,7 @@ module Master
 
           def hosted_ids(spec, key)
             # The listing is fetched live on every index build; CatalogCache
-            # keeps the last non-empty answer per (endpoint, mode) so an
+            # keeps the last successful answer per (endpoint, mode) so an
             # offline start degrades to the previous catalogue instead of an
             # empty pool. Keyless cache entries also bind to the current
             # admission rule; changing an allowlist or listing predicate must
@@ -157,7 +157,11 @@ module Master
             rows = parsed.is_a?(Hash) ? parsed["data"] : parsed
             raise ArgumentError, "hosted catalogue must contain a model array" unless rows.is_a?(Array)
 
-            rows = rows.select { |row| row.is_a?(Hash) && row.fetch("model_type", "chat") == "chat" }
+            unless rows.all? { |row| row.is_a?(Hash) && (row["id"] || row["name"]).is_a?(String) && !(row["id"] || row["name"]).strip.empty? }
+              raise ArgumentError, "hosted catalogue contains an invalid model row"
+            end
+
+            rows = rows.select { |row| row.fetch("model_type", "chat") == "chat" }
             unless key
               keyless = spec["keyless"].is_a?(Hash) ? spec["keyless"] : {}
               # `allow` names the keyless model ids outright, for endpoints whose
@@ -167,7 +171,7 @@ module Master
               rules = keyless.reject { |field, _| field == "allow" }
               rows = rows.select do |row|
                 id = row["id"] || row["name"]
-                (allow.empty? || allow.include?(id.to_s)) &&
+                (!keyless.key?("allow") || allow.include?(id.to_s)) &&
                   rules.all? { |field, want| row[field] == want }
               end
             end

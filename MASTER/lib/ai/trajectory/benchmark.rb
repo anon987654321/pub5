@@ -47,7 +47,8 @@ module Master
         def writes_have_prior_reads?(events)
           events.each_with_index.all? do |event, index|
             next true unless write_event?(event)
-            events[0...index].any? { |prior| read_event?(prior) && prior["path"].to_s == event["path"].to_s }
+            path = event["path"].to_s
+            !path.empty? && events[0...index].any? { |prior| prior["ok"] == true && read_event?(prior) && prior["path"].to_s == path }
           end
         end
 
@@ -64,6 +65,8 @@ module Master
         end
 
         def verification_event?(event)
+          return false unless event["ok"] == true
+
           tool = event["tool"].to_s
           return true if %w[test scan verify council_call].include?(tool)
           event["command"].to_s.match?(/(?:ruby\s+-c|rake\s+test|bundle\s+exec\s+rake|bin\/check|\/fix\b)/)
