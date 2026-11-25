@@ -353,7 +353,11 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes deploy, "bundle_install_as_app"
     assert_includes deploy, '"bundle-check"'
     assert_includes runtime, '"bundle-check"'
-    refute_includes tasks, "bundle-install)"
+    # Provisioning is allowed now (operator, 2026-11-25), but only bounded: niced,
+    # time-limited, one job, and frozen to the pinned lockfile.
+    install = tasks[/^\s+bundle-install\)\n.*?;;/m].to_s
+    assert_includes install, "nice -n 15 timeout 900"
+    assert_includes install, "install --frozen --jobs 1"
     refute_includes tasks, "ci-bundle-install)"
   end
 
