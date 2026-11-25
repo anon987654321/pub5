@@ -92,6 +92,7 @@ module Master
         end
         inventory = inventory_paths.uniq.filter_map do |path|
           next if %w[. ..].include?(File.basename(path))
+          next if repo_relative(path).split(File::SEPARATOR).include?(".master")
 
           type = if File.symlink?(path)
                    "symlink"
@@ -254,6 +255,8 @@ module Master
         design = relative == "MASTER" ? collect_design : []
         # Keep the batch bounded, but disclose every deferred opportunity.
         active = (findings + design).map { |row| opportunity_key(row) }.uniq
+        return [] if active.empty?
+
         selected = []
         RepairMemory.new(root: @root).rotate_opportunities(relative, active) do |counts|
           @offered = counts

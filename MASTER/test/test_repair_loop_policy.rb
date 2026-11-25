@@ -499,6 +499,17 @@ class TestRepairLoopPolicy < Minitest::Test
 
   # Only SAFE approves. A ramble or a check that raised approved the fix before,
   # and with fixes now reaching the disk that is a fix nobody reviewed.
+  def test_independent_review_excludes_author_and_first_reviewer
+    loop = Master::Fix::RepairLoop.allocate
+    agent = Object.new
+    agent.define_singleton_method(:candidate_models) { |**| %w[author first second] }
+    loop.instance_variable_set(:@agent, agent)
+    Thread.current[:master_fix_candidate_author_models] = ["author"]
+    assert_equal "second", loop.send(:independent_review_model, "first")
+  ensure
+    Thread.current[:master_fix_candidate_author_models] = nil
+  end
+
   def test_reflexion_approves_only_on_safe
     assert_equal "puts :y\n", verdict_for("SAFE")
     assert_nil verdict_for("UNSAFE: drops a branch")

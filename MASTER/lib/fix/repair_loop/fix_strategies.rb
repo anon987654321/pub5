@@ -33,7 +33,7 @@ module Master
         def reflexion_verify(violation, proposed_src)
           Thread.current[:reflexion_reason] = nil
           path = violation[:file]
-          return proposed_src unless File.exist?(path)
+          return unverified(path, what: "source disappeared", error: IOError.new("missing source")) unless File.file?(path)
 
           original_src = begin
             File.read(path, encoding: "UTF-8")
@@ -46,6 +46,7 @@ module Master
           # The verdict reads a diff and answers SAFE or UNSAFE; a cheaper model
           # (MASTER_FIX_VERIFIER_MODEL) can give it, and Opus keeps the repairs.
           pin = ENV.fetch("MASTER_FIX_VERIFIER_MODEL", "")
+          Thread.current[:master_llm_answer_model] = nil
           response = Master::Review::LLMDispatcher::ModelPin.with(pin) { ask_once_agent(prompt, image: @visual_image).to_s.strip }
           # A reply that is neither verdict (a tool call, a ramble) is asked for again, once, with the
           # reason it was refused. Only SAFE still approves, so a second non-verdict is still a refusal.
@@ -53,12 +54,32 @@ module Master
             retry_prompt = "#{prompt}\nYour last reply was not a verdict. Judge only the supplied evidence; if context is incomplete, answer UNSAFE with the missing evidence. Do not call tools. Reply with exactly one line: SAFE, or UNSAFE: <reason>."
             response = Master::Review::LLMDispatcher::ModelPin.with(pin) { ask_once_agent(retry_prompt, image: @visual_image).to_s.strip }
           end
+          if response == "SAFE" && (alternate = independent_review_model(Thread.current[:master_llm_answer_model]))
+            Thread.current[:master_llm_answer_model] = nil
+            response = ask_once_agent(prompt + "\nIndependently challenge the change; return SAFE or UNSAFE: reason.", model: alternate, image: @visual_image).to_s.strip
+            actual = Thread.current[:master_llm_answer_model].to_s
+            if actual != alternate.to_s
+              return unverified(path, what: "independent review not confirmed", error: IOError.new("alternate model identity unavailable or changed"))
+            end
+          end
           handle_reflexion_response(response, path, proposed_src)
         rescue StandardError => e
           # A check that could not run approves nothing, as a broken quorum
           # approves nothing: the fix is refused and says why.
           Master::Ground::Swallow.log(e, context: "RepairLoop.reflexion_verify", rule: @law.id)
           unverified(path, what: "the verifier could not run", error: e)
+        end
+
+        # Prefer a different actual model, not a different persona on the
+        # same model. A single available model remains a single-model review.
+        def independent_review_model(first)
+          return if first.to_s.empty? || @visual_image || !@agent.respond_to?(:candidate_models)
+          return unless ENV.fetch("MASTER_FIX_VERIFIER_MODEL", "").empty?
+
+          authors = Array(Thread.current[:master_fix_candidate_author_models]).map(&:to_s)
+          Array(@agent.candidate_models(task_type: :review)).map(&:to_s).find do |model|
+            !model.empty? && model != first.to_s && !authors.include?(model)
+          end
         end
 
         # A verifier that could not judge says why: the refusal names the exception, not "UNSAFE".
