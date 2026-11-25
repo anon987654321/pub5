@@ -263,10 +263,10 @@ models:
     - *web_chat_grok
     - *web_chat_chatgpt
   default:
-    # DeepSeek leads /fix-serving for this session (operator request,
-    # 2026-11-22); GLM-5.3 Flash is its next lane.
-    - *ollama_deepseek_v4_1_flash
+    # GLM-5.3 Flash leads /fix-serving for this session (operator request,
+    # 2026-11-25); the DeepSeek head follows it.
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
@@ -289,10 +289,10 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   primary:
-    # DeepSeek is the session primary (operator request, 2026-11-22);
-    # GLM-5.3 Flash follows it.
-    - *ollama_deepseek_v4_1_flash
+    # GLM-5.3 Flash is the session primary (operator request, 2026-11-25);
+    # the DeepSeek head follows it.
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
@@ -308,8 +308,10 @@ models:
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
-    - *ollama_deepseek_v4_1_flash
+    # GLM-5.3 Flash leads this tier for this session (operator request,
+    # 2026-11-25).
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *replicate_gpt_5_2
     - *replicate_claude_opus_5_5
@@ -346,8 +348,10 @@ models:
     - *mistral_small
   # Short advisory calls use the same primary/fallback order as the main pool.
   fast:
-    - *ollama_deepseek_v4_1_flash
+    # GLM-5.3 Flash leads this tier for this session (operator request,
+    # 2026-11-25).
     - *glm_5_3_flash
+    - *ollama_deepseek_v4_1_flash
     - *zai_cli_auto
     - *claude_sonnet
     - *grok_cli_auto
