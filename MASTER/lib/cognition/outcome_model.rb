@@ -41,6 +41,16 @@ module Master
         }.freeze
       end
 
+      # Rank known actions for investigation, not authorization. Unlearned
+      # actions remain visible and no prediction can bypass execution gates.
+      def alternatives(state, context:, actions:)
+        Array(actions).uniq.map do |action|
+          predict(state, context:, action:).merge(action:).freeze
+        end.sort_by do |row|
+          [row[:status] == :learned ? 0 : 1, -row[:success_probability], -row[:samples], row[:action].to_s]
+        end.freeze
+      end
+
       def observe!(state, context:, action:, outcome:, evidence:, predicted_probability: nil)
         outcome = outcome.to_s
         raise ArgumentError, "unknown task outcome: #{outcome}" unless OUTCOMES.include?(outcome)
@@ -198,7 +208,8 @@ module Master
         excess = records.size - MAX_RECORDS
         return unless excess.positive?
 
-        records.keys.first(excess).each { |key| records.delete(key) }
+        records.keys.sort_by { |key| [records[key]["updated_at"].to_s, key] }
+               .first(excess).each { |key| records.delete(key) }
       end
     end
   end
