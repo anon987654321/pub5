@@ -1953,7 +1953,9 @@ RAILS_DOCTRINE_sensible_defaults:
     repeat a choice or perform setup when a safe, unsurprising default can be
     inferred from reliable context. The common path works without instruction;
     overrides remain available for genuinely different modes, never to widen
-    authority or permissions.
+    authority or permissions. Creative tools use their recovered knowledge in
+    the ordinary execution path, not only behind named flags. A single public
+    entrypoint per creative domain guides the operator when intent is missing.
   resolution: review
 
 RAILS_DOCTRINE_omakase:
