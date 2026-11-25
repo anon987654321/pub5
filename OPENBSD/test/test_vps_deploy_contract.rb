@@ -54,6 +54,10 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, 'PROTECTED /$rel (SSH configuration requires an out-of-band recovery path)'
     assert_includes operator, 'PROTECTED /$rel (pass --doas to use validate_doas.ksh)'
     assert_includes operator, 'validate_doas.ksh" install'
+    # --doas installs doas.conf alone and defers the rest; refusing on other
+    # changes left a drifted doas.conf with no path (vm23, 2026-11-25).
+    assert_includes operator, "DEFERRED  ${#CHANGED} other mirror changes"
+    refute_includes operator, "may only change doas.conf by itself"
   end
 
   def test_nsd_zone_changes_are_signed_and_validated_before_activation
