@@ -458,6 +458,7 @@ module Backlog
       return :busy if state == "running"
 
       if origin == "backlog" && state == "waiting"
+        return :busy unless current["auto_continue"] == true
         return :busy if due_mission?(current)
 
         return :delivery_failed unless park_current!(record: current)

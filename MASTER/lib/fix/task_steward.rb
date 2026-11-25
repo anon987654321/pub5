@@ -81,11 +81,10 @@ module Master
       def tick!
         record = Mission.current(root: @root)
         unless eligible?(record)
-          # A future-due backlog mission may be parked while independent work
-          # advances. Do not reinterpret an explicitly disabled or non-backlog
-          # mission as permission to enqueue unattended repository work.
-          if record && record["origin"].to_s == "backlog" &&
-             record["auto_continue"] == true && record["state"].to_s == "waiting"
+          # Retry terminal handoff if the previous callback was interrupted.
+          # Future-due backlog tasks may also be parked for independent work.
+          # A paused live task or a non-backlog task never grants intake.
+          if backlog_handoff?(record)
             notify_after_run(:idle, mission_id: record["id"])
           end
           return :idle
@@ -143,6 +142,14 @@ module Master
         goal = goal[0...-1] while %w[! . ? ...].include?(goal[-1])
         intent = record.dig("operator", "intent").to_s
         intent == "continue_prior_plan" || CONTEXTLESS_GOALS.include?(goal.delete("'"))
+      end
+
+      def backlog_handoff?(record)
+        return false unless record && record["origin"].to_s == "backlog"
+
+        state = record["state"].to_s
+        %w[completed blocked failed].include?(state) ||
+          (state == "waiting" && record["auto_continue"] == true)
       end
 
       def eligible?(record)

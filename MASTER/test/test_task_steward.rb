@@ -116,6 +116,35 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_terminal_backlog_handoff_retries_after_callback_failure
+    %w[completed blocked failed].each do |state|
+      record = { "id" => "first", "origin" => "backlog", "state" => state,
+                 "auto_continue" => false }
+      observed = []
+      steward = Master::Fix::TaskSteward.new(
+        root: Dir.tmpdir, bus: nil, runner: ->(**) { flunk "terminal task reran" },
+        after_run: ->(mission:, result:) {
+          observed << [mission.fetch("id"), result]
+          raise "intake interrupted" if observed.one?
+        },
+      )
+      Master::Fix::Mission.stub(:current, record) do
+        2.times { assert_equal :idle, steward.tick! }
+      end
+      assert_equal [["first", :idle], ["first", :idle]], observed
+    end
+  end
+
+  def test_terminal_foreground_mission_does_not_grant_backlog_intake
+    record = { "id" => "manual", "origin" => "fold", "state" => "completed",
+               "auto_continue" => false }
+    steward = Master::Fix::TaskSteward.new(
+      root: Dir.tmpdir, bus: nil, runner: ->(**) { flunk "terminal task reran" },
+      after_run: ->(**) { flunk "foreground task granted backlog intake" },
+    )
+    Master::Fix::Mission.stub(:current, record) { assert_equal :idle, steward.tick! }
+  end
+
   def test_disabled_backlog_mission_is_not_handed_off_to_unattended_intake
     Dir.mktmpdir do |root|
       write_mission(
