@@ -90,9 +90,9 @@ end
 Law.define(:FACE_POINT_IS_ONE_PIXEL) do
   source "pixel_perfection - MASTER/data/laws.yml, extended to WebGL"
   detect do |line|
-    line.match?(/gl_PointSize\s*=/) && !line.match?(/gl_PointSize\s*=\s*1\.[05]\s*;/)
+    line.match?(/gl_PointSize\s*=/) && !line.match?(/gl_PointSize\s*=\s*(?:1\.[05]|3\.0)\s*;/)
   end
-  fix "Use fixed crisp points: gl_PointSize=1.0 or 1.5. Put depth and curvature into brightness, not size."
+  fix "Use fixed crisp points: 1.0 or 1.5 for single marks, 3.0 for the canonical rugged bitmap. Never scale with depth."
   bad  "  gl_PointSize=clamp(uSize*(260./-mv.z)*sizeBoost,2.0,4.0);"
   good "  gl_PointSize=1.0;"
 end
