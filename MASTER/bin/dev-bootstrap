@@ -65,6 +65,30 @@ version_key() {
   printf '%d\n' $((major * 1000000 + minor * 1000 + patch))
 }
 
+# Before Ruby is available, use a POSIX watchdog rather than a platform-specific
+# timeout utility. A temp file prevents a forked child holding stdout from
+# keeping command substitution open after the interpreter has been killed.
+probe_with_deadline() (
+  output=$(mktemp "${TMPDIR:-/tmp}/master-ruby-probe.XXXXXXXX") || exit 1
+  trap 'rm -f "$output"' 0
+  "$@" >"$output" 2>/dev/null &
+  probe_pid=$!
+  (
+    timer=
+    trap '[ -z "$timer" ] || kill "$timer" 2>/dev/null || :; exit 0' TERM
+    sleep 5 & timer=$!
+    wait "$timer" || exit 0
+    kill -KILL "$probe_pid" 2>/dev/null || :
+  ) </dev/null >/dev/null 2>&1 &
+  watchdog=$!
+  status=0
+  wait "$probe_pid" 2>/dev/null || status=$?
+  kill "$watchdog" 2>/dev/null || :
+  wait "$watchdog" 2>/dev/null || :
+  [ "$status" -eq 0 ] || exit "$status"
+  cat "$output"
+)
+
 best_on_path() {
   best_key=-1
   best_ruby=
@@ -75,7 +99,7 @@ best_on_path() {
     for candidate in "$@"; do
       [ -n "$candidate" ] || continue
       [ -x "$candidate" ] || continue
-      version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+      version=$(probe_with_deadline "$candidate" -e 'print RUBY_VERSION') || continue
       key=$(version_key "$version") || continue
       [ "$key" -gt "$best_key" ] || continue
       best_key=$key
@@ -87,7 +111,7 @@ best_on_path() {
 
   generic=$(command -v ruby 2>/dev/null || true)
   if [ -n "$generic" ] && [ -x "$generic" ]; then
-    if version=$("$generic" -e 'print RUBY_VERSION' 2>/dev/null) &&
+    if version=$(probe_with_deadline "$generic" -e 'print RUBY_VERSION') &&
       key=$(version_key "$version"); then
       printf '%s\n' "$generic"
       return
@@ -96,7 +120,7 @@ best_on_path() {
 
   for candidate in "$HOME"/.rubies/*/bin/ruby "$HOME"/.rbenv/versions/*/bin/ruby; do
     [ -x "$candidate" ] || continue
-    version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+    version=$(probe_with_deadline "$candidate" -e 'print RUBY_VERSION') || continue
     key=$(version_key "$version") || continue
     [ "$key" -gt "$best_key" ] || continue
     best_key=$key
@@ -109,7 +133,7 @@ best_on_path() {
     [ -d "$directory" ] || continue
     for candidate in "$directory"/ruby[0-9]*; do
       [ -x "$candidate" ] || continue
-      version=$("$candidate" -e 'print RUBY_VERSION' 2>/dev/null) || continue
+      version=$(probe_with_deadline "$candidate" -e 'print RUBY_VERSION') || continue
       key=$(version_key "$version") || continue
       [ "$key" -gt "$best_key" ] || continue
       best_key=$key
@@ -239,7 +263,7 @@ build() {
 if [ -n "${PUB5_RUBY:-}" ]; then
   [ -x "$PUB5_RUBY" ] || { say "PUB5_RUBY is not executable: $PUB5_RUBY"; exit 1; }
   version=
-  if ! version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null) || ! version_key "$version" >/dev/null; then
+  if ! version=$(probe_with_deadline "$PUB5_RUBY" -e 'print RUBY_VERSION') || ! version_key "$version" >/dev/null; then
     say "PUB5_RUBY must be Ruby >= $MIN_MAJOR.$MIN_MINOR (found ${version:-unreadable})"
     exit 1
   fi
@@ -256,7 +280,7 @@ fi
 if [ -x "$PREFIX/bin/ruby" ]; then
   built=
   if built=$(LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-    "$PREFIX/bin/ruby" -e 'print RUBY_VERSION' 2>/dev/null) && version_key "$built" >/dev/null; then
+    probe_with_deadline "$PREFIX/bin/ruby" -e 'print RUBY_VERSION') && version_key "$built" >/dev/null; then
     install_ca_bundle
     LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
@@ -279,7 +303,7 @@ if [ "$#" -gt 0 ]; then
   exec "$PREFIX/bin/ruby" "$@"
 fi
 
-say "receipt: $PREFIX/bin/ruby ($("$PREFIX/bin/ruby" -e 'print RUBY_VERSION'))"
+say "receipt: $PREFIX/bin/ruby ($(probe_with_deadline "$PREFIX/bin/ruby" -e 'print RUBY_VERSION'))"
 say "support libraries: $PREFIX (static, private to this checkout)"
 say "use: bin/dev-bootstrap [args...] runs args on it"
 say "  or: export LD_LIBRARY_PATH=$PREFIX/lib and PATH=$PREFIX/bin:\$PATH"

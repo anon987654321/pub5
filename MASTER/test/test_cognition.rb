@@ -215,6 +215,19 @@ class TestCognition < Minitest::Test
     assert_equal 0, result[:attempts]
   end
 
+  def test_walk_forward_reports_abstentions_separately_from_accuracy
+    training = [{ event: "start" }, { event: "done" }, { event: "start" }]
+    testing = [{ event: "done" }, { event: "unknown" }, { event: "new" }]
+    result = Cognition::Prediction.evaluate(training:, testing:)
+    assert_equal 3, result[:observations]
+    assert_equal 3, result[:attempts]
+    assert_equal 2, result[:emitted]
+    assert_equal 1, result[:correct]
+    assert_equal 0.6667, result[:prediction_coverage]
+    assert_equal 0.5, result[:conditional_accuracy]
+    assert_equal 0.3333, result[:top1_accuracy]
+  end
+
   def test_walk_forward_evaluation_is_inconclusive_without_predictive_context
     report = Cognition::Prediction.evaluate(training: [], testing: [{ context: "task-a", event: "repair:start" }])
 

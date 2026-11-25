@@ -33,11 +33,35 @@ BEST_KEY=-1
 BEST_RUBY=
 BEST_VERSION=
 
+# Before Ruby is available, use a POSIX watchdog rather than a platform-specific
+# timeout utility. A temp file prevents a forked child holding stdout from
+# keeping command substitution open after the interpreter has been killed.
+probe_with_deadline() (
+  output=$(mktemp "${TMPDIR:-/tmp}/master-ruby-probe.XXXXXXXX") || exit 1
+  trap 'rm -f "$output"' 0
+  "$@" >"$output" 2>/dev/null &
+  probe_pid=$!
+  (
+    timer=
+    trap '[ -z "$timer" ] || kill "$timer" 2>/dev/null || :; exit 0' TERM
+    sleep 5 & timer=$!
+    wait "$timer" || exit 0
+    kill -KILL "$probe_pid" 2>/dev/null || :
+  ) </dev/null >/dev/null 2>&1 &
+  watchdog=$!
+  status=0
+  wait "$probe_pid" 2>/dev/null || status=$?
+  kill "$watchdog" 2>/dev/null || :
+  wait "$watchdog" 2>/dev/null || :
+  [ "$status" -eq 0 ] || exit "$status"
+  cat "$output"
+)
+
 probe_version() {
   if [ "$1" -ef "$TOOLS_RUBY" ]; then
-    LD_LIBRARY_PATH="$TOOLS_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$1" -e 'print RUBY_VERSION' 2>/dev/null
+    LD_LIBRARY_PATH="$TOOLS_PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" probe_with_deadline "$1" -e 'print RUBY_VERSION'
   else
-    "$1" -e 'print RUBY_VERSION' 2>/dev/null
+    probe_with_deadline "$1" -e 'print RUBY_VERSION'
   fi
 }
 

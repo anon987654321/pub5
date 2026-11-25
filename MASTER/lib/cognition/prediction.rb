@@ -27,14 +27,17 @@ module Master
         end
 
         attempts = 0
+        emitted = 0
         correct = 0
-        Array(testing).each do |item|
+        observations = Array(testing)
+        observations.each do |item|
           row = evaluation_row(item)
           context = scoped ? row[:context] : nil
           prior = predictor.previous_event(predictions, context:)
           if prior
             attempts += 1
             expected = predictor.expected(predictions, event: prior, context:)
+            emitted += 1 unless expected.nil?
             correct += 1 if expected == row[:event]
           end
           predictor.observe!(predictions, event: row[:event], context:)
@@ -44,8 +47,12 @@ module Master
           state: attempts.positive? ? :measured : :inconclusive,
           protocol: :walk_forward,
           scope: scoped ? :contextual : :shared,
+          observations: observations.size,
           attempts:,
+          emitted:,
           correct:,
+          prediction_coverage: observations.empty? ? 0.0 : (emitted.to_f / observations.size).round(4),
+          conditional_accuracy: emitted.positive? ? (correct.to_f / emitted).round(4) : nil,
           top1_accuracy: attempts.positive? ? (correct.to_f / attempts).round(4) : nil,
         }.freeze
       end

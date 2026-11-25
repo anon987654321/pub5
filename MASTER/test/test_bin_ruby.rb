@@ -161,6 +161,33 @@ class TestBinRuby < Minitest::Test
     end
   end
 
+  def test_wrapper_bounds_a_stalled_interpreter_probe
+    Dir.mktmpdir do |dir|
+      fake = File.join(dir, "ruby")
+      File.write(fake, "#!/bin/sh\nexec sleep 30\n")
+      File.chmod(0o755, fake)
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      _, err, status = unbundled { Open3.capture3({ "PUB5_RUBY" => fake }, BIN, "go") }
+      refute status.success?
+      assert_includes err, "not a compatible Ruby"
+      assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 15
+    end
+  end
+
+  def test_runner_refuses_unpaired_explicit_ruby_and_invalid_bundle_override
+    Dir.mktmpdir do |dir|
+      ruby = File.join(dir, "custom-ruby")
+      File.write(ruby, "#!/bin/sh\nprintf 3.3.8\n")
+      File.chmod(0o755, ruby)
+      ENV.stub(:[], ->(key) { { "PUB5_RUBY" => ruby }[key] }) do
+        assert_raises(RuntimeError) { Operator::RubyRunner.bundle_cmd }
+      end
+      ENV.stub(:[], ->(key) { { "PUB5_BUNDLE" => dir }[key] }) do
+        assert_raises(RuntimeError) { Operator::RubyRunner.bundle_cmd }
+      end
+    end
+  end
+
   def test_runner_pairs_bundle_with_explicit_ruby
     Dir.mktmpdir do |dir|
       ruby = File.join(dir, "custom-ruby")

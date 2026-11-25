@@ -28,22 +28,31 @@ module Operator
 
     def bundle_cmd(root: Environment.repo_root)
       explicit = ENV["PUB5_BUNDLE"].to_s
-      return explicit if !explicit.empty? && File.executable?(explicit)
+      unless explicit.empty?
+        return explicit if File.file?(explicit) && File.executable?(explicit)
 
-      ruby = ENV["PUB5_RUBY"].to_s.empty? ? best_available_ruby(root:)&.fetch(:path, nil) : ruby_cmd(root:)
-      suffix = ruby ? File.basename(ruby)[/\Aruby(\d+(?:\.\d+)*)\z/, 1].to_s : ""
+        raise "PUB5_BUNDLE must name an executable Bundler: #{explicit}"
+      end
+
+      ruby = ruby_cmd(root:)
+      suffix = File.basename(ruby)[/\Aruby(\d+(?:\.\d+)*)\z/, 1].to_s
       if !suffix.empty?
         paired = File.join(File.dirname(ruby), "bundle#{suffix}")
-        return paired if File.executable?(paired)
+        return paired if File.file?(paired) && File.executable?(paired)
 
-        paired = openbsd_path("bundle#{suffix}", root:)
-        return paired if paired
+        paired = command_path("bundle#{suffix}")
+        return paired if File.file?(paired) && File.executable?(paired)
 
         raise "Bundler for selected Ruby package #{File.basename(ruby)} is unavailable"
       end
 
+      paired = File.join(File.dirname(ruby), "bundle")
+      return paired if File.file?(paired) && File.executable?(paired)
+      unless ENV["PUB5_RUBY"].to_s.empty? && same_interpreter?(ruby, RbConfig.ruby)
+        raise "Bundler for selected Ruby #{ruby} is unavailable; install it alongside Ruby or set PUB5_BUNDLE"
+      end
+
       candidates = []
-      candidates << File.join(File.dirname(ruby), "bundle") if ruby
       home = File.expand_path("~")
       candidates.concat(
         [
@@ -53,7 +62,8 @@ module Operator
       )
       candidates << openbsd_path("bundle", root:)
       candidates << command_path("bundle")
-      candidates.compact.find { |candidate| File.executable?(candidate) } || "bundle"
+      candidates.compact.find { |candidate| File.file?(candidate) && File.executable?(candidate) } ||
+        raise("Bundler for selected Ruby #{ruby} is unavailable")
     end
 
     def best_available_ruby(root: Environment.repo_root)
