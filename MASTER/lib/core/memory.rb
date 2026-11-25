@@ -207,7 +207,7 @@ module Master::Core
         end
 
         def transcript
-          @episode.events.map(&:to_s)
+          Array(@episode&.events).map(&:to_s)
         end
       end
 
@@ -287,8 +287,10 @@ module Master::Core
       def allowed?(path, mode = :read)
         candidate = normalize(path)
         requested = mode.to_sym
+        return false unless MODES.include?(requested)
+
         @entries.any? do |entry|
-          next false unless candidate == entry.path || candidate.start_with?("#{entry.path}/")
+          next false unless entry.path.empty? || candidate == entry.path || candidate.start_with?("#{entry.path}/")
           entry.mode == :write || entry.mode == requested
         end
       end
