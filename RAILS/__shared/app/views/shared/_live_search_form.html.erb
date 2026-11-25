@@ -16,7 +16,7 @@
         turbo_stream: true,
         live_search_target: "form"
       } do |f| %>
-    <div class="search-form">
+    <%= tag.div class: "search-form" do %>
       <%= f.search_field :q,
             value: query,
             id: local_assigns.fetch(:input_id, "q"),
@@ -41,9 +41,9 @@
       <% if local_assigns.fetch(:show_submit, true) %>
         <%= f.submit t("search.submit"), class: local_assigns.fetch(:submit_class, "button button-small"), aria: { label: t("search.submit") } %>
       <% end %>
-    </div>
+    <% end %>
   <% end %>
-  <span class="visually-hidden" role="status" aria-live="polite" data-live-search-target="status"></span>
+  <%= tag.span class: "visually-hidden", role: "status", aria: { live: "polite" }, data: { live_search_target: "status" } %>
 
   <%# Inside .search, not beside it: the pen fuses the results into the box when
       it is active, which is what the 30px pill collapsing to a 16px rectangle

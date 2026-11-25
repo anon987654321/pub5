@@ -4,9 +4,7 @@ module Shared
   module StimulusFormHelper
     # @stimulus-components/character-counter — countdown mode with maxlength.
     def character_counter_field(form, method, max:, **options)
-      rows = options.delete(:rows)
-
-      wrapper = tag.div(
+      tag.div(
         data: {
           controller: "character-counter",
           character_counter_countdown_value: true,
@@ -16,19 +14,11 @@ module Shared
         field_options[:maxlength] = max
         field_options[:data] = (field_options[:data] || {}).merge(character_counter_target: "input")
 
-        field =
-          if rows
-            form.text_area(method, **field_options, rows:)
-          else
-            form.text_area(method, **field_options)
-          end
-
         safe_join([
-          field,
+          form.text_area(method, **field_options),
           tag.span(class: "char-counter", data: { character_counter_target: "counter" }, aria: { live: "polite" }),
         ])
       end
-      wrapper
     end
 
     # @stimulus-components/password-visibility
