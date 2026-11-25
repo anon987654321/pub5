@@ -10,7 +10,7 @@
   </div>
 <% end %>
 
-<% listing_filter_params = request.query_parameters.except("page", "format") %>
+<% listing_filter_params = request.query_parameters.except("page", "format").merge("kind" => @kind.to_s) %>
 <% if @categories.any? %>
   <%# Kaufland.de's category shortcut rail: a 110px white well over each name.
       Categories carry no picture, so the well holds the name's initial rather

@@ -289,6 +289,7 @@ module Master
     "diff_stager" => "DiffStager", "code_index" => "CodeIndex", "git_context" => "GitContext",
     "ast_edit" => "AstEdit", "tts" => "TTS", "md" => "MD", "pdf" => "PDF",
     "openbsd_manual_preflight" => "OpenBSDManualPreflight",
+    "openbsd_receipt_builder" => "OpenBSDReceiptBuilder",
     "ux_refinement_catalog" => "UXRefinementCatalog"
   )
   loader.enable_reloading if defined?(MASTER_DEV_MODE) || ENV["MASTER_DEV"].to_s == "1"

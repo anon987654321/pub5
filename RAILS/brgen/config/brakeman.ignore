@@ -3,19 +3,72 @@
     {
       "warning_type": "SQL Injection",
       "warning_code": 0,
-      "fingerprint": "a4a9feb5f58905bc37b215b44bb6f06507650fa9319aa8345df27ba6cc2b99ad",
+      "fingerprint": "2c07b29921c4bea9accd30edd19cc6e0a4dd4eeaecf50ab1453fa7653297a461",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "engines/marketplace/app/services/marketplace/search_ranker.rb",
+      "line": 21,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "[Format Error]",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Marketplace::SearchRanker",
+        "method": "relation"
+      },
+      "user_input": "relevance_sql",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "Every search token reaches SQL through connection.quote; category ids pass through Integer(); the rest is constant SQL. ORDER BY cannot take bind parameters."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "b179345fc8b821a5ebc7583926bda4802155c75b71c7c48e5877675441e38c35",
       "check_name": "SQL",
       "message": "Possible SQL injection",
       "file": "engines/dating/app/models/dating/profile.rb",
-      "line": 89,
+      "line": 108,
       "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
-      "code": "Dating::Profile.ranked_for deck ordering",
+      "code": "Arel.sql(\"#{\"CASE\\n  WHEN dating_profiles.last_active_at IS NULL THEN 3\\n  WHEN dating_profiles.last_active_at > datetime('now', '-2 days')  THEN 0\\n  WHEN dating_profiles.last_active_at > datetime('now', '-14 days') THEN 1\\n  ELSE 2\\nEND\\n\".squish} ASC,\\ndating_profiles.prompts_count DESC,\\n((dating_profiles.id * #{Integer(((Digest::MD5.hexdigest(\"#{seed}:#{viewer.id}\")[0, 6].to_i(16) % 996) + 1))}) % #{Integer(997)}) ASC\\n\".squish)",
       "render_path": null,
-      "location": { "type": "method", "class": "Dating::Profile", "method": "ranked_for" },
-      "user_input": "multiplier / modulus",
+      "location": {
+        "type": "method",
+        "class": "Dating::Profile",
+        "method": "Dating::Profile.ranked_for"
+      },
+      "user_input": "Integer(((Digest::MD5.hexdigest(\"#{seed}:#{viewer.id}\")[0, 6].to_i(16) % 996) + 1))",
       "confidence": "Medium",
-      "note": "Both interpolated values are integers by construction and neither is reachable from user input. multiplier is Integer(md5_hex.to_i(16) % 996 + 1), so 1..996; modulus is Integer(SHUFFLE_MODULUS), the literal 997. Integer() raises rather than coerces, so a non-integer would fail loudly here rather than reach the query. The third interpolation is RECENCY_SQL, a frozen constant with no input in it. ORDER BY cannot take a bind parameter, so interpolation is the only shape available; Brakeman flags any dynamic argument to Arel.sql and cannot follow the digest chain that proves the range. Reviewed 2026-08-13 while unblocking brgen CI, which this one warning was failing."
+      "cwe_id": [
+        89
+      ],
+      "note": "Both interpolated values are integers by construction (Integer() on a digest-derived multiplier and a constant modulus) and the CASE text is a constant; neither is reachable from user input. ORDER BY cannot take bind parameters."
+    },
+    {
+      "warning_type": "SQL Injection",
+      "warning_code": 0,
+      "fingerprint": "cd894cbcbe0c8290906a1e3dfe334a89324e04852ef54c55eebeafb3e33b0e85",
+      "check_name": "SQL",
+      "message": "Possible SQL injection",
+      "file": "app/models/post.rb",
+      "line": 134,
+      "link": "https://brakemanscanner.org/docs/warning_types/sql_injection/",
+      "code": "Arel.sql(\"#{\"CASE\\n  WHEN posts.created_at > datetime('now', '-2 days')  THEN 0\\n  WHEN posts.created_at > datetime('now', '-14 days') THEN 1\\n  ELSE 2\\nEND\\n\".squish} ASC,\\n#{\"(posts.score + 2.0 * posts.comments_count + 1.0) / (((julianday('now') - julianday(posts.created_at)) * 24.0) + 2.0)\"} DESC,\\n((posts.id * #{Integer(((Digest::MD5.hexdigest(\"feed:#{seed}:#{viewer.id}\")[0, 6].to_i(16) % 996) + 1))}) % #{Integer(997)}) ASC,\\nposts.created_at DESC,\\nposts.id DESC\\n\".squish)",
+      "render_path": null,
+      "location": {
+        "type": "method",
+        "class": "Post",
+        "method": "Post.ranked_for"
+      },
+      "user_input": "Integer(((Digest::MD5.hexdigest(\"feed:#{seed}:#{viewer.id}\")[0, 6].to_i(16) % 996) + 1))",
+      "confidence": "Medium",
+      "cwe_id": [
+        89
+      ],
+      "note": "RANK_RECENCY_SQL and RANK_ENGAGEMENT_SQL are constants; multiplier and modulus pass through Integer(). Nothing user-controlled reaches this ORDER BY, which cannot take bind parameters."
     }
   ],
-  "brakeman_version": "7.1.0"
+  "brakeman_version": "8.1.0"
 }

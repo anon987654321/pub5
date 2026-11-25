@@ -14,9 +14,10 @@ class StylesheetTidyTest < ActiveSupport::TestCase
     assert_no_match(/^\s*\.tabs \{/, SOURCE)
   end
 
+  # The rules sit inside @layer blocks, so they are indented.
   test "the graph and the current nav link each have one definition" do
-    assert_equal 1, SOURCE.scan(/^\.dep-graph \{/).size
-    assert_equal 1, SOURCE.scan(/^nav\[data-pwa-primary-nav\] a\[aria-current\] \{/).size
+    assert_equal 1, SOURCE.scan(/^[ \t]*\.dep-graph \{/).size
+    assert_equal 1, SOURCE.scan(/^[ \t]*nav\[data-pwa-primary-nav\] a\[aria-current\] \{/).size
   end
 
   test "no block repeats a declaration on consecutive lines" do

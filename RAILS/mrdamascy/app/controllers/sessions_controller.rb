@@ -200,7 +200,7 @@ class SessionsController < ApplicationController
       phone: VippsClient.login_phone(info["phone_number"]),
       name: info["name"].presence,
       address: address["formatted"].presence || address["street_address"].presence,
-      postcode: address["postal_code"].presence
+      postcode: address["postal_code"].presence,
     }
   rescue VippsClient::NotAvailable
     nil

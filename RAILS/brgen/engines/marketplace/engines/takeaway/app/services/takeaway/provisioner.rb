@@ -52,7 +52,7 @@ module Takeaway
       return @marketplace_store if @marketplace_store
 
       slug = @attributes[:store_slug].presence ||
-             [@attributes[:name].to_s.parameterize, "restaurant", @owner.id].join("-")
+             [ @attributes[:name].to_s.parameterize, "restaurant", @owner.id ].join("-")
       store = Marketplace::Store.find_or_initialize_by(slug:)
       return store if store.persisted?
 
@@ -71,7 +71,6 @@ module Takeaway
       unless store.owner_id == @owner.id && store.vertical == "restaurants"
         raise ActiveRecord::RecordNotFound, "restaurant storefront is not owned by this account"
       end
-
     end
 
     def restaurant_attributes

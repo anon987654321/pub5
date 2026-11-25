@@ -140,7 +140,7 @@ class TestIdeaPictureOutput < Minitest::Test
     Dir.mktmpdir do |dir|
       source = File.join(dir, "portrait source.jpg")
       File.write(source, "source")
-      picture = Studio::Visual::IdeaPicture.new(directory: dir)
+      picture = Studio::Visual::IdeaPicture.new(directory: dir, subjects_root: dir)
 
       graded = Dir.mktmpdir do |working_directory|
         Dir.chdir(working_directory) do
@@ -172,7 +172,7 @@ class TestIdeaPictureOutput < Minitest::Test
     Dir.mktmpdir do |dir|
       client = Object.new
       client.define_singleton_method(:download_url) { |_url, path| File.write(path, "provider-original") }
-      picture = Studio::Visual::IdeaPicture.new(client:, directory: dir)
+      picture = Studio::Visual::IdeaPicture.new(client:, directory: dir, subjects_root: dir)
       picture.define_singleton_method(:render_with_fallback) { |_words| "https://provider.example/still.jpg" }
       picture.define_singleton_method(:first_url) { |output| output }
       picture.define_singleton_method(:grade) do |path, seed: nil|
@@ -226,7 +226,7 @@ class TestIdeaPictureOutput < Minitest::Test
     Dir.mktmpdir do |dir|
       existing = File.join(dir, "probe_master.jpg")
       File.write(existing, "existing render")
-      picture = Studio::Visual::IdeaPicture.new(directory: dir)
+      picture = Studio::Visual::IdeaPicture.new(directory: dir, subjects_root: dir)
       picture.define_singleton_method(:render_with_fallback) { |_words| flunk "must reject collision before provider access" }
 
       error = assert_raises(RuntimeError) do
@@ -241,7 +241,7 @@ class TestIdeaPictureOutput < Minitest::Test
     Dir.mktmpdir do |dir|
       source = File.join(dir, "portrait.jpg")
       File.write(source, "source")
-      picture = Studio::Visual::IdeaPicture.new(directory: dir)
+      picture = Studio::Visual::IdeaPicture.new(directory: dir, subjects_root: dir)
 
       Studio::Subprocess.stub(:capture3, ->(_env, *_args, timeout:) { ["postpro0: ok", "", successful_status] }) do
         error = assert_raises(RuntimeError) { picture.send(:grade, source) }
@@ -279,6 +279,46 @@ class TestIdeaPictureOutput < Minitest::Test
       assert_equal "2K", input.fetch("resolution")
       refute input.key?("subject_reference")
       assert_equal [["01.jpg", "probe"]], uploads
+    end
+  end
+
+  def test_reference_files_fall_back_to_published_sources
+    Dir.mktmpdir do |dir|
+      subject = File.join(dir, "probe")
+      FileUtils.mkdir_p(File.join(subject, "sources", "additional"))
+      File.write(File.join(subject, "sources", "additional", "01.jpg"), "recent")
+      File.write(File.join(subject, "sources", "01.jpg"), "archive")
+
+      files = Studio::Visual::IdeaPicture.reference_files(subject)
+
+      assert_includes files, File.join(subject, "sources", "additional", "01.jpg")
+      assert_includes files, File.join(subject, "sources", "01.jpg")
+    end
+  end
+
+  def test_reference_engine_preflight_does_not_validate_the_subject_lora
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      subject_dir = File.join(subject_root, "probe")
+      FileUtils.mkdir_p(subject_dir, mode: 0o700)
+      File.write(
+        File.join(subject_dir, "subject.env"),
+        "REPLICATE_MODEL=owner/model:version-123\nLIKELINESS_REVIEWED_VERSION=owner/model:version-123\n",
+        mode: "w", perm: 0o600
+      )
+      seen = []
+      client = Object.new
+      client.define_singleton_method(:input_names) do |model|
+        seen << model
+        %w[prompt image_input aspect_ratio resolution output_format]
+      end
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root,
+        engine: "google/nano-banana-2.1"
+      )
+
+      assert_equal "google/nano-banana-2.1", picture.validate_model!
+      assert_equal ["google/nano-banana-2.1"], seen
     end
   end
 
@@ -401,7 +441,7 @@ class TestIdeaPictureOutput < Minitest::Test
     Dir.mktmpdir do |dir|
       client = Object.new
       client.define_singleton_method(:predict) { |*| flunk "provider must not be called" }
-      picture = Studio::Visual::IdeaPicture.new(subject: "johann", client:, directory: dir)
+      picture = Studio::Visual::IdeaPicture.new(subject: "johann", client:, directory: dir, subjects_root: dir)
 
       error = assert_raises(ArgumentError) { picture.animate(File.join(dir, "missing.jpg"), "motion") }
       assert_match(/source still is missing/, error.message)

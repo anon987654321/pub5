@@ -25,7 +25,6 @@ module Master
         "lora" => File.join("lora", "photograph.rb"),
         "runs" => File.join("repo", "runs.rb"),
         "repo_inventory" => File.join("repo", "repo_inventory.rb"),
-        "sprawl_plan" => File.join("repo", "sprawl_plan.rb"),
         "cognition_benchmark" => File.join("research", "cognition_benchmark.rb"),
         "llm_challenges" => File.join("research", "llm_challenges.rb"),
         "llm_trajectory" => File.join("research", "llm_trajectory.rb"),

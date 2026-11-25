@@ -41,6 +41,27 @@ class TestSelfieSeries < Minitest::Test
     end
   end
 
+  # A reference-capable engine must be preflighted against its own schema, not
+  # the subject LoRA's. The fake exposes the current Google reference inputs and
+  # records the uploaded source photographs.
+  class ReferenceClient < FakeClient
+    attr_reader :uploads
+
+    def initialize
+      super
+      @uploads = []
+    end
+
+    def input_names(_model_id)
+      %w[prompt image_input aspect_ratio resolution output_format]
+    end
+
+    def upload_file(path, subject:)
+      @uploads << [path, subject]
+      "https://files.replicate.delivery/#{File.basename(path)}"
+    end
+  end
+
   def setup
     @dir = Dir.mktmpdir
     @client = FakeClient.new
@@ -83,11 +104,12 @@ class TestSelfieSeries < Minitest::Test
   # The graded pass shells out to postpro and the manifest lookup needs a
   # subject with an approved training — both are no-op'd in setup here the way
   # idea_picture_test.rb stubs the same seams, and every write stays in tmpdir.
-  def series(fail_download_at: nil, inference_profile: nil)
+  def series(fail_download_at: nil, inference_profile: nil, client: nil, subjects_root: nil)
     Studio::Visual::SelfieSeries.new(
       subject: "probe",
-      client: fail_download_at ? FakeClient.new(fail_download_at:) : @client,
+      client: client || (fail_download_at ? FakeClient.new(fail_download_at:) : @client),
       directory: File.join(@dir, "stills"),
+      subjects_root:,
       ledger_path: File.join(@dir, "ledger.jsonl"),
       inference_profile:,
     )
@@ -137,6 +159,28 @@ class TestSelfieSeries < Minitest::Test
     run_series(series, count: 2)
 
     assert_equal ["owner/model:version-123"] * 2, @client.predictions.map(&:first)
+  end
+
+  def test_reference_engine_is_used_by_default_when_the_subject_has_sources
+    subject_root = File.join(@dir, "subjects")
+    FileUtils.mkdir_p(File.join(subject_root, "probe", "references"))
+    File.write(File.join(subject_root, "probe", "references", "01.jpg"), "reference")
+    client = ReferenceClient.new
+
+    rendered = run_series(series(client:, subjects_root: subject_root), count: 1)
+
+    assert_equal 1, rendered.length
+    assert_equal "google/nano-banana-2.1", client.predictions.fetch(0).fetch(0)
+    assert_equal "https://files.replicate.delivery/01.jpg",
+                 client.predictions.fetch(0).fetch(1).fetch("image_input").first
+    assert_equal 1, client.uploads.length
+  end
+
+  def test_render_records_the_arcface_likeness_result
+    result = { "state" => "PASS", "metric" => "arcface_cosine", "similarity" => 0.72 }
+    Studio::Lora::Judge.stub(:likeness, result) { series.run(count: 1) }
+
+    assert_equal result, ledger_rows("render").fetch(0).fetch("likeness")
   end
 
   def test_each_named_subject_has_six_distinct_scenes
@@ -271,7 +315,9 @@ class TestSelfieSeries < Minitest::Test
   private
 
   def run_series(box, **options)
-    box.run(**options)
+    Studio::Lora::Judge.stub(:likeness, { "state" => "INCONCLUSIVE", "reason" => "test" }) do
+      box.run(**options)
+    end
   end
 
   def ledger_rows(kind)

@@ -81,17 +81,15 @@ class SharedScrapeTest < ActiveSupport::TestCase
     end
   end
 
-  test "IPv4-embedded NAT64 and 6to4 addresses inherit the embedded address policy" do
-    {
-      "64:ff9b::a9fe:a9fe" => false,
-      "64:ff9b::a00:1" => false,
-      "64:ff9b::808:808" => true,
-      "2002:a9fe:a9fe::1" => false,
-      "2002:0a00:0001::1" => false,
-      "2002:0808:0808::1" => true,
-    }.each do |address, expected|
-      actual = Shared::Scrape.public_http_url?("https://[#{address}]/")
-      assert_equal expected, actual, address
+  # Scraping uses OutboundHttp's strict policy: NAT64 (64:ff9b::/96) and 6to4
+  # (2002::/16) are refused outright, whatever IPv4 they carry, so no
+  # transition address can tunnel a private target past it.
+  test "NAT64 and 6to4 addresses are refused whatever IPv4 they embed" do
+    %w[
+      64:ff9b::a9fe:a9fe 64:ff9b::a00:1 64:ff9b::808:808
+      2002:a9fe:a9fe::1 2002:0a00:0001::1 2002:0808:0808::1
+    ].each do |address|
+      refute Shared::Scrape.public_http_url?("https://[#{address}]/"), address
     end
   end
 

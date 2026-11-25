@@ -58,6 +58,26 @@ class TestConvergenceProof < Minitest::Test
     assert_equal "pass", result[:state]
   end
 
+  def test_an_old_inconclusive_survives_more_than_500_newer_unrelated_receipts
+    root = aged_fixture_root
+    old = @now - 20 * 86_400
+    write_receipt(root:, id: "20260101T000000Z-old-history", generated_at: old,
+                  checks: [ { "name" => "commands", "state" => "inconclusive", "detail" => "still unanswered" } ])
+
+    stamp = (@now - 86_400).strftime("%Y%m%dT%H%M%SZ")
+    500.times do |index|
+      write_receipt(
+        root:, id: "#{stamp}-unrelated-#{index.to_s.rjust(4, "0")}", generated_at: @now - 86_400,
+        checks: [ { "name" => "unrelated", "state" => "pass", "detail" => "not the pending check" } ],
+      )
+    end
+
+    result = Master::Convergence::Proof.check_aging(root, now: @now)
+
+    assert_equal "fail", result[:state]
+    assert_match(/commands.*receipt 20260101T000000Z-old-history/, result[:detail])
+  end
+
   def test_a_verdict_after_the_inconclusive_clears_it
     root = aged_fixture_root
     write_receipt(root:, id: "20260101T000000Z-old-2", generated_at: @now - 20 * 86_400,

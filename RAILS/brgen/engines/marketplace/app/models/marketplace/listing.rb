@@ -58,7 +58,7 @@ class Marketplace::Listing < ApplicationRecord
   attr_accessor :source
   process_media_variants :photos, variants: {
     thumb: { resize_to_limit: [ 360, 360 ], format: :webp },
-    card: { resize_to_limit: [ 800, 800 ], format: :webp }
+    card: { resize_to_limit: [ 800, 800 ], format: :webp },
   }
 
   CONDITIONS = %w[new_with_tags new_without_tags very_good good satisfactory].freeze
@@ -75,14 +75,14 @@ class Marketplace::Listing < ApplicationRecord
     next_day_west: 2,
     one_to_two_days: 3,
     three_to_five_days: 4,
-    pickup_only: 5
+    pickup_only: 5,
   }.freeze
 
   FULFILMENT_METHODS = {
     self_ship: 0,
     local_hub: 1,
     locker: 2,
-    third_party: 3
+    third_party: 3,
   }.freeze
   # Set only when the create action enqueues PostproJob (photos attached and a
   # preset chosen); nil means postpro was never requested, which stays the
@@ -161,7 +161,7 @@ class Marketplace::Listing < ApplicationRecord
   # these scopes are the chrome the index was missing.
   scope :casual, -> { where(store_id: nil) }
   scope :ranked, -> { order(ranking_score: :desc) }
-  scope :with_fast_delivery, -> { where(delivery_promise: [0, 1, 2]) }
+  scope :with_fast_delivery, -> { where(delivery_promise: [ 0, 1, 2 ]) }
   scope :from_shops, -> { where.not(store_id: nil) }
   scope :near, ->(lat, lng, radius_km = 5) { nearby(lat, lng, radius_km) }
   scope :rated, -> { where("rating > 0") }

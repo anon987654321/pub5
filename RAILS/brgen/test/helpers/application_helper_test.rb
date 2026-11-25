@@ -410,5 +410,4 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal "1", nav_item_badge("ai")
     assert_nil nav_item_badge("dating")
   end
-
 end

@@ -50,7 +50,7 @@ module BrgenSpamSweep
     "%eich pris%",         # ... Welsh
     "%ձեր գինը%",          # ... Armenian
     "%თქვენი ფასი%",       # ... Georgian
-    "%çmimin tuaj%"        # ... Albanian
+    "%çmimin tuaj%",        # ... Albanian
   ].freeze
 
   TITLE_PATTERNS = [ "Hello%,", "Hi,%", "Greetings%" ].freeze

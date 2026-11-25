@@ -100,7 +100,7 @@ module Master
         page_dir = File.join(@dir, page.app, slugify(page.key))
         shot = visit.shoot(surface_for(page, port: visit.port), page_dir:)
         Row.new(**page.to_h, status: shot.status, shots: shot.widths, dialogs: shot.dialogs,
-                             note: shot.html ? nil : NOT_A_PAGE)
+                             note: shot.note || (shot.html ? nil : NOT_A_PAGE))
       rescue StandardError => e
         failed(page, "#{e.class.name.split("::").last}: #{e.message}")
       end

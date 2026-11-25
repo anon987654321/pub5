@@ -43,7 +43,7 @@ class DinteroCheckoutContractTest < ActiveSupport::TestCase
     splits = Marketplace::Payments::DinteroCheckout.send(:split_for, order)
     assert_equal [
       { payout_destination_id: "seller_123", amount: 900 },
-      { payout_destination_id: "platform_123", amount: 100 }
+      { payout_destination_id: "platform_123", amount: 100 },
     ], splits
     assert_equal 1000, splits.sum { |split| split[:amount] }
   end

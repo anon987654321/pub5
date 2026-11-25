@@ -430,7 +430,7 @@ Dir.glob(File.join(OPENBSD, "mirror", "etc", "rc.d", "*")).sort.each do |path|
 end
 
 # The vm23 operator contract is Falcon-only. Mr Damascy had drifted to Puma;
-# keep Puma available only to the Capybara test group, never in production.
+# Capybara now serves its system tests with Falcon too, so Puma is in no group.
 mrd_app = File.join(ROOT, "RAILS", "mrdamascy")
 mrd_gemfile_path = File.join(mrd_app, "Gemfile")
 mrd_lock_path = File.join(mrd_app, "Gemfile.lock")
@@ -449,9 +449,9 @@ if required_mrd_files.all? { |path| File.file?(path) && !File.symlink?(path) }
 
   failures << "mrdamascy rc.d service port must remain 47314" unless mrd_service.match?(/^PORT=47314$/)
   failures << "mrdamascy Gemfile must declare Falcon as a runtime dependency" unless runtime_gemfile.match?(/^gem ["']falcon["']/)
-  failures << "mrdamascy Gemfile must keep Puma out of runtime dependencies" if runtime_gemfile.match?(/^gem ["']puma["']/)
-  failures << "mrdamascy Gemfile.lock must lock Falcon and test-only Puma" unless
-    lock_dependencies.lines.map(&:strip).include?("falcon") && lock_dependencies.lines.map(&:strip).include?("puma")
+  failures << "mrdamascy Gemfile must not declare Puma" if mrd_gemfile.match?(/^\s*gem ["']puma["']/)
+  failures << "mrdamascy Gemfile.lock must lock Falcon and not Puma" unless
+    lock_dependencies.lines.map(&:strip).include?("falcon") && !lock_dependencies.lines.map(&:strip).include?("puma")
 
   daemon_flags_line = mrd_service.lines.find { |line| line.start_with?("daemon_flags=") }.to_s
   root_setup = mrd_service.lines.take_while { |line| !line.start_with?("daemon_flags=") }.join

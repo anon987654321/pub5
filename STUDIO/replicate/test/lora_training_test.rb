@@ -188,11 +188,12 @@ class TestStudioLoraTrainingRunner < Minitest::Test
         { "subject" => subject, "destination" => "owner/#{subject}" }
       end
       timeouts = []
+      assertions = self
       runner.define_singleton_method(:train_subject!) do |_client, package, timeout:, billing_rate:, approved_budget_usd:, reserved_timeout_seconds:|
         timeouts << timeout
-        assert_equal billing_rate, Studio::Lora::Training::BILLING_RATE
-        assert_equal approved_budget_usd, BigDecimal("4.50")
-        assert_equal timeout, reserved_timeout_seconds
+        assertions.assert_equal billing_rate, Studio::Lora::Training::BILLING_RATE
+        assertions.assert_equal approved_budget_usd, BigDecimal("4.50")
+        assertions.assert_equal timeout, reserved_timeout_seconds
         {
           "subject" => package.fetch("subject"),
           "status" => "TRAINED_NEEDS_LIKENESS_REVIEW",
@@ -366,5 +367,45 @@ class TestStudioLoraTrainingRunner < Minitest::Test
 
   def test_canonical_final_render_count_matches_the_four_portrait_release
     assert_equal 4, Studio::Lora::Training::STANDARD.fetch("review").fetch("final_render_count")
+  end
+
+  def test_latest_version_is_public_for_the_training_runner
+    client = Studio::ReplicateClient.new(token: "test")
+
+    assert_respond_to client, :latest_version
+  end
+
+  def test_training_inputs_validate_against_the_provider_training_schema
+    client = Studio::ReplicateClient.new(token: "test")
+    document = {
+      "openapi_schema" => {
+        "components" => {
+          "schemas" => {
+            "Input" => {
+              "properties" => { "txt" => {}, "replicate_weights" => {} },
+              "required" => ["txt"]
+            },
+            "TrainingInput" => {
+              "properties" => {
+                "input_images" => {}, "trigger_word" => {}, "training_steps" => {},
+                "lora_type" => {}, "seed" => {}
+              },
+              "required" => ["input_images"]
+            }
+          }
+        }
+      }
+    }
+    client.define_singleton_method(:get) { |_uri| document }
+    body = {
+      input_images: "https://example.test/dataset.zip",
+      trigger_word: "MERETHE",
+      training_steps: 1000,
+      lora_type: "subject",
+      seed: 42
+    }
+
+    assert client.send(:validate_input_schema!, "owner/name:version", body, schema_name: "TrainingInput")
+    assert_raises(ArgumentError) { client.send(:validate_input_schema!, "owner/name:version", body) }
   end
 end

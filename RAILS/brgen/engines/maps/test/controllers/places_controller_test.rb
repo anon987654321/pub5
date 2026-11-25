@@ -184,7 +184,8 @@ class MapsPlacesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, "60.397, 5.324"
-    assert_includes response.body, "mlat=60.397&mlon=5.324#map=16/60.397/5.324"
+    # The href attribute as a browser reads it; in the HTML source & is &amp;.
+    assert_select "a[href=?]", "https://www.openstreetmap.org/?mlat=60.397&mlon=5.324#map=16/60.397/5.324"
     refute_includes response.body, "60.397456"
     refute_includes response.body, "5.324456"
   end

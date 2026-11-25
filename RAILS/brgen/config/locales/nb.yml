@@ -109,7 +109,7 @@ nb:
     main: Hovedinnhold
     takeaway: takeaway
     marketplace: markedsplass
-    opens_new_tab: "%{label} (åpnes i ny fane)"
+    new_tab_suffix: "(åpnes i ny fane)"
   skip_to_content: Hopp til hovedinnhold
   home:
     new_posts:

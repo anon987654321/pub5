@@ -92,6 +92,12 @@ install_doas_conf_from_repo() {
   ensure_doas_trailing_newline "$tmp" || { rm -f "$tmp"; return 1; }
   cp "$tmp" /etc/doas.conf || { rm -f "$tmp"; return 1; }
   rm -f "$tmp"
+  # cp keeps the old file's mode, so a 644 doas.conf stayed 644 and
+  # OPERATOR.sh's file_matches (600 root:wheel) reported it changed forever.
+  chown root:wheel /etc/doas.conf && chmod 600 /etc/doas.conf || {
+    rollback_doas_conf "$backup"
+    return 1
+  }
 
   if validate_doas_works; then
     logger -t "$tag" "synced /etc/doas.conf from repo (validated)"

@@ -109,7 +109,7 @@ class NewsletterEditionBuilder
         "price" => v.discount_amount.to_s,
         "currency" => v.currency.to_s,
         "merchant" => v.program_name.to_s,
-        "image_url" => nil
+        "image_url" => nil,
       }
     end
     record.update!(deals: existing + voucher_rows)

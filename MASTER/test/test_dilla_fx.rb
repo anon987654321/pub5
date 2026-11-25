@@ -56,7 +56,7 @@ class TestDillaFx < Minitest::Test
     with_env("MASTER_TTS_GENDER" => nil) do
       assert_equal :christopher, Policy.voice_for_language(:en)
       assert_equal :pernille, Policy.voice_for_language(:nb)
-      assert_equal :yasmin, Policy.voice_for_language(:ms)
+      assert_equal :osman, Policy.voice_for_language(:ms)
     end
     with_env("MASTER_TTS_GENDER" => "female") { assert_equal :christopher, Policy.voice_for_language(:en) }
     with_env("MASTER_TTS_GENDER" => "male") do

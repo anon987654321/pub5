@@ -7,7 +7,8 @@
 # like that carries a sentence is a different product from one that carries
 # nothing, and prompts are what give it something to point at.
 class Dating::Prompt < ApplicationRecord
-  belongs_to :profile, class_name: "Dating::Profile"
+  # The belongs_to side maintains the count; the has_many option only reads it.
+  belongs_to :profile, class_name: "Dating::Profile", counter_cache: :prompts_count
   has_many :likes, class_name: "Dating::Like", foreign_key: :dating_prompt_id, dependent: :nullify,
            inverse_of: :dating_prompt
 

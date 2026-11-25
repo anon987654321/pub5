@@ -67,14 +67,6 @@ ownership:
     purpose: pinned deployment child; verifies the live parent lock, deploy-user Git reads and exact workstation CI/preflight proofs before syncing one app and checking the preinstalled production bundle
     risk: high
     check: ruby OPENBSD/checks/shell_syntax_check.rb
-  bin/vps_ci_all.sh:
-    purpose: retired refusal stub; standalone bulk production sync is forbidden
-    risk: high
-    check: ruby OPENBSD/checks/shell_syntax_check.rb
-  bin/vps_master_scan.sh:
-    purpose: retired refusal stub; repository scans and /fix run on workstations or isolated sandboxes
-    risk: high
-    check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/resource_guard.sh:
     purpose: unprivileged manual entrypoint; refuses root and delegates to the installed runner
     risk: high

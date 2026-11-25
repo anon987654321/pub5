@@ -11,10 +11,14 @@ RUBY = RbConfig.ruby
 desc "Load every STUDIO entrypoint and prove the contracts answer"
 task :check do
   expected_owners = %w[dilla lora postpro replicate].sort
-  # These two root-level files are compatibility proof entrypoints; the
-  # canonical suite is under replicate/test. They are not a fifth code owner.
-  allowed_entries = (expected_owners + ["test"]).sort
-  actual_entries = Dir.children(STUDIO_ROOT).sort
+  # README.md documents the tree; test/ holds compatibility proof entrypoints.
+  # Neither is a fifth code owner.
+  allowed_entries = (expected_owners + %w[README.md test]).sort
+  # Judge tracked entries: Dir.children failed the check on Finder's
+  # gitignored .DS_Store (2026-11-24).
+  tracked, status = Open3.capture2("git", "-C", STUDIO_ROOT, "ls-files", "-z", "--", ".")
+  raise "STUDIO root boundary: git ls-files failed" unless status.success?
+  actual_entries = tracked.split("\0").map { |path| path.split("/").first }.uniq.sort
   invalid_owners = expected_owners.reject do |owner|
     path = File.join(STUDIO_ROOT, owner)
     File.directory?(path) && !File.symlink?(path)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 source "https://rubygems.org"
-ruby ">= 3.2"
+ruby ">= 3.4"
 
 gem "async"
 gem "async-http"
@@ -67,7 +67,6 @@ end
 
 group :test do
   gem "capybara"
-  gem "puma"
   gem "selenium-webdriver"
   gem "axe-core-capybara"
 end

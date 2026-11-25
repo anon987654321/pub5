@@ -170,10 +170,10 @@ validate_payload() {
   [[ ! -f $MIRROR/etc/mail/smtpd.conf ]] || /usr/sbin/smtpd -n -f "$MIRROR/etc/mail/smtpd.conf"
   [[ ! -f $MIRROR/etc/ssh/sshd_config ]] || /usr/sbin/sshd -t -f "$MIRROR/etc/ssh/sshd_config"
   if [[ -f $MIRROR/var/nsd/etc/nsd.conf ]]; then
-    /usr/local/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf" || return 1
+    /usr/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf" || return 1
     local zone
     for zone in "$MIRROR"/var/nsd/zones/master/*.zone(N); do
-      /usr/local/sbin/nsd-checkzone "${zone:t:r}" "$zone" || {
+      /usr/sbin/nsd-checkzone "${zone:t:r}" "$zone" || {
         print -u2 -- "OPERATOR: NSD zone validation failed: $zone"
         return 1
       }
@@ -211,7 +211,7 @@ restore_signed_zones() {
     base=${zone_file:t}
     [[ -f $dir/$base ]] && cp -p "$dir/$base" "$zone_file" || return 1
   done
-  /usr/local/sbin/nsd-control reload && /usr/local/sbin/nsd-control notify
+  /usr/sbin/nsd-control reload && /usr/sbin/nsd-control notify
 }
 
 backup_file() {
@@ -445,12 +445,27 @@ case "$ACTION" in
   apply)
     print "OPENBSD mirror apply"
     print_plan
+    # --doas installs doas.conf by itself and nothing else. It refused while any
+    # other file differed, and a plain apply refuses while doas.conf differs, so
+    # a drifted doas.conf beside other changes had no path at all (vm23,
+    # 2026-11-25). The other changes are named and left for the next plain apply.
+    if (( INSTALL_DOAS )); then
+      (( failures == 0 )) || {
+        print -u2 -- "OPERATOR: BLOCKED - protected or invalid mirror differences must be handled separately"
+        exit 78
+      }
+      (( DOAS_NEEDED )) || { print "SAME      /etc/doas.conf already matches; nothing to install"; exit 0; }
+      acquire_apply_lock || exit 75
+      "$SCRIPT_DIR/bin/validate_doas.ksh" install "$MIRROR/etc/doas.conf" "pub5-openbsd" || {
+        print -u2 -- "OPERATOR: guarded doas configuration change failed (helper restored the prior policy)"
+        exit 1
+      }
+      print "PASS      /etc/doas.conf installed alone"
+      (( ${#CHANGED} == 0 )) || print "DEFERRED  ${#CHANGED} other mirror changes; run --apply without --doas"
+      exit 0
+    fi
     (( ${CHANGED[(Ie)var/nsd/etc/nsd.conf]} )) && NSD_CONFIG_CHANGED=1
     (( ${CHANGED[(Ie)var/nsd/zones/master/*.zone]} || NSD_CONFIG_CHANGED )) && NSD_CHANGED=1
-    if (( DOAS_NEEDED && ${#CHANGED} )); then
-      print -u2 -- "OPERATOR: BLOCKED - --doas may only change doas.conf by itself; apply other mirror changes separately"
-      exit 78
-    fi
     (( failures == 0 )) || {
       print -u2 -- "OPERATOR: BLOCKED - protected or invalid mirror differences must be handled separately"
       exit 78
@@ -529,7 +544,7 @@ case "$ACTION" in
             failures=1
             break
           fi
-          /usr/local/sbin/nsd-checkzone "${source_zone:t:r}" "$signed_zone" || {
+          /usr/sbin/nsd-checkzone "${source_zone:t:r}" "$signed_zone" || {
             print -u2 -- "OPERATOR: signed DNSSEC zone failed validation: $signed_zone"
             failures=1
             break
@@ -540,7 +555,7 @@ case "$ACTION" in
         if (( NSD_CONFIG_CHANGED )); then
           /usr/sbin/rcctl restart nsd && /usr/sbin/rcctl check nsd || failures=1
         else
-          /usr/local/sbin/nsd-control reload && /usr/local/sbin/nsd-control notify || failures=1
+          /usr/sbin/nsd-control reload && /usr/sbin/nsd-control notify || failures=1
         fi
       fi
     fi
@@ -575,13 +590,6 @@ case "$ACTION" in
       fi
       print "RECOVERED prior tracked files and affected services"
       exit 1
-    fi
-    if (( DOAS_NEEDED )); then
-      if ! "$SCRIPT_DIR/bin/validate_doas.ksh" install "$MIRROR/etc/doas.conf" "pub5-openbsd"; then
-        print -u2 -- "OPERATOR: guarded doas configuration change failed (helper restored the prior policy)"
-        restore_root_crontab || { print -u2 -- "DELIVERY_FAILED: root crontab restoration failed"; exit 1; }
-        exit 1
-      fi
     fi
     print "PASS      OPENBSD filesystem mirror applied"
     print "BACKUP    $BACKUP_ROOT/$RUN_ID"

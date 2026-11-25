@@ -15,7 +15,8 @@ class TestKeylessRouting < Minitest::Test
       DEEPSEEK_API_KEY GOOGLE_API_KEY GEMINI_API_KEY MISTRAL_API_KEY LLM7_API_KEY
       ZAI_API_KEY REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
       MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_WEB_CHAT MASTER_LOCAL_ONLY MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_OLLAMA_ENABLED
-      MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LLM_GATEWAY_URL MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
+      MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LOCAL_SERVERS MASTER_LLM_GATEWAY_URL
+      MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
     ].to_h { |key| [key, ENV[key]] }
     @saved_env.each_key { |key| ENV.delete(key) }
     # Neutralize both local subscription CLIs so these tests grade keyless and
@@ -261,7 +262,7 @@ class TestKeylessRouting < Minitest::Test
     assert_equal ["ollama:gemma3:4b"], ollama_fallbacks
   end
 
-  CLOUD_UNSUPPORTED = "ollama cloud models are unsupported"
+  CLOUD_UNSUPPORTED = "legacy ollama:cloud ids are not local daemon models"
 
   # The code rule on its own, then whatever data/lanes.yml hand-kills ahead of
   # it: a dead entry names itself, so the reason follows the list, not a name here.
@@ -661,6 +662,17 @@ class TestKeylessRouting < Minitest::Test
     server&.close
   end
 
+  def test_master_free_only_treats_false_values_as_disabled
+    previous = ENV["MASTER_FREE_ONLY"]
+    { nil => false, "" => false, "0" => false, "false" => false, "off" => false,
+      "1" => true, "true" => true, "yes" => true, "on" => true }.each do |value, expected|
+      value.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = value
+      assert_equal expected, Master.free_only?, "MASTER_FREE_ONLY=#{value.inspect}"
+    end
+  ensure
+    previous.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = previous
+  end
+
   # A local or explicitly trusted OpenAI-compatible gateway joins the
   # existing pool only after its URL is set. The URL's host and model ids are
   # discovered through the same endpoint catalogue used by other hosted lanes.
@@ -734,6 +746,8 @@ class TestKeylessRouting < Minitest::Test
   # Groq, Cerebras and NVIDIA wait in models.yml for a key; without one they
   # are not asked, so a boot does not spend a probe on each.
   def test_a_key_only_endpoint_is_not_asked_until_its_key_is_set
+    old_free_only = ENV["MASTER_FREE_ONLY"]
+    ENV["MASTER_FREE_ONLY"] = "0"
     ENV.delete("MASTER_NO_POOL_PROBES")
     asked = []
     router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
@@ -750,6 +764,7 @@ class TestKeylessRouting < Minitest::Test
     assert_equal ["keyonly:m"], router.hosted_models
     assert_equal ["https://keyonly.invalid/v1/models"], asked
   ensure
+    old_free_only.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old_free_only
     ENV.delete("KEYONLY_TEST_KEY")
     ENV["MASTER_NO_POOL_PROBES"] = "1"
   end
@@ -763,18 +778,26 @@ class TestKeylessRouting < Minitest::Test
       socket.print("HTTP/1.1 200 OK\r\nContent-Length: #{body.bytesize}\r\nConnection: close\r\n\r\n#{body}")
       socket.close
     end
-    ENV.delete("MASTER_NO_POOL_PROBES")
-    router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
     base = "http://127.0.0.1:#{server.addr[1]}/v1"
-    router.instance_variable_get(:@rules)["local_servers"] = [base]
-    router.define_singleton_method(:start_pool_probes) { {} }
+    router = local_server_router(base)
 
     assert_equal base, router.local_server_for("local:Qwen/Qwen3-4B")
     assert router.reachable?("local:Qwen/Qwen3-4B")
   ensure
     ENV["MASTER_NO_POOL_PROBES"] = "1"
+    ENV.delete("MASTER_LOCAL_SERVERS")
     thread&.kill
     server&.close
+  end
+
+  def local_server_router(base)
+    ENV.delete("MASTER_NO_POOL_PROBES")
+    ENV["MASTER_LOCAL_SERVERS"] = "1"
+    config = FakeConfig.new(model: Master.free_primary_model)
+    Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT).tap do |router|
+      router.instance_variable_get(:@rules)["local_servers"] = [base]
+      router.define_singleton_method(:start_pool_probes) { {} }
+    end
   end
 
   def test_browser_chat_is_not_an_automatic_fallback_when_paid_api_keys_are_configured

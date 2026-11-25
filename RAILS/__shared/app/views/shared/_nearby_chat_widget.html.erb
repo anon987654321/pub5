@@ -67,7 +67,10 @@
           brgen verticals are engines and an engine's helpers do not carry the
           host app's routes. See Shared::UiHelper#ambient_chat_frame_path. %>
       <% if (chat_frame_src = ambient_chat_frame_path) %>
-        <%= turbo_frame_tag "nearby-chat-widget-frame", src: chat_frame_src, class: "nearby-chat-widget-frame" do %>
+        <%# Lazy: the panel rests closed, so the room loads when it is opened, not
+            on every page view (it also reloaded once more when located). %>
+        <% frame_options = { src: chat_frame_src, loading: :lazy, class: "nearby-chat-widget-frame" } %>
+        <%= turbo_frame_tag "nearby-chat-widget-frame", **frame_options do %>
           <div class="nearby-chat-widget-empty">
             <% if messenger_href %>
               <%= link_to t("chat.private_messages_lead"), messenger_href,

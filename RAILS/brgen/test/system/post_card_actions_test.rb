@@ -17,9 +17,7 @@ class PostCardActionsTest < ApplicationSystemTestCase
   # question; a visitor answers both before using the feed.
   def visit_feed
     visit root_path
-    decline_optional_cookies if has_css?("#cookie-consent-banner", wait: 3)
-    find("button.welcome-onboarding-close", wait: 5).click if has_css?("button.welcome-onboarding-close", wait: 3)
-    assert_no_selector "button.welcome-onboarding-close"
+    answer_first_visit
   end
 
   # Centred, so the open list is not under the sticky composer bar.

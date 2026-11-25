@@ -273,7 +273,8 @@ module Shared
       # Write beside the target and rename, so a concurrent reader never sees a
       # half-written image and two jobs racing land on one file.
       tmp = dir.join("#{thumbnail_digest(url)}.#{Process.pid}.tmp")
-      tmp.write(body)
+      # Images are bytes: a text write transcodes them and raised on 0xFF.
+      tmp.binwrite(body)
       File.rename(tmp, dir.join("#{thumbnail_digest(url)}#{THUMBNAIL_TYPES.fetch(type)}"))
       true
     rescue *OutboundHttp::NETWORK_ERRORS, IOError, SystemCallError => e

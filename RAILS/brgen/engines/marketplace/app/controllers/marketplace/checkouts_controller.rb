@@ -10,7 +10,7 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
     Marketplace::Payments::ProviderError,
     Marketplace::Payments::DinteroClient::Error,
     Net::OpenTimeout, Net::ReadTimeout, SocketError, OpenSSL::SSL::SSLError,
-    Errno::ECONNREFUSED, Errno::ECONNRESET, JSON::ParserError, KeyError,
+    Errno::ECONNREFUSED, Errno::ECONNRESET, JSON::ParserError, KeyError
   ].freeze
 
   # The only hosts a checkout may send a buyer to. The URL comes back from the

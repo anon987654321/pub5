@@ -7,7 +7,7 @@
 require "fileutils"
 require "digest"
 require "json"
-require_relative "../output_paths"
+require_relative "../replicate/output_paths"
 
 module Postpro
   module Constitution

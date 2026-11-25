@@ -48,7 +48,7 @@ class DatingVerificationAndPicksTest < ActionDispatch::IntegrationTest
 
     assert_difference -> { Dating::Verification.count }, 1 do
       post dating.verifications_path, params: {
-        verification: { pose: pose, selfie: fixture_selfie }
+        verification: { pose: pose, selfie: fixture_selfie },
       }
     end
     assert_equal pose, Dating::Verification.order(:created_at).last.pose

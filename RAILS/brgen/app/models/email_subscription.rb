@@ -87,7 +87,7 @@ class EmailSubscription < ApplicationRecord
       metadata: {
         decision:,
         source:,
-        consent_version: MARKETING_CONSENT_VERSION
+        consent_version: MARKETING_CONSENT_VERSION,
       }
     )
   end

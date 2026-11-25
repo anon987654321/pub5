@@ -217,7 +217,11 @@ module Studio
           )
           trainer_owner, trainer_name, = model_reference!(LORA_TRAINER)
           trainer_version_id = trainer_pin
-          validate_input_schema!("#{trainer_owner}/#{trainer_name}:#{trainer_version_id}", body.fetch(:input))
+          validate_input_schema!(
+            "#{trainer_owner}/#{trainer_name}:#{trainer_version_id}",
+            body.fetch(:input),
+            schema_name: "TrainingInput"
+          )
           ensure_private_model!(destination)
 
           training = post(trainings_uri, body)
@@ -375,10 +379,10 @@ module Studio
           [settled, receipt]
         end
 
-        def validate_input_schema!(model_id, input)
+        def validate_input_schema!(model_id, input, schema_name: "Input")
           raise ArgumentError, "prediction input must be a Hash" unless input.is_a?(Hash)
 
-          schema = input_schema(model_id)
+          schema = input_schema(model_id, schema_name:)
           properties = schema.fetch("properties")
           allowed = properties.keys.map(&:to_s)
           supplied = input.keys.map(&:to_s)
@@ -732,21 +736,21 @@ module Studio
 
       # Read the provider's OpenAPI schema for the exact pinned version.
       # A local capability table would become a second, drifting source of truth.
-      def input_schema(model_id)
+      def input_schema(model_id, schema_name: "Input")
         owner, name, pinned = model_reference!(model_id)
-        cache_key = [owner, name, pinned || "latest"].join("/")
+        cache_key = [owner, name, pinned || "latest", schema_name].join("/")
         @input_schema_cache ||= {}
         return @input_schema_cache.fetch(cache_key) if @input_schema_cache.key?(cache_key)
 
         schema = if pinned
                    version = get(URI("#{BASE}/models/#{owner}/#{name}/versions/#{pinned}"))
-                   version.dig("openapi_schema", "components", "schemas", "Input")
+                   version.dig("openapi_schema", "components", "schemas", schema_name)
                  else
                    model = get(URI("#{BASE}/models/#{owner}/#{name}"))
-                   model.dig("latest_version", "openapi_schema", "components", "schemas", "Input")
+                   model.dig("latest_version", "openapi_schema", "components", "schemas", schema_name)
                  end
         unless schema.is_a?(Hash) && schema["properties"].is_a?(Hash) && !schema["properties"].empty?
-          raise SchemaUnavailable, "Replicate did not provide an input schema for #{owner}/#{name}#{pinned ? ":#{pinned}" : ""}"
+          raise SchemaUnavailable, "Replicate did not provide a #{schema_name} schema for #{owner}/#{name}#{pinned ? ":#{pinned}" : ""}"
         end
 
         @input_schema_cache[cache_key] = schema
@@ -761,6 +765,7 @@ module Studio
         model = get(URI("#{BASE}/models/#{owner}/#{name}"))
         model.dig("latest_version", "id") || raise("no version for #{model_id}")
       end
+      public :latest_version
 
       def get(uri)
         uri = api_uri(uri)
@@ -969,6 +974,8 @@ module Studio
           delay = [delay + 2, 15].min
         end
       end
+
+      public :wait_for_training
 
       def operation_timeout!(value, label)
         seconds = Float(value)

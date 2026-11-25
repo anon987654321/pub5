@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 source "https://rubygems.org"
-ruby ">= 3.2"
+ruby ">= 3.4"
 
 gem "rails", github: "rails/rails", ref: "c9e85dbe297e248dd2f217d04f84a94881ac046a"
 
@@ -9,7 +9,7 @@ gem "rails", github: "rails/rails", ref: "c9e85dbe297e248dd2f217d04f84a94881ac04
 gem "propshaft"
 # Use sqlite3 as the database for Active Record
 gem "sqlite3", ">= 2.1"
-# vm23 runs Falcon in production; Puma is confined to Capybara system tests.
+# Falcon serves every environment: vm23 production and Capybara system tests.
 gem "falcon"
 # Use JavaScript with ESM import maps [https://github.com/rails/importmap-rails]
 gem "importmap-rails"
@@ -40,10 +40,11 @@ group :development, :test do
 end
 
 # System tests: a headless Chrome through Selenium, as brgen runs them, with
-# axe-core for the accessibility checks. Puma is retained only for Capybara.
+# axe-core for the accessibility checks. Capybara serves the app with Falcon
+# (RAILS/__shared/test/capybara_falcon.rb).
 group :test do
-  gem "simplecov", "~> 1.2", require: false  # policy: coverage_policy_test collates every app
-  gem "puma"
+  # policy: coverage_policy_test collates every app
+  gem "simplecov", "~> 1.2", require: false
   gem "capybara"
   gem "selenium-webdriver"
   gem "axe-core-capybara"

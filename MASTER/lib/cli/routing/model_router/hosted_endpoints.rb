@@ -118,7 +118,7 @@ module Master
             Array(spec["key_env"]).map { |env| ENV[env].to_s }.find { |value| !value.empty? }
           end
 
-          def free_only? = ENV["MASTER_FREE_ONLY"].to_s != ""
+          def free_only? = Master.free_only?
 
           def no_keyless? = ENV["MASTER_NO_KEYLESS"].to_s != ""
 

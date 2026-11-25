@@ -50,9 +50,9 @@ class NvdCveTest < ActiveSupport::TestCase
   test "one CVE discovered for two ports remains one advisory linked to both" do
     payload = {
       "id" => "CVE-2026-44002",
-      "descriptions" => [{ "value" => "A sample vulnerability affecting multiple packages" }],
+      "descriptions" => [ { "value" => "A sample vulnerability affecting multiple packages" } ],
       "published" => "2026-09-01T12:00:00.000",
-      "metrics" => { "cvssMetricV31" => [{ "cvssData" => { "baseScore" => 8.1 } }] }
+      "metrics" => { "cvssMetricV31" => [ { "cvssData" => { "baseScore" => 8.1 } } ] },
     }
 
     first_record = NvdCve.new(@first).send(:record, payload)
@@ -62,5 +62,15 @@ class NvdCveTest < ActiveSupport::TestCase
     assert_equal 1, SecurityAdvisory.where(identifier: "CVE-2026-44002").count
     linked = SecurityAdvisoryPort.where(security_advisory: first_record).pluck(:port_id)
     assert_equal [ @first.id, @second.id ].sort, linked.sort
+  end
+
+  test "a port that sees the same CVE again keeps one link" do
+    payload = { "id" => "CVE-2026-44003", "descriptions" => [ { "value" => "Seen twice" } ] }
+
+    NvdCve.new(@first).send(:record, payload)
+    NvdCve.new(@first).send(:record, payload)
+
+    advisory = SecurityAdvisory.find_by!(identifier: "CVE-2026-44003")
+    assert_equal [ @first.id ], SecurityAdvisoryPort.where(security_advisory: advisory).pluck(:port_id)
   end
 end

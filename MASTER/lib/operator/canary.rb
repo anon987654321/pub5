@@ -272,6 +272,16 @@ module Operator
     # Keep the whole child process group under a real deadline.
     LOCAL_CI_TIMEOUT = 3_600
 
+    # Bundler exports BUNDLE_LOCKFILE for the bundle it activated. Clearing only
+    # BUNDLE_GEMFILE made each app compare its own Gemfile with MASTER's lock.
+    FOREIGN_BUNDLE_ENV = %w[
+      BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_BIN_PATH BUNDLE_DEPLOYMENT BUNDLE_DISABLE_SHARED_GEMS
+      BUNDLE_FROZEN BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
+      BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG BUNDLE_USER_HOME
+      BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT BUNDLER_SETUP BUNDLER_VERSION
+      GEM_HOME GEM_PATH MT_NO_PLUGINS RUBYOPT RUBYLIB
+    ].freeze
+
     module_function
 
     def main(argv, root: File.expand_path("../../..", __dir__), out: $stdout)
@@ -287,9 +297,9 @@ module Operator
 
     # Stops at the first failure: the later checks load the same code, and the
     # first message is the one the operator needs.
-    def run(root:, rehearse: true, studio: false, runner: method(:capture))
+    def run(root:, rehearse: true, runner: method(:capture))
       results = []
-      steps(root, rehearse, studio, runner).each do |name, step|
+      steps(root, rehearse, runner).each do |name, step|
         results << step.call
         results.last.name = name
         break unless results.last.ok
@@ -297,7 +307,11 @@ module Operator
       results
     end
 
-    def steps(root, rehearse, studio, runner)
+    # STUDIO is source-only on vm23: no service runs it, so its own suite is not
+    # a vm23 release gate (operator decision, 2026-11-24). The clean-tree check
+    # still refuses uncommitted STUDIO edits; `rake -f STUDIO/replicate/Rakefile
+    # check test` remains STUDIO's proof.
+    def steps(root, rehearse, runner)
       ruby = RbConfig.ruby
       list = {
         "syntax" => -> { syntax(root) },
@@ -305,11 +319,6 @@ module Operator
         "boot smoke" => -> { shell(runner, [ruby, "tools/boot_smoke.rb"], File.join(root, "MASTER")) },
       }
       list["rehearse"] = -> { shell(runner, [ruby, "OPENBSD/bin/rehearse"], root) } if rehearse
-      if studio
-        list["STUDIO check + test"] = lambda {
-          shell(runner, [ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"], File.join(root, "STUDIO"))
-        }
-      end
       list
     end
 
@@ -416,29 +425,41 @@ module Operator
         return [false, "vm23 identity receipt names a host outside OPENBSD/data/operator.yml"]
       end
 
-      hostname, ok = probe.call("hostname")
-      return [false, "SSH to vm23 failed during read-only hostname probe: #{hostname}"] unless ok
-      actual_hostname = hostname.to_s.lines.map(&:strip).reject(&:empty?).first
-      unless actual_hostname == expected.fetch("hostname")
-        return [false, "SSH reached #{actual_hostname.inspect}, but the admitted production host is #{expected.fetch("hostname")}; nothing was deployed"]
-      end
-
-      uname, ok = probe.call("uname -srm")
-      return [false, "SSH to vm23 failed during read-only OS probe: #{uname}"] unless ok
-      os_name, release, architecture = uname.to_s.strip.split(/\s+/, 4)
-      unless [os_name, release, architecture] == [
-        "OpenBSD", expected.fetch("os_release"), expected.fetch("architecture")
-      ]
-        return [false, "vm23 OS identity mismatch: got #{uname.to_s.strip.inspect}; receipt expects OpenBSD #{expected.fetch("os_release")} #{expected.fetch("architecture")}; nothing was deployed"]
-      end
-
-      [true, nil]
+      refusal = hostname_identity_refusal(expected.fetch("hostname"), probe) || os_identity_refusal(expected, probe)
+      [refusal.nil?, refusal]
     rescue KeyError => error
       [false, "vm23 identity receipt is incomplete: #{error.key}"]
     rescue SystemCallError => error
       [false, "vm23 identity preflight could not read its configuration (#{error.class})"]
     rescue Psych::Exception => error
       [false, "vm23 identity configuration is invalid (#{error.class})"]
+    end
+
+    # vm23 answers `hostname` with its FQDN; the receipt names the canonical
+    # host. One alias table serves this probe and the SSH admission gate.
+    def hostname_identity_refusal(admitted, probe)
+      output, ok = probe.call("hostname")
+      return "SSH to vm23 failed during read-only hostname probe: #{output}" unless ok
+
+      actual = output.to_s.lines.map(&:strip).reject(&:empty?).first.to_s
+      return if host_identity_names(admitted).include?(actual.downcase)
+
+      "SSH reached #{actual.inspect}, but the admitted production host is #{admitted}; nothing was deployed"
+    end
+
+    def os_identity_refusal(expected, probe)
+      uname, ok = probe.call("uname -srm")
+      return "SSH to vm23 failed during read-only OS probe: #{uname}" unless ok
+
+      wanted = ["OpenBSD", expected.fetch("os_release"), expected.fetch("architecture")]
+      return if uname.to_s.strip.split(/\s+/, 4).first(3) == wanted
+
+      "vm23 OS identity mismatch: got #{uname.to_s.strip.inspect}; " \
+        "receipt expects #{wanted.join(" ")}; nothing was deployed"
+    end
+
+    def host_identity_names(hostname)
+      [hostname, *Master::Fix::OpenBSDManualPreflight::HOST_IDENTITY_ALIASES.fetch(hostname, [])]
     end
 
     # `bin/operator vps deploy <app> --remote`: judge the commit here, then hand the
@@ -484,7 +505,7 @@ module Operator
 
         preflight_word = "VPS_DEPLOY_SKIP_PREFLIGHT=1 I_UNDERSTAND_FAST_DEPLOY=1"
       else
-        results = run(root:, runner:, studio: inventory.target_kind(app) == :all)
+        results = run(root:, runner:)
         out.puts(report(results))
         return [false, "preflight failed on #{sha[0, 9]}; nothing was sent to the box"] unless results.all?(&:ok)
 
@@ -533,8 +554,14 @@ module Operator
     def local_ci(root:, app:, out: $stdout, err: $stderr)
       dir = File.join(root, "RAILS", app)
       ruby = RubyRunner.ruby_cmd(root:)
-      cleared = %w[BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH GEM_HOME GEM_PATH RUBYOPT RUBYLIB].to_h { [_1, nil] }
-      env = cleared.merge("PATH" => "#{File.dirname(ruby)}:#{ENV.fetch("PATH", "")}", "PUB5_CI_APP" => app)
+      cleared = FOREIGN_BUNDLE_ENV.to_h { [_1, nil] }
+      # A parent that ran bundler/setup exports restore handles; the child's own
+      # bundler/setup would use them to put MASTER's GEM_HOME and BUNDLE_PATH back.
+      ENV.each_key { |key| cleared[key] = nil if key.start_with?("BUNDLER_ORIG_") }
+      bundle_dir = File.dirname(RubyRunner.bundle_cmd(root:))
+      path = [File.dirname(ruby), (bundle_dir unless bundle_dir == "."), File.join(Gem.user_dir, "bin")]
+             .compact.uniq.join(":")
+      env = cleared.merge("PATH" => "#{path}:#{ENV.fetch("PATH", "")}", "PUB5_CI_APP" => app)
       output, status = Master::Io::Exec.capture2e(
         env, ruby, "bin/ci", chdir: dir, timeout: LOCAL_CI_TIMEOUT, raise_on_timeout: true
       )

@@ -27,7 +27,7 @@ SCRIPT_TIMEOUT_S = 1_800
 $LOAD_PATH.unshift(ROOT, CHECKS_DIR)
 require File.join(ROOT, "MASTER", "checks", "support", "check_autofix")
 require File.join(ROOT, "MASTER", "checks", "support", "check_result")
-require File.join(ROOT, "MASTER", "lib", "execution", "contract")
+require File.join(ROOT, "MASTER", "lib", "execution")
 require File.join(ROOT, "MASTER", "checks", "support", "check_ledger")
 
 require File.join(ROOT, "MASTER", "checks", "support", "flow_coverage")

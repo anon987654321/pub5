@@ -105,7 +105,7 @@ en:
     main: Main content
     takeaway: takeaway
     marketplace: marketplace
-    opens_new_tab: "%{label} (opens in a new tab)"
+    new_tab_suffix: "(opens in a new tab)"
   skip_to_content: Skip to main content
   home:
     new_posts:

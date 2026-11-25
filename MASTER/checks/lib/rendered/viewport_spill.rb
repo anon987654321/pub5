@@ -82,7 +82,7 @@ module Deploy
           if (p && !root.has(p) && p.getBoundingClientRect().right > vw + 1) continue;
           spills.push(name(el) + " reaches " + Math.round(r.right));
         }
-        return JSON.stringify(Array.from(new Set(spills)).slice(0, 6));
+        return JSON.stringify(Array.from(new Set(spills)));
       })()
     JS
 

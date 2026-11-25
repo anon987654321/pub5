@@ -542,7 +542,7 @@ pool. The bounded FaceWorld proxy is a compatibility path only when the primary
 scatter interface is unavailable; it consumes the existing world-point share.
 Normal motion stages the transition. Reduced motion resolves directly to the
 same final geometry without an animation. After the configured quiet interval,
-the subject restores to the carved-field portrait.
+the subject restores to the selected conversation mask, or the carved-field portrait when no mask is available. Unknown or rejected subject descriptors restore that same identity. Mask rotation is conversation-driven or explicit, not an idle animation. Subject geometry is schematic unless backed by measured data.
 
 This separation is deliberate: identity is stable, the subject is temporary,
 and movement has a reason. The face must remain readable before, during and

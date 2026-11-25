@@ -106,9 +106,12 @@ class SearchPaletteTest < ActionDispatch::IntegrationTest
     get global_search_path(q: tag)
 
     assert_response :success
-    assert_includes response.body, people["open"].username
-    refute_includes response.body, people["blocked"].username
-    refute_includes response.body, people["blocker"].username
+    # Rendered text, not HTML: the match is wrapped in <mark>, which split every
+    # name and left the refutes below passing vacuously.
+    shown = document_root_element.text
+    assert_includes shown, people["open"].username
+    refute_includes shown, people["blocked"].username
+    refute_includes shown, people["blocker"].username
   end
 
   # Every committed search was stored for the palette and nothing let the

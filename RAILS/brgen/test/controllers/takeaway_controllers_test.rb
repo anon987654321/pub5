@@ -313,7 +313,7 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
         "5" => { closed: "1" },
         "6" => { closed: "1" },
         "0" => { closed: "1" },
-      }
+      },
     }
 
     assert_redirected_to takeaway.restaurant_path(draft)
@@ -332,7 +332,7 @@ class TakeawayControllersTest < ActionDispatch::IntegrationTest
 
     patch takeaway.restaurant_path(draft), params: {
       restaurant: { active: "0" },
-      opening_hours: { "1" => { opens_at: "9:00", closes_at: "17:00" } }
+      opening_hours: { "1" => { opens_at: "9:00", closes_at: "17:00" } },
     }
 
     assert_response :unprocessable_entity

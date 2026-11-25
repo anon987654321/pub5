@@ -528,10 +528,13 @@ pictures.
 `ps aux | grep -c chrome` showed 645. Run browser-touching tests when no
 sweep is active, or expect `Timeout::ExitException` from `cdp_framing.rb`.
 
-**Rendered review evidence is run-scoped.** `RAILS/screenshot_*.png` is the
-flat, git-ignored review set and raw captures live in temp
-(`pub5-screenshot-sweep/`). A sweep creates no screenshot archive under
-`RAILS/`; the critic reads only what the current sweep rendered.
+**The published review set is run-scoped.** `RAILS/screenshot_*.png` is
+the curated, tracked set published to GitHub; it is not git-ignored. Raw
+per-width captures stay in temp (`pub5-screenshot-sweep/`). A sweep clears
+the old set before publishing, and a failed sweep leaves no review set. The
+critic reads only captures emitted by the current sweep; it never reuses an
+older image or manifest. An HTTP-200 startup placeholder is not a rendered
+page and must never be published as review evidence.
 
 ## Judging your own work
 

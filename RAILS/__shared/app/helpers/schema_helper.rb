@@ -420,14 +420,21 @@ module SchemaHelper
     }
   end
 
+  # A record that declares a location precision publishes only its rounded
+  # public coordinates: JSON-LD is read by every crawler, so the exact point of
+  # a neighbourhood-precision place must not ride along in the page source.
   def geo_snippet(place)
-    return nil unless place.respond_to?(:latitude) && place.latitude.present? && place.longitude.present?
+    latitude, longitude = public_point(place)
+    return if latitude.blank? || longitude.blank?
 
-    {
-      "@type" => "GeoCoordinates",
-      "latitude" => place.latitude,
-      "longitude" => place.longitude,
-    }
+    { "@type" => "GeoCoordinates", "latitude" => latitude, "longitude" => longitude }
+  end
+
+  def public_point(place)
+    exact = [ place.try(:latitude), place.try(:longitude) ]
+    return [] if exact.any?(&:blank?)
+
+    place.try(:public_coordinates) || exact
   end
 
   def iso8601_duration(seconds)

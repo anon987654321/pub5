@@ -413,7 +413,7 @@ class TestDillaHistoricalMaterial < Minitest::Test
     assert_equal 1, charts.length
     assert_equal "never_catch_me_flylo", charts.first.fetch("id")
     studies = Dilla.progressions.select { |row| row["source"] == "engine_study" }
-    refute_empty studies, "engine studies must stay a separate first-class source"
+    assert_equal 3, studies.length
     assert_equal studies.length, studies.map { |row| row["id"] }.uniq.length
     studies.each do |row|
       assert_match(/not a transcription/i, row.fetch("note"),

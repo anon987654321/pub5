@@ -189,7 +189,7 @@ class Conversation < ApplicationRecord
     # View once: a zero-length timer, read as "when everyone it was sent to has
     # opened it" rather than as a clock. It reuses the one column the other
     # options live in, so a conversation is in exactly one ephemeral mode.
-    "after_read" => 0
+    "after_read" => 0,
   }.freeze
 
   def disappearing_messages? = disappearing_duration.present? && disappearing_duration.positive?

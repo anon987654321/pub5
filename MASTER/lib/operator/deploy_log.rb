@@ -15,6 +15,9 @@ module Operator
     APP_ID = /\A[a-z][a-z0-9_-]{0,31}\z/
     SHA = /\A(?:[0-9a-f]{7,40}|unknown)\z/i
     STATUS = %w[success failure blocked inconclusive cancelled].freeze
+    # The collector writes the public canary verdict under this heading and
+    # MASTER's /deploy accepts a release only when it reads "(PASS)" after it.
+    PUBLIC_CANARY = "post-deploy public canary"
 
     attr_reader :path, :app, :sha
 

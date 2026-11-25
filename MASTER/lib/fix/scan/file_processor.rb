@@ -39,6 +39,7 @@ module Master
         STRUCTURED_DATA_MAX_LINES = 20_000
         OUTSIDE_SAMPLE = "clean file, outside sample"
         UNCHANGED = "unchanged since its last semantic read"
+        INCONCLUSIVE = "semantic evidence already inconclusive this run"
         DEFERRED = "put off behind the pass's mechanical repairs"
         OVER_BUDGET = "past the pass's semantic budget"
         # Model reads, kept apart from the deterministic findings so each is keyed on its own law set.

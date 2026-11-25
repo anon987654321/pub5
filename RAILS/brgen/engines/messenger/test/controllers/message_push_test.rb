@@ -292,5 +292,4 @@ class MessagePushTest < ActionDispatch::IntegrationTest
       device_id: token.id
     )
   end
-
 end

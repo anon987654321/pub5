@@ -127,7 +127,7 @@ module Brgen
         nicks << @nick if @nick && nicks.none? { |n| n.sub(/\A[@+]/, "") == @nick }
         [
           build("353", [ @nick, "=", cname, nicks.join(" ") ]),
-          build("366", [ @nick, cname, "End of /NAMES list" ])
+          build("366", [ @nick, cname, "End of /NAMES list" ]),
         ]
       end
 

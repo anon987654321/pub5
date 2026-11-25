@@ -29,7 +29,7 @@ class Event < ApplicationRecord
   has_one_attached :cover
   process_media_variants :cover, variants: {
     card: { resize_to_limit: [ 800, 450 ], format: :webp },
-    hero: { resize_to_limit: [ 1_600, 900 ], format: :webp }
+    hero: { resize_to_limit: [ 1_600, 900 ], format: :webp },
   }
 
   validates :title, presence: true, length: { maximum: 200 }

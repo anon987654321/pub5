@@ -29,6 +29,7 @@ module Studio
         "kwaivgi/kling-v3-omni-video" => %w[prompt start_image duration mode generate_audio],
       }.freeze
       FILM_DEFAULT_KEYS = %w[prompt image duration mode aspect_ratio resolution].freeze
+      REFERENCE_FALLBACK_LIMIT = 4
       # The module root is STUDIO. The flatten (b5acc93bc) moved this file one
       # level up out of photograph/generators/ but left the two-step climb, so
       # ROOT answered the repository root and every path built from it — the
@@ -39,6 +40,24 @@ module Studio
       # lora/lora.rb as Studio::Lora::Craft: geometry, light direction and
       # expression are decided here, where a grade cannot add them.
       PHOTOGRAPHIC_CRAFT = Studio::Lora::Craft::PHOTOGRAPHIC_CRAFT
+
+      # Reference photographs for a subject: an explicit references/ set wins;
+      # otherwise fall back to the subject's own published sources. The fallback
+      # keeps the reference route on by default without requiring a new flag.
+      def self.reference_files(subject_directory)
+        directory = File.expand_path(subject_directory.to_s)
+        explicit = Dir[File.join(directory, "references", "*.{jpg,jpeg,png,webp}")]
+                   .select { |path| File.file?(path) && !File.symlink?(path) }.sort
+        return explicit unless explicit.empty?
+
+        additional = Dir[File.join(directory, "sources", "additional", "*.{jpg,jpeg,png,webp}")]
+                     .select { |path| File.file?(path) && !File.symlink?(path) }.sort
+                     .first(REFERENCE_FALLBACK_LIMIT)
+        archive = Dir[File.join(directory, "sources", "*.{jpg,jpeg,png,webp}")]
+                  .select { |path| File.file?(path) && !File.symlink?(path) }.sort
+                  .first(REFERENCE_FALLBACK_LIMIT)
+        (additional + archive).uniq
+      end
 
       def initialize(
         client: nil,
@@ -63,7 +82,7 @@ module Studio
         @subject_directory = File.join(subjects_root, @subject)
         @model_manifest = model_manifest || default_model_manifest
         @engine = engine&.to_s
-        raise ArgumentError, "inference profiles apply only to the subject LoRA route" if @engine && !inference_profile.nil?
+        raise ArgumentError, "inference profiles apply only to the subject's pinned LoRA route" if @engine && !inference_profile.nil?
         @lora_only = !!lora_only
         raise ArgumentError, "inference profiles apply only to the subject's pinned LoRA route" if !inference_profile.nil? && !@lora_only
         @allow_unreviewed_likeness = !!allow_unreviewed_likeness
@@ -121,7 +140,11 @@ module Studio
         authorize_subject!
         # In LoRA-only mode a missing manifest or incompatible schema is a hard
         # preflight failure. A subject selfie must never fall back to a generic face.
-        model = still_model if @lora_only
+        # A selected reference engine is validated against its own schema, not
+        # against the subject's LoRA (the two do not share FLUX input keys).
+        model = engine
+        lora = @lora_only || model == "$subject_lora"
+        model = still_model if model == "$subject_lora"
         if @lora_only
           reviewed_version = subject_env["LIKELINESS_REVIEWED_VERSION"].to_s.strip
           unless reviewed_version == model
@@ -130,18 +153,17 @@ module Studio
             end
           end
         end
-        return model if @lora_only && @validated_still_model == model
-        return engine unless @lora_only || lora_configured?
-
-        model ||= still_model
         return model if @validated_still_model == model
 
         names = client.input_names(model).map(&:to_s)
         raise "Replicate model is unavailable or has no readable input schema: #{model}" if names.empty?
 
-        required = %w[prompt model num_inference_steps guidance_scale]
+        required = lora ? %w[prompt model num_inference_steps guidance_scale] : %w[prompt]
         missing = required - names
-        raise "Replicate model #{model} is missing required FLUX inference inputs: #{missing.join(", ")}" unless missing.empty?
+        if missing.any?
+          label = lora ? "FLUX inference inputs" : "still inputs"
+          raise "Replicate model #{model} is missing required #{label}: #{missing.join(", ")}"
+        end
 
         @validated_still_inputs = names.freeze
         @validated_still_model = model
@@ -338,7 +360,7 @@ module Studio
       # no reference photographs — otherwise every render would spend three
       # failures before reaching an engine that can actually run.
       def render_chain
-        return ["$subject_lora"] if @lora_only
+        return ["$subject_lora"] if engine == "$subject_lora"
 
         chain = Studio::ReplicateClient::Models.chain_for(engine)
         return chain if references_available?
@@ -356,9 +378,19 @@ module Studio
         name == "$subject_lora" ? still_model : name
       end
 
-      # The engine this render reaches for first: the catalogue's primary
-      # likeness model unless --engine named another.
-      def engine = @lora_only ? "$subject_lora" : (@engine || Studio::ReplicateClient::Models.default_engine)
+      # The engine this render reaches for first: the catalogue's default
+      # reference model when the subject has reference photographs, otherwise
+      # the pinned subject LoRA. An explicit engine is an override.
+      def engine
+        return "$subject_lora" if @lora_only
+        return @engine if @engine
+        return Studio::ReplicateClient::Models.default_engine if references_available?
+        return "$subject_lora" if lora_configured?
+
+        Studio::ReplicateClient::Models.default_engine
+      end
+
+      public :engine
 
       # The input for one engine, shaped to what that engine declares.
       def still_input(words, engine_name = nil)
@@ -458,7 +490,7 @@ module Studio
       end
 
       def reference_files
-        Dir[File.join(references_directory, "*.{jpg,jpeg,png,webp}")].reject { |f| File.symlink?(f) }.sort
+        self.class.reference_files(@subject_directory)
       end
 
       def references_directory = File.join(@subject_directory, "references")

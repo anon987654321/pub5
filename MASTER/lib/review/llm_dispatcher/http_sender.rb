@@ -87,7 +87,7 @@ module Master
           # index, but KeyRotator resolves keys at call time; without this gate
           # an endpoint with key_env values could silently turn the "free" lane
           # back into a keyed request.
-          key = if ENV["MASTER_FREE_ONLY"].to_s != ""
+          key = if Master.free_only?
                   nil
                 else
                   Io::KeyRotator.active_key_for(name) || endpoint[:key]

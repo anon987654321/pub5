@@ -102,6 +102,17 @@ class VpsSafetyCheckTest < Minitest::Test
     end
   end
 
+  def test_mrdamascy_must_not_declare_puma_in_any_group
+    with_fixture do |dir|
+      path = File.join(dir, "RAILS", "mrdamascy", "Gemfile")
+      File.write(path, File.read(path).sub("group :test do\n", "group :test do\n  gem \"puma\"\n"))
+      out, status = run_check(dir)
+
+      refute status.success?
+      assert_includes out, "mrdamascy Gemfile must not declare Puma"
+    end
+  end
+
   def test_mrdamascy_secret_is_not_loaded_by_the_root_rc_script
     with_fixture do |dir, _|
       path = File.join(dir, "OPENBSD", "mirror", "etc", "rc.d", "mrdamascy")

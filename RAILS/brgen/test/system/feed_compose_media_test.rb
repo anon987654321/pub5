@@ -8,8 +8,7 @@ require "application_system_test_case"
 class FeedComposeMediaTest < ApplicationSystemTestCase
   test "a chosen photo shows as a thumbnail and can be removed again" do
     visit root_path
-    decline_optional_cookies if has_css?("#cookie-consent-banner", wait: 3)
-    find("button.welcome-onboarding-close", wait: 5).click if has_css?("button.welcome-onboarding-close", wait: 3)
+    answer_first_visit
 
     find("button.compose-trigger").click
     within("dialog.composer") do

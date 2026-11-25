@@ -70,11 +70,11 @@ The pinned checkout is the whole pub5 repository, so the same release also
 advances all tracked STUDIO source under `/home/dev/pub5/STUDIO`. STUDIO is
 source and local creative tooling (Dilla, LoRA, Postpro and the Studio CLI),
 not a registered vm23 service: it is not installed as a daemon or exposed as
-a separate deploy target. For a full `all` release, workstation preflight
-syntax-checks STUDIO and runs `rake -f replicate/Rakefile check test` before
-any SSH or production change. A dirty or untracked file in any of MASTER,
-RAILS, OPENBSD or STUDIO blocks the release, so the pinned commit cannot
-silently omit local STUDIO edits.
+a separate deploy target. Workstation preflight syntax-checks STUDIO, but
+STUDIO’s own suite (`rake -f replicate/Rakefile check test`) is not a vm23
+release gate. A dirty or untracked file in any of MASTER, RAILS, OPENBSD or
+STUDIO still blocks the release, so the pinned commit cannot silently omit
+local STUDIO edits.
 
 This is the controlled equivalent of copying the mirror into `/`, not a blind recursive copy. It deliberately does not reboot the host: the installer restarts the affected daemons/services after validation. A reboot is a separate maintenance decision, not an automatic side effect of every release.
 
@@ -871,7 +871,6 @@ deliberately:
 |--------|----|-------|------|
 | `ruby OPENBSD/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
 | `MASTER/bin/operator vps deploy <app|group|all> --remote` | **Yes** — workstation preflight and serial `bin/ci` for every selected Rails app; assets must be built and SHA-attested before SSH | Selected app, group or full fleet | Normal code release; vm23 only syncs, verifies, migrates and restarts |
-| `zsh OPENBSD/bin/vps_ci_all.sh` | **Retired refusal stub** | None | Do not use; bulk production sync is owned by the pinned `vps-deploy` parent |
 | `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
 | `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Starts every inventory app with native `rcctl`; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
@@ -1237,9 +1236,9 @@ on launch day:
 3. Move the primary aside (never delete): `mv
    /home/<app>/app/storage/production.sqlite3{,.pre-launch}`.
 4. As the app user: `bundle exec bin/rails db:prepare` — schema, no seeds.
-   brgen demo seeds are the DEMO; a launch database starts empty. If a curated
-   skeleton is wanted (cities, categories, admin), seed ONLY
-   `db/seeds/launch.rb` — write it that week, review it that week.
+   Brgen demo seeds are the DEMO; a launch database starts empty. If a curated
+   skeleton is wanted (cities, categories, admin), create a separate launch
+   seed for that release, review it that week, and never reuse demo data.
 5. Start the app with `doas /usr/sbin/rcctl start <app>` and, if configured, start its job worker with `doas /usr/sbin/rcctl start <app>_jobs`; then run the route-manifest probe.
 6. The .pre-launch file stays until the first week survives; dr-pull keeps
    pulling nightly either way.

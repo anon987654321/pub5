@@ -29,7 +29,8 @@ class OwnershipGuardContractTest < Minitest::Test
   INLINE_AUTHORIZE_RE = /\bauthorize[\s(]/
   INLINE_EQUALITY_RE = /Current\.user\s*==|==\s*Current\.user|\.owner\?\(Current\.user\)/
   SELF_SCOPED_FINDER_RE = %r{
-    Current\.user\.[a-z_]+\.(?:find|find_by!?|find_or_create_by!?|find_or_initialize_by!?|where|destroy_all|update_all) |
+    Current\.user(?:\.[a-z_]+)+
+      \.(?:find|find_by!?|find_or_create_by!?|find_or_initialize_by!?|where|destroy_all|update_all) |
     \.(?:find_by|where)\([^)]*\b(?:user|follower|liker|disliker|initiator)_?i?d?:\s*Current\.user |
     \([^)]*Current\.user[^)]*\)\.find
   }x

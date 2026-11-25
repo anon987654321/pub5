@@ -17,7 +17,8 @@ require "json"
 require "optparse"
 require "pathname"
 require "yaml"
-require_relative "../output_paths"
+require_relative "../replicate/output_paths"
+require_relative "../replicate/subprocess"
 require_relative "../postpro/uncanny"
 
 module Studio
@@ -26,6 +27,33 @@ module Studio
       THRESHOLDS_FILE = File.join(__dir__, "thresholds.yml")
       IMAGE_EXT = %w[.jpg .jpeg .png .webp].freeze
       MIN_REFERENCE_IMAGES = 5
+      LIKENESS_THRESHOLD = 0.55
+      LIKENESS_PYTHON = ENV.fetch("STUDIO_INSIGHTFACE_PYTHON", "python3")
+      LIKENESS_SCRIPT = <<~'PY'
+        import sys, json, cv2, numpy as np
+        from insightface.app import FaceAnalysis
+
+        app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+        app.prepare(ctx_id=0, det_size=(640, 640))
+
+        def embedding(path):
+            image = cv2.imread(path)
+            if image is None:
+                return None
+            faces = app.get(image)
+            if not faces:
+                return None
+            faces.sort(key=lambda face: (face.bbox[2] - face.bbox[0]) * (face.bbox[3] - face.bbox[1]),
+                       reverse=True)
+            return faces[0].normed_embedding
+
+        reference = embedding(sys.argv[1])
+        candidate = embedding(sys.argv[2])
+        if reference is None or candidate is None:
+            print(json.dumps({"error": "no face detected"}))
+            sys.exit(2)
+        print(json.dumps({"similarity": float(np.dot(reference, candidate))}))
+      PY
 
       METRIC_RANGES = {
         "texture" => 0.0..4.0,
@@ -62,6 +90,53 @@ module Studio
       }.freeze
 
       module_function
+
+      # ArcFace cosine similarity between the subject's reference photograph and
+      # a finished selfie. This is the identity gate the whole-frame texture
+      # readings cannot supply: a beautiful frame of the wrong face must not
+      # pass. InsightFace is an optional local dependency; when it is absent the
+      # result is INCONCLUSIVE, never PASS.
+      def likeness(reference:, candidate:, threshold: LIKENESS_THRESHOLD)
+        return { "state" => "INCONCLUSIVE", "metric" => "arcface_cosine",
+                 "reason" => "no reference photograph" } if reference.nil? || !File.file?(reference)
+        return { "state" => "INCONCLUSIVE", "metric" => "arcface_cosine",
+                 "reason" => "candidate is missing" } unless candidate && File.file?(candidate)
+        return { "state" => "INCONCLUSIVE", "metric" => "arcface_cosine",
+                 "reason" => "insightface unavailable" } unless insightface_available?
+
+        stdout, stderr, status = Studio::Subprocess.capture3(
+          {}, LIKENESS_PYTHON, "-c", LIKENESS_SCRIPT, reference.to_s, candidate.to_s, timeout: 180
+        )
+        return { "state" => "INCONCLUSIVE", "metric" => "arcface_cosine",
+                 "reason" => "insightface failed: #{stderr.to_s.lines.last.to_s.strip}" } unless status.success?
+
+        data = JSON.parse(stdout)
+        return { "state" => "INCONCLUSIVE", "metric" => "arcface_cosine",
+                 "reason" => data.fetch("error", stdout.to_s[0, 120]) } if data["error"]
+
+        similarity = Float(data.fetch("similarity"))
+        {
+          "state" => similarity >= threshold ? "PASS" : "FAIL",
+          "metric" => "arcface_cosine",
+          "similarity" => similarity.round(4),
+          "threshold" => threshold,
+          "reference" => File.basename(reference)
+        }
+      rescue StandardError => error
+        { "state" => "INCONCLUSIVE", "metric" => "arcface_cosine",
+          "reason" => "#{error.class}: #{error.message[0, 120]}" }
+      end
+
+      def insightface_available?
+        return @insightface_available unless @insightface_available.nil?
+
+        _stdout, _stderr, status = Studio::Subprocess.capture3(
+          {}, LIKENESS_PYTHON, "-c", "import insightface, cv2, numpy", timeout: 30
+        )
+        @insightface_available = status.success?
+      rescue StandardError
+        @insightface_available = false
+      end
 
       def inside_checkout_path?(candidate)
         expanded = File.expand_path(candidate)

@@ -212,6 +212,7 @@ class DeployPreflightTest < Minitest::Test
 
   def test_local_ci_uses_the_bounded_executor_and_clears_foreign_bundle_state
     dir = tree("RAILS/brgen/bin/ci" => "#!/bin/sh\nexit 0\n")
+    ENV["BUNDLER_ORIG_GEM_HOME"] = "/master/gems"
     captured = {}
     status = Object.new
     status.define_singleton_method(:success?) { true }
@@ -223,21 +224,29 @@ class DeployPreflightTest < Minitest::Test
     output = StringIO.new
 
     Operator::RubyRunner.stub(:ruby_cmd, "/opt/ruby/bin/ruby") do
-      Master::Io::Exec.stub(:capture2e, runner) do
-        assert Pre.local_ci(root: dir, app: "brgen", out: output, err: StringIO.new)
+      Operator::RubyRunner.stub(:bundle_cmd, "/opt/bundle/bin/bundle") do
+        Master::Io::Exec.stub(:capture2e, runner) do
+          assert Pre.local_ci(root: dir, app: "brgen", out: output, err: StringIO.new)
+        end
       end
     end
 
     env, ruby, script = captured.fetch(:argv)
     assert_equal "/opt/ruby/bin/ruby", ruby
     assert_equal "bin/ci", script
+    assert_equal %w[/opt/ruby/bin /opt/bundle/bin], env.fetch("PATH").split(":").first(2)
+    assert_includes env.fetch("PATH").split(":"), File.join(Gem.user_dir, "bin")
     assert_nil env.fetch("BUNDLE_GEMFILE")
+    assert_nil env.fetch("BUNDLE_LOCKFILE")
+    Pre::FOREIGN_BUNDLE_ENV.each { |key| assert_nil env.fetch(key), key }
+    assert_nil env.fetch("BUNDLER_ORIG_GEM_HOME")
     assert_equal "brgen", env.fetch("PUB5_CI_APP")
     assert_equal File.join(dir, "RAILS", "brgen"), captured.fetch(:options).fetch(:chdir)
     assert_equal Pre::LOCAL_CI_TIMEOUT, captured.fetch(:options).fetch(:timeout)
     assert_equal true, captured.fetch(:options).fetch(:raise_on_timeout)
     assert_equal "ci output\n", output.string
   ensure
+    ENV.delete("BUNDLER_ORIG_GEM_HOME")
     FileUtils.rm_rf(dir)
   end
 
@@ -347,6 +356,22 @@ class DeployPreflightTest < Minitest::Test
     FileUtils.rm_rf(dir)
   end
 
+  # The live host answered `hostname` with its FQDN (2026-11-24); a receipt for
+  # the canonical vm23 refused every release until the alias table covered it.
+  def test_vm23_identity_accepts_the_hosts_own_fqdn
+    dir = tree(
+      "OPENBSD/data/operator.yml" => "meta:\n  vps: dev@brgen.no\nhost_scope:\n  canonical_hosts: [vm23]\n"
+    )
+    expected = { "hostname" => "vm23", "os_release" => "7.8", "architecture" => "amd64" }
+    answers = { "hostname" => ["brgen.openbsd.amsterdam\n", true], "uname -srm" => ["OpenBSD 7.8 amd64\n", true] }
+
+    ok, reason = Pre.verify_vm23_identity(root: dir, expected:, probe: ->(command) { answers.fetch(command) })
+
+    assert ok, reason
+  ensure
+    FileUtils.rm_rf(dir)
+  end
+
   def test_vm23_identity_rejects_the_hypervisor_or_any_other_host
     dir = tree(
       "OPENBSD/data/operator.yml" => "meta:\n  vps: dev@brgen.no\nhost_scope:\n  canonical_hosts: [vm23]\n"
@@ -445,7 +470,10 @@ class DeployPreflightTest < Minitest::Test
     assert_equal "RTFM_FIRST receipt missing", reason
   end
 
-  def test_full_release_runs_studio_checks_before_remote_deployment
+  # STUDIO runs nothing on vm23; its suite is its own proof, not a release
+  # gate (operator decision 2026-11-24). Uncommitted STUDIO edits are still
+  # refused: test_remote_command_refuses_untracked_studio_source.
+  def test_full_release_does_not_gate_on_the_studio_suite
     calls = []
     runner = lambda do |argv, chdir|
       calls << [argv, chdir]
@@ -456,13 +484,8 @@ class DeployPreflightTest < Minitest::Test
 
     assert ok
     assert_includes command, "VPS_DEPLOY_SHA=#{SHA}"
-    assert(
-      calls.any? do |argv, chdir|
-        argv == [RbConfig.ruby, "-S", "rake", "-f", "replicate/Rakefile", "check", "test"] &&
-          File.basename(chdir) == "STUDIO"
-      end,
-      "full production release must run STUDIO's check and test tasks on the workstation"
-    )
+    studio_calls = calls.select { |_argv, chdir| File.basename(chdir) == "STUDIO" }
+    assert_empty studio_calls, "STUDIO's suite must not gate a vm23 release"
   end
 
   def test_remote_break_glass_needs_the_acknowledgement
@@ -486,14 +509,19 @@ class DeployPreflightTest < Minitest::Test
     source = File.read(File.expand_path("../bin/operator", __dir__))
     deploy = source[/when "deploy"\n.*?when "admin"/m]
     assert_includes deploy, "Operator::DeployPreflight.remote_command"
-    assert_operator deploy.index("remote_command"), :<, deploy.index("ssh_run(")
+    receipt = deploy.index("ensure_openbsd_receipt(app)")
+    admission = deploy.index("Operator::DeployPreflight.remote_command")
+    launch = deploy.index("remote_deploy_launch_command(")
+    refute_nil receipt
+    assert_operator receipt, :<, admission
+    assert_operator admission, :<, launch
   end
 
   def test_remote_deploy_refuses_to_run_inline_when_tmux_is_missing
     source = File.read(File.expand_path("../bin/operator", __dir__))
-    remote = source[/remote_script = <<~ZSH.*?^      ZSH$/m]
+    remote = source[/remote_script = <<~ZSH.*?^  ZSH$/m]
     refute_nil remote
-    assert_includes remote, "tmux is required for an unattended deployment"
+    assert_includes remote, "tmux is required; nothing was started"
     assert_includes remote, "exit 69"
     refute_includes remote, '#{command}'
   end

@@ -1,6 +1,6 @@
 # AGENTS.md — contributor contract for mrdamascy
 
-**Read `APP_SPEC.md` first, in full.** It is the single source of truth for this app (routes §3, schema §4, services §5, controllers §6, views §7, Stimulus §8, SCSS §9, locales §10, seeds §11, Vipps Express §12, research credits §13, tests §14, docs §15, validator §16). Implement exactly against it — no deviations, no extra gems, no schema drift. **Operator-mandated deltas of 2026-11-02 are part of the spec** (see the header of APP_SPEC.md): the real Danmarksplass kitchen identity, the Stripe Checkout second payment lane, the restaurant's own logo, as a vector trace and the generated food photos.
+**Read `README.md#product-specification` first, in full.** It is the single source of truth for this app (routes §3, schema §4, services §5, controllers §6, views §7, Stimulus §8, SCSS §9, locales §10, seeds §11, Vipps Express §12, research credits §13, tests §14, docs §15, validator §16). Implement exactly against it — no deviations, no extra gems, no schema drift. **Operator-mandated deltas of 2026-11-02 are part of the spec** (see the header of README.md#product-specification): the real Danmarksplass kitchen identity, the Stripe Checkout second payment lane, the restaurant's own logo, as a vector trace and the generated food photos.
 
 ## Where this app lives
 
@@ -10,16 +10,16 @@ RAILS/mrdamascy/                   ← you are here (standalone Rails 8 app, amb
 
 Integration rules with the monorepo:
 
-- The app lived inside `RAILS/__other/` until 2026-11-02, deliberately outside the contract roots while under construction. It is now a first-class app at `RAILS/mrdamascy/` with an `apps.yml` entry; it still must not break or be broken by `MASTER/`, or the contract-tested apps (amber, brgen, bsdports, radio …).
-- **Do not touch** `MASTER/`, `apps.yml`, other apps, or anything above the app root. Do not edit `APP_SPEC.md` (proposals go through the spec owner).
+- The app lived outside the contract roots while under construction until 2026-11-02. It is now a first-class app at `RAILS/mrdamascy/` with an `apps.yml` entry; it still must not break or be broken by `MASTER/`, or the contract-tested apps (amber, brgen, bsdports, radio …).
+- **Do not touch** `MASTER/`, `apps.yml`, other apps, or anything above the app root. Do not edit `README.md#product-specification` (proposals go through the spec owner).
 - Do not depend on `__shared/` (no `Shared::` libs, no shared coverage/test_defaults tooling) — this app is standalone and self-contained, same pattern as amber's core but with its own plain `test_helper.rb`.
 
 ## File map
 
 ```
 mrdamascy/
-├── APP_SPEC.md              # ← source of truth, read first
-├── README.md                # brand story, Foodora comparison, run guide
+├── README.md#product-specification              # ← source of truth, read first
+├── README.md                # complete product specification and operator guide
 ├── AGENTS.md                # this contract
 ├── config/
 │   ├── routes.rb            # §3 verbatim + §8's checkout/zone + the operator-mandated stripe/* trio

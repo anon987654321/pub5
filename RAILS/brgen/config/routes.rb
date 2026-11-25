@@ -18,10 +18,11 @@ Rails.application.routes.draw do
   # Referral tokens contain dot-separated base64url fields; disable the
   # optional format suffix so the entire opaque token reaches the controller.
   post "referral_splinters" => "referral_splinters#create", as: :referral_splinters
+  # Tokens are iv.tag.ciphertext; the default segment pattern stops at a dot.
   get "referral_splinters/:token" => "referral_splinters#show",
-      as: :referral_splinter, format: false
+      as: :referral_splinter, format: false, constraints: { token: %r{[^/]+} }
   post "referral_splinters/:token/redeem" => "referral_splinters#redeem",
-      as: :redeem_referral_splinter, format: false
+      as: :redeem_referral_splinter, format: false, constraints: { token: %r{[^/]+} }
   resources :share_drafts, only: %i[show destroy] do
     member { post :publish }
   end

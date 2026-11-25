@@ -171,7 +171,11 @@ Operator::CiGuard.run! do
     # test/application_system_test_case.rb's assert_accessible).
     # PUB5_COVERAGE_PART: its own SimpleCov result, merged with rails_test's
     # rather than replacing it (__shared/test/coverage.rb).
-    step("system_test", "env PUB5_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system") unless vps_host
+    # One worker: a Chrome and an app server per parallel worker starved this
+    # 8 GB workstation, and audio-sync and Turbo-navigation tests failed at
+    # random (2-17 per run in parallel, 0-1 serially, 2026-11-25).
+    system_test = "env PARALLEL_WORKERS=1 PUB5_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system"
+    step("system_test", system_test) unless vps_host
     seed_env = vps_host ? "env RAILS_ENV=test SKIP_BERGEN_DEMO=1" : "env RAILS_ENV=test"
     # bin/rake, not bin/rails.
     #
@@ -189,6 +193,9 @@ Operator::CiGuard.run! do
     # locally `rails -T` lists all 156 tasks. Bundle fine, rake fine, constant fine
     # -- only the dispatch is broken, and only there. Going straight to rake does
     # not touch it.
-    step "seeds", "#{seed_env} bin/rake db:seed:replant"
+    # Seeds prove they load, then the test database is emptied again: replant
+    # left a seeded Bergen courier behind, and the next run's dispatch test
+    # found it as the nearest free driver (2026-11-24).
+    step "seeds", "#{seed_env} bin/rake db:seed:replant && #{seed_env} bin/rake db:truncate_all"
   end
 end

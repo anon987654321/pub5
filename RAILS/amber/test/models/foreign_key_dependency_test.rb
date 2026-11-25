@@ -82,6 +82,10 @@ class ForeignKeyDependencyTest < ActiveSupport::TestCase
     "Outfit -> DeclutterChallenge (outfit_id)",
     "Outfit -> Post (outfit_id)",
     "Outfit -> Recommendation (outfit_id)",
+    # The commerce ledger is append-only: its rows refuse destroy and update,
+    # and user_id is NOT NULL, so neither destroy nor nullify can be the answer.
+    "User -> Shared::CommerceLedgerEntry (actor_id)",
+    "User -> Shared::CommerceLedgerEntry (user_id)",
     "User -> Shared::Notification (actor_id)",
     "User -> Shared::Notification (user_id)",
     "User -> Shared::Reaction (user_id)",

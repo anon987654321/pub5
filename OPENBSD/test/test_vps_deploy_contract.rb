@@ -18,6 +18,7 @@ class VpsDeployContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps-deploy"), encoding: "UTF-8")
   CI_SOURCE = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci.sh"), encoding: "UTF-8")
+  GUARD = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "bin", "resource_guard.sh"), encoding: "UTF-8")
   APPS = Deploy::Inventory.new(root: ROOT).app_names
   MASTER_DEPLOY = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
 
@@ -29,7 +30,7 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_all_applies_the_filesystem_mirror_before_application_deploys
-    assert_includes SOURCE, 'zsh "$repo/OPENBSD/OPERATOR.sh" --apply'
+    assert_source SOURCE, 'zsh "$repo/OPENBSD/OPERATOR.sh" --apply'
     assert_operator SOURCE.index('OPENBSD/OPERATOR.sh" --apply'), :<, SOURCE.index('for one in $deploy_order')
   end
 
@@ -53,6 +54,10 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, 'PROTECTED /$rel (SSH configuration requires an out-of-band recovery path)'
     assert_includes operator, 'PROTECTED /$rel (pass --doas to use validate_doas.ksh)'
     assert_includes operator, 'validate_doas.ksh" install'
+    # --doas installs doas.conf alone and defers the rest; refusing on other
+    # changes left a drifted doas.conf with no path (vm23, 2026-11-25).
+    assert_includes operator, "DEFERRED  ${#CHANGED} other mirror changes"
+    refute_includes operator, "may only change doas.conf by itself"
   end
 
   def test_nsd_zone_changes_are_signed_and_validated_before_activation
@@ -116,9 +121,9 @@ class VpsDeployContractTest < Minitest::Test
     assert_equal all.map(&:name).sort, degraded.map(&:name).sort
     assert_equal "master", all.first.deploy_group
     assert_equal "master", degraded.last.deploy_group
-    assert_includes SOURCE, "Deploy::Inventory.new"
-    assert_includes SOURCE, "ordered_apps"
-    assert_includes SOURCE, "target_kind"
+    assert_source SOURCE, "Deploy::Inventory.new"
+    assert_source SOURCE, "ordered_apps"
+    assert_source SOURCE, "target_kind"
     refute_match(/DEPLOY_ALL=\([^)]*(?:brgen|amber|bsdports|mrdamascy)/, SOURCE)
   end
 
@@ -128,21 +133,21 @@ class VpsDeployContractTest < Minitest::Test
       assert_equal app.deploy_root.split("/", 2).first.downcase, app.deploy_group
     end
     assert_equal :unknown, inventory.target_kind("../outside")
-    assert_includes SOURCE, "unknown app or group"
+    assert_source SOURCE, "unknown app or group"
   end
 
   def test_deploy_paths_export_openbsd_package_path
     expected = "export PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin"
-    assert_includes SOURCE, expected
-    assert_includes MASTER_DEPLOY, expected
+    assert_source SOURCE, expected
+    assert_source MASTER_DEPLOY, expected
   end
 
   def test_it_rejects_an_unknown_deploy_target
     inventory = Deploy::Inventory.new(root: ROOT)
 
     assert_equal :unknown, inventory.target_kind("../outside")
-    assert_includes SOURCE, "deploy_target_kind"
-    assert_includes SOURCE, "unknown app or group"
+    assert_source SOURCE, "deploy_target_kind"
+    assert_source SOURCE, "unknown app or group"
   end
 
   # The 2026-09-16 runner.rb deletion killed this deploy under set -e. The
@@ -204,15 +209,15 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes operator, 'verify_root_crontab || {'
   end
   def test_deploy_transcripts_never_create_files_on_vm23
-    assert_includes SOURCE, "deploy_log=/dev/null"
-    assert_includes SOURCE, "deploy_run_log=/dev/null"
-    assert_includes SOURCE, "VPS_DEPLOY_LOG_REF"
-    assert_includes SOURCE, "workstation_log=$deploy_log_ref"
-    assert_includes SOURCE, "workstation log reference is required"
-    refute_includes SOURCE, 'exec > >(tee -a'
-    refute_includes SOURCE, 'mkdir -p -- "$deploy_log_dir/runs"'
-    refute_includes SOURCE, "/var/log/pub5/vps-deploy.log"
-    refute_includes SOURCE, "/home/dev/vps-deploy.log"
+    assert_source SOURCE, "deploy_log=/dev/null"
+    assert_source SOURCE, "deploy_run_log=/dev/null"
+    assert_source SOURCE, "VPS_DEPLOY_LOG_REF"
+    assert_source SOURCE, "workstation_log=$deploy_log_ref"
+    assert_source SOURCE, "workstation log reference is required"
+    refute_source SOURCE, "exec > >(tee -a"
+    refute_source SOURCE, 'mkdir -p -- "$deploy_log_dir/runs"'
+    refute_source SOURCE, "/var/log/pub5/vps-deploy.log"
+    refute_source SOURCE, "/home/dev/vps-deploy.log"
   end
   def test_remote_deploy_collector_polls_at_a_bounded_interval
     operator = File.read(File.join(ROOT, "MASTER", "bin", "operator"), encoding: "UTF-8")
@@ -226,35 +231,35 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_disk_usage_uses_native_bounded_du
-    assert_includes SOURCE, "disk-usage)"
-    assert_includes SOURCE, '/usr/bin/du -xk "$1"'
-    refute_includes SOURCE, "pub5-admin"
+    assert_source SOURCE, "disk-usage)"
+    assert_source SOURCE, '/usr/bin/du -xk "$1"'
+    refute_source SOURCE, "pub5-admin"
   end
   # vps-deploy runs as root, so its hints name native rcctl without doas.
   def test_failure_hints_use_native_rcctl
-    assert_includes SOURCE, "doas /usr/sbin/rcctl restart <app>"
-    assert_includes SOURCE, "doas /usr/sbin/rcctl start $app"
-    assert_includes SOURCE, "doas /usr/sbin/rcctl restart $other"
-    refute_includes SOURCE, "pub5-admin"
+    assert_source SOURCE, "doas /usr/sbin/rcctl restart <app>"
+    assert_source SOURCE, "doas /usr/sbin/rcctl start $app"
+    assert_source SOURCE, "doas /usr/sbin/rcctl restart $other"
+    refute_source SOURCE, "pub5-admin"
   end
 
   def test_vps_deploy_fails_closed_without_root_fallbacks
-    assert_includes SOURCE, 'records_call write "$VPS_DEPLOY_RUN_ID" "$payload"'
-    assert_includes SOURCE, "Deploy::Records.new(repo_root: repo)"
-    refute_includes SOURCE, "PUB5_ADMIN"
-    refute_includes SOURCE, "pub5-admin"
+    assert_source SOURCE, 'records_call write "$VPS_DEPLOY_RUN_ID" "$payload"'
+    assert_source SOURCE, "Deploy::Records.new(repo_root: repo)"
+    refute_source SOURCE, "PUB5_ADMIN"
+    refute_source SOURCE, "pub5-admin"
     refute_match(/^\s*doas\s+rcctl\b/, SOURCE)
     refute_match(/^\s*doas\s+(?:tee|chmod|mkdir)\b/, SOURCE)
-    refute_includes SOURCE, 'doas ksh "$repo/OPENBSD/bin/resource_guard.sh"'
-    refute_includes SOURCE, 'doas "$RUBY" "$repo/OPENBSD/checks/solid_queue_proof.rb"'
-    refute_includes SOURCE, 'doas tee "$file"'
+    refute_source SOURCE, 'doas ksh "$repo/OPENBSD/bin/resource_guard.sh"'
+    refute_source SOURCE, 'doas "$RUBY" "$repo/OPENBSD/checks/solid_queue_proof.rb"'
+    refute_source SOURCE, 'doas tee "$file"'
   end
   def test_deploy_uses_native_rcctl_and_direct_records
-    assert_includes SOURCE, '"/usr/sbin/rcctl" "$action" "$service"'
-    assert_includes SOURCE, 'admin_request stamp "$name" "$sha" "$stamp_status"'
-    assert_includes SOURCE, "admin_request resource-guard"
-    assert_includes SOURCE, 'admin_request solid-queue-proof "$app"'
-    assert_includes SOURCE, 'records_call write "$@"'
+    assert_source SOURCE, '"/usr/sbin/rcctl" "$action" "$service"'
+    assert_source SOURCE, 'admin_request stamp "$name" "$sha" "$stamp_status"'
+    assert_source SOURCE, "admin_request resource-guard"
+    assert_source SOURCE, 'admin_request solid-queue-proof "$app"'
+    assert_source SOURCE, 'records_call write "$@"'
   end
 
   # Since 6735acf1 the mirror is a copy-ready filesystem image: OPERATOR.sh
@@ -461,17 +466,18 @@ class VpsDeployContractTest < Minitest::Test
   end
 
   def test_ci_source_permissions_do_not_grant_world_read
-    assert_includes CI_SOURCE, 'chmod -R u+rX,g+rX "${repo}/MASTER/tools"'
-    refute_includes CI_SOURCE, 'chmod -R a+rX "${repo}/MASTER/tools"'
+    prepare_path = File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-prepare.ksh")
+    prepare = File.read(prepare_path, encoding: "UTF-8")
+    refute_match(/chmod\b[^\n]*\b(?:a|o)r/, CI_SOURCE, "vps_ci.sh must not grant world read")
+    refute_match(/chmod\b[^\n]*\b(?:a|o)r/, prepare, "ci-prepare.ksh must not grant world read")
+    assert_includes prepare, "/bin/chmod 750 /home/dev"
     runtime_check = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"), encoding: "UTF-8")
-    assert_includes runtime_check, 'chmod -R u+rX,g+rX "$rails_tree"'
-    refute_includes runtime_check, 'chmod -R a+rX "$rails_tree"'
+    refute_match(/chmod\b[^\n]*\b(?:a|o)\+r/, runtime_check, "_runtime_check.sh must not grant world read")
   end
 
   def test_ci_does_not_escalate_permission_changes_on_the_checkout
-    refute_includes CI_SOURCE, 'doas chmod -R a+rX "${repo}/MASTER/tools"'
-    assert_includes CI_SOURCE, 'chmod -R u+rX,g+rX "${repo}/MASTER/tools"'
-    refute_includes CI_SOURCE, 'chmod -R a+rX "${repo}/MASTER/tools"'
+    refute_match(/doas\s+(?:\S+\/)?chmod\b/, CI_SOURCE, "permission changes belong to ci-prepare.ksh, not a doas chmod")
+    assert_source CI_SOURCE, 'doas /usr/local/libexec/ci-prepare.ksh "$app"'
   end
 
   def test_ci_helpers_are_installed_and_used_before_sync
@@ -491,36 +497,37 @@ class VpsDeployContractTest < Minitest::Test
     assert status.success?, "OpenBSD libexec helpers must be tracked mirror files"
     assert_equal helpers, tracked.lines.map(&:chomp).sort
 
-    assert_includes CI_SOURCE, 'doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"'
+    assert_source CI_SOURCE, 'doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"'
     assert_operator CI_SOURCE.index('doas /usr/local/libexec/ci-prepare.ksh "$app"'),
                     :<, CI_SOURCE.index("sync_from_repo\n")
   end
 
   def test_ci_copy_tree_uses_the_app_scoped_helper
-    assert_includes CI_SOURCE, 'doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"'
-    refute_includes CI_SOURCE, "sync_from_repo_legacy"
-    refute_includes CI_SOURCE, "sync_ci_rails_root_legacy"
-    assert_includes CI_SOURCE, "unaccounted_tracked_files \"$app\" \"$repo\" paths kept_local"
+    assert_source CI_SOURCE, 'doas /usr/bin/su -m "$app" -c "/usr/local/libexec/ci-sync.ksh $app"'
+    refute_source CI_SOURCE, "sync_from_repo_legacy"
+    refute_source CI_SOURCE, "sync_ci_rails_root_legacy"
+    assert_source CI_SOURCE, "unaccounted_tracked_files \"$app\" \"$repo\" paths kept_local"
     assert_operator CI_SOURCE.index('doas /usr/local/libexec/ci-prepare.ksh "$app"'),
                     :<, CI_SOURCE.index("sync_from_repo\n")
   end
 
   def test_ci_has_no_broker_and_no_root_copy_fallback
-    refute_includes CI_SOURCE, "pub5-admin"
+    refute_source CI_SOURCE, "pub5-admin"
     refute_match(/doas\s+(?:sh\s+-c|(?:rm|mkdir|chown|chmod|tee|groupadd|usermod|tar)\b)/, CI_SOURCE)
-    refute_includes CI_SOURCE, "sync_from_repo_legacy"
+    refute_source CI_SOURCE, "sync_from_repo_legacy"
   end
   def test_ci_runner_is_retired_on_the_production_host
     runner = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "ci-run.ksh"), encoding: "UTF-8")
     assert_includes runner, "refused"
     assert_includes runner, "workstation"
-    refute_includes runner, "bin/ci"
-    refute_includes CI_SOURCE, "ci-run.ksh"
+    assert_includes runner, "exit 69"
+    refute_match(/^(?!echo\b)[^#\n]*\bbin\/ci\b/, runner, "ci-run.ksh must refuse, never run bin/ci")
+    refute_source CI_SOURCE, "ci-run.ksh"
   end
 
   def test_ci_uses_the_helper_for_account_and_storage_preparation
-    assert_includes CI_SOURCE, 'doas /usr/local/libexec/ci-prepare.ksh "$app"'
-    refute_includes CI_SOURCE, "pub5-admin"
+    assert_source CI_SOURCE, 'doas /usr/local/libexec/ci-prepare.ksh "$app"'
+    refute_source CI_SOURCE, "pub5-admin"
     refute_match(/doas\s+(?:sh\s+-c|(?:rm|mkdir|chown|chmod|tee|groupadd|usermod|tar)\b)/, CI_SOURCE)
   end
 
@@ -530,50 +537,41 @@ class VpsDeployContractTest < Minitest::Test
   # The helper may sync only after the parent has pinned and admitted the
   # exact commit and supplied workstation CI/preflight attestations.
   def test_a_ci_attestation_covers_exactly_the_commit_it_names
-    assert_includes SOURCE, %q{[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]}
-    assert_includes CI_SOURCE, %q{head=$(git_as_deploy_user rev-parse HEAD 2>/dev/null)}
-    assert_includes CI_SOURCE, "git_as_deploy_user() {"
-    assert_includes CI_SOURCE, "run_as_deploy_user"
-    refute_includes CI_SOURCE, %q{git -C "$repo"}
-    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_LOCK_HELD:-} == 1}
-    assert_includes CI_SOURCE, %q{owner_identity == "$VPS_DEPLOY_LOCK_IDENTITY"}
-    assert_includes CI_SOURCE, %q{${owner_started}_${owner_digest} == "$owner_identity"}
-    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_SHA:-} == "$head" ]]}
-    assert_includes CI_SOURCE, %q{[[ $attested == "$head" ]]}
-    assert_includes CI_SOURCE, %q{[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]]}
-    assert_includes CI_SOURCE, %q{if [[ -n ${VPS_DEPLOY_PREFLIGHT_SHA:-} ]]; then}
-    assert_includes CI_SOURCE, "workstation preflight SHA does not match"
-    assert_includes CI_SOURCE, %q{VPS_DEPLOY_SKIP_PREFLIGHT:-0}
+    assert_source SOURCE, %q{[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]}
+    assert_source CI_SOURCE, %q{head=$(git_as_deploy_user rev-parse HEAD 2>/dev/null)}
+    assert_source CI_SOURCE, "git_as_deploy_user() {"
+    assert_source CI_SOURCE, "run_as_deploy_user"
+    refute_source CI_SOURCE, %q{git -C "$repo"}
+    assert_source CI_SOURCE, %q{[[ ${VPS_DEPLOY_LOCK_HELD:-} == 1}
+    assert_source CI_SOURCE, %q{owner_identity == "$VPS_DEPLOY_LOCK_IDENTITY"}
+    assert_source CI_SOURCE, %q{${owner_started}_${owner_digest} == "$owner_identity"}
+    assert_source CI_SOURCE, %q{[[ ${VPS_DEPLOY_SHA:-} == "$head" ]]}
+    assert_source CI_SOURCE, %q{[[ $attested == "$head" ]]}
+    assert_source CI_SOURCE, %q{[[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$head" ]]}
+    assert_source CI_SOURCE, %q{if [[ -n ${VPS_DEPLOY_PREFLIGHT_SHA:-} ]]; then}
+    assert_source CI_SOURCE, "workstation preflight SHA does not match"
+    assert_source CI_SOURCE, %q{VPS_DEPLOY_SKIP_PREFLIGHT:-0}
     sync = CI_SOURCE.index("sync_from_repo" + "\n")
     %w[VPS_DEPLOY_LOCK_HELD VPS_DEPLOY_SHA VPS_DEPLOY_CI_SHA VPS_DEPLOY_ADMITTED_SHA VPS_DEPLOY_PREFLIGHT_SHA].each do |name|
       position = CI_SOURCE.index(name)
       refute_nil position, "missing #{name} guard"
       assert_operator position, :<, sync, "#{name} must be checked before copy-tree sync"
     end
-    assert_includes CI_SOURCE, %q{"bundle-check"}
-    refute_includes CI_SOURCE, "ci-run.ksh"
-    refute_includes CI_SOURCE, "bundle_install_as_app"
-    refute_includes CI_SOURCE, "VPS_DEPLOY_SKIP_TESTS"
-    refute_includes SOURCE, "SKIP_CI=1"
-    refute_includes SOURCE, "preflight-boot"
-    refute_includes SOURCE, 'canary.rb" --no-rehearse'
-  end
-
-  def test_bulk_ci_wrapper_refuses_standalone_production_sync
-    wrapper = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_ci_all.sh"), encoding: "UTF-8")
-
-    assert_includes wrapper, "standalone bulk sync/bundle path is retired"
-    assert_includes wrapper, "exit 69"
-    refute_includes wrapper, 'zsh "$script"'
-    refute_includes wrapper, "ruby_select.sh"
+    assert_source CI_SOURCE, %q{"bundle-check"}
+    refute_source CI_SOURCE, "ci-run.ksh"
+    refute_source CI_SOURCE, "bundle_install_as_app"
+    refute_source CI_SOURCE, "VPS_DEPLOY_SKIP_TESTS"
+    refute_source SOURCE, "SKIP_CI=1"
+    refute_source SOURCE, "preflight-boot"
+    refute_source SOURCE, 'canary.rb" --no-rehearse'
   end
 
   def test_the_ci_stamp_only_records_a_workstation_attestation
-    assert_includes CI_SOURCE, "ci_stamp=ci_attested"
-    refute_includes CI_SOURCE, "ci_stamp=ci_ok"
-    refute_includes CI_SOURCE, "ci_stamp=ci_skipped"
-    assert_includes CI_SOURCE, 'status == "ci_attested"'
-    assert_includes CI_SOURCE, %q{doas "$RUBY" -rjson}
+    assert_source CI_SOURCE, "ci_stamp=ci_attested"
+    refute_source CI_SOURCE, "ci_stamp=ci_ok"
+    refute_source CI_SOURCE, "ci_stamp=ci_skipped"
+    assert_source CI_SOURCE, 'status == "ci_attested"'
+    assert_source CI_SOURCE, %q{doas "$RUBY" -rjson}
   end
 
   def test_it_runs_as_root_and_keeps_git_as_the_deploy_user
@@ -582,7 +580,7 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil guard, "the uid gate is gone"
     assert_includes guard, 'exec doas -n /usr/bin/env "${deploy_env[@]}" zsh "$self" "$@"'
     assert_match(/exit 2/, guard, "without doas the gate must exit, not continue unprivileged")
-    assert_includes SOURCE, 'su -s /bin/sh "$DEPLOY_USER" -c "$snippet"'
+    assert_source SOURCE, 'su -s /bin/sh "$DEPLOY_USER" -c "$snippet"'
     refute_match(/^\s*git\s+(?:-C\s+\S+\s+)?(?:fetch|pull|checkout|merge|reset)\b/, SOURCE,
                  "a bare git call runs as root, which cannot reach github")
   end
@@ -590,15 +588,15 @@ class VpsDeployContractTest < Minitest::Test
   # All selected Rails suites must pass on the workstation before SSH; vm23
   # checks only the immutable production bundle and the staged asset attestation.
   def test_no_skip_ci_bypass_exists
-    refute_includes SOURCE, "SKIP_CI"
-    assert_includes SOURCE, '[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]'
-    assert_includes CI_SOURCE, '[[ $attested == "$head" ]]'
+    refute_source SOURCE, "SKIP_CI"
+    assert_source SOURCE, '[[ ${VPS_DEPLOY_CI_SHA:-} == "$pin" ]]'
+    assert_source CI_SOURCE, '[[ $attested == "$head" ]]'
   end
 
   def test_the_deploy_flag_is_held_for_the_whole_deploy_and_released_on_exit
     refute_nil flag_block, "the deploy flag block is gone - the scan broke, or the flag did"
     guard_glob = GUARD[%r{^DEPLOY_FLAGS="(/home/dev/pub5/\.deploying\S*)"$}, 1]
-    assert_includes GUARD, "for _flag in $DEPLOY_FLAGS; do", "the guard no longer loops over DEPLOY_FLAGS"
+    assert_source GUARD, "for _flag in $DEPLOY_FLAGS; do", "the guard no longer loops over DEPLOY_FLAGS"
     refute_nil guard_glob, "resource_guard no longer reads a deploy flag glob"
 
     Dir.mktmpdir do |repo|
@@ -620,6 +618,20 @@ class VpsDeployContractTest < Minitest::Test
     end
   end
 
+  # A source-contract miss names the snippet; assert_includes printed all of
+  # vps-deploy (70 KB) into the rehearsal and buried the failing line.
+  def assert_source(source, snippet, message = nil)
+    assert source.include?(snippet), message || "source lacks #{snippet.inspect}"
+  end
+
+  def refute_source(source, snippet, message = nil)
+    refute source.include?(snippet), message || "source still contains #{snippet.inspect}"
+  end
+
+  def flag_block
+    SOURCE[/^deploy_flag=.*?^trap 'exit 143' TERM$/m]
+  end
+
   def lock_block
     SOURCE[/^lock_dir=.*?(?=^# Deployment transcripts belong on the workstation)/m]
   end
@@ -639,7 +651,8 @@ class VpsDeployContractTest < Minitest::Test
     checksum, checksum_status = Open3.capture2("cksum", stdin_data: command.chomp)
     return unless checksum_status.success?
 
-    normalized_start = started.strip.gsub(/[^A-Za-z0-9]/, "_")
+    # $(...) strips only trailing newlines: keep ps's padding as the deployer does.
+    normalized_start = started.sub(/\n+\z/, "").gsub(/[^A-Za-z0-9]/, "_")
     normalized_checksum = checksum.split.join("_")
     "#{normalized_start}_#{normalized_checksum}"
   end
@@ -984,8 +997,10 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes block, "free_swap >= 400"
     assert_includes block, "cpu-pressure"
     assert_includes block, "420 && pressure_busy >= 80"
-    assert_includes SOURCE, "admit_host_load"
-    assert_includes SOURCE, "VPS_DEPLOY_ADMITTED_SHA=$pin"
+    # The run's own pin/snapshot burst must not refuse it (vm23, 2026-11-25).
+    assert_includes block, "pressure_stamp < started"
+    assert_source SOURCE, "admit_host_load"
+    assert_source SOURCE, "VPS_DEPLOY_ADMITTED_SHA=$pin"
   end
 
   def test_fleet_admission_runs_once_before_mirror_and_children
@@ -997,8 +1012,8 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil gate
     assert_operator gate, :<, mirror
     assert_operator gate, :<, child
-    assert_includes SOURCE, 'if [[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$pin" ]]; then'
-    assert_includes SOURCE, "resource shedding remains active"
+    assert_source SOURCE, 'if [[ ${VPS_DEPLOY_ADMITTED_SHA:-} == "$pin" ]]; then'
+    assert_source SOURCE, "resource shedding stays active"
   end
 
   def test_vps_deploy_and_master_deployer_are_build_free
@@ -1006,8 +1021,8 @@ class VpsDeployContractTest < Minitest::Test
     rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")
     tasks = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
     runtime = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"), encoding: "UTF-8")
-    refute_includes SOURCE, "rails_assets_precompile_as_app"
-    refute_includes SOURCE, "ensure_smart_turn_assets"
+    refute_source SOURCE, "rails_assets_precompile_as_app"
+    refute_source SOURCE, "ensure_smart_turn_assets"
     refute_includes master, "bundle install"
     refute_includes master, "assets:precompile"
     assert_includes master, ".pub5-build-sha"
@@ -1124,7 +1139,7 @@ class VpsDeployContractTest < Minitest::Test
       VPS_DEPLOY_MASTER_MIN_AVAIL
       VPS_DEPLOY_MIN_FREE_KB
     ].each do |name|
-      assert_includes SOURCE, "validate_deploy_setting #{name}", "#{name} can influence arithmetic without validation"
+      assert_source SOURCE, "validate_deploy_setting #{name}", "#{name} can influence arithmetic without validation"
     end
 
     assert_operator SOURCE.index("validate_deploy_setting VPS_DEPLOY_LOCK_TTL"),
@@ -1174,17 +1189,17 @@ class VpsDeployContractTest < Minitest::Test
 
 
   def test_fleet_recovery_receipt_is_created_and_snapshot_precedes_service_stops
-    assert_includes SOURCE, "write_deploy_run_receipt() {"
-    assert_includes SOURCE, 'records_call write "$VPS_DEPLOY_RUN_ID" "$payload"'
-    assert_includes SOURCE, "export VPS_DEPLOY_LOCK_PID=${$}"
-    assert_includes SOURCE, "export VPS_DEPLOY_LOCK_IDENTITY=$identity"
-    assert_includes SOURCE, 'VPS_DEPLOY_RUN_ID="$(date -u'
-    assert_includes SOURCE, "VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1"
+    assert_source SOURCE, "write_deploy_run_receipt() {"
+    assert_source SOURCE, 'records_call write "$VPS_DEPLOY_RUN_ID" "$payload"'
+    assert_source SOURCE, "export VPS_DEPLOY_LOCK_PID=${$}"
+    assert_source SOURCE, "export VPS_DEPLOY_LOCK_IDENTITY=$identity"
+    assert_source SOURCE, 'VPS_DEPLOY_RUN_ID="$(date -u'
+    assert_source SOURCE, "VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1"
 
     receipt_setup = SOURCE.index("# One durable receipt belongs to the lock-owning parent.")
     created = SOURCE.index('write_deploy_run_receipt || {', receipt_setup)
     snapshot = SOURCE.index("VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=1")
-    first_stop = SOURCE.index('admin_service stop "$jobs_service"')
+    first_stop = SOURCE.index('admin_service stop "$app"')
     refute_nil created
     refute_nil snapshot
     refute_nil first_stop
@@ -1197,16 +1212,29 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes stage, "failed to persist recovery receipt"
   end
 
+  # A child deploy inherits the run id, so its first receipt write happens at
+  # `set_stage start`; records_call must already be defined by then.
+  # A child deploy owns no lock and skips the pin block; it must still know
+  # the pin its parent exported, or set -u kills it at host admission.
+  def test_a_child_deploy_takes_its_pin_from_the_parent
+    assert_source SOURCE, "pin=${VPS_DEPLOY_SHA:-}"
+    assert_source SOURCE, "child deploy inherited no pinned SHA from its parent"
+  end
+
+  def test_records_call_is_defined_before_the_first_receipt_write
+    assert_operator SOURCE.index("\nrecords_call() {"), :<, SOURCE.index("\nset_stage start")
+  end
+
   def test_recovery_plan_is_explicit_and_never_deploys_or_checks_out_code
     recovery = SOURCE[/# Operator-driven recovery is intentionally separate from deploy\..*?(?=^# Pin the commit, prove it boots, record what is running\.)/m]
     refute_nil recovery
-    assert_includes SOURCE, "recover --plan"
-    assert_includes SOURCE, "recover --apply <run-id>"
+    assert_source SOURCE, "recover --plan"
+    assert_source SOURCE, "recover --apply <run-id>"
     assert_includes recovery, "deploy-run-list"
     assert_includes recovery, "deploy-run-read"
     assert_includes recovery, "lock_process_identity"
-    assert_includes SOURCE, "other_deploy_processes() {"
-    assert_includes SOURCE, "pgrep -f 'OPENBSD/bin/vps-deploy'"
+    assert_source SOURCE, "other_deploy_processes() {"
+    assert_source SOURCE, "pgrep -f 'OPENBSD/bin/vps-deploy'"
     scanner = SOURCE[/^other_deploy_processes\(\) \{.*?^\}/m]
     refute_nil scanner
     assert_includes scanner, "(( rc == 1 )) || return 1"
@@ -1224,12 +1252,12 @@ class VpsDeployContractTest < Minitest::Test
   def test_recovery_invocation_uses_a_fresh_lock_and_historical_ports
     recovery = SOURCE[/# Operator-driven recovery is intentionally separate from deploy\..*?(?=^# Pin the commit, prove it boots, record what is running\.)/m]
     refute_nil recovery
-    assert_includes SOURCE, "unset VPS_DEPLOY_STARTED VPS_DEPLOY_LOCK_HELD"
-    assert_includes SOURCE, "VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT=1"
-    assert_includes SOURCE, "ORDER) DEPLOY_ALL_DEGRADED=(${=one})"
-    refute_includes SOURCE, "ORDER) DEPLOY_ALL_DEGRADED=(${@=one})"
-    assert_includes SOURCE, 'if [[ ${VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT:-0} != 1 ]]; then'
-    assert_includes SOURCE, '[[ $owner_host == "$(hostname -s)" ]]'
+    assert_source SOURCE, "unset VPS_DEPLOY_STARTED VPS_DEPLOY_LOCK_HELD"
+    assert_source SOURCE, "VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT=1"
+    assert_source SOURCE, "ORDER) DEPLOY_ALL_DEGRADED=(${=one})"
+    refute_source SOURCE, "ORDER) DEPLOY_ALL_DEGRADED=(${@=one})"
+    assert_source SOURCE, "if [[ ${VPS_DEPLOY_RESTORE_PORTS_FROM_RECEIPT:-0} != 1 ]]; then"
+    assert_source SOURCE, '[[ $owner_host == "$(hostname -s)" ]]'
     assert_includes recovery, "snapshot_recorded"
   end
 
@@ -1238,20 +1266,19 @@ class VpsDeployContractTest < Minitest::Test
     refute_nil recovery
     assert_includes recovery, '[[ -n $VPS_DEPLOY_STARTED ]]'
     assert_includes recovery, "keep_deploy_flag"
-    assert_includes SOURCE, "VPS_DEPLOY_RESTORE_ATTEMPTED"
+    assert_source SOURCE, "VPS_DEPLOY_RESTORE_ATTEMPTED"
     assert_includes recovery, 'recovery_state: "pending"'
     assert_includes recovery, 'recovery_state: "complete"'
     assert_includes recovery, 'status: "recovered"'
   end
 
 
-  def test_legacy_master_scan_entrypoint_refuses_on_production_host
-    scan = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_master_scan.sh"), encoding: "UTF-8")
-
-    assert_includes scan, "vm23 is production-only"
-    assert_includes scan, "exit 69"
-    refute_includes scan, "ruby_select.sh"
-    refute_includes scan, "with-ci-lock"
+  # Retired bulk-sync and repository-scan doors are deleted, not stubbed: a
+  # command that does not exist cannot run on vm23 or be revived by a typo fix.
+  def test_retired_bulk_sync_and_scan_entrypoints_are_absent
+    %w[vps_ci_all.sh vps_master_scan.sh].each do |name|
+      refute File.exist?(File.join(ROOT, "OPENBSD", "bin", name)), "#{name} must stay deleted"
+    end
   end
 
 end

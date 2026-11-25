@@ -32,6 +32,36 @@ class TestStudioLoraJudge < Minitest::Test
     Postpro::Uncanny::Reading.new(texture:, tonal_range:, clipping:, specular_spread:)
   end
 
+  def test_likeness_uses_arcface_and_passes_above_the_threshold
+    reference = File.join(@references, "reference-1.jpg")
+    candidate = File.join(@references, "candidate.jpg")
+    File.write(candidate, "fixture")
+    status = Struct.new(:success?).new(true)
+    calls = []
+    Judge.instance_variable_set(:@insightface_available, nil)
+    Studio::Subprocess.stub(:capture3, lambda do |*args, timeout:|
+      calls << [args, timeout]
+      if args.any? { |argument| argument.to_s.include?("import insightface") }
+        ["", "", status]
+      else
+        [JSON.generate("similarity" => 0.72), "", status]
+      end
+    end) do
+      result = Judge.likeness(reference:, candidate:)
+
+      assert_equal "PASS", result.fetch("state")
+      assert_in_delta 0.72, result.fetch("similarity"), 0.001
+      assert_equal 2, calls.length
+    end
+  end
+
+  def test_likeness_is_inconclusive_without_a_reference
+    result = Judge.likeness(reference: nil, candidate: File.join(@references, "reference-1.jpg"))
+
+    assert_equal "INCONCLUSIVE", result.fetch("state")
+    refute_equal "PASS", result.fetch("state")
+  end
+
   def test_thresholds_require_all_metrics_and_physical_finite_values
     valid = {
       "texture" => 0.1,

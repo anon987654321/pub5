@@ -1,0 +1,50 @@
+{
+  "status": "READY_FOR_OPERATOR_REVIEW",
+  "source_commit": "8e1955ae130592ab7c20ee266c024f061431c67e",
+  "source_count": 15,
+  "selected_archive_images": [
+    "10.jpg",
+    "11.jpg",
+    "12.jpg",
+    "13.jpg"
+  ],
+  "additional_captioned_images": [
+    "tommervik-01.jpg",
+    "tommervik-02.jpg",
+    "tommervik-03.jpg",
+    "tommervik-04.jpg",
+    "tommervik-05.jpg",
+    "tommervik-06.jpg",
+    "tommervik-08.jpg",
+    "tommervik-09.jpg",
+    "tommervik-12.jpg",
+    "tommervik-13.jpg",
+    "tommervik-14.jpg",
+    "tommervik-15.jpg",
+    "tommervik-16.jpg",
+    "tommervik-17.jpg"
+  ],
+  "candidate_count": 18,
+  "minimum_images": 12,
+  "recommended_range": [
+    12,
+    18
+  ],
+  "missing_selected_sources": [
+
+  ],
+  "problems": [
+
+  ],
+  "trainer": "replicate/fast-flux-trainer",
+  "trainer_version": "080f17375c73ef43e1009da9d560ab5f935176c61a0c7a88866c8b8387057675",
+  "trigger_word": "MERETHE",
+  "training_steps": 1000,
+  "lora_type": "subject",
+  "seed": 42,
+  "training_started": false,
+  "provider_upload_started": false,
+  "dataset_zip": "/workspace/project/pub5/STUDIO/lora/merethe/.cache/merethe_training.zip",
+  "archived_prepared_artifacts": {
+  }
+}

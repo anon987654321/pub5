@@ -38,7 +38,7 @@ class TestOpenbsdConfig < Minitest::Test
   end
 
   def test_full_stack_manual_inventory_covers_tracked_configuration_and_nsd_files
-    inventory = Master::Fix::OpenBSDManualPreflight.mirror_configuration_inventory(root: Master::ROOT)
+    inventory = Master::Fix::OpenBSDManualPreflight.mirror_configuration_inventory(root: Master::REPO_ROOT)
     paths = inventory.map { |entry| entry.fetch("path") }
 
     assert_includes paths, "OPENBSD/mirror/etc/relayd.conf"
@@ -47,7 +47,7 @@ class TestOpenbsdConfig < Minitest::Test
     assert_includes paths, "OPENBSD/mirror/home/johann/.mailcap"
     assert_includes paths, "OPENBSD/mirror/home/johann/.muttrc"
     assert(paths.any? { |path| path.end_with?(".zone") })
-    openbsd_file_count = Dir.glob(File.join(Master::ROOT, "OPENBSD", "**", "*"), File::FNM_DOTMATCH)
+    openbsd_file_count = Dir.glob(File.join(Master::REPO_ROOT, "OPENBSD", "**", "*"), File::FNM_DOTMATCH)
                               .count { |path| File.file?(path) && !File.symlink?(path) }
     assert_operator Master::Fix::OpenBSDManualPreflight::MAX_SOURCE_READS, :>=, openbsd_file_count + 32,
                     "the content-bearing receipt must fit every tracked OpenBSD source plus dependency headroom"
@@ -62,7 +62,7 @@ class TestOpenbsdConfig < Minitest::Test
     report = Master::Fix::OpenBSDManualPreflight.mirror_configuration_report(
       { "hostname" => "vm23", "os_release" => "0.0", "architecture" => "amd64",
         "source_reads" => [], "native_interfaces" => [], "manual_pages" => [] },
-      root: Master::ROOT
+      root: Master::REPO_ROOT
     )
 
     assert_equal "vm23", report.fetch("hostname")
@@ -73,6 +73,18 @@ class TestOpenbsdConfig < Minitest::Test
     assert(report.fetch("files").any? { |row| row.fetch("path") == "OPENBSD/mirror/etc/relayd.conf" })
   end
 
+  # MASTER/ holds no mirror: an empty inventory once reported 0 of 0 blocked as PASS.
+  def test_full_stack_report_with_no_mirror_inventory_is_blocked
+    report = Master::Fix::OpenBSDManualPreflight.mirror_configuration_report(
+      { "hostname" => "vm23", "os_release" => "7.8", "architecture" => "amd64",
+        "source_reads" => [], "native_interfaces" => [], "manual_pages" => [] },
+      root: Master::ROOT
+    )
+
+    assert_equal "BLOCKED", report.fetch("status")
+    assert_match(/no tracked OpenBSD mirror configuration/, report.fetch("error"))
+  end
+
   def test_mirror_coverage_report_is_written_atomically_under_master_runtime_state
     Dir.mktmpdir("openbsd-manual-report-") do |root|
       FileUtils.mkdir_p(File.join(root, "MASTER"))
@@ -81,7 +93,7 @@ class TestOpenbsdConfig < Minitest::Test
         root:
       )
 
-      assert_equal File.join(root, "MASTER", ".master", "openbsd_mirror_coverage.json"), path
+      assert_equal File.join(File.realpath(root), "MASTER", ".master", "openbsd_mirror_coverage.json"), path
       assert_equal "BLOCKED", JSON.parse(File.read(path)).fetch("status")
       assert_equal 0o600, File.stat(path).mode & 0o777
     end
@@ -174,7 +186,7 @@ class TestOpenbsdConfig < Minitest::Test
     Master::Fix::OpenBSDManualPreflight.stub(:write_mirror_configuration_report, ->(*, **) {}) do
       refusal = Master::Fix::OpenBSDManualPreflight.mirror_configuration_refusal(
         preflight,
-        root: Master::ROOT
+        root: Master::REPO_ROOT
       )
     end
 

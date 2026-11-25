@@ -177,7 +177,7 @@ class StripeClient
       headers = {
         "Authorization" => "Bearer #{env!('STRIPE_SECRET_KEY')}",
         "Content-Type" => "application/x-www-form-urlencoded",
-        "Stripe-Version" => "2024-06-20"
+        "Stripe-Version" => "2024-06-20",
       }
       headers["Idempotency-Key"] = idempotency_key if idempotency_key
       headers

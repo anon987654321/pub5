@@ -93,11 +93,11 @@ class Dating::PathCrossingRecorder
          .pluck(:blocker_id, :blocked_id)
          .flatten
          .to_set
-         .subtract([@user.id])
+         .subtract([ @user.id ])
   end
 
   def record_crossing(city_id, peer, peer_profile)
-    user_a_id, user_b_id = [@user.id, peer.user_id].sort
+    user_a_id, user_b_id = [ @user.id, peer.user_id ].sort
     shared_neighborhood_id =
       @profile.neighborhood_id if @profile.neighborhood_id.present? &&
                                   @profile.neighborhood_id == peer_profile.neighborhood_id

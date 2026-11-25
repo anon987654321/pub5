@@ -26,7 +26,7 @@ module Operator
   #
   # The pieces all existed and nothing ran them together: `bin/check --ladder` held the
   # scanner chain, `MASTER/checks/runner.rb --all` the app checks, `bin/check` the
-  # suites, `bin/operator measure` the ratchets, `tools/sprawl_census.rb` the shape of
+  # suites, `bin/operator measure` the ratchets, `lib/operator/sprawl_census.rb` the shape of
   # the tree. Five invocations, no run covering the repo, so "is the tree
   # conformant" answered for whichever quarter the last session measured.
   #
@@ -801,16 +801,13 @@ module Operator
     # records a fall so the ground cannot be given back. Moving a file to drop one
     # of those is a namespace judgement and not a tool's to make.
     def sprawl(scan_only:)
-      planner = [RUBY, File.join(MASTER, "tools", "repo", "sprawl_plan.rb")]
-      planner << "--write" unless scan_only
-      plan_ok, plan_body = capture(*planner)
       census = [RUBY, File.join(MASTER, "lib", "operator", "sprawl_census.rb")]
       census << "--ratchet" unless scan_only
-      ok, body = capture(*census)
+      census_ok, census_body = capture(*census)
       dup_ok, dup_body = capture(RUBY, File.join(MASTER, "tools", "audit", "dup_census.rb"))
-      both = plan_ok && ok && dup_ok
-      verdict = "sprawl: #{both ? "at or under every recorded low" : "over a recorded low"}"
-      [both, plan_body + body + dup_body + [verdict], both ? 0 : 1]
+      ok = census_ok && dup_ok
+      verdict = "sprawl: #{ok ? "at or under every recorded low" : "over a recorded low"}"
+      [ok, census_body + dup_body + [verdict], ok ? 0 : 1]
     end
 
     # Every stage child is a Ruby that activates its own bundle, often a

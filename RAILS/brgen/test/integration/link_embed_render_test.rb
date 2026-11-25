@@ -34,7 +34,7 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
       # the way the job would have, without contacting the provider.
       if resolved.ok? && resolved.thumbnail_url
         Shared::LinkEmbed.cache_thumbnail!(resolved.thumbnail_url,
-                                           fetch: ->(_uri) { ["\xFF\xD8\xFF\xE0 seeded", "image/jpeg"] })
+                                           fetch: ->(_uri) { [ "\xFF\xD8\xFF\xE0 seeded", "image/jpeg" ] })
       end
       post
     end

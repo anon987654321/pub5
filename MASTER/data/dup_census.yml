@@ -19,7 +19,7 @@
 #   or per-application contracts; they are not shared by a common deploy root.
 # This ceiling is not permission for further copies: any additional exact
 # duplicate group fails the existing ratchet until reviewed and reduced.
-duplicate_sets: 162
+duplicate_sets: 161
 duplicate_members:
 - "BIZ/future_healthcare_os/future_healthcare_os.html | BIZ/tools/future_healthcare_os.html"
 - "BIZ/future_nato_weapons/future_nato_weapons.html | BIZ/tools/future_nato_weapons.html"
@@ -180,6 +180,5 @@ duplicate_members:
 - "RAILS/screenshot_bsdports_account.png | RAILS/screenshot_bsdports_account_export.png | RAILS/screenshot_bsdports_two_factor_setup.png"
 - "RAILS/screenshot_bsdports_changelog.png | RAILS/screenshot_bsdports_rules.png"
 - "RAILS/screenshot_bsdports_ports.png | RAILS/screenshot_bsdports_root.png"
-- "RAILS/screenshot_master_canvas_topology.png | RAILS/screenshot_master_chat_enhance.png | RAILS/screenshot_master_chat_history.png | RAILS/screenshot_master_chat_research.png | RAILS/screenshot_master_chat_skills.png | RAILS/screenshot_master_chat_tts.png | RAILS/screenshot_master_chat_tts_phrases.png | RAILS/screenshot_master_chat_tts_status.png | RAILS/screenshot_master_chat_tts_stream.png | RAILS/screenshot_master_dashboard.png | RAILS/screenshot_master_dashboard_live.png | RAILS/screenshot_master_radio_bergen.png"
 - "RAILS/screenshot_mrdamascy_cart.png | RAILS/screenshot_mrdamascy_checkout.png"
 - "RAILS/screenshot_mrdamascy_session_vipps.png | RAILS/screenshot_mrdamascy_vipps_login_mock.png"

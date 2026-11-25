@@ -18,6 +18,9 @@ module Shared
     validates :vertical, inclusion: { in: VERTICALS }
     validates :reward_tier, inclusion: { in: VERTICALS.map { |name| "#{name}_pro_30_days" } }
 
+    # The referring account without a lazy read on a locked, strict splinter.
+    def referrer_account = strict_safe(:referrer)
+
     class << self
       def generate!(referrer:, vertical:, validity: TOKEN_TTL)
         vertical = vertical.to_s
@@ -51,10 +54,7 @@ module Shared
             splinter.vertical == vertical && splinter.reward_tier == payload.fetch(:tier).to_s
 
           splinter.update!(redeemed_by: user, redeemed_at: Time.current)
-          entitlement = "#{vertical}_pro"
-          current_expiry = ReferralCredit.where(user: splinter.referrer, entitlement:).where(expires_at: Time.current..).maximum(:expires_at)
-          ReferralCredit.create!(user: splinter.referrer, referral_splinter: splinter, vertical:, entitlement:,
-                                 expires_at: [current_expiry, Time.current].compact.max + REWARD_DAYS.days)
+          grant_credit!(splinter, vertical)
           splinter
         end
       rescue KeyError, TypeError, ArgumentError, ActiveRecord::RecordNotFound,
@@ -63,6 +63,16 @@ module Shared
       end
 
       private
+
+      # The referrer's credit extends any unexpired one for the same entitlement.
+      def grant_credit!(splinter, vertical)
+        now = Time.current
+        entitlement = "#{vertical}_pro"
+        referrer = splinter.referrer_account
+        current_expiry = ReferralCredit.where(user: referrer, entitlement:, expires_at: now..).maximum(:expires_at)
+        ReferralCredit.create!(user: referrer, referral_splinter: splinter, vertical:, entitlement:,
+                               expires_at: [current_expiry, now].compact.max + REWARD_DAYS.days)
+      end
 
       def encrypt(payload)
         cipher = OpenSSL::Cipher.new("aes-256-gcm")

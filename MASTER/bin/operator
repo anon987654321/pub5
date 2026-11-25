@@ -283,6 +283,98 @@ def remote_deploy_capture_command(session)
     "else print __PUB5_DEPLOY_NO_SESSION__; fi"
 end
 
+# The tmux pane outlives the deploy by a day so the collector can still read
+# its exit marker after an SSH drop; the collector kills the session itself.
+DEPLOY_PANE_HOLD_SECONDS = 86_400
+DEPLOY_PANE_HISTORY_LINES = 100_000
+
+# The deploy as tmux runs it: vps-deploy, then its exit printed into the pane.
+def remote_deploy_tmux_command(remote_command, log_ref)
+  inner = [
+    "set +e",
+    "export VPS_DEPLOY_LOG=/dev/null",
+    "export VPS_DEPLOY_RUN_LOG=/dev/null",
+    "export VPS_DEPLOY_LOGGING=1",
+    "export VPS_DEPLOY_LOG_REF=#{Shellwords.escape(log_ref)}",
+    remote_command,
+    "ec=$?",
+    "print -r -- \"PUB5_DEPLOY_EXIT=$ec\"",
+    "sleep #{DEPLOY_PANE_HOLD_SECONDS}",
+  ].join("; ")
+  "zsh -lc #{Shellwords.escape(inner)}"
+end
+
+# The one remote launch script: start that deploy in a fresh tmux session.
+# Release admission declares this exact text.
+def remote_deploy_launch_command(remote_command, log_ref:, session:)
+  tmux_command = remote_deploy_tmux_command(remote_command, log_ref)
+
+  remote_script = <<~ZSH
+    set -euo pipefail
+    cd /home/dev/pub5
+    session=#{Shellwords.escape(session)}
+
+    if ! command -v tmux >/dev/null 2>&1; then
+      print -u2 "vps-deploy: BLOCKED - tmux is required; nothing was started"
+      exit 69
+    fi
+    if tmux has-session -t "$session" 2>/dev/null; then
+      print -u2 "vps-deploy: session $session already exists; inspect or resume it before starting another deploy"
+      exit 75
+    fi
+
+    tmux new-session -d -x 200 -y 50 -s "$session" #{Shellwords.escape(tmux_command)}
+    tmux set-option -w -t "$session:0" history-limit #{DEPLOY_PANE_HISTORY_LINES}
+    print "vps-deploy: started in tmux session $session"
+    print "vps-deploy: output will be collected locally"
+  ZSH
+  Shellwords.join(["zsh", "-fc", remote_script])
+end
+
+# Every remote command a release sends after admission, in the exact shapes the
+# RTFM gate parses. The SHAs are placeholders: they change no command or page.
+def release_remote_commands(app)
+  pin = "0" * 40
+  remote_command = "cd /home/dev/pub5 && VPS_DEPLOY_SHA=#{pin} VPS_DEPLOY_PREFLIGHT_SHA=#{pin} " \
+                   "VPS_DEPLOY_CI_SHA=#{pin} zsh OPENBSD/bin/vps-deploy #{Shellwords.escape(app)}"
+  [
+    remote_deploy_launch_command(remote_command, log_ref: "local://deploys/receipt", session: "pub5-deploy"),
+    remote_deploy_capture_command("pub5-deploy"),
+    Shellwords.join(["tmux", "kill-session", "-t", "pub5-deploy"]),
+    remote_ruby("OPENBSD/bin/vps-state"),
+  ]
+end
+
+# RTFM_FIRST admits a release only on a fresh, exact-HEAD receipt. Build it
+# here when it is missing, expired or stale: the reads are the manual reader
+# and the identity probe, the two bootstrap exceptions, and the validator
+# still judges the result before anything else reaches vm23.
+def ensure_openbsd_receipt(app)
+  require "operator/canary"
+  require_relative "../lib/fix/openbsd_receipt_builder"
+  _identity, reason = Operator::DeployPreflight.openbsd_target_identity(root: ROOT)
+  return unless reason
+
+  puts "rtfm0: receipt not admissible: #{reason.sub(/\ARTFM_FIRST (?:blocked: )?/, "")}"
+  puts "rtfm0: rebuilding from #{ssh_host}: tracked OPENBSD sources, target manuals via read-only uname and man"
+  hostname = operator_runtime_config.fetch("host_scope").fetch("canonical_hosts").first
+  envelope = Master::Fix::OpenBSDReceiptBuilder.build(
+    root: ROOT, hostname:, commands: release_remote_commands(app),
+    reader: ->(command) { ssh_capture(command, attempts: 2) }
+  )
+  report_openbsd_receipt(envelope)
+rescue Master::Fix::TaskContract::Invalid => error
+  die("vps", "RTFM_FIRST receipt could not be built: #{error.message}; nothing was deployed", 78)
+end
+
+def report_openbsd_receipt(envelope)
+  preflight = envelope.fetch("openbsd_preflight")
+  path = Master::Fix::OpenBSDReceiptBuilder.write(envelope, root: ROOT).delete_prefix("#{ROOT}/")
+  target = "OpenBSD #{preflight.fetch("os_release")} #{preflight.fetch("architecture")}"
+  puts "rtfm0: #{path}: #{preflight.fetch("source_reads").size} sources, " \
+       "#{preflight.fetch("manual_pages").size} manuals, #{target}"
+end
+
 def append_post_deploy_checks(log, remote_status)
   code = remote_status
   if code.zero?
@@ -293,10 +385,10 @@ def append_post_deploy_checks(log, remote_status)
         RUBY, File.join(OPENBSD_OPS, "bin", "canary"), "--public",
         timeout: 600, raise_on_timeout: true
       )
-      log.append("\npost-deploy public canary (#{status.success? ? 'PASS' : 'FAIL'}):\n#{output}\n")
+      log.append("\n#{Operator::DeployLog::PUBLIC_CANARY} (#{status.success? ? 'PASS' : 'FAIL'}):\n#{output}\n")
       code = 1 unless status.success?
     rescue StandardError => error
-      log.append("\npost-deploy public canary (ERROR): #{error.class}: #{error.message}\n")
+      log.append("\n#{Operator::DeployLog::PUBLIC_CANARY} (ERROR): #{error.class}: #{error.message}\n")
       code = 1
     end
   end
@@ -1275,6 +1367,8 @@ when "vps"
     die("vps", "use only one of --follow or --detach", 64) if follow && detach
     if remote
       require "operator/canary"
+      require "operator/asset_stage"
+      ensure_openbsd_receipt(app)
       connection_check = lambda do |root:|
         expected, reason = Operator::DeployPreflight.openbsd_target_identity(root:)
         next [false, reason] unless expected
@@ -1292,38 +1386,17 @@ when "vps"
       die("vps", "preflight did not return a pinned SHA", 1) unless sha
       log = Operator::DeployLog.new(app:, sha:)
       log.append("preflight: PASS on #{sha}\n")
+      staged, reason = Operator::AssetStage.new(root: ROOT, sha:, ssh: ssh_base_argv).run(app)
+      unless staged
+        log.append("assets: #{reason}\n")
+        log.finish(status: "failure", exit_code: 1)
+        die("vps", "deploy refused, #{reason}; nothing was launched on the box", 1)
+      end
+      log.append("assets: built here and staged on the box for #{sha}\n")
       session = "pub5-deploy"
       log_ref = "local://deploys/#{File.basename(log.path)}"
-      inner = [
-        "set +e",
-        "export VPS_DEPLOY_LOG=/dev/null",
-        "export VPS_DEPLOY_RUN_LOG=/dev/null",
-        "export VPS_DEPLOY_LOGGING=1",
-        "export VPS_DEPLOY_LOG_REF=#{Shellwords.escape(log_ref)}",
-        remote_command,
-        "ec=$?",
-        "print -r -- \"PUB5_DEPLOY_EXIT=$ec\"",
-        "sleep 86400",
-      ].join("; ")
-      tmux_command = "zsh -lc #{Shellwords.escape(inner)}"
-      remote_script = <<~ZSH
-        set -euo pipefail
-        cd /home/dev/pub5
-        session=#{Shellwords.escape(session)}
-        if ! command -v tmux >/dev/null 2>&1; then
-          print -u2 "vps-deploy: BLOCKED - tmux is required; nothing was started"
-          exit 69
-        fi
-        if tmux has-session -t "$session" 2>/dev/null; then
-          print -u2 "vps-deploy: session $session already exists; inspect or resume it before starting another deploy"
-          exit 75
-        fi
-        tmux new-session -d -x 200 -y 50 -s "$session" #{Shellwords.escape(tmux_command)}
-        tmux set-option -w -t "$session:0" history-limit 100000
-        print "vps-deploy: started in tmux session $session"
-        print "vps-deploy: output will be collected locally"
-      ZSH
-      launch_output, launched = ssh_capture(Shellwords.join(["zsh", "-fc", remote_script]), attempts: 1)
+      launch_command = remote_deploy_launch_command(remote_command, log_ref:, session:)
+      launch_output, launched = ssh_capture(launch_command, attempts: 1)
       log.append("remote launch (#{launched ? 'started' : 'failed'}):\n#{launch_output}\n")
       unless launched
         log.finish(status: "failure", exit_code: 1)

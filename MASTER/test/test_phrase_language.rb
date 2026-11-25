@@ -67,7 +67,7 @@ class TestPhraseLanguage < Minitest::Test
 
   def test_language_switching_is_on_by_default_and_uses_registered_voices
     assert T::DEFAULTS["phrase_language_switching"]
-    assert_equal({ en: :christopher, nb: :pernille, ms: :yasmin }, T.phrase_languages(T::DEFAULTS))
+    assert_equal({ en: :christopher, nb: :pernille, ms: :osman }, T.phrase_languages(T::DEFAULTS))
   end
 
   def test_turning_language_switching_off_removes_phrase_voice_overrides

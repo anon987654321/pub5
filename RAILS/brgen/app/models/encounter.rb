@@ -9,7 +9,7 @@ class Encounter < ApplicationRecord
   WAITING = "waiting"
   MATCHED = "matched"
   CLOSED = "closed"
-  STATUSES = [WAITING, MATCHED, CLOSED].freeze
+  STATUSES = [ WAITING, MATCHED, CLOSED ].freeze
 
   # A wait older than this is nobody waiting anymore; the next ask closes it.
   WAIT_LASTS_FOR = 90.seconds
@@ -28,6 +28,9 @@ class Encounter < ApplicationRecord
   validates :status, inclusion: { in: STATUSES }
 
   def close! = update!(status: CLOSED)
+  # The paired chat without a lazy read: pair! and the waiting page reload
+  # encounters under strict loading.
+  def chat = strict_safe(:conversation)
   def fresh? = updated_at > MATCH_REMEMBERED_FOR.ago
   def waiting? = status == WAITING
   def matched? = status == MATCHED

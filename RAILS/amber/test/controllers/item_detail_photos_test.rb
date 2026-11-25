@@ -8,7 +8,6 @@ require "base64"
 # style attribute, which a CSP without 'unsafe-inline' refuses; and a palette
 # chip had no colour name for a screen reader, only a hover title naming the item.
 class ItemDetailPhotosTest < ActionDispatch::IntegrationTest
-
   GPS_JPEG = Base64.strict_decode64([
     "/9j/4AAQSkZJRgABAQAAAQABAAD/4QCIRXhpZgAATU0AKgAAAAgAAYglAAQAAAABAAAAGgAAAAAABAABAAIAAAACTgAAAAAC",
     "AAUAAAADAAAAUAADAAIAAAACRQAAAAAEAAUAAAADAAAAaAAAAAAAAAA8AAAAAQAAAAAAAAABAAAAAAAAAAEAAAAFAAAAAQAA",

@@ -16,6 +16,28 @@ module Shared
       # an unrelated test failed. Clearing per test keeps rate limiting
       # exercisable instead of silently disabled.
       test_case.setup { Rails.cache.clear }
+      # I18n.locale is per thread and survives a test that sets it, so a test
+      # that switched to :en left the next one in the same worker rendering
+      # English: TypingIndicatorTest got "is typing" for "skriver" and failed
+      # brgen's bin/ci at random (2026-11-25). Every test starts on the default.
+      test_case.setup { I18n.locale = I18n.default_locale }
+      ActionDispatch::IntegrationTest.prepend(SignInWitness) if defined?(ActionDispatch::IntegrationTest)
+    end
+
+    # amber's bin/ci twice failed 10-26 signed-in tests at random with
+    # "redirect to /session/new" (2026-11-25), never reproduced alone, and the
+    # per-file sign_in_as helpers never check their POST. This names why a
+    # sign-in was refused, on stderr, without changing any test's outcome:
+    # tests that expect a refused sign-in still get exactly that.
+    module SignInWitness
+      def post(path, **)
+        super.tap do
+          back_to_sign_in = response.redirect? && response.location.to_s.end_with?("/session/new")
+          next unless back_to_sign_in && path.to_s.end_with?("/session")
+
+          warn "sign-in witness: #{name} POST #{path} refused, alert=#{flash[:alert].inspect}"
+        end
+      end
     end
   end
 end

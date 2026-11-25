@@ -24,7 +24,7 @@ module Master
           }).filter(Boolean))
         JS
 
-        Shot = Data.define(:status, :html, :links, :widths, :dialogs)
+        Shot = Data.define(:status, :html, :links, :widths, :dialogs, :note)
 
         def initialize(cdp:, widths:, dir:)
           @cdp = cdp
@@ -36,13 +36,14 @@ module Master
           FileUtils.mkdir_p(page_dir)
           load(surface)
           status = @cdp.status
-          return Shot.new(status:, html: false, links: [], widths: {}, dialogs: []) unless html?
+          return Shot.new(status:, html: false, links: [], widths: {}, dialogs: [], note: nil) unless html?
           return error_shot(status, page_dir) if status.to_i >= 400
+          return startup_placeholder(status) if startup_placeholder?
 
           links = JSON.parse(@cdp.evaluate(LINKS_JS).to_s)
           widths = shoot_widths(page_dir)
           states = dialogs ? capture_dialogs(surface, page_dir) : []
-          Shot.new(status:, html: true, links:, widths:, dialogs: states)
+          Shot.new(status:, html: true, links:, widths:, dialogs: states, note: nil)
         end
 
         def self.height(width) = width < 768 ? 844 : 900
@@ -57,12 +58,31 @@ module Master
 
         def html? = @cdp.evaluate("document.contentType") == "text/html"
 
+        # HTTP 200 is not proof of a rendered page. MASTER's boot placeholder
+        # used to be copied into twelve differently named review shots. Reject
+        # only the short, whole-page placeholder; normal copy may mention it.
+        def startup_placeholder?
+          @cdp.evaluate(<<~JS.strip) == true
+            (() => {
+              const text = (document.body?.innerText || "").trim();
+              return text.length <= 80 && /^starting up,\\s*please wait\\.{0,3}$/i.test(text);
+            })()
+          JS
+        end
+
+        def startup_placeholder(status)
+          Shot.new(
+            status:, html: true, links: [], widths: {}, dialogs: [],
+            note: "startup placeholder remained instead of rendered page content"
+          )
+        end
+
         # An error page is recorded as it first shows, viewport-sized: a Rails
         # development routing error lists every route and runs to 600,000px.
         def error_shot(status, page_dir)
           file = File.join(page_dir, "w#{@widths.first}_http#{status}.png")
           @cdp.screenshot(file)
-          Shot.new(status:, html: true, links: [], widths: { @widths.first => relative(file) }, dialogs: [])
+          Shot.new(status:, html: true, links: [], widths: { @widths.first => relative(file) }, dialogs: [], note: nil)
         end
 
         def shoot_widths(page_dir)

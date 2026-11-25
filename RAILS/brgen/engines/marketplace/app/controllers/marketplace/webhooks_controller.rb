@@ -213,5 +213,4 @@ class Marketplace::WebhooksController < ActionController::Base
         data["status"].presence || data["state"].presence || "UNKNOWN"
     )
   end
-
 end

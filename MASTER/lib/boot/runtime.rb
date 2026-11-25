@@ -146,22 +146,21 @@ module Master
     end
 
     def default_model
-      # The first live lane in the declared model catalogue. Provider class,
-      # authentication type and an unrelated OpenRouter key never promote a
-      # later subscription CLI above the configured primary. The keys below
-      # are only the final fallback when no catalogue lane is live.
+      # MASTER_FREE_ONLY asks no lane that needs a key, so the keyed floors
+      # below and incidental hosted discovery are skipped.
+      return openrouter_default if free_only?
+
+      # An explicit provider credential is an operator's chosen floor. It
+      # must not lose to an anonymously discovered lane that happened to be
+      # reachable during startup.
+      return "grok-4.3" if api_key_present?("XAI_API_KEY") && !api_key_present?("OPENROUTER_API_KEY")
+      return free_primary_model if api_key_present?("OPENROUTER_API_KEY")
+      return "deepseek-chat" if api_key_present?("DEEPSEEK_API_KEY")
+      return "gemini-2.5-flash" if api_key_present?("GOOGLE_API_KEY") || api_key_present?("GEMINI_API_KEY")
+
       lane = Master::Io::LaneSelection.live_lanes.first
       return lane if lane
 
-      # MASTER_FREE_ONLY asks no lane that needs a key, so the keyed floors
-      # below are skipped and the answer is the browser-chat face or nothing
-      # (HostedEndpoints drops the keys the same way).
-      unless free_only?
-        return "grok-4.3" if api_key_present?("XAI_API_KEY") && !api_key_present?("OPENROUTER_API_KEY")
-        return free_primary_model if api_key_present?("OPENROUTER_API_KEY")
-        return "deepseek-chat" if api_key_present?("DEEPSEEK_API_KEY")
-        return "gemini-2.5-flash" if api_key_present?("GOOGLE_API_KEY") || api_key_present?("GEMINI_API_KEY")
-      end
       return "web-chat:grok" if keyless_llm_enabled?
 
       openrouter_default
@@ -170,7 +169,7 @@ module Master
     # MASTER_FREE_ONLY: no lane that needs a key is asked. Subscription CLI
     # lanes keep their own gate — this switch governs API keys, not sign-ins.
     def free_only?
-      ENV["MASTER_FREE_ONLY"].to_s != ""
+      %w[1 true yes on].include?(ENV["MASTER_FREE_ONLY"].to_s.strip.downcase)
     end
 
     def any_api_key_present?

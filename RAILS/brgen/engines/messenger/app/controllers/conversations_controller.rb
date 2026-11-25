@@ -189,7 +189,7 @@ class ConversationsController < ApplicationController
   LISTS = {
     inbox: %w[in_inbox messages.title inbox_conversations],
     archive: [ "in_archive", "messages.archive_title", "archived_conversations" ],
-    requests: [ "in_requests", "messages.requests_title", "requested_conversations" ]
+    requests: [ "in_requests", "messages.requests_title", "requested_conversations" ],
   }.freeze
 
   def listed_threads

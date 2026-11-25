@@ -221,7 +221,7 @@ module Brgen
           commentable_id: post.id,
           content: body,
           created_at: created_at,
-          updated_at: created_at
+          updated_at: created_at,
         }
       end
       Comment.insert_all(rows) if rows.any?

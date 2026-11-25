@@ -58,39 +58,52 @@ class NvdCve
       id = cve["id"]
       return if id.blank?
 
+      attrs = advisory_attributes(cve, id)
+      adv = find_or_create_advisory(id, attrs)
+      fill_advisory(adv, attrs)
+      link_port(adv)
+      adv
+    end
+
+    def advisory_attributes(cve, id)
       desc = cve.dig("descriptions", 0, "value").to_s[0, 500]
-      title = desc[0, 200].presence || id
       metrics = cve.dig("metrics", "cvssMetricV31", 0, "cvssData") ||
                 cve.dig("metrics", "cvssMetricV2", 0, "cvssData") || {}
       score = metrics["baseScore"]
       pub = cve["published"]
 
-      # The unique identifier index is the race-safe identity boundary. Two
-      # ports can discover the same CVE at once; create_or_find_by! returns the
-      # single canonical advisory instead of losing the second port on a race.
-      # A known identifier is found first: the model's uniqueness validation
-      # would raise RecordInvalid, which create_or_find_by! does not rescue.
-      adv = SecurityAdvisory.find_by(identifier: id) || SecurityAdvisory.create_or_find_by!(identifier: id) do |record|
-        record.title = title
-        record.description = desc.presence
-        record.published_at = pub.present? ? Time.parse(pub) : Time.current
-        record.cvss_score = score if score
-        record.source_url = "https://nvd.nist.gov/vuln/detail/#{id}"
-        record.severity = severity(score) if score
-      end
+      {
+        title: desc[0, 200].presence || id,
+        description: desc.presence,
+        published_at: pub.present? ? Time.parse(pub) : Time.current,
+        cvss_score: score,
+        source_url: "https://nvd.nist.gov/vuln/detail/#{id}",
+        severity: score && severity(score),
+      }
+    end
 
-      adv.title = title if adv.title.blank?
-      adv.description = desc if adv.description.blank? && desc.present?
-      adv.published_at ||= pub.present? ? Time.parse(pub) : Time.current
-      adv.cvss_score = score if score
-      adv.source_url ||= "https://nvd.nist.gov/vuln/detail/#{id}"
-      adv.severity = severity(score) if score
+    # The unique identifier index is the race-safe identity boundary. Two
+    # ports can discover the same CVE at once; create_or_find_by! returns the
+    # single canonical advisory instead of losing the second port on a race.
+    # A known identifier is found first: the model's uniqueness validation
+    # would raise RecordInvalid, which create_or_find_by! does not rescue.
+    def find_or_create_advisory(id, attrs)
+      SecurityAdvisory.find_by(identifier: id) ||
+        SecurityAdvisory.create_or_find_by!(identifier: id) { |adv| adv.assign_attributes(attrs.compact) }
+    end
+
+    def fill_advisory(adv, attrs)
+      adv.absorb(attrs)
       adv.save! if adv.changed?
+    end
 
-      # One NVD identifier can affect many ports. The join's unique index and
-      # create_or_find_by! make repeated and concurrent cross-references safe.
-      SecurityAdvisoryPort.create_or_find_by!(security_advisory: adv, port: @port)
-      adv
+    # One NVD identifier can affect many ports. The join's unique index and
+    # create_or_find_by! make concurrent cross-references safe; the find comes
+    # first for the same reason as the advisory, so a port that sees a CVE
+    # again on its next run does not raise RecordInvalid.
+    def link_port(adv)
+      SecurityAdvisoryPort.find_by(security_advisory: adv, port: @port) ||
+        SecurityAdvisoryPort.create_or_find_by!(security_advisory: adv, port: @port)
     end
 
     def severity(score)

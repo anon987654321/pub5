@@ -40,7 +40,7 @@ module Playlist
           end
           path = archive_root.join(filename)
           raise InvalidArchive, "Missing or empty archive audio file: #{path}" unless path.file? && path.size.positive?
-          [entry, path, Digest::MD5.file(path).base64digest]
+          [ entry, path, Digest::MD5.file(path).base64digest ]
         end
 
         # Preflight attached sources before writing; never overwrite a changed

@@ -131,7 +131,7 @@ module Ports
       attributes = {
         name: metadata[:name],
         version: metadata[:version].presence || "unknown",
-        last_updated: Date.current
+        last_updated: Date.current,
       }
       if thin_metadata
         attributes[:category] = category if port.new_record?
@@ -223,7 +223,7 @@ module Ports
         "build" => metadata[:build_depends],
         "run" => metadata[:run_depends],
         "test" => metadata[:test_depends],
-        "lib" => metadata[:lib_depends]
+        "lib" => metadata[:lib_depends],
       }.each do |dep_type, pkgpaths|
         Array(pkgpaths).each do |pkgpath|
           pending_deps << { port:, pkgpath:, dep_type: }

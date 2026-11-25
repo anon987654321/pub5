@@ -15,7 +15,9 @@ class BrandMarkNameTest < ActionDispatch::IntegrationTest
       mark = css_select("a.brand-mark").first
       refute_nil mark, "#{host} renders the brand mark"
       assert_nil mark["aria-label"], "#{host}: an aria-label would replace the wordmark in the name"
-      assert_equal host.split(".").first, mark.css(".brand-text").text.strip
+      # The particle overlay repeats the label under aria-hidden; the name skips it.
+      named = mark.css(".brand-text").first.xpath(".//text()[not(ancestor::*[@aria-hidden=\"true\"])]").text
+      assert_equal host.split(".").first, named.strip
     end
   end
 end

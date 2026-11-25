@@ -119,31 +119,38 @@ module Master
 
       def aged_inconclusives(root:, now: Time.now.utc, window: REVIEW_WINDOW_DAYS)
         pending = {}
-        # oldest first, so a verdict clears only the windows opened before it
-        Receipt.recent(root:, limit: 500).reverse_each do |row|
+        # Read the complete append-only receipt history one file at a time. A
+        # fixed window can forget an unanswered INCONCLUSIVE after enough runs.
+        paths = Dir.glob(File.join(root, ".master", "receipts", "convergence-*.json")).sort
+        paths.each do |path|
+          row = begin
+            JSON.parse(File.read(path, encoding: "UTF-8"))
+          rescue JSON::ParserError, EncodingError
+            nil
+          end
+          next unless row.is_a?(Hash)
+
           at = safe_time(row["generated_at"])
+          next unless at
+
           Array(row.dig("details", "checks")).each do |check|
+            next unless check.is_a?(Hash)
+
             name = check["name"]
             case check["state"]
-            when "inconclusive" then pending[name] ||= at
-            when "pass", "fail" then pending[name] = nil
+            when "inconclusive"
+              pending[name] ||= { dated_at: at, receipt_id: row["id"] }
+            when "pass", "fail"
+              pending[name] = nil
             end
           end
         end
-        pending.filter_map do |name, dated_at|
-          next if dated_at.nil?
-          next if now - dated_at <= window * 86_400
+        pending.filter_map do |name, first|
+          next if first.nil?
+          next if now - first[:dated_at] <= window * 86_400
 
-          { name:, receipt_id: first_receipt_id(root, name, dated_at), dated_at: dated_at.iso8601 }
+          { name:, receipt_id: first[:receipt_id], dated_at: first[:dated_at].iso8601 }
         end
-      end
-
-      def first_receipt_id(root, name, at)
-        row = Receipt.recent(root:, limit: 500).reverse_each.find do |candidate|
-          safe_time(candidate["generated_at"]) == at &&
-            Array(candidate.dig("details", "checks")).any? { |check| check["name"] == name && check["state"] == "inconclusive" }
-        end
-        row && row["id"]
       end
 
       def safe_time(value)

@@ -38,13 +38,15 @@ class PostFollowingLaneTest < ActiveSupport::TestCase
     assert_not_includes ids, noise.id, "a stranger's post must never reach the following lane"
   end
 
-  test "the resolver routes following to the graph for a viewer and to hot for nobody" do
+  test "the resolver routes following to the graph for a viewer and to the default lane for nobody" do
     mine = make_post(@followed, "til leseren")
     assert_includes Post.sorted_lane("following", viewer: @reader).pluck(:id), mine.id
-    # Signed out, the crafted URL falls back to hot rather than raising.
-    assert_equal Post.hot.to_sql, Post.sorted_lane("following", viewer: nil).to_sql
+    # Signed out, the crafted URL falls back to the ranked default lane
+    # (f9944ddd) rather than raising.
+    assert_equal Post.ranked_for(viewer: nil).to_sql, Post.sorted_lane("following", viewer: nil).to_sql
     assert_equal Post.fresh.to_sql, Post.sorted_lane("fresh").to_sql
-    assert_equal Post.hot.to_sql, Post.sorted_lane(nil).to_sql
+    assert_equal Post.hot.to_sql, Post.sorted_lane("hot").to_sql
+    assert_equal Post.ranked_for(viewer: nil).to_sql, Post.sorted_lane(nil).to_sql
   end
 
   test "unfollowing empties the lane" do

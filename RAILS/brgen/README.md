@@ -160,13 +160,13 @@ marketplace host. The legacy `takeaway.<apex>` host still resolves to that engin
 Messenger is an engine whose routes are drawn in the host. MASTER and Mr Damascy
 remain separate applications, not verticals.
 
-**Vertical product briefs:** [Dating](engines/dating/README.md) ·
-[Marketplace](engines/marketplace/README.md) ·
-[Takeaway / food](engines/marketplace/engines/takeaway/README.md) ·
-[Radio](engines/radio/playlist/README.md) ·
-[TV](engines/radio/tv/README.md) ·
-[Maps](engines/maps/README.md) ·
-[Messenger](engines/messenger/README.md).
+**Vertical product briefs:** [Dating](#brgen-dating) ·
+[Marketplace](#brgen-marketplace) ·
+[Takeaway / food](#brgen-takeaway) ·
+[Radio](#brgen-playlist) ·
+[TV](#brgen-tv) ·
+[Maps](#brgen-maps) ·
+[Messenger](#brgen-messenger).
 
 These briefs preserve the distinct product promises while treating the active engine,
 routes and tests as the authority for what is actually available.
@@ -175,7 +175,7 @@ routes and tests as the authority for what is actually available.
 The Marketplace engine owns listings, stores, orders and its storefront; the Brgen host owns
 city identity and the webhook entry points shared with the other verticals. The host has no
 listing model. The engine's product and feature status lives in
-[the Marketplace README](engines/marketplace/README.md) and `RAILS/apps.yml`.
+[the Marketplace section](#brgen-marketplace) and `RAILS/apps.yml`.
 
 The host serves `/merchant-feed.xml` with up to 10,000 publicly visible, priced and photographed
 goods; affiliate inventory is excluded. Stripe and Vipps enter through host routes at
@@ -225,7 +225,7 @@ catalog whenever supplied.
 Users in each city get names in that city's
 language through Brgen::CityContent.with_faker_locale. Setting Faker::Config.locale alone gives
 English, because Faker's data is tagged nb-NO while the app declares only bare locales. The
-photographs the seeds attach are described in config/demo_media/README.md.
+photographs the seeds attach are described in the [Demo media section](#demo-media).
 
 ## Affiliate income
 
@@ -425,3 +425,650 @@ host and SHA, observed evidence, and the next safe read-only diagnostic. Do not 
 automatically, skip tests, weaken a gate, change unrelated host configuration, or claim
 success. Recovery and rollback are deliberate, separately reviewed operations.
 
+
+
+## Vertical and demo-media guides
+
+Brgen is one application with several mounted engines, not a fleet of separately deployed apps. Their product notes and implementation contracts are collected here; the engine directories remain the code owners.
+
+
+### Demo media
+
+**A city network should look lived in on its first night, so the Bergen seeds carry photographs
+made for them, and the app keeps those photographs inside its own tree.** A seed run on the
+production box finds its pictures on disk instead of asking the internet for them.
+
+The catalogue is bergen.yml. It maps each seed key to a picture and holds sixty-nine rows.
+Sixty-four of them name a file in the images folder beside it, and each of those is marked
+graded, because the frame has already been through postpro once and a second pass would stack a
+second grain field on the first. The other five are Wikimedia Commons photographs of Bergen with
+their credits written beside them, and those five are fetched over the network when the seed
+runs.
+
+Shared::DemoMedia looks a key up here first. A key the catalogue does not hold falls back to a
+picsum landscape when the seed asks for a remote image, and to no picture at all when the seed
+asks for the catalogue alone, as the bulk seeds do. A row whose file is missing is skipped with
+a warning rather than raised, since one failed seed blocks every deploy. Setting SKIP_DEMO_MEDIA
+turns attachment off, and the test environment never attaches. DEMO_MEDIA_CATALOG points the
+lookup at a different catalogue, and DEMO_MEDIA_CITY at a different city's file.
+
+The frames are prompts in STUDIO/lora/seed_media.yml, rendered on Replicate by
+run_seed_media_replicate.rb in STUDIO/lora/_toolkit and filed here by
+install_seed_media.rb. That script grades each frame at the preset its prompt names, never
+overwrites a frame already filed, and caps the long edge at 1280 pixels. The four dating
+portraits are general-model strangers, every one an adult, with no likeness of anyone real. The
+prompt, model, seed, prediction and postpro preset of every render are recorded in
+STUDIO/lora/seed_media_manifest.yml.
+
+These graded copies are tracked in git, which is a deliberate exception to the rule against
+committing generated assets. That rule keeps build output and renders out of history because
+they can be made again from source. These cannot: a render costs money and never comes out the
+same twice, and the deploy copies only tracked files to the box, where the seeds read them. So
+the app keeps the small copy, and the full renders and their ungraded originals stay out of git
+on the machine that made them.
+
+Unprocessed sources receive one Postpro pass during the curated seed run. `preset: "random"`
+chooses a valid preset deterministically from the seed key; repeating the seed does not change the
+grade because the random number generator changed. A row marked `graded: true` is already
+processed and must not receive a second pass.
+
+For each new locally supplied image, record its source URL, source name, photographer,
+photographer URL, license and/or required credit in the catalogue. Those details are copied to the
+Active Storage blob metadata, and post cards/post pages can display a credit when one exists.
+Do not bulk scrape Unsplash: its license excludes compiling its images to reproduce a similar or
+competing service. Use the existing generated frames, the credited Wikimedia Commons sources, or
+another source whose license permits the specific intended use.
+
+
+### brgen dating
+
+**Matchmaking for a city you already live in.** Dating shows you the people of your own town,
+asks them to prove they are who they look like, and leaves the rest to the two of you.
+
+Dating is mounted at `dating.<city>`, for example `dating.brgen.no` and
+`dating.lsangeles.com`. It runs inside Brgen's Rails process and uses Brgen's
+users. The city is resolved from the apex host; Dating is not a separate app.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+Each person builds a profile of photos, a short bio and up to three prompt answers. The deck
+shows one candidate at a time, and the next one comes from `home#next`. A like or a dislike
+moves the deck along, and a rewind undoes the last dislike. When two people like each other the
+engine creates a match, and the matches page lists them. A separate page shows who has liked
+you, since that is a different decision from swiping through the deck. A short list of picks,
+five a day, gives a break from a deck with no bottom. The list is stored, so it stays the same
+all day, and it skips anyone who was picked earlier in the week.
+
+Two things stand between a stranger and a face in the deck. Making or editing a profile asks
+for Vipps Login first, because a verified phone number puts a real person behind a profile.
+Beyond that, a person can ask for a verification: a selfie in a pose the app draws at random,
+reviewed by a human. Face matching is not automatic, since it fails on the people it should
+serve, and a wrong rejection on a dating profile is worse than a slow approval. Only a
+reviewer, the same admin who works the moderation queue, may approve or reject one.
+
+The Vipps check fails closed. With `VIPPS_CLIENT_ID` and its secret in `/etc/brgen.env`, only a
+Vipps-verified account can put a profile in the deck. Without the keys the writing surfaces lock:
+the old behaviour treated a missing variable as an open door, which is the wrong default for a
+dating product. A server that deliberately runs without Vipps keys (a demo, a fixture city) opens
+the gate only when the operator sets `DATING_IDENTITY_BYPASS=demo` in the same env file — a named
+decision, visible next to the variables it stands in for.
+
+The models are `Profile`, `Prompt`, `Like`, `Dislike`, `Match`, `DailyPick` and `Verification`.
+`isolate_namespace Dating` gives their tables the `dating_` prefix. The engine lives in
+brgen's database and carries no migrations of its own; they are in `RAILS/brgen/db/migrate`.
+Routes are drawn on `Dating::Engine`, and brgen mounts the engine at the root under
+`constraints(subdomain: DATING_SUBDOMAINS)`. From the host, reach its helpers namespaced, as
+in `dating.matches_url(…, subdomain: "dating")`.
+
+## Visual direction
+
+**Tinder and happn are interaction references, not product authorities.** Keep discovery focused
+on one substantial profile at a time, with fluent swipe and tap controls, legible photographs,
+short prompts and a clear route from mutual match to conversation. Make local discovery and
+path-crossing context understandable without exposing a person's precise route or current
+location. The profile must remain more than a photograph: preserve prompts, biography, intent
+and verification context.
+
+Do not add streaks, artificial scarcity, opaque ranking, paid visibility or interaction
+patterns that pressure a person to like or disclose more than they choose. Reporting, blocking,
+privacy and identity checks must remain easy to find.
+
+## Original product promise and present boundary
+
+The archived brief described a safe, local way to meet people: profiles, preference-aware
+discovery, geographic controls, mutual matches, conversation and member-controlled privacy.
+The current engine delivers city/radius discovery, profile photos and prompts, like/dislike and
+rewind flows, mutual matches, a held daily pick, a message hand-off, and a human-reviewed
+verification request. Vipps identity gating fails closed when configured; an unconfigured
+production server does not silently admit unverified profile publishing.
+
+Brgen's shared events surface remains the place for city events. A dedicated dating-event planner,
+paid boosts, premium membership and super-likes are not presented as live Dating features. The
+old brief's claims of ML-powered compatibility, anonymous browsing modes, online-presence
+indicators and automatic facial verification are not current implementation facts. Matching must
+remain two-sided and respectful: location is a discovery filter, not a public exact-location
+disclosure, and a verification badge means a human-reviewed request was approved.
+
+The engine depends on `pub5-shared` for `User`, authentication, tenancy and the design system,
+and its boot shape comes from `Shared::VerticalEngine`. Its strings live in the engine's own
+Norwegian and English locale files, and Norwegian is the default.
+
+
+### brgen maps
+
+**Places and a live map, for whichever city you arrived through.** Maps puts the shops, cafes
+and corners of your town on one screen and lets you say that you were there.
+
+Maps is mounted at `maps.<city>`, including `maps.brgen.no` and
+`maps.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's
+users and resolves the city from the apex host. It is not a separate app.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+The home page draws the map on a MapLibre canvas, with tiles from OpenFreeMap. Its GeoJSON
+source clusters nearby places, events and stories at city scale, expands a cluster on selection,
+and draws individual points as GPU map layers at street scale. Search updates that source rather
+than rebuilding a DOM marker for every result. Marker and cluster colours resolve from the Maps
+surface tokens; the Positron basemap stays deliberately quiet beneath the city data. The places
+page remains the complete list/search alternative, with a filter by kind, and answers JSON to the
+same query for the map. A place page shows the recent check-ins and the
+places nearby. A signed-in visitor, a soft guest included, can check in with a short note.
+
+The engine owns routes, controllers and views only. `Place` and `PlaceCheckIn` stay in brgen's
+models, because restaurants and stores point at a place too, so it has more than one consumer
+and is shared the way `User` is. Check-ins therefore live in brgen's database, in
+`place_check_ins`, with no `maps_` tables. Routes are drawn on `Maps::Engine`, and brgen mounts
+the engine at the root under `constraints(subdomain: MAPS_SUBDOMAINS)`.
+
+The map is built in the browser, so the home section carries a `map-morph-guard` Stimulus
+controller that keeps it out of a Turbo page morph, the same `turbo:before-morph-element` guard
+the shared tiptap editor runs over a mounted editor. The controller lives in the engine's
+`app/javascript/controllers`, which brgen pins through the vertical list in its
+`config/importmap.rb`; nothing refreshes the page yet, and the guard is in place before one
+does. Its first controller tests run inside brgen's suite, under `test/controllers`.
+
+
+### brgen marketplace
+
+**Every listing in brgen lives here, the shop's product and the chair someone is selling alike.**
+Marketplace is one place for a city to buy, sell, rent, hire and order dinner, without asking
+anyone to learn a second site for each.
+
+Marketplace is mounted on each city's localised commerce subdomain:
+`markedsplass.brgen.no`, `marketplace.lsangeles.com`, `marktplatz` in
+Germany and `mercato` in Italy. `Brgen::DomainRegistry::SUBAPP_ALIASES`
+maps each spelling to this engine. Marketplace runs inside Brgen's Rails
+process and uses Brgen's users; it is not a separate app.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+## Restored marketplace intent
+
+The original brief aimed at both local person-to-person exchange and professional shops:
+discoverable listings, trustworthy sellers, useful search, direct buyer/seller contact and
+location-aware inventory. The current data model deliberately supports both: a listing may have
+a store or belong to an individual seller. The current storefront and seeded catalogue are
+shop-first, so the presence of an individual-listing model must not be mistaken for a finished
+classifieds experience.
+
+Category and full-text search, locality filters, facets, saved searches, wishlist, reviews,
+public listing questions, variants, order state, returns and the native seller surface are
+implemented. AI recommendations, coupon/referral-credit campaigns, anonymous contact relay,
+full shipping-label/rate integrations, catalogue-scale multi-currency operations and the
+Solidus storefront remain separate work. Solidus is optional and staging-only; it is not the
+public production storefront.
+
+Store owners open a shop and post product listings across categories. Buyers add listings to a
+cart, give an address, and check out through Dintero, Vipps or Stripe, whichever is configured.
+Sellers take payouts, answer public questions on a listing, offer sizes and colours as variants,
+and accept returns. Both sides leave reviews. Deals and saved searches aid discovery, a star
+bookmarks a listing for the wishlist page, and a merchant feed in XML goes out for shopping
+search engines.
+
+The two tiers are one model rather than two places. `Listing belongs_to :store, optional:
+true`: with a store it is a shop's product, and without one it is a person selling a chair. The
+seeds always attach a store, there is no separate casual surface, and the storefront chrome
+wraps both. A listing also has a kind. Goods is the default, and job, housing and gig listings
+carry their own facts in a detail table each, so that no column sits empty for every bicycle.
+The kind is a parameter of the index page. Seeded categories are consumer goods only:
+electronics, clothing, furniture, vehicles and services, each with children.
+
+Nothing casual lives in the host app, so do not look for it there; the host has no listing
+model at all. What is Craigslist-shaped about brgen is the access model. `ListingPolicy` asks
+only for a user, and `Shared::Authentication` gives an anonymous visitor a soft `Current.user`
+to list with, so no one has to sign up first.
+
+The models are `Store`, `Listing`, `Category`, `Order`, `Checkout`, `Review`, `Deal`,
+`ListingFavorite`, `SavedSearch`, `Address`, `Payout`, `Question`, `Return`, `Variant`,
+`VariantOption`, `ListingEvent`, `WebhookDelivery` and the three detail tables `JobDetail`,
+`HousingDetail` and `GigDetail`. `isolate_namespace Marketplace` gives their tables the
+`marketplace_` prefix, and the migrations are in `RAILS/brgen/db/migrate`. Payment services
+and the Dintero client are in brgen's `app/services/marketplace/payments`, not in the engine.
+
+Routes are drawn on `Marketplace::Engine`, and brgen mounts the engine at the root under
+`constraints(subdomain: MARKETPLACE_SUBDOMAINS)`. From the host, reach the helpers as
+`marketplace.listing_url(…, subdomain: "markedsplass")`. The saved list is at `/wishlist`,
+because the host declares `/saved` for bookmarks before it mounts this engine, and a `/saved`
+here would never run.
+
+Payment callbacks split between engine and host. `webhooks/dintero` and its signed session
+callback are engine-local. The `webhooks/stripe` route in the engine hands off to the host's
+Stripe controller, so that a dashboard pointed at either URL still pays the order, and the
+host also owns `/webhooks/vipps`. Dintero webhooks are verified on the raw body before any
+JSON parsing, and each delivery is stored for replay handling.
+
+## Visual direction
+
+**bol.com and Kaufland.de are commerce usability references.** Keep search prominent, category
+navigation predictable, filters relevant to the selected category, and the catalogue dense
+without making product images or prices hard to scan. Product cards should establish the
+product, price, condition, seller and delivery facts in a stable order. Product pages should
+make the gallery, variants, availability, seller trust, delivery and buy box easy to compare.
+
+Preserve separate trust cues for professional shops and private sellers; do not imply that one
+has the guarantees of the other. Borrow commerce geometry, not another retailer's identity,
+copy or campaign assets.
+
+## Food
+
+The canonical food surface is `/food` on the localised Marketplace host, as in
+`markedsplass.<city>/food` or `marketplace.<city>/food`. Restaurants, menus, delivery drivers,
+group orders and reviews are backed by the nested `Takeaway` engine, kept at
+`engines/takeaway`. Marketplace and takeaway share one campaign-art system, described in the
+shared engine's README. The former `takeaway.<city>` host remains a compatibility mount of the
+same engine, and new links should point to Marketplace.
+
+## Dintero
+
+Dintero owns marketplace money movement. A seller's payout destination must be approved and
+ACTIVE before the seller's slice goes out in an inline split. BRGEN stores the exact split
+contract on each local order and reuses it for capture and refund, so a later change of
+configuration cannot rewrite a historical transaction. Capture is a separate step from
+authorisation, and BRGEN does not mark an order paid because a browser came back from checkout.
+Paid status follows the webhook.
+
+Dintero's Shopping API creates the payment sessions. The integration keeps its own
+`dintero_order_id`, `dintero_session_id` and `dintero_transaction_id` and never treats a local
+order id as a Dintero resource. The checkout adapter is gated by `DINTERO_CHECKOUT_ENABLED=1`,
+so a credentialed but unverified integration cannot show a payment button before the Shopping
+API payload has been exercised in Dintero's test mode. The hook subscription registers against
+the HTTPS address in `DINTERO_HOOK_URL`, which must not point at localhost or at Dintero.
+
+## Solidus
+
+Solidus is an optional commerce kernel for catalogue, cart, checkout, fulfilment and merchant
+operations. It stays behind `SOLIDUS_MARKETPLACE=1` and mounts at `/solidus` only when its gems
+are also loaded. The native `Marketplace::*` models remain the public seller and order domain
+until a deliberate cutover. Listings, stores, orders, seller policy, buyer and seller
+messaging, local geography, offers, questions and returns stay BRGEN's own. BRGEN does not
+install the legacy solidus_marketplace extension.
+
+The 1 GB OpenBSD host is the wrong place to install Solidus. Install it only on a staging host
+with a database the Solidus deployment supports. Before any production cutover, verify the
+Dintero Shopping payload against the current test account, and exercise authorisation, capture,
+refund, duplicate delivery, seller approval and settlement events.
+
+
+### brgen takeaway
+
+**Good food from kitchens in your city, ordered without leaving the local network.** Takeaway
+connects restaurants, their menus, neighbours and delivery drivers. It is the food-ordering
+surface inside Brgen Marketplace, not a separate Rails application.
+
+Takeaway is nested inside the Marketplace engine. Its canonical route is
+`/food` on the city's localised Marketplace host, such as
+`markedsplass.brgen.no/food` or `marketplace.lsangeles.com/food`.
+The historical `takeaway.<city>` host remains as a compatibility mount;
+new links should use Marketplace. Takeaway is not a separate Rails app.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+## Recovered product promise
+
+The original Brgen plan described local restaurant discovery, menus, ordering, order tracking
+and delivery coordination. The current Takeaway engine has grown beyond a static restaurant
+directory:
+
+- Public restaurant discovery with cuisine filtering, live search, city context and nearby
+  restaurants when coordinates are known.
+- Restaurant-owned menus, item availability, photos, opening hours, minimum order values,
+  delivery fees and stated delivery radii.
+- Guest-friendly browsing and ordering without forcing a full account registration first.
+- Server-calculated order totals, delivery address and optional tip; client-submitted totals are
+  never trusted.
+- A guarded order lifecycle: pending, confirmed, preparing, out for delivery, delivered or
+  cancelled. Invalid transitions are refused.
+- Scheduled orders, immediate-cart expiry, reorder from a previous order and customer-visible
+  status notifications.
+- Shared group orders: one host opens a token-addressed order, invites others to add their own
+  lines, and places the combined ticket.
+- Delivery-driver profiles, availability and dispatch relationships; a driver is attached to an
+  order only when the dispatch rules have a suitable candidate.
+- Restaurant reviews tied to a delivered order, favourites, local discovery and verified
+  business status through Brgen's shared verification workflow.
+- Activity graph events and shared media processing.
+
+The implementation is backed by the nested engine at
+`RAILS/brgen/engines/marketplace/engines/takeaway`, with host-owned migrations and shared Brgen
+identity/tenant records. The precise status and implementation notes live in `RAILS/apps.yml`.
+
+## Ordering and delivery boundaries
+
+A restaurant with recorded opening hours is treated as open only when those hours say so.
+Scheduled orders may be placed for a future time. When a restaurant has not supplied hours,
+the application does not invent a closing schedule.
+
+Delivery-radius checks run only when the restaurant has supplied a radius and both sides have
+usable coordinates. A free-text address is not silently geocoded, and missing coordinates are
+not replaced with a guessed city-centre pin. Driver dispatch can leave an order unassigned when
+there is no verified candidate; the product must not pretend a courier accepted a delivery when
+none did.
+
+The current order lifecycle and driver assignment are not a third-party courier network. Live
+GPS tracking, route optimisation, external courier APIs, guaranteed delivery ETAs and a
+market-wide logistics exchange are separate work until implemented and tested.
+
+## Architecture
+
+Takeaway is nested inside the marketplace engine and mounted by the Brgen host. Its models use the
+`Takeaway::` namespace and `takeaway_` table prefix. Migrations are maintained in
+`RAILS/brgen/db/migrate`, not in a second independent database.
+
+The engine class includes `Shared::VerticalEngine`. Routes are drawn on
+`Takeaway::Engine`; from the Marketplace host the route helpers are namespaced under
+`takeaway`. Keep restaurant, menu, order and driver records in the shared city/tenant context.
+
+Marketplace and Takeaway intentionally share the commerce and campaign foundations while
+keeping distinct navigation and user journeys. Their nav bars remain separate partials because
+their section lists, cart behaviour and route helpers differ.
+
+## Safety and trust
+
+- Restaurant owners may change their own menus and restaurant details.
+- Orders remain receipts and are not deleted when a restaurant is archived.
+- Buyers can see only their own orders; restaurant owners can see orders for their own kitchen.
+- Reviews require a delivered order.
+- Order totals are calculated on the server from available menu items.
+- Webhook and payment state must come from verified provider events, never a browser return URL.
+
+## Still to build
+
+The archived promise of end-to-end delivery coordination is only partly fulfilled. The next
+substantial steps are a tested driver dispatch/acceptance flow, customer-facing delivery status
+and ETA semantics, courier location updates with explicit consent, and a provider adapter only
+when a real courier partner is selected. Restaurant payout and payment flows must remain
+consistent with Marketplace's provider contracts.
+
+Do not revive the old PostgreSQL, Redis, Mapbox, Nginx or Rails 8.0 setup instructions. The
+current stack is pinned in `RAILS/apps.yml` and the Brgen host's Gemfile/lockfile.
+
+
+### brgen messenger
+
+**The city's conversations, without losing the thread.** Messenger is the private and group
+conversation surface shared by people using Brgen. It should feel immediate, but its deeper
+promise is continuity: a conversation remains readable, searchable, safe to leave, and useful
+across devices and time.
+
+Messenger is mounted at `messenger.<city>`, including
+`messenger.brgen.no` and `messenger.lsangeles.com`. The Brgen host draws
+its routes; the `brgen_messenger` engine supplies the vertical's autoloading
+and JavaScript assets. It shares the host app, database, identity system and
+deployment. It is not a separate application.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+## Recovered product intent
+
+The original Brgen brief promised real-time messaging as part of one integrated city network.
+The later architecture adds the features that make messaging dependable rather than merely
+instant: durable history, identity and privacy boundaries, moderation, and a clear distinction
+between direct messages, group conversations and public rooms.
+
+The current implementation includes:
+
+- Direct conversations reused for the same pair of people, rather than creating a new thread
+  every time a different entry point is used.
+- Group conversations with membership, an owner/operator role, member invitations and safe
+  handover when the last operator leaves.
+- Live message delivery through Turbo Streams, with typing indicators and read receipts.
+- Message replies, editing within a bounded window, unsending, forwarding and link previews.
+- Image attachments and audio voice notes, validated on the server as well as in the composer.
+- Search across conversation titles and message bodies, pinned conversations, archive/resurface
+  behaviour and cursor-based load-earlier history.
+- Per-conversation disappearing-message modes, including view-once semantics, with expiry
+  removing content from search, forwarding and previews.
+- Story replies that continue in the DM thread after the original story expires.
+- Channel rooms, role/mode handling and bot participation; MASTER can be invited to a direct
+  or group conversation.
+- A responsive desktop layout with a room rail, inbox, thread and contextual artifact pane.
+
+These are code-backed capabilities recorded in the Brgen feature inventory. The authoritative
+implementation is in the host models/controllers plus the engine's Stimulus controllers; see
+`RAILS/apps.yml` for the precise inventory.
+
+## Privacy and safety
+
+A private message is not a public city post. Conversation membership scopes access to the thread;
+blocks are checked in both directions for direct conversations. Attachments are restricted to
+supported image and audio media types. Message history is not silently discarded when a sender
+deletes an account: the erasure path unsends that person's content and purges attachments while
+preserving the thread structure needed by other participants.
+
+Disappearing messages are a user-selected retention mode, not a guarantee against screenshots,
+copies or a recipient recording content elsewhere. Voice notes are attachments, not a promise of
+end-to-end encrypted calls. The current product does not claim end-to-end encryption.
+
+## What the original brief did not specify
+
+Messenger should eventually make safety controls, notification preferences and account/device
+session management easy to understand. Any future encryption, federation, calling or file-sharing
+work must begin with a threat model and explicit compatibility decisions; it must not be added as
+a cosmetic badge or implied by the word private.
+
+## Architecture
+
+The engine lives at `RAILS/brgen/engines/messenger`. The host owns the shared conversation and message
+models because the Brgen feed, dating matches, marketplace listings, stories, channels and
+messenger surface all use the same conversation graph. Do not duplicate those models inside the
+engine.
+
+`BrgenMessenger::Engine` includes `Shared::VerticalEngine`, which puts the engine's JavaScript
+controllers on the asset path. The actual routes are host-drawn under the Messenger subdomain
+constraint. Use the host's route helpers and preserve the existing city/tenant scope.
+
+The engine depends on `pub5-shared` for identity, authentication, tenancy, media processing and
+shared UI. Read the host's agent notes before changing routes, models or shared concerns.
+
+## Development
+
+Run the Brgen host's test suite for messenger changes; the engine's shared test inventory is
+listed in `RAILS/test/engine_roots.rb`. Add regression tests for access control, duplicate direct
+threads, group ownership, expiry, unread/read receipts, pagination cursors, attachment types and
+Turbo broadcasts whenever those contracts change.
+
+Do not revive the historical PostgreSQL/Redis/ActionCable/StimulusReflex instructions. The active
+stack is the one pinned in `RAILS/apps.yml` and the host Gemfile/lockfile.
+
+
+### Brgen Radio and TV
+
+Brgen's local media surfaces let a city publish and discover sound and moving images without
+splitting the community into unrelated networks. Both are mountable engines inside the Brgen
+Rails process.
+
+- **Radio** is the public name of the Playlist engine at `radio.<city>`. Its code and models
+  retain the `Playlist` namespace.
+- **TV** is the video and channel engine at `tv.<city>`.
+
+The city/host topology is defined in the Host and subdomain map above, with
+agent-specific constraints in `AGENTS.md`. These engines share Brgen identity, tenancy,
+media processing and activity infrastructure.
+
+## Product briefs
+
+- [Radio / Playlist](#brgen-playlist) — local audio publishing, playlists, collaboration,
+  hosted tracks, embeddable players, listening parties, timestamped comments and expiry.
+- [TV](#brgen-tv) — channels, uploaded video, shows, episodes, subscriptions, watch-time
+  discovery, video notes and the live-stream model boundary.
+
+The historical plans also mentioned a record label, creator donations, premium audio tiers,
+global music discovery and full live video. Those remain product opportunities, not claims that
+the corresponding workflows are already operating. Radio's curated Radio Bergen import has
+separate tenant and rights preconditions documented in the [Playlist section](#brgen-playlist).
+
+## Architecture rule
+
+Do not create separate Rails applications for Radio or TV. Their engine code is mounted by Brgen
+and their records live in the Brgen database. The active implementation and remaining work are
+listed in `RAILS/apps.yml`.
+
+
+### brgen playlist
+
+**Music is better when someone is listening with you.** Playlist lets a city build its soundtrack
+together, hear the same song at the same moment, and talk over it as it plays.
+
+The public host is `radio.<city>`, for example `radio.brgen.no` and
+`radio.lsangeles.com`. The source directory, module and tables retain the
+name Playlist; the host constraint is `RADIO_SUBDOMAINS`. The former
+`playlist.<city>` host no longer resolves, and no alias remains. The engine
+runs inside Brgen's process and uses Brgen's users; it is not a separate app.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+Users build playlists and sets, add tracks, and invite collaborators as owner, editor or viewer.
+Pasting URLs, one to a line, imports tracks into a playlist from YouTube, Spotify, SoundCloud,
+Whyp or a direct link, and any member with a real account can upload an audio file as a hosted
+track. A set can open a listening party, where people hear the same thing at the same time and
+chat beside it. Listeners leave comments pinned to a moment in a track. Likes and listens drive
+discovery.
+
+A `DillaSketch` ties a playlist or a set to the studio's dilla engine. Its `render_audio` action
+queues `DillaRenderJob` on the bulk queue, which renders through `Shared::DillaProcessor` and the
+STUDIO contract, attaches the render to the sketch, and by default publishes it as a track. When
+the dilla script is missing on the machine, the sketch records the failure in its `render_error`
+instead of failing quietly.
+
+The models are `Playlist`, `Track`, `PlaylistTrack`, `Set`, `SetTrack`, `Collaboration`,
+`ListeningParty`, `PartyMessage`, `Listen`, `Like`, `TimestampedComment`, `DillaSketch` and
+`AudioVersion`. `isolate_namespace Playlist` gives their tables the `playlist_` prefix, and the
+migrations are in `RAILS/brgen/db/migrate`. Inside the engine, write `::Playlist::Playlist` with
+the leading colons, because the plain name resolves to the module's own model first.
+
+Routes are drawn on `Playlist::Engine`, and brgen mounts the engine at the root under
+`constraints(subdomain: RADIO_SUBDOMAINS)`. Playlists and sets nest their tracks, collaborations
+and dilla sketches. A playlist also has an embeddable page and an owner-only analytics page. A
+set adds a like and a `listening_party` with its party messages, and `hosted_tracks` and
+`listens` round out upload and playback. From the host, reach the helpers as
+`playlist.playlist_url(…, subdomain: "radio")`.
+
+The engine depends on `pub5-shared` for `User`, authentication, tenancy and the shared UI. On
+screen it uses an immersive stage with a transport bar, and it publishes the bar's height so
+floating widgets clear it. Its stylesheet rules live in brgen's single `application.scss`,
+scoped under `body.vertical-playlist`.
+
+## Visual direction
+
+**SoundCloud and WHY.IT are creator and discovery references.** Make the creator and the
+recording the centre of the product: strong cover art, clear artist identity, useful track rows,
+waveform playback, timestamped discussion, playlists, sets and a discoverable creator catalogue.
+Human curation and local scenes should sit beside popularity signals, not disappear beneath them.
+
+The Radio Tunnel is Brgen Radio's signature listening mode; it must not become the only way to
+browse music. Keep a direct path to tracks, playlists, sets and uploads. Playback begins only
+after a reader's gesture, credits and import provenance remain visible, and listening counts
+must describe real recorded activity.
+
+## Original creator-platform promise
+
+The archived Whyp.it-inspired brief called for easy local audio publishing, high-quality playback,
+embeds, listening insight, privacy/expiry controls and support for independent creators. The
+current engine has hosted tracks, external URL imports, playlists and sets, owner/editor/viewer
+collaboration, embeddable players, timestamped comments, listening parties, likes/listen records
+and per-track expiry. The Radio Bergen archive is a separate curated import and remains gated by
+its tenant and recording-rights preconditions.
+
+The first restoration of creator analytics is now in the code: a playlist owner can open an
+aggregate dashboard with total listens, listens in the last seven days and per-track counts.
+It does not reveal listener identities. This is deliberately a small, privacy-preserving first
+step, not a complete creator business suite: unique listeners, retention cohorts, exports,
+revenue attribution, donations, paid creator tiers and sponsored-content workflows remain
+unimplemented.
+
+The public host is `radio.<city>`; `playlist.<city>` is not a supported host.
+
+## Radio Bergen tunnel and curated archive
+
+The Playlist home now renders the existing Radio Bergen tunnel through the Rails
+engine view and Stimulus controller rather than a standalone HTML page. Playback
+starts after a user gesture. The legacy opening track is preferred when it exists in the
+selected queue; when it is absent, playback starts at the first selected item, preserving
+the curated order instead of choosing randomly. Once the selected crate is imported, the
+tunnel plays same-origin Active Storage audio and analyses the actual audio signal.
+
+The focused queue-selection regression is available as `cd RAILS && npm run test:radio`.
+
+The exact 35-track selection and ordering live in
+`RAILS/brgen/config/radio_bergen/tracks.yml`; filenames map to the archive-root
+files in `pub2`, not the stale `mp3/akmd-…` URLs. Audio is deliberately not
+committed into Git. The command below is for reference only. Do not execute it
+until the tenant-scope blocker is closed and tested locally. Distribution rights
+for every recording must also be confirmed.
+
+```sh
+RADIO_BERGEN_ARCHIVE_ROOT=/absolute/path/to/pub2 \
+RADIO_BERGEN_OWNER_EMAIL=your-existing-account@example.invalid \
+RADIO_BERGEN_RIGHTS_CONFIRMED=1 \
+bin/rails radio_bergen:import_curated
+```
+
+**Tenant guard:** the rake task now resolves the persisted `brgen.no` City and finds the owner inside that tenant. The importer requires that same city and a same-city saved owner, then wraps preflight and writes in `ActsAsTenant.with_tenant(city)`. Missing or cross-city scope is rejected before archive reads or playlist writes. The guard regressions are authored but have not been run in a full Rails checkout; do not import until they pass. Distribution rights for every recording remain a separate operator decision.
+
+The task is intended to preflight all source files, attach them through Active Storage, and
+create the playlist in the original order. It is idempotent for matching audio
+and refuses to silently overwrite a changed attachment. The confirmation flag
+is an operator attestation, not a legal determination.
+
+
+### brgen tv
+
+**A television channel anyone in the city can start.** Tv gives every neighbourhood a screen of
+its own, for what the town makes, what it streams live and what it wants to watch next.
+
+TV is mounted at `tv.<city>`, including `tv.brgen.no` and
+`tv.lsangeles.com`. It runs inside Brgen's Rails process, uses Brgen's users
+and resolves the city from the apex host. It is not a separate app.
+
+The Brgen host map appears above; `AGENTS.md` carries the agent-specific constraints.
+
+Channels publish uploaded videos and shows with numbered episodes. Viewers comment, take
+notes pinned to a moment in a video, and follow channels by subscribing. The data model also
+represents broadcasts and live-stream states, but production live-video ingest and delivery are
+not available yet: that requires a media server and an external delivery/transcoding tier. The home page is a grid of trending, live and recent videos, ranked by watch
+time. The feed at `/feed` is the other shape, one video to a screen, ranked by how much of each
+people actually watched, ten at a time. Both depend on `ViewEvent`, which records watch time
+because a view counted at page load ranks a bounce like a full watch. Each clip may be built on
+a `Sound`, and a sound has a page that gathers every clip made on the same audio.
+
+The models are `Channel`, `Video`, `Broadcast`, `LiveStream`, `Show`, `Episode`, `StreamChat`,
+`VideoNote`, `Comment`, `Subscription`, `ViewEvent` and `Sound`. `isolate_namespace Tv` gives
+their tables the `tv_` prefix, and the migrations are in `RAILS/brgen/db/migrate`.
+
+Routes live in the engine's own `config/routes.rb`, and brgen mounts the engine at the root
+under `constraints(subdomain: TV_SUBDOMAINS)`. Channels are addressed by slug and nest their
+videos, live streams and shows. A live stream carries `go_live` and `end_live` and its stream
+chats. Stream chat and video notes broadcast over Turbo Streams, on `tv:live_stream:<id>:entries`
+and `tv:video:<id>:notes`, with explicit partials rather than inferred ones. Inside the engine
+the helpers carry no prefix, so a link reads `channel_url`. From the host, reach them as
+`tv.channel_url(…, subdomain: "tv")`.
+
+A new city starts with no television, so the engine ships a content pipeline. The rake task
+`tv:starter_pack` writes clips, posters and a manifest. It generates with Replicate when
+`REPLICATE_API_TOKEN` is set. Without the token it refuses in plain words, and with
+`TV_TEST_CARDS=1` it draws honest test cards with ffmpeg instead. The task `tv:ingest` reads a
+manifest into a channel with published videos. It matches channels by slug, so it can run again.
+
+The engine depends on `pub5-shared` for `User`, authentication, tenancy and the design system.
+Its models include the shared concerns for media processing, notifications, reactions and
+slugs.

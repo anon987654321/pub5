@@ -1,0 +1,41 @@
+---
+schema: 1
+subject: merethe
+subject_consent:
+  likeness_generation: true
+  provider_processing: true
+  model_training: true
+  model_retention: true
+  model_publication: true
+  model_distribution: true
+  evidence:
+    granted_by: Wenche Tommervik (operator instruction)
+    granted_on: '2026-11-24'
+    covers: likeness_generation, provider_processing, model_training, model_retention,
+      model_publication, model_distribution
+    stored_at: evidence/subject-consent.txt
+source_rights:
+  generation_use: true
+  provider_processing: true
+  training_use: true
+  model_publication: true
+  model_distribution: true
+  evidence:
+    me2_archive:
+      granted_by: Wenche Tommervik (operator instruction)
+      granted_on: '2026-11-24'
+      covers: generation_use, provider_processing, training_use, model_publication,
+        model_distribution
+      stored_at: evidence/me2_archive-rights.txt
+    training_dataset:
+      granted_by: Wenche Tommervik (operator instruction)
+      granted_on: '2026-11-24'
+      covers: generation_use, provider_processing, training_use, model_publication,
+        model_distribution
+      stored_at: evidence/training_dataset-rights.txt
+    additional_images:
+      granted_by: Wenche Tommervik (operator instruction)
+      granted_on: '2026-11-24'
+      covers: generation_use, provider_processing, training_use, model_publication,
+        model_distribution
+      stored_at: evidence/additional_images-rights.txt

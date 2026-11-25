@@ -40,9 +40,10 @@ class AmberScriptTest < ActiveSupport::TestCase
     shared << self.class.shared_rails_root.join("_bundle.sh").read
 
     assert_includes content, 'deploy_tracked_app "$APP_NAME"'
-    assert_includes shared, 'bundle_install_as_app "$APP_NAME" "$APP_DIR"'
-    assert_includes shared, "bundle_cas_prepare"
-    assert_includes shared, "bundle_cas_capture"
+    # The deploy verifies a bundle prebuilt on an OpenBSD builder rather than
+    # installing one on the host, and the privileged shared CAS is retired.
+    assert_includes shared, %(run_rails_as_app "$app_name" "$APP_DIR" "bundle-check")
+    refute_includes shared, "bundle_cas_"
     assert_includes shared, %(run_rails_as_app "$app_name" "$app_dir" "bundle-install")
     refute_includes content, "bundle install --deployment --without"
   end

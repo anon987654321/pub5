@@ -102,11 +102,11 @@ module Webhooks
 
       currency = if payable.respond_to?(:payment_currency)
                    payable.payment_currency
-                 elsif payable.respond_to?(:currency)
+      elsif payable.respond_to?(:currency)
                    payable.currency
-                 else
+      else
                    "NOK"
-                 end
+      end
       Shared::S2sAttribution.enqueue_conversion(
         user_id:, reference:, amount_cents: amount, currency: currency.to_s.upcase.presence || "NOK"
       )

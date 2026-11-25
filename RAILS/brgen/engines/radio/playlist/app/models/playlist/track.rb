@@ -22,7 +22,7 @@ class Playlist::Track < ApplicationRecord
   has_one_attached :artwork
   process_media_variants :artwork, variants: {
     thumb: { resize_to_limit: [ 320, 320 ], format: :webp },
-    cover: { resize_to_limit: [ 1_024, 1_024 ], format: :webp }
+    cover: { resize_to_limit: [ 1_024, 1_024 ], format: :webp },
   }
 
   SOURCE_TYPES = %w[upload youtube spotify soundcloud whyp direct dilla].freeze

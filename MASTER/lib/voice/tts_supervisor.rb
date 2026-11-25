@@ -164,13 +164,16 @@ module Master
       #
       # Callers hold the pool-slot lock: ensure_pool_worker! is the only one.
       def replace_worker(root:, path:, index:)
-        # If the path exists but this process has no child identity for the slot,
-        # it may be owned by another MASTER. Leave both socket and worker alone.
+        # A path without our child identity may belong to another MASTER. Keep a
+        # responsive or merely busy socket intact; a refused UNIX connection is
+        # the narrow, OS-proven stale case that no worker owns.
         if (File.exist?(path) || File.symlink?(path)) && !@daemon_pids.key?(index)
-          Master::Trace::Dmesg.status(
-            "tts0", "slot #{index} has an unowned socket path; refusing to unlink or replace it", io: $stderr
-          )
-          return false
+          unless stale_socket?(path)
+            Master::Trace::Dmesg.status(
+              "tts0", "slot #{index} has a reachable or unverified external socket; leaving it intact", io: $stderr
+            )
+            return false
+          end
         end
 
         if @daemon_pids.key?(index)
@@ -199,10 +202,10 @@ module Master
       def spawn_daemon(root:, path:, index: 0)
         worker = File.join(root, "bin", "tts-worker")
         env = Master::Io::ProcessSpawn.environment(daemon_env(root))
-        log = log_path(root, index:)
+        log = writable_log(log_path(root, index:))
         pid = Process.spawn(
           env, RbConfig.ruby, worker, "--daemon", path,
-          chdir: root, out: log, err: log, **Master::Io::ProcessSpawn.options
+          chdir: root, out: log, err: [:child, :out], **Master::Io::ProcessSpawn.options
         )
         # Keep the daemon as a waitable child. This reserves its PID until
         # retire_daemon reaps it, preventing PID reuse between validation and kill.
@@ -325,6 +328,17 @@ module Master
         false
       end
 
+      def stale_socket?(path)
+        return false unless File.socket?(path)
+
+        UNIXSocket.open(path) { |_socket| }
+        false
+      rescue Errno::ECONNREFUSED, Errno::ENOENT
+        true
+      rescue SystemCallError, IOError
+        false
+      end
+
       def worker_version(root)
         worker = File.join(root, "bin", "tts-worker")
         Digest::SHA256.file(worker).hexdigest[0, 16]
@@ -383,6 +397,17 @@ module Master
       rescue Errno::EEXIST => e
         Master::Ground::Swallow.log(e, context: "TtsSupervisor.lock_directory")
         false
+      end
+
+      # On vm23 both dev (the deploy's CLI) and the master daemon spawn workers
+      # into the same shared .master. A bare path opened the log for truncating
+      # write at 0644, so whichever user created it first locked the other out:
+      # the daemon's spawn raised EACCES, nothing started, and the deploy smoke
+      # failed on "tts_socket false" (2026-11-25). Append, group-writable, and a
+      # log this user cannot write is replaced, which the shared directory allows.
+      def writable_log(path)
+        File.unlink(path) if File.exist?(path) && !File.writable?(path)
+        [path, File::WRONLY | File::CREAT | File::APPEND, 0o660]
       end
 
       def log_path(root, index: 0)

@@ -137,17 +137,9 @@
     }
 
     const canvas = document.getElementById?.("face");
-    if (canvas && source) {
-      const credit = String(source.image_credit || source.collection || "");
-      const characterPrefix = characterName ? `${characterName}. ` : "";
-      canvas.title = `${characterPrefix}${profile.name} — original particle study. Reference: ${source.title || "collection object"}; ${source.collection || "collection"}; ${credit}.`;
-      canvas.setAttribute?.(
-        "aria-label",
-        `${characterPrefix}${profile.name}, an original monochrome particle-face study. Reference object: ${source.title || "collection object"}, ${source.collection || "collection"}. ${credit}.`
-      );
-    } else if (canvas) {
+    if (canvas) {
       canvas.removeAttribute?.("title");
-      canvas.setAttribute?.("aria-label", "MASTER original monochrome particle face");
+      canvas.setAttribute?.("aria-label", "MASTER monochrome particle mask");
     }
 
     window.dispatchEvent(new CustomEvent("master:mask-profile", {
@@ -182,7 +174,8 @@
   // Storage is only a fallback for standalone/offline face previews.
   if (serverProfileIndex < 0 && activeKey) {
     try {
-      const stored = Number(sessionStorage.getItem("master.mask." + activeKey));
+      const raw = sessionStorage.getItem("master.mask." + activeKey);
+      const stored = raw === null ? NaN : Number(raw);
       const storedProfile = Number.isInteger(stored) ? PROFILES[stored] : null;
       const storedRotation = storedProfile
         ? ROTATION_PROFILE_IDS.indexOf(storedProfile.id) : -1;
@@ -239,8 +232,7 @@
     newConversation: (id) => {
       const conversationId = String(id || "").trim();
       if (!conversationId) return false;
-      rotate({ detail: { conversationId } });
-      return true;
+      return rotate({ detail: { conversationId } });
     }
   });
 })();

@@ -25,7 +25,12 @@ class PushPromptTest < ApplicationSystemTestCase
     fill_in "password", with: "password123"
     find("input[type=submit][value='#{I18n.t("auth.sign_in")}']").click
     assert wait_until { Session.exists?(user_id: @reader.id) }
+    # The onboarding queue asks for push only from a reader's third session
+    # (MIN_SESSIONS in onboarding_queue.js); this reader is a returning one.
+    page.execute_script("localStorage.setItem('pub4:onboarding:sessions', '3')")
+    page.execute_script("localStorage.setItem('pub4:onboarding:last-seen', String(Date.now()))")
     visit "/conversations/#{conversation.id}"
+    answer_first_visit
 
     assert_equal "default", page.evaluate_script("Notification.permission")
     assert_selector "#push-prompt", visible: :hidden

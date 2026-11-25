@@ -138,7 +138,7 @@ module Brgen
         "privacy" => "public",
         "purpose" => "Radio seed media",
         "generated_at" => Time.current.iso8601,
-        "rights_note" => "Imported from the operator-provided Whyp collection; verify publication rights before production redistribution."
+        "rights_note" => "Imported from the operator-provided Whyp collection; verify publication rights before production redistribution.",
       }.compact
     end
 
@@ -161,7 +161,7 @@ module Brgen
         "source_type" => "whyp",
         "source_url" => source_url,
         "audio" => relative_public_path(audio_path),
-        "artwork" => artwork_path ? relative_public_path(artwork_path) : nil
+        "artwork" => artwork_path ? relative_public_path(artwork_path) : nil,
       }.compact
     end
 

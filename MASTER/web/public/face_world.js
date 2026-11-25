@@ -658,11 +658,20 @@
     const descriptor = explicitSubject
       ? normalizeVisualSubject(visualSubject)
       : inferVisualSubject(value);
-    const next = descriptor ? "object" : "face";
+    if (!descriptor) return restoreFaceSubject();
+    const next = "object";
     const signature = subjectSignature(descriptor);
     if (next === semanticForm && signature === subjectSignature(semanticDescriptor) &&
         !pendingSubjectForm) return next;
 
+    if (window.MASTER_FACE?.faceMat?.uniforms?.uSubjectDirect) {
+      if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
+      subjectTransitionTimer = null;
+      pendingSubjectForm = null;
+      pendingSubjectDescriptor = null;
+      subjectTransitionGeneration += 1;
+      return setSubjectForm(next, descriptor);
+    }
     const currentMorph = Number(window.MASTER_FACE?.morphCurrent);
     const faceStillMorphing = semanticForm === "face" && nativeSubjectField &&
       Number.isFinite(currentMorph) && currentMorph < 0.995;

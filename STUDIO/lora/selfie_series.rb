@@ -5,11 +5,14 @@ require "fileutils"
 require "time"
 require "securerandom"
 require_relative "idea_picture"
+require_relative "judge"
 require_relative "lora"
 
 module Studio
   module Visual
-    # A bounded, still-only LoRA portrait series. Final graded photographs are
+    # A bounded, still-only identity portrait series. The subject's reference
+    # photographs and the catalogue's default reference engine are used when
+    # available; the pinned LoRA is the fallback. Final graded photographs are
     # written directly to STUDIO/lora/ with a subject/index prefix. No render
     # directory is created per person.
     class SelfieSeries
@@ -19,18 +22,25 @@ module Studio
       # Each prompt carries its own environment, moment, lens and light.
       SCENES = Studio::Lora::Selfie::SCENES
 
-      def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil, inference_profile: nil)
+      def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil,
+                     inference_profile: nil, subjects_root: nil)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @scenes = scenes.nil? ? nil : Array(scenes)
         raise ArgumentError, "selfie series needs at least one scene" if @scenes&.empty?
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
+        @subjects_root = File.expand_path(subjects_root || IdeaPicture::SUBJECTS)
+        @reference_files = IdeaPicture.reference_files(File.join(@subjects_root, @subject))
+        selected_engine = engine
+        if selected_engine.nil? && inference_profile.nil? && @reference_files.any?
+          selected_engine = Studio::ReplicateClient::Models.default_engine
+        end
         @series = IdeaPicture.new(
-          subject: @subject, directory: @directory, client:, engine:, lora_only: engine.nil?,
-          inference_profile:
+          subject: @subject, directory: @directory, subjects_root: @subjects_root, client:,
+          engine: selected_engine, lora_only: selected_engine.nil?, inference_profile:
         )
-        @ledger_path = ledger_path || File.join(IdeaPicture::SUBJECTS, @subject, "ledger.jsonl")
+        @ledger_path = ledger_path || File.join(@subjects_root, @subject, "ledger.jsonl")
       end
 
       def preflight! = @series.validate_model!
@@ -44,7 +54,8 @@ module Studio
         preflight!
         rendered = []
         series_id = SecureRandom.hex(8)
-        record("series_start", series_id:, count: total, inference_profile: @series.inference_profile)
+        record("series_start", series_id:, count: total, inference_profile: @series.inference_profile,
+               engine: @series.engine, reference_photographs: @reference_files.length)
         total.times do |index|
           scene = if @scenes
                     @scenes[index % @scenes.size]
@@ -57,7 +68,8 @@ module Studio
               scene, film: false, output_stem: stem,
               grade_seed: Studio::Lora::Selfie.grade_seed(index + 1, @subject)
             ).fetch("still")
-            record("render", series_id:, index: index, scene: scene, path: path)
+            likeness = Studio::Lora::Judge.likeness(reference: @reference_files.first, candidate: path)
+            record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness)
             rendered << path
           rescue StandardError => error
             record("render_attempt", series_id:, index: index, scene: scene,

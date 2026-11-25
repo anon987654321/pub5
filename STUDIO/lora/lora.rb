@@ -225,8 +225,9 @@ module Studio
         require_relative "../replicate/models"
         subject = wizard.ask("Subject", default: "ragnhild")
         count = wizard.number("How many sittings", default: 4, range: 1..24)
-        # A selfie series means this subject's own trained identity.
-        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("../photograph.rb", __dir__),
+        # A selfie series means the subject's own reference photographs first;
+        # the trained identity is the fallback.
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("photograph.rb", __dir__),
                         "--selfie-series", "--subject", subject, "--count", count.to_s)
         success ? 0 : ($?.exitstatus || 1)
       end
@@ -477,14 +478,31 @@ module Studio
         "merethe" => %w[fuji400h portra portra800 cinestill ultramax instax].freeze
       }.freeze
 
+      # The house sitting keeps portrait-distance geometry while keeping the
+      # selfie's framing and gaze: that is the craft decision in README §1.
+      # phone: true is a deliberate distortion study for an operator who wants
+      # the arm's-length look; it is not the default and needs no flag in the
+      # normal path.
+      PHONE_SELFIE = "handheld at arm's length, slight wide-angle perspective, natural available light, " \
+                     "candid, visible skin texture and pores, no studio lighting, no beauty retouching, " \
+                     "clean phone camera colour"
+
+      def self.phone_selfie(scene)
+        body = scene.to_s.gsub(/,\s*(?:35|50|85)mm\b/i, ", 24mm-equivalent phone lens")
+        "#{body}, #{PHONE_SELFIE}"
+      end
+
       # A sitting, one-based like the scenario numbers the old toolkit used.
       # Unknown subjects retain the recovered general-purpose scene set.
-      def self.scene(number, subject: nil)
+      def self.scene(number, subject: nil, phone: false) # rubocop:disable Style/OptionalBooleanParameter
         scenes = SUBJECT_SCENES.fetch(subject.to_s, SCENES)
         stocks = SUBJECT_SCENE_STOCKS.fetch(subject.to_s, SCENE_STOCKS)
         index = (Integer(number) - 1) % scenes.size
+        body = scenes.fetch(index)
+        return phone_selfie(body) if phone
+
         stock = Studio::Lora::Craft::STOCK.fetch(stocks.fetch(index))
-        "#{scenes.fetch(index)}, #{stock}"
+        "#{body}, #{stock}"
       end
 
       # A distinct postpro heavy look per frame, and per subject. postpro deals

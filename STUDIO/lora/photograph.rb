@@ -99,8 +99,8 @@ def studio_photograph_options(argv)
     parser.on("--duration N", Integer, "film duration in seconds (1..10)") { |value| options[:duration] = value }
     parser.on("--soundtrack PATH", "lay a music bed under the film (e.g. dilla.wav)") { |value| options[:soundtrack] = value }
     parser.on("--subject NAME", "subject directory under STUDIO/lora (default ragnhild)") { |value| options[:subject] = value }
-    parser.on("--selfie-series", "render four portraits using --subject's own LoRA") { options[:series] = true }
-    parser.on("--all-subjects", "preflight each subject and render only those with valid consent and a pinned LoRA") { options[:all_subjects] = true }
+    parser.on("--selfie-series", "render portraits using the subject's references when present, otherwise the pinned LoRA") { options[:series] = true }
+    parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
@@ -233,8 +233,9 @@ if $PROGRAM_NAME == __FILE__
         inference_profile: options[:inference_profile]
       )
     elsif options[:series]
-      # A series defaults to the subject's pinned LoRA. An explicit --engine is
-      # an intentional opt-out for reference/text experiments.
+      # A series uses the subject's references and the catalogue default
+      # reference engine when present; without references it uses the pinned
+      # LoRA. An explicit --engine is an override, not a required choice.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
         subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile]

@@ -48,7 +48,7 @@ module Takeaway
       return {} if known.empty?
 
       open = open_ids(known, moment)
-      known.to_h { |id| [id, open.include?(id) ? :open : :closed] }
+      known.to_h { |id| [ id, open.include?(id) ? :open : :closed ] }
     end
 
     # Of +ids+, the ones inside today's window or yesterday's past midnight.

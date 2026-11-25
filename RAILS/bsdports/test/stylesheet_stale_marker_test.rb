@@ -7,7 +7,8 @@ require "test_helper"
 class StylesheetStaleMarkerTest < ActiveSupport::TestCase
   test "the stale state draws a visible rule" do
     source = Rails.root.join("app/assets/stylesheets/application.scss").read
-    block = source[/^\.data-state--stale \{\n(.*?)\n\}/m, 1]
+    # The rule sits inside @layer components, so it is indented.
+    block = source[/^([ \t]*)\.data-state--stale \{\n(.*?)\n\1\}/m, 2]
     assert block, "no .data-state--stale block"
     assert_match(/border-inline-start: 2px solid var\(--status-stale-border\);/, block)
   end

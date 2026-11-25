@@ -1026,8 +1026,11 @@ operator_playbook:
     - id: master_scan_bundle_exec
       area: deploy
       signal: "OPERATOR.sh --sync-configs aborts: cannot load such file -- zeitwerk"
-      action: "Run MASTER scans and /fix on the workstation or isolated sandbox with its local Ruby and approved model lane. OPENBSD/bin/vps_master_scan.sh is a refusal stub; never start MASTER/bin/master, bundle exec or a repository scan on vm23."
-      proof: "Workstation scan receipt names the exact repo SHA; vps_master_scan.sh exits 69 without starting Ruby"
+      action: >-
+        Run MASTER scans and /fix on the workstation or isolated sandbox with its
+        local Ruby and approved model lane. Never start MASTER/bin/master, bundle
+        exec or a repository scan on vm23.
+      proof: "Workstation scan receipt names the exact repo SHA; OPENBSD/bin has no repository-scan entrypoint"
 
     - id: relayd_csp_overwrites_rails
       area: master_web

@@ -18,7 +18,6 @@ module Deploy
     ].freeze
     NAMED_ROLES = (CONTROL_ROLES + ["image"]).freeze
     VIEWPORTS = %w[desktop mobile].freeze
-    MAX_SURFACES_PER_APP_VIEWPORT = 2
 
     def self.run = new.run
 
@@ -85,7 +84,7 @@ module Deploy
           unnamed = self.class.unnamed_nodes(nodes)
           next if unnamed.empty?
 
-          examples = unnamed.first(5).map { |node| "#{node["role"]}(#{node["node_id"]})" }.join(", ")
+          examples = unnamed.map { |node| "#{node["role"]}(#{node["node_id"]})" }.join(", ")
           result.fail(
             "accessibility_tree: #{label} has #{unnamed.size} unnamed interactive/image node(s): #{examples}",
           )
@@ -115,7 +114,7 @@ module Deploy
                     .select { |surface| VIEWPORTS.include?(surface.viewport) }
                     .group_by { |surface| [surface.app, surface.viewport] }
                     .sort_by { |(app, viewport), _rows| [app, viewport] }
-                    .flat_map { |_key, rows| rows.first(MAX_SURFACES_PER_APP_VIEWPORT) }
+                    .flat_map { |_key, rows| rows }
     end
   end
 end

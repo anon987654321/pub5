@@ -418,7 +418,7 @@ class TestPhantomRecovery < Minitest::Test
     assert harness.bus.events.any? { |event, _| event == "react:protocol_failure" }
   end
 
-  def test_malformed_react_tool_call_is_not_returned_as_a_successful_answer
+  def test_malformed_react_tool_call_gets_one_repair_then_fails_closed
     harness = ReactHarness.new
     malformed = %(<tool_call>{"name":"ReadFile","args": {</tool_call>)
     harness.define_singleton_method(:send_ruby_llm) do |*, **|
@@ -432,9 +432,38 @@ class TestPhantomRecovery < Minitest::Test
 
     assert_predicate result, :err?
     assert_equal :llm_failure, result.category
-    assert_equal 1, harness.sends
+    assert_equal 2, harness.sends
+    assert_match(/repeated a malformed tool-call payload/, result.message)
+    assert_match(/no tools were executed/, result.message)
     refute_includes result.message, "<tool_call>"
     assert harness.bus.events.any? { |event, _| event == "react:malformed_tool_call" }
+    assert harness.bus.events.any? do |event, payload|
+      event == "react:protocol_repair" && payload[:kind] == :malformed_tool_call
+    end
+    assert harness.bus.events.any? { |event, _| event == "react:protocol_failure" }
+  end
+
+  def test_malformed_react_tool_call_can_recover_on_the_single_protocol_retry
+    harness = ReactHarness.new
+    responses = [
+      %(<tool_call>{"name":"ReadFile","args": {</tool_call>),
+      "Recovered answer after the malformed call was rejected.",
+    ]
+    harness.define_singleton_method(:send_ruby_llm) do |*, **|
+      @sends += 1
+      Master::Result.ok(responses.shift)
+    end
+
+    result = harness.send(
+      :react_tool_loop, "m", [{ role: "user", content: "read a file" }], sys: nil, stream: false
+    )
+
+    assert_predicate result, :ok?
+    assert_equal "Recovered answer after the malformed call was rejected.", result.value!
+    assert_equal 2, harness.sends
+    assert harness.bus.events.any? do |event, payload|
+      event == "react:protocol_repair" && payload[:kind] == :malformed_tool_call
+    end
   end
 
   def test_react_step_limit_returns_a_typed_timeout_instead_of_the_last_tool_call
@@ -558,7 +587,7 @@ class TestPhantomRecovery < Minitest::Test
   end
 
   def test_judge_agent_calls_master_phantom_recovery
-    source = File.read(File.join(Master::ROOT, "lib", "review", "agent.rb"))
+    source = File.read(File.join(Master::ROOT, "lib", "review", "agent", "conversation.rb"))
     assert_includes source, "Master::PhantomRecovery.handle"
     refute_match(/(?<!Master::)PhantomRecovery\.handle/, source)
   end

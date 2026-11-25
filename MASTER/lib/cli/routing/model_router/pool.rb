@@ -566,7 +566,7 @@ module Master
 
           def ollama_problem(id)
             return "ollama disabled (set MASTER_OLLAMA_ENABLED=1 to opt in)" unless ollama_enabled?
-            return "ollama cloud models are unsupported" if ollama_cloud_model?(id)
+            return "legacy ollama:cloud ids are not local daemon models" if ollama_cloud_model?(id)
 
             name = id.sub(%r{\Aollama[:/]}, "")
             installed = ollama_installed_models
@@ -594,6 +594,7 @@ module Master
           public def local_server_models = local_server_index.keys
 
           def local_server_index
+            return {} unless ENV["MASTER_LOCAL_SERVERS"] == "1"
             return {} if ENV["MASTER_NO_POOL_PROBES"] == "1"
 
             @local_server_index ||= Array(@rules["local_servers"]).each_with_object({}) do |base, index|

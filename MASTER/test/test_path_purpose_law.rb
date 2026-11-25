@@ -125,4 +125,13 @@ class TestPathPurposeRule < Minitest::Test
       refute_empty rule.check("", path: "undeclared_probe_dir/thing.rb")
     end
   end
+
+  # bin/operator lint scans from the repository; the map is still MASTER's.
+  # Stripping the scan root left MASTER/lib/... and reported MASTER/ unowned.
+  def test_a_repository_root_scan_judges_master_paths_against_masters_map
+    rule = Master::Review::Scan::Laws::PathPurposeLaw.new(root: Master::REPO_ROOT)
+
+    assert_empty rule.check("", path: File.join(Master::REPO_ROOT, "MASTER/lib/fix/not_written_yet.rb"))
+    refute_empty rule.check("", path: File.join(Master::REPO_ROOT, "MASTER/undeclared_probe_dir/thing.rb"))
+  end
 end

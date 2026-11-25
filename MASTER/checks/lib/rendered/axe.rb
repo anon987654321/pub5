@@ -6,11 +6,8 @@ require_relative "../../support/geometry_probe"
 require_relative "../../support/axe"
 
 module Deploy
-  # axe-core's WCAG rules on the rendered page, mobile surfaces first, one surface per app and
-  # viewport kind as AccessibilityTreeCheck samples them. Violations report soft, each under the
-  # Law that owns its rule: the live counts have not been measured across the fleet yet.
+  # Audit WCAG rules on every declared viewport, reporting findings under their Laws.
   class AxeCheck
-    PER_APP = 1
 
     def self.run = new.result
 
@@ -36,8 +33,7 @@ module Deploy
     end
 
     def surfaces
-      GeometryProbe.surfaces.group_by { |surface| [surface.app, GeometryProbe.mobile?(surface)] }
-                   .values.flat_map { |rows| rows.first(PER_APP) }
+      GeometryProbe.surfaces
     end
 
     def audited(cdp, surface)

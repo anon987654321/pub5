@@ -5,6 +5,7 @@ require_relative "minitest_helper"
 require_relative "../../lora/lora"
 require_relative "../../lora/photograph"
 require_relative "../../lora/selfie_film"
+require_relative "../../lora/validate"
 
 class TestStudioLoraCli < Minitest::Test
   CLI = Studio::Lora::CLI

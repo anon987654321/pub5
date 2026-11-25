@@ -130,7 +130,7 @@ if [[ $app == recover ]]; then
       ;;
     *) usage >&2; exit 2 ;;
   esac
-  unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
+  unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT VPS_DEPLOY_RUN_STARTED_EPOCH
   unset VPS_DEPLOY_STARTED VPS_DEPLOY_LOCK_HELD
 else
   [[ $# -eq 1 ]] || { usage >&2; exit 2 }
@@ -434,6 +434,28 @@ log() {
 
 # The fleet receipt is ordinary root-owned data. The focused Records library
 # validates its schema and publishes it atomically; it has no command-dispatch API.
+# Defined before set_stage start: a child deploy inherits VPS_DEPLOY_RUN_ID,
+# so its first receipt write runs before the rest of this file is read, and
+# records_call further down was "command not found" (vm23, 2026-11-25).
+records_call() {
+  "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
+    repo, action, *args = ARGV
+    records = Deploy::Records.new(repo_root: repo)
+    case action
+    when "write"
+      records.write(args.fetch(0), args.fetch(1))
+    when "read"
+      puts JSON.generate(records.read(args.fetch(0)))
+    when "list"
+      puts JSON.generate(records.all)
+    when "stamp"
+      records.write_stamp(*args)
+    else
+      abort "unknown deployment-record operation"
+    end
+  ' "$repo" "$@"
+}
+
 write_deploy_run_receipt() {
   [[ -n ${VPS_DEPLOY_RUN_ID:-} ]] || return 0
   local payload
@@ -565,25 +587,6 @@ admin_service() {
   }
   (( $# == 1 )) || { print -u2 "vps-deploy: one service argument required"; return 64; }
   "/usr/sbin/rcctl" "$action" "$service"
-}
-
-records_call() {
-  "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
-    repo, action, *args = ARGV
-    records = Deploy::Records.new(repo_root: repo)
-    case action
-    when "write"
-      records.write(args.fetch(0), args.fetch(1))
-    when "read"
-      puts JSON.generate(records.read(args.fetch(0)))
-    when "list"
-      puts JSON.generate(records.all)
-    when "stamp"
-      records.write_stamp(*args)
-    else
-      abort "unknown deployment-record operation"
-    end
-  ' "$repo" "$@"
 }
 
 admin_request() {
@@ -834,7 +837,7 @@ restore_started() {
 # One durable receipt belongs to the lock-owning parent. Child app deploys
 # inherit the ID, snapshot and owner identity and update only the current stage.
 if (( lock_owner )) && [[ $app != recover ]]; then
-  unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
+  unset VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT VPS_DEPLOY_RUN_STARTED_EPOCH
   unset VPS_DEPLOY_STARTED
   unset VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
   unset VPS_DEPLOY_RECEIPT_PINNED_SHA VPS_DEPLOY_RECEIPT_PREVIOUS_SHA
@@ -843,6 +846,7 @@ if (( lock_owner )) && [[ $app != recover ]]; then
   VPS_DEPLOY_RUN_ID="$(date -u '+%Y%m%dT%H%M%SZ')-$app-${$}"
   VPS_DEPLOY_RUN_TARGET=$app
   VPS_DEPLOY_RUN_STARTED_AT="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+  VPS_DEPLOY_RUN_STARTED_EPOCH=$(date +%s)
   VPS_DEPLOY_RECEIPT_STATUS=running
   VPS_DEPLOY_RECEIPT_RECOVERY=none
   VPS_DEPLOY_RECEIPT_PINNED_SHA=
@@ -852,7 +856,7 @@ if (( lock_owner )) && [[ $app != recover ]]; then
   VPS_DEPLOY_RECEIPT_ORDER=
   VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED=0
   export VPS_DEPLOY_RECEIPT_SNAPSHOT_RECORDED
-  export VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT
+  export VPS_DEPLOY_RUN_ID VPS_DEPLOY_RUN_TARGET VPS_DEPLOY_RUN_STARTED_AT VPS_DEPLOY_RUN_STARTED_EPOCH
   export VPS_DEPLOY_RECEIPT_STATUS VPS_DEPLOY_RECEIPT_RECOVERY
   export VPS_DEPLOY_RECEIPT_PINNED_SHA VPS_DEPLOY_RECEIPT_PREVIOUS_SHA
   export VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_PORTS VPS_DEPLOY_RECEIPT_ORDER
@@ -1069,7 +1073,7 @@ deploy_refuse() { log "refused: $1"; print -u2 "vps-deploy: refused - $1"; print
 
 admit_host_load() {
   local sample load_raw load_five swap_output swap_blocks free_swap
-  local pressure_file=/var/db/pub5/cpu-pressure pressure_stamp pressure_busy now
+  local pressure_file=/var/db/pub5/cpu-pressure pressure_stamp pressure_busy now started
   for sample in 1 2; do
     load_raw=$(${VPS_DEPLOY_SYSCTL:-sysctl} -n vm.loadavg 2>/dev/null) \
       || deploy_refuse "cannot read vm.loadavg; admission is fail-closed"
@@ -1088,7 +1092,13 @@ admit_host_load() {
       read pressure_stamp pressure_busy < "$pressure_file" || deploy_refuse "cannot read CPU-pressure state"
       now=$(date +%s)
       [[ $pressure_stamp == <-> && $pressure_busy == <-> && $now == <-> ]] || deploy_refuse "cannot parse CPU-pressure state"
-      if (( now >= pressure_stamp && now - pressure_stamp <= 420 && pressure_busy >= 80 )); then
+      # Only pressure from before this run started counts: the pin and
+      # snapshot stages are themselves a five-second burst, and the watcher
+      # recorded 96% from them at 10:39:06, so the deploy refused itself
+      # (vm23, 2026-11-25). The five-minute load ceiling above still holds.
+      started=${VPS_DEPLOY_RUN_STARTED_EPOCH:-$(( now + 1 ))}
+      if (( now >= pressure_stamp && now - pressure_stamp <= 420 && pressure_busy >= 80 &&
+            pressure_stamp < started )); then
         deploy_refuse "sustained CPU pressure is active ($pressure_busy% busy)"
       fi
     fi
@@ -1148,6 +1158,12 @@ if (( lock_owner )); then
   export VPS_DEPLOY_RECEIPT_SERVICES VPS_DEPLOY_RECEIPT_RECOVERY
   print "vps-deploy: started before this deploy: $VPS_DEPLOY_STARTED"
   set_stage snapshot
+else
+  # A child (all -> master) holds no lock and never runs the pin block above,
+  # so `pin` was unset and set -u killed it in ensure_host_admission (vm23,
+  # 2026-11-25). It deploys exactly what its parent pinned and exported.
+  pin=${VPS_DEPLOY_SHA:-}
+  [[ -n $pin ]] || deploy_refuse "child deploy inherited no pinned SHA from its parent"
 fi
 
   # Resolve against the inventory in the checkout after it has been fast-forwarded

@@ -2,6 +2,8 @@
 
 require "test_helper"
 require "axe/matchers/be_axe_clean"
+require_relative "../../__shared/test/capybara_falcon"
+require_relative "../../__shared/test/capybara_chrome_reset"
 
 # The verticals route by subdomain, and brgen.no's names resolve to vm23. Chrome
 # maps every brgen.no host to the test server instead, so a system test visits
@@ -90,5 +92,15 @@ class ApplicationSystemTestCase < ActionDispatch::SystemTestCase
   # page answers it first, as a visitor must.
   def decline_optional_cookies
     within("#cookie-consent-banner") { click_button I18n.t("cookie_consent.reject", locale: :nb) }
+  end
+
+  # A first visit layers the cookie question and a welcome dialog over the page;
+  # a visitor answers both before using it, and so does a test that presses
+  # something on the page. Either may be absent on a later visit.
+  def answer_first_visit
+    decline_optional_cookies if has_css?("#cookie-consent-banner", wait: 3)
+    find("button.welcome-onboarding-close", wait: 5).click if has_css?("button.welcome-onboarding-close", wait: 3)
+    assert_no_selector "#cookie-consent-banner", visible: true, wait: 5
+    assert_no_selector "button.welcome-onboarding-close", wait: 5
   end
 end

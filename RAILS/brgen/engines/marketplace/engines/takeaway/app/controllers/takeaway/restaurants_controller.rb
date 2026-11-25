@@ -122,8 +122,11 @@ class Takeaway::RestaurantsController < Takeaway::BaseController
     Marketplace::Store.where(id: store_id).update_all(active:, updated_at: Time.current) if store_id
   end
 
+  # One row per weekday 0..6; anything else in the form is dropped.
+  OPENING_HOURS_FIELDS = 7.times.to_h { |weekday| [ weekday.to_s, %i[opens_at closes_at closed] ] }.freeze
+
   def save_opening_hours!
-    submitted = params.require(:opening_hours).permit!.to_h
+    submitted = params.require(:opening_hours).permit(OPENING_HOURS_FIELDS).to_h
     7.times do |weekday|
       row = submitted.fetch(weekday.to_s, {})
       hour = @restaurant.opening_hours.find_or_initialize_by(weekday:)
