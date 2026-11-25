@@ -12,7 +12,7 @@ class Playlist::ListeningPartiesController < Playlist::BaseController
         return
       end
       @messages = @party.party_messages.includes(:user).chronological.limit(100)
-      @tracks = @set.tracks.order(:position)
+      @tracks = shareable_tracks
     end
 
     def create
@@ -21,15 +21,18 @@ class Playlist::ListeningPartiesController < Playlist::BaseController
         return
       end
       @party = @set.build_listening_party(host: Current.user, status: "active")
-      first_track = @set.tracks.order(:position).first
+      first_track = shareable_tracks.first
       @party.current_track = first_track
       @party.save!
       redirect_to set_listening_party_path(@set), notice: t("flash.playlist.party_started")
     end
 
     def update
-      track = @set.tracks.find_by(id: params[:track_id]) if params[:track_id].present?
-      @party.sync!(track: track || @party.current_track, position_seconds: params[:position_seconds],
+      track_id = params[:track_id].presence || @party.current_track_id
+      track = shareable_tracks.find { |candidate| candidate.id.to_s == track_id.to_s }
+      return head :unprocessable_entity if track_id.present? && !track
+
+      @party.sync!(track: track, position_seconds: params[:position_seconds],
                    playing: params[:playing].to_s != "false")
       head :ok
     end
@@ -40,6 +43,10 @@ class Playlist::ListeningPartiesController < Playlist::BaseController
     end
 
     private
+
+    def shareable_tracks
+      @set.tracks.order(:position).select { |track| track.playable_by?(nil) }
+    end
 
     def set_set
       party = { listening_party: { current_track: :audio_file_attachment } }

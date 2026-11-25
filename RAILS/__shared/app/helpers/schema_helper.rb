@@ -315,6 +315,7 @@ module SchemaHelper
 
   def music_playlist_schema(playlist)
     track_rel = playlist.respond_to?(:tracks) ? playlist.tracks : []
+    track_rel = track_rel.publicly_visible if track_rel.respond_to?(:publicly_visible)
     track_rel = track_rel.unexpired if track_rel.respond_to?(:unexpired)
     tracks = track_rel.respond_to?(:limit) ? track_rel.limit(50) : Array(track_rel).first(50)
 

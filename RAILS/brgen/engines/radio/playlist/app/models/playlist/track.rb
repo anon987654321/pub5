@@ -68,7 +68,8 @@ class Playlist::Track < ApplicationRecord
 
   def replace_audio!(file, actor: nil)
     if audio_file.attached?
-      audio_versions.create!(user: actor, original_filename: audio_file.filename.to_s, byte_size: audio_file.byte_size)
+      version = audio_versions.create!(user: actor, original_filename: audio_file.filename.to_s, byte_size: audio_file.byte_size)
+      version.audio_file.attach(audio_file.blob)
     end
 
     audio_file.attach(file)

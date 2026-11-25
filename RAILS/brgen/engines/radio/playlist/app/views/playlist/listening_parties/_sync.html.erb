@@ -6,6 +6,7 @@
     party_audio_controller reads the data: the track's source, the position at
     synced-at, and whether the host's audio is running. A party synced longer
     ago than ListeningParty::HEARTBEAT reads as paused. %>
+<% track = nil unless track&.playable_by?(nil) %>
 <% fresh = party.updated_at.present? && party.updated_at > Playlist::ListeningParty::HEARTBEAT.ago %>
 <% playing = local_assigns.fetch(:playing, fresh) %>
 <% src = if track&.audio_file&.attached?
