@@ -14,6 +14,7 @@ class DesignAuthoringTest < Minitest::Test
     assert_includes text, "purpose=read and participate in a post stream"
     assert_includes text, Master::Design::Typeface::HOUSE_RULE
     assert_includes text, "AVOID THE DEFAULTS"
+    assert_includes text, "relative size, alignment and visual weight"
   end
 
   def test_recovered_creative_lenses_are_used_by_design_authoring

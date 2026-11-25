@@ -40,7 +40,9 @@ module Master
       def vision_prompt
         <<~TEXT
           Two renders of the same page, A then B. Direction: #{direction_summary}
-          Which has the better layout: clearer hierarchy, steadier spacing, nothing cramped or floating?
+          Which better serves the content and task through optical balance, relative scale, typographic hierarchy,
+          alignment, grouping, deliberate whitespace and a clear focal point? Do not reward uniformity for its
+          own sake. Reject clipped, cramped or less legible content and lost interaction affordances.
           Say "same" if you cannot tell them apart.
           Return only JSON: {"better": "A" or "B" or "same", "why": "<one short sentence>"}.
         TEXT
@@ -58,7 +60,9 @@ module Master
           All classes and ids on the page: #{@page_tokens.first(80).join(' ')}.
           Direction: #{direction}
           Make ONE edit to ONE of the stylesheets below that improves the layout you can see: spacing, alignment,
-          sizing, hierarchy, grid or flex structure, overflow, reading width. Change layout properties only, never
+          sizing, hierarchy, grid or flex structure, overflow, reading width. Diagnose a specific relationship
+          between visible elements, not merely an isolated number. Prefer intrinsic reflow and meaningful
+          group separation over uniform gaps or enlarging every element. Explain the intended optical gain. Change layout properties only, never
           a colour, typeface, font weight, shadow or opacity, never a token file, and keep every spacing value on the
           declared scale or a var(--token).
           #{type_note}

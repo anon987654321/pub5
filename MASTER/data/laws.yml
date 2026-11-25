@@ -1630,9 +1630,11 @@ ACTION_LABEL_BRIEF:
 BRINGHURST:
   parent: PROPORTION
   statement: >
-    The Elements of Typographic Style. Typography exists to honour
-    content. The page is a machine for reading, and its measure,
-    rhythm, scale, and alignment are the mechanism.
+    Honour content through typography. Compose measure, leading, scale,
+    rhythm, alignment and contrast as relationships; refine optical balance,
+    letterspacing, numerals and punctuation for the language and medium.
+    Judge reading and meaning, not numerical conformity alone.
+    Source: Robert Bringhurst, The Elements of Typographic Style.
   severity: info
   resolution: review
   mechanical: Master::Law::Typography#all
@@ -2078,8 +2080,11 @@ BOUNDED_LOAD_abc_size:
 PROPORTION:
   root: proportion
   statement: >
-    Relationships follow a declared scale, never an arbitrary value.
-    A number with no derivation cannot be checked or changed as a set.
+    Give each part a scale appropriate to its purpose and relationships.
+    Use declared scales for coherence; justify optical corrections by
+    observed improvement. Preserve meaningful differences in magnitude,
+    grouping and visual weight. A number without derivation cannot be
+    checked or changed as a set.
   severity: warning
   resolution: review
   mechanical: Master::Law::Surface#proportion

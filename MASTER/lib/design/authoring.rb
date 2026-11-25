@@ -26,7 +26,7 @@ module Master
         - Plan: name the palette, the type roles, the layout and the one memorable element. Take them from the direction below and the app's own tokens, not from habit.
         - Review: if the plan is what you would write for any similar page, change the part that is generic.
         - Complete: a surface is finished when its empty, loading, error and worst-case states exist, not when its happy path renders.
-        - Critique: before returning, remove one decoration that serves nothing.
+        - Critique: compare the relative size, alignment and visual weight of neighboring elements; remove only decoration that serves nothing.
       TEXT
 
       # The fold has tools and turns, so it plans in the open and leaves the
@@ -39,7 +39,7 @@ module Master
         - Review the plan: replace any part you would write for any similar page.
         - Build with the app's existing primitives and partials; add a token only when no existing one fits.
         - Complete: add the missing states and responsive behavior before you call it done.
-        - Critique: render it if you can, and remove one decoration that serves nothing.
+        - Critique: render narrow, intermediate and wide compositions if available; inspect optical alignment, meaningful spacing, visual weight and focal hierarchy. Remove only decoration that serves nothing.
       TEXT
 
       TELLS = <<~TEXT.chomp

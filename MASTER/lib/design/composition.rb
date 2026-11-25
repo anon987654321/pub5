@@ -35,7 +35,7 @@ module Master
         variants = spec.fetch("variants", {})
         summary = variants.map { |name, value| "#{name}:#{value.fetch("reference")}/#{value.fetch("structure")}" }
         suffix = summary.empty? ? "" : " variants=#{summary.join(",")}"
-        "composition=#{key} grid=#{spec.fetch("grid")} mobile=#{spec.fetch("mobile")} focal_order=#{Array(spec.fetch("focal_order")).join(">")}#{suffix}"
+        "composition=#{key} grid=#{spec.fetch("grid")} mobile=#{spec.fetch("mobile")} focal_order=#{Array(spec.fetch("focal_order")).join(">")}#{suffix}; #{Master.laws_document(root:).fetch("PROPORTION").fetch("statement").strip}"
       end
 
       def composition_key(school:, purpose:)
