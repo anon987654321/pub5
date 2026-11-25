@@ -69,7 +69,7 @@ module Master
             return
           end
 
-          result = critique(files.first(FILES_PER_ROUND), budget:)
+          result = critique(rotating_files(files, pass), budget:)
           return unless result&.ok?
 
           value = result.value!
@@ -148,6 +148,9 @@ module Master
           - inversion: assume the proposed repair is wrong and state what breaks, where, and when
           - panel synthesis: compare each voice by evidence, confidence and falsifier; never choose by majority alone
           - counterfactual: state the smallest measurement that separates the proposed repair from preserving the current behavior
+          - completeness: trace documented user journeys through entrypoints, authorization, persistence, error recovery and tests; distinguish missing implementation from unsupported new requirements
+          - detector health: investigate repeated false positives against executable good/bad fixtures; do not relax laws merely to silence them
+          - cross-critique: challenge other specialists by evidence and counterexample, revise your own proposal when refuted, and permit the judge to choose none
           - completeness: never accept truncated, placeholder, or simulated work as evidence; require the smallest falsifiable proof
 
           For every actionable finding, anchor it to a repository-relative file plus stable line or symbol.

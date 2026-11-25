@@ -74,6 +74,15 @@ class TestProblemGraph < Minitest::Test
     assert problems.all? { |problem| problem.files.size <= Master::Fix::ProblemGraph::MAX_FILES }
   end
 
+  def test_connected_findings_respect_both_bounds_and_input_order
+    rows = 40.times.map { |index| finding("MASTER/lib/#{index}.rb", "NO_GOD_CLASS", "shared", ["MASTER/lib/shared.rb"]) }
+    problems = @graph.call(rows)
+    assert_equal rows.size, problems.sum(&:size)
+    assert problems.all? { |item| item.size <= Master::Fix::ProblemGraph::MAX_FINDINGS }
+    assert problems.all? { |item| item.files.size <= Master::Fix::ProblemGraph::MAX_FILES }
+    assert_equal problems.map(&:id), @graph.call(rows.reverse).map(&:id)
+  end
+
   def test_retired_size_only_laws_have_no_structural_operation
     %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
       refute Master::Fix::ProblemGraph::LAW_OPERATIONS.key?(id)

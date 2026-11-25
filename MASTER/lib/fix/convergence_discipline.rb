@@ -171,6 +171,8 @@ module Master
 
         current = @history[-1]
         before = @history[-2]
+        return false unless current[:captured_files] == before[:captured_files]
+
         comparison = current[:risk_vector] <=> before[:risk_vector]
         comparison&.negative? == true
       end
@@ -326,7 +328,8 @@ module Master
         return false if @history.size < cycles + 1
 
         deltas = @history.last(cycles + 1).each_cons(2).map do |a, b|
-          (a[:score] - b[:score]).abs.to_f
+          # A severity change is progress even when the total count is flat.
+          a[:risk_vector] == b[:risk_vector] ? (a[:score] - b[:score]).abs.to_f : Float::INFINITY
         end
         deltas.all? { |delta| delta <= limits["diminishing_delta"].to_f }
       end
@@ -526,6 +529,8 @@ module Master
           evidence rule: unreadable, unmeasured, truncated, or simulated work is not a pass
           leverage rule: fix the change with the widest proven causal reach, not the loudest finding
           unfinished-work rule: preserve fertile uncertainty; delete only after consumer and value evidence
+          craftsmanship: trace purpose and root causes, compare materially different repairs, challenge assumptions with counterexamples, and verify the whole affected contract
+          detector rule: repeated false positives or refusals demand investigation of the detector, not automatic weakening of the law
           #{hygiene_contract}
           #{Master::Cognition::Intelligence.orientation_contract}
           #{Master::Cognition::Intelligence.reasoning_contract}

@@ -101,6 +101,15 @@ class TestConvergenceDiscipline < Minitest::Test
     assert_equal third[:finding_digest], @discipline.receipt.fetch(:finding_digest)
   end
 
+  def test_flat_count_with_improving_severity_is_not_diminishing_returns
+    @discipline.begin_run([@path])
+    %i[critical error warning info].each_with_index do |severity, index|
+      @discipline.observe(pass: index + 1, findings: [{ law: "A", severity: }], files: [@path], progressed: true)
+    end
+    assert @discipline.improving?
+    refute @discipline.diminishing_returns?
+  end
+
   def test_adaptive_decision_requires_progress_and_respects_hard_limits
     assert_equal :no_improvement,
                  @discipline.adaptive_decision(deadline_expired: false, pass_limit: 1, absolute_limit: 60).reason

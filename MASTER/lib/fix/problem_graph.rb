@@ -64,7 +64,7 @@ module Master
         rows = Array(findings).filter_map { |row| normalize(row) }
         return [] if rows.empty?
 
-        components(rows).map { |group| problem(group) }
+        components(rows.sort_by { |path, law, message, related| [path, law, message, related.sort] }).map { |group| problem(group) }
           .sort_by { |item| [operation_position(item.primary_operation), -item.size, item.id] }
       end
 
@@ -89,11 +89,10 @@ module Master
           group = [seed]
 
           loop do
-            additions, rest = pending.partition { |row| related?(group, row) && within_bounds?(group, row) }
-            break if additions.empty?
+            index = pending.index { |row| related?(group, row) && within_bounds?(group, row) }
+            break unless index
 
-            group.concat(additions)
-            pending = rest
+            group << pending.delete_at(index)
           end
 
           groups << group
@@ -123,7 +122,7 @@ module Master
           .sort_by { |operation| operation_position(operation) }
 
         laws = group.map { |_path, law, _message, _related| law }.uniq
-        id_source = [files, laws, group.map { |path, law, message, _| [path, law, message] }].inspect
+        id_source = [files, laws.sort, group.map { |path, law, message, _| [path, law, message] }.sort].inspect
         id = Digest::SHA256.hexdigest(id_source)[0, 10]
 
         confidence =

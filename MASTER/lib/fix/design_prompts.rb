@@ -44,6 +44,8 @@ module Master
           alignment, grouping, deliberate whitespace and a clear focal point? Do not reward uniformity for its
           own sake. Reject clipped, cramped or less legible content and lost interaction affordances.
           Distinguish prose measure from display type, and intentional group separation from accidental irregularity.
+          Compare content priority, visual rhythm, optical rather than merely mathematical alignment, and whether each grouping earns its space.
+          Preserve intentional identity and distinguish expressive composition from accidental inconsistency.
           Name the specific visible relationship that improves. Say "same" if neither is demonstrably better.
           Return only JSON: {"better": "A" or "B" or "same", "why": "<one short sentence>"}.
         TEXT
