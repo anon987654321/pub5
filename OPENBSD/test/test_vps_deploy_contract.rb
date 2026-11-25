@@ -1046,6 +1046,21 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes install, "install --frozen --jobs 1"
   end
 
+  # c7c69d670 inverted the arity check, so every two-argument task, the only
+  # shape run_rails_as_app sends, exited 64 on vm23 (2026-11-25). A non-root
+  # run that passes the arity check stops at the root check with 77 instead.
+  def test_two_argument_rails_tasks_pass_the_arity_check
+    path = File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh")
+    skip "ksh is not installed" unless File.executable?("/bin/ksh")
+    skip "the root check cannot be observed as root" if Process.uid.zero?
+    status = ->(*argv) { Open3.capture2e("/bin/ksh", path, *argv).last.exitstatus }
+
+    %w[bundle-check bundle-sibling-hydrate bundle-install db-prepare].each do |task|
+      assert_equal 77, status.call("bsdports", task), task
+    end
+    assert_equal 64, status.call("bsdports", "bundle-check", "extra")
+  end
+
   def test_vps_deploy_and_master_deployer_are_build_free
     master = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")

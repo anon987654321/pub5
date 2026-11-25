@@ -15,7 +15,7 @@ case "$app" in
 esac
 case "$task" in
   bundle-check|bundle-sibling-hydrate|bundle-install|db-prepare|db-seed|db-storage-migrate|npm-cache|\
-overlay-initializers|overlay-public) [[ "$#" -ne 2 ]] || exit 64 ;;
+overlay-initializers|overlay-public) [[ "$#" -eq 2 ]] || exit 64 ;;
   bundle-cas-hydrate)
     [ "$#" -eq 3 ] || exit 64
     printf "%s\n" "$database" | /usr/bin/grep -Eq "^ruby([0-9]{2}|[0-9]+[.][0-9]+)\$" || exit 64
