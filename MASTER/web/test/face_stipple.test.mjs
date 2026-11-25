@@ -62,7 +62,7 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.match(system, /attribute float aSolo;/);
   assert.match(system, /vSolo = aSolo;/);
   assert.equal((system.match(/varying float vSolo;/g) || []).length, 2);
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
   assert.match(system, /if \(vSolo < 0\.5 && vThreshold > uDensity\) discard;/);
   assert.match(system, /gl_FragColor = vec4\(vec3\(0\.9333333\), 1\.0\)/);
   assert.match(system, /vAlpha = 1\.0/);
@@ -122,8 +122,8 @@ test("fingerprint ridges and radial signal waves stay inside the bounded fixed-s
   assert.match(system, /float waveFront = exp\(-abs\(scatterRadius - waveRadius\) \* 7\.0\)/);
   assert.match(system, /float ridgeCoordinate = ridgeRadius \+/);
   assert.match(system, /float ridgePattern = 0\.5 \+ 0\.5 \* cos\(/);
-  assert.match(system, /ridgeTone, 0\.0, 1\.0\)/);
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /floor\(gl_PointCoord \* 3\.0\)/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
   assert.doesNotMatch(system, /requestAnimationFrame/);
 });
 
@@ -138,7 +138,7 @@ test("Hollow Gaze and Faultline are semantic, bounded voids in the fixed-size fi
   assert.match(system, /vFaultline = \(1\.0 - smoothstep\(uFaultlineHalfWidth/);
   assert.match(system, /if \(vSolo < 0\.5 && fault > 0\.62\) discard;/);
   assert.match(system, /faultlineStrengthForState\(mode, voids\.faultline\)/);
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
   assert.match(tokens, /density_scale:\s*0\.45/);
 });
 
@@ -149,7 +149,7 @@ test("aliased face contours use bounded tokenised position quantisation without 
   assert.match(system, /uniform float uAliasGrid;/);
   assert.match(system, /floor\(p\.xy \/ uAliasGrid \+ 0\.5\) \* uAliasGrid/);
   assert.match(system, /p\.xy = mix\(p\.xy, stepped, uAliasStrength\)/);
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
 });
 
 test("MASTER randomly morphs among the four original abstract face expressions", () => {
@@ -296,7 +296,7 @@ test("stipple breath is luminance-only, survives idle stillness and freezes for 
   assert.match(system, /float breath = 1\.0 \+ uBreathScale \* 0\.05 \* sin\(uTime \* 0\.5712\)/);
   assert.match(system, /u\.uBreathScale\.value = reducedMotionEnabled\(state\) \? 0 : 1;/);
   assert.match(system, /u\.uMotionScale\.value = motion;/);
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
   assert.match(system, /uLuminosity \* breath/);
 });
 
@@ -581,7 +581,7 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.doesNotMatch(system, /float depthScale = clamp/);
   assert.doesNotMatch(tokens, /point_size:\s*$/m);
   // Geometry carries depth; ink and point size stay fixed.
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
   assert.match(system, /vAlpha = 1\.0/);
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
@@ -936,7 +936,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(api.glyphForDepth(1), "●");
   assert.equal(api.canonicalSwarmMode({ mode: "listening" }), "attentive");
   assert.equal(api.modeMultipliersFor({ mode: "thinking" }).noise, 0.22);
-  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(system, /gl_PointSize = 3\.0;/);
 
   const moving = api.buildFromSamples(THREE, [
     { x: 0.8, y: 0, z: 0, zone: 0, bias: 1 },
