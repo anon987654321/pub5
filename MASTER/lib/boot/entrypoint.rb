@@ -265,14 +265,9 @@ module Master
           "root" => root,
           "at" => Time.now.utc.iso8601,
         }
-        # The persistent-state layer refuses group/world-writable /fix state,
-        # so the receipt must land private no matter what umask the caller
-        # had. mkdir_p's mode only shapes created leaves (and the umask still
-        # narrows it), hence the explicit chmod that also normalizes any
-        # broad legacy directory left by older versions.
         dir = File.dirname(path)
         FileUtils.mkdir_p(dir, mode: 0o700)
-        File.chmod(0o700, dir)
+        close_state_directory_to_others(dir)
         tmp = "#{path}.#{Process.pid}.tmp"
         File.write(tmp, JSON.generate(payload) + "\n", mode: "w", encoding: "UTF-8", perm: 0o600)
         File.rename(tmp, path)
@@ -280,6 +275,22 @@ module Master
         Master::Trace::Dmesg.status("boot0", "receipt unavailable, #{e.class}: #{e.message}", io: out)
       ensure
         File.delete(tmp) if defined?(tmp) && tmp && File.exist?(tmp)
+      end
+
+      # Clear "other", keep the group: rc.d/master shares MASTER/.master as
+      # dev:master 2775 so the daemon can create its TTS sockets there. A chmod
+      # 0700 here ran on every dev boot, locked the daemon out, and failed the
+      # vm23 deploy smoke on "tts_socket false" (2026-11-25). /fix state is
+      # MasterPaths.fix_state, a different directory whose own lock keeps it
+      # private. Same rule as Ground::SqliteStore#harden_sqlite_directory, and
+      # EPERM is rescued for the same reason: chmod belongs to the owner, and
+      # the daemon must not fail its boot over a directory dev owns.
+      def close_state_directory_to_others(dir)
+        mode = File.stat(dir).mode & 0o7777
+        (mode & 0o007).zero? || File.chmod(mode & 0o7770, dir).positive?
+      rescue Errno::EPERM, Errno::ENOSYS, Errno::EOPNOTSUPP
+        # Not the owner: left as found, and reported as not closed.
+        false
       end
 
       def same_file?(a, b)

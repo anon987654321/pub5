@@ -121,14 +121,17 @@ class TestBootEntrypoint < Minitest::Test
     end
   end
 
-  def test_boot_receipt_normalizes_a_broad_legacy_directory
+  # rc.d/master shares MASTER/.master with the daemon's group so it can create
+  # its TTS sockets; a dev boot clamping it to 0700 locked the daemon out.
+  def test_boot_receipt_clears_other_but_keeps_the_shared_group
     Dir.mktmpdir("master-entrypoint") do |root|
       dir = File.join(root, ".master")
-      FileUtils.mkdir_p(dir, mode: 0o775)
+      FileUtils.mkdir_p(dir)
+      File.chmod(0o775, dir)
 
       Master::Boot::Entrypoint.send(:write_boot_receipt!, root:, out: StringIO.new)
 
-      assert_equal "700", format("%03o", File.stat(dir).mode & 0o777)
+      assert_equal "770", format("%03o", File.stat(dir).mode & 0o777)
       assert_equal "600", format("%03o", File.stat(File.join(dir, "boot.json")).mode & 0o777)
     end
   end
