@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_25_090000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_25_180000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -419,11 +419,13 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_25_090000) do
     t.integer "dating_prompt_id"
     t.integer "likee_id", null: false
     t.integer "liker_id", null: false
+    t.integer "photo_attachment_id"
     t.datetime "updated_at", null: false
     t.index ["dating_prompt_id"], name: "index_dating_likes_on_dating_prompt_id"
     t.index ["likee_id"], name: "index_dating_likes_on_likee_id"
     t.index ["liker_id", "likee_id"], name: "index_dating_likes_on_liker_id_and_likee_id", unique: true
     t.index ["liker_id"], name: "index_dating_likes_on_liker_id"
+    t.index ["photo_attachment_id"], name: "index_dating_likes_on_photo_attachment_id"
   end
 
   create_table "dating_location_pings", force: :cascade do |t|
@@ -2193,6 +2195,7 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_25_090000) do
   add_foreign_key "dating_daily_picks", "users"
   add_foreign_key "dating_dislikes", "users", column: "dislikee_id"
   add_foreign_key "dating_dislikes", "users", column: "disliker_id"
+  add_foreign_key "dating_likes", "active_storage_attachments", column: "photo_attachment_id", on_delete: :nullify
   add_foreign_key "dating_likes", "dating_prompts"
   add_foreign_key "dating_likes", "users", column: "likee_id"
   add_foreign_key "dating_likes", "users", column: "liker_id"

@@ -27,6 +27,12 @@ nb:
     confirm_remove_prompt: "Fjerne dette svaret? De andre svarene dine blir værende."
     prompt_answer: "Svaret ditt"
     add_prompt: "Legg til svar"
+    like_specific: "Lik et bilde eller svar"
+    photo_number: "Bilde %{number}"
+    like_subject: "Hva likte du?"
+    whole_profile: "Hele profilen"
+    like_comment: "Legg til en kommentar (valgfritt)"
+    liked_photo: "Likte dette bildet"
     location_status:
       unsupported: "Denne nettleseren gir ikke tilgang til posisjon."
       waiting: "Venter på tillatelsen din…"

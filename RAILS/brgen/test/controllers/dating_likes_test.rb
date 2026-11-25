@@ -65,6 +65,24 @@ class DatingLikesTest < ActionDispatch::IntegrationTest
     assert_nil Dating::Like.find_by(liker_id: @me.id, likee_id: @them.id).dating_prompt_id
   end
 
+  test "a photo like records only a photo belonging to its subject" do
+    photo = @them.dating_profile.photos.first
+    sign_in_as(@me)
+    in_dating
+
+    assert_difference -> { Dating::Like.count }, 1 do
+      post dating.likes_path, params: { user_id: @them.id, subject: "photo:#{photo.id}", comment: "Flott bilde" }
+    end
+    like = Dating::Like.find_by!(liker_id: @me.id, likee_id: @them.id)
+    assert_equal photo.id, like.photo_attachment_id
+    assert_nil like.dating_prompt_id
+    assert_equal "Flott bilde", like.comment
+
+    post dating.likes_path, params: { user_id: @them.id, subject: "photo:#{@me.dating_profile.photos.first.id}" }
+    assert_response :not_found
+    assert_equal photo.id, like.reload.photo_attachment_id
+  end
+
   test "a plain like with no comment is still a like" do
     sign_in_as(@me)
     in_dating

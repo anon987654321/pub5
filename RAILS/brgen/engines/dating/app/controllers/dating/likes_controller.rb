@@ -19,6 +19,19 @@ class Dating::LikesController < Dating::BaseController
     end
     like = Dating::Like.find_or_initialize_by(liker: Current.user, likee: user)
     like.dating_prompt_id = prompt_id_for(profile)
+    like.photo_attachment_id = nil
+    if params[:subject].present?
+      kind, id = params[:subject].to_s.split(":", 2)
+      case kind
+      when "photo"
+        like.photo_attachment_id = profile.photos_attachments.find(id).id
+        like.dating_prompt_id = nil
+      when "prompt"
+        like.dating_prompt_id = profile.prompts.find(id).id
+      else
+        return head :unprocessable_entity
+      end
+    end
     like.comment = params[:comment].presence
     if like.save
       redirect_back fallback_location: root_path
@@ -34,7 +47,7 @@ class Dating::LikesController < Dating::BaseController
     @likes = Dating::Like.waiting_on(Current.user)
                          .where(liker_id: Dating::Profile.visible.with_photos.select(:user_id))
                          .where.not(liker_id: dating_blocked_users)
-                         .includes(:dating_prompt, liker: { dating_profile: { photos_attachments: :blob } })
+                         .includes(:dating_prompt, photo_attachment: :blob, liker: { dating_profile: { photos_attachments: :blob } })
                          .order(created_at: :desc)
                          .limit(50)
     # One read for the Block/Unblock choice on every card, not one per card.

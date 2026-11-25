@@ -1,5 +1,6 @@
 <% display_name = profile.user&.display_name.presence || t("chat.anon") %>
-<% first_prompt = profile.prompts.min_by { |prompt| [prompt.position.to_i, prompt.id] } %>
+<% prompts = profile.prompts.sort_by { |prompt| [prompt.position.to_i, prompt.id] } %>
+<% first_prompt = prompts.first %>
 <article
   class="swipe-card swipe-card--stack-<%= index %>"
   data-user-id="<%= profile.user_id %>"
@@ -45,6 +46,30 @@
       <%= tag.li "#{t("dating.looking_for")} #{profile.looking_for_label}" if profile.looking_for.present? %>
     </ul>
     <% if Current.user.present? && Current.user != profile.user %>
+      <details data-swipe-ignore="true">
+        <summary><%= t("dating.like_specific") %></summary>
+        <% photos = profile.photos.to_a %>
+        <div class="photo-strip">
+          <% photos.each_with_index do |photo, number| %>
+            <figure>
+              <%= lazy_image_tag photo, alt: t("dating.photo_number", number: number + 1), class: "photo-thumb" %>
+              <figcaption><%= t("dating.photo_number", number: number + 1) %></figcaption>
+            </figure>
+          <% end %>
+        </div>
+        <% prompts.each do |prompt| %>
+          <p><strong><%= prompt.question_text %></strong> <%= prompt.answer %></p>
+        <% end %>
+        <%= form_with url: likes_path, method: :post, data: { turbo_frame: "_top" } do |f| %>
+          <%= f.hidden_field :user_id, value: profile.user_id, id: nil %>
+          <%= f.label :subject, t("dating.like_subject"), for: "like-subject-#{profile.id}" %>
+          <%= f.select :subject, photos.each_with_index.map { |photo, n| [t("dating.photo_number", number: n + 1), "photo:#{photo.id}"] } +
+                prompts.map { |prompt| [prompt.question_text, "prompt:#{prompt.id}"] }, { include_blank: t("dating.whole_profile") }, { id: "like-subject-#{profile.id}" } %>
+          <%= f.label :comment, t("dating.like_comment"), for: "like-comment-#{profile.id}" %>
+          <%= f.text_area :comment, rows: 2, maxlength: 280, id: "like-comment-#{profile.id}" %>
+          <%= f.submit t("actions.like"), class: "button button-primary" %>
+        <% end %>
+      </details>
       <details class="swipe-overflow">
         <summary aria-label="<%= t("dating.more") %>"><%= icon :more, size: 18 %></summary>
         <div class="swipe-overflow-menu">

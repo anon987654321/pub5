@@ -23,11 +23,14 @@
 
         <%# The comment is the whole point of the Hinge interaction: it says
             what they liked, so the reply has somewhere to start. %>
+        <% if like.dating_prompt %>
+          <p><%= like.dating_prompt.question_text %></p>
+          <p><%= tag.em like.dating_prompt.answer %></p>
+        <% elsif like.photo_attachment %>
+          <p><%= t("dating.liked_photo") %></p>
+          <%= lazy_image_tag like.photo_attachment, alt: t("dating.liked_photo"), class: "photo-thumb" %>
+        <% end %>
         <% if like.commented? %>
-          <% if like.dating_prompt %>
-            <p><%= like.dating_prompt.question_text %></p>
-            <p><%= tag.em like.dating_prompt.answer %></p>
-          <% end %>
           <blockquote class="like-comment"><%= like.comment %></blockquote>
         <% end %>
 

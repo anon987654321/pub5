@@ -27,6 +27,12 @@ en:
     confirm_remove_prompt: "Remove this answer? Your other answers stay."
     prompt_answer: "Your answer"
     add_prompt: "Add answer"
+    like_specific: "Like a photo or answer"
+    photo_number: "Photo %{number}"
+    like_subject: "What did you like?"
+    whole_profile: "Whole profile"
+    like_comment: "Add a comment (optional)"
+    liked_photo: "Liked this photo"
     location_status:
       unsupported: "This browser does not provide location access."
       waiting: "Waiting for your permission…"
