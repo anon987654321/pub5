@@ -1737,6 +1737,38 @@ PRINT_PAGE_CANON:
   severity: warning
   resolution: review
 
+DOCUMENT_FOLIO_IN_THE_FOOT:
+  parent: PRINT_PAGE_CANON
+  statement: >
+    A printed document's pages carry a folio in the foot, built into the
+    page's own margin boxes, so every sheet the reader holds names its place.
+  severity: warning
+  resolution: review
+
+DOCUMENT_HEADING_STAYS_WITH_BODY:
+  parent: PRINT_PAGE_CANON
+  statement: >
+    A printed document's heading stays with the body block it names: the
+    page never breaks between a heading and its first paragraph.
+  severity: warning
+  resolution: review
+
+DOCUMENT_TABULAR_FIGURES:
+  parent: PRINT_PAGE_CANON
+  statement: >
+    A printed document's numeric tables set tabular figures, so amounts and
+    counts align in their columns instead of jittering by glyph width.
+  severity: warning
+  resolution: review
+
+DOCUMENT_WIDOW_ORPHAN_CONTROL:
+  parent: PRINT_PAGE_CANON
+  statement: >
+    A printed document's paragraphs set widow and orphan control, so a page
+    never opens or closes on a single stray line.
+  severity: warning
+  resolution: review
+
 BUSPLAN_PAIR_FOLDER:
   parent: BRINGHURST
   statement: >
@@ -3077,6 +3109,10 @@ law_catalogue:
     DIVERGED_BRANCH_SYNC: {definition_sources: [MASTER/law/practice.rb], severity: warning}
     DIVERGENT_CHANGE: {definition_sources: [MASTER/law/universal.rb], severity: warning}
     DOCUMENTATION_FOLLOWS_CODE: {definition_sources: [MASTER/law/practice.rb], severity: error}
+    DOCUMENT_FOLIO_IN_THE_FOOT: {definition_sources: [MASTER/law/document.rb], severity: warning, languages: [css, html]}
+    DOCUMENT_HEADING_STAYS_WITH_BODY: {definition_sources: [MASTER/law/document.rb], severity: warning, languages: [css, html]}
+    DOCUMENT_TABULAR_FIGURES: {definition_sources: [MASTER/law/document.rb], severity: warning, languages: [css, html]}
+    DOCUMENT_WIDOW_ORPHAN_CONTROL: {definition_sources: [MASTER/law/document.rb], severity: warning, languages: [css, html]}
     DOLLAR_PAREN: {definition_sources: [MASTER/law/shell.rb], severity: warning, languages: [zsh]}
     DOMAIN_LANGUAGE: {definition_sources: [MASTER/law/universal.rb], severity: warning}
     DONT_OUTRUN_HEADLIGHTS: {definition_sources: [MASTER/law/universal.rb], severity: info}
