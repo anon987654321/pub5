@@ -291,27 +291,37 @@ module Master
       # Domain-specific questions are evidence prompts, not objective verdicts.
       # Route explicit craft requests, not incidental domain mentions.
       def creative_medium(text)
+        creative_media(text).first
+      end
+
+      def creative_media(text)
         value = text.to_s
-        return unless value.match?(/\b(?:what makes|how to|how (?:can|do) (?:we|i)|compose|create|design|critique|refine|improve|write|draft|beauty|craft|beautiful)\b/i)
-        case value
-        when /\b(?:software|code|repository|refactor|ruby)\b/i then "software"
-        when /\b(?:architecture|architectural|courtyard|interior design)\b/i then "architecture"
-        when /\b(?:music|song|beat|groove|harmony|dilla|sound design)\b/i then "music"
-        when /\b(?:photograph\w*|portrait|selfie|camera)\b/i then "photography"
-        when /\b(?:film|cinema\w*|video|cinematic)\b/i then "cinema"
-        when /\b(?:writing|prose|essay|letter|story|poem|copy)\b/i then "writing"
-        when /\b(?:design|typography|layout|interface|ui)\b/i then "design"
-        end
+        return [] unless value.match?(/\b(?:what makes|how to|how (?:can|do) (?:we|i)|compose|create|design|critique|refine|improve|write|draft|beauty|craft|beautiful)\b/i)
+        matches = [
+          [/\b(?:software|code|repository|refactor|ruby)\b/i, "software"],
+          [/\b(?:architecture|architectural|courtyard|interior design)\b/i, "architecture"],
+          [/\b(?:music|song|beat|groove|harmony|dilla|sound design)\b/i, "music"],
+          [/\b(?:photograph\w*|portrait|selfie|camera)\b/i, "photography"],
+          [/\b(?:film|cinema\w*|video|cinematic)\b/i, "cinema"],
+          [/\b(?:writing|prose|essay|letter|story|poem|copy)\b/i, "writing"],
+          [/\b(?:design|typography|layout|interface|ui)\b/i, "design"],
+        ].filter_map { |pattern, medium| medium if pattern.match?(value) }
+        matches.delete("architecture") if matches.include?("software") && value.match?(/\bsoftware architecture\b/i) && !value.match?(/\b(?:architectural|courtyard|interior design|building)\b/i)
+        matches
       end
 
       def creative_context(domain, study: reference_study)
         lenses = study.fetch("creative_lenses", {})
         return "" unless lenses.is_a?(Hash)
 
+        domains = Array(domain).map(&:to_s).uniq
         rows = lenses.filter_map do |name, row|
-          next unless row.is_a?(Hash) && row[domain.to_s].is_a?(String)
+          next unless row.is_a?(Hash)
 
-          "#{name} [#{Array(row["laws"]).join(",")}]: #{row.fetch(domain.to_s)}"
+          observations = domains.filter_map { |medium| "#{medium}: #{row[medium]}" if row[medium].is_a?(String) }
+          next if observations.empty?
+
+          "#{name} [#{Array(row["laws"]).join(",")}]: #{observations.join("; ")}"
         end
         return "" if rows.empty?
 
