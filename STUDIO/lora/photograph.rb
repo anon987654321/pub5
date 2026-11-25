@@ -29,6 +29,9 @@ def studio_photograph_actions
       )
       result = picture.write_shot(shot, grade_seed: request["grade_seed"])
       quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      # The original is read for the grade delta above, then discarded: the
+      # studio keeps developed frames only.
+      picture.discard_raw_renders(result)
       result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     end,
     "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
@@ -59,16 +62,15 @@ def studio_photograph_actions
         inference_profile: request["inference_profile"]
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
-        preset: request["heavy"] ? nil : request.fetch("preset", "house"), grade_seed: request["grade_seed"],
-        chain_presets: Array(request["chain_presets"]), discard_raw: request["discard_raw"] ? true : false
+        preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"],
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true
       )
     end,
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(
         subject:, engine: request["engine"], inference_profile: request["inference_profile"],
-        direction: request.fetch("direction", "varied"), heavy: request["heavy"] ? true : false,
-        chain_presets: Array(request["chain_presets"]), discard_raw: request["discard_raw"] ? true : false
+        direction: request.fetch("direction", "varied")
       ).run(
         count: request.fetch("count", 4)
       )
@@ -113,6 +115,7 @@ def studio_render_candidates(request)
     begin
       result = picture.write_shot(shot, grade_seed: request["grade_seed"], prediction_budget: budget)
       quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      picture.discard_raw_renders(result)
       result.merge("index" => index, "state" => quality.fetch("delivery"),
                    "quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     rescue StandardError => error
@@ -151,8 +154,7 @@ end
 
 def studio_photograph_options(argv)
   options = {
-    film: false, duration: 5, count: 4, all_subjects: false, inference_profile: nil, heavy: false,
-    chain_presets: [], discard_raw: false,
+    film: false, duration: 5, count: 4, all_subjects: false, inference_profile: nil,
     subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild")
   }
   OptionParser.new do |parser|
@@ -166,12 +168,7 @@ def studio_photograph_options(argv)
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
     parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental or snapshot") { |value| options[:direction] = value }
-    parser.on("--preset NAME", "named laboratory grade (default house); \"heavy\" is the legacy random pass") { |value| options[:preset] = value }
-    parser.on("--heavy", "develop with the legacy random heavy pass instead of the recipe's named grade") { options[:heavy] = true }
-    parser.on("--chain-preset NAME", "stack another laboratory grade after the first; repeatable") do |value|
-      options[:chain_presets] << value
-    end
-    parser.on("--discard-raw", "keep only the developed frames, not the ungraded originals") { options[:discard_raw] = true }
+    parser.on("--preset NAME", "named laboratory grade for a single photograph (default house)") { |value| options[:preset] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -182,18 +179,14 @@ def studio_photograph_options(argv)
     parser.on("--models", "list the Replicate engines and exit") { options[:models] = true }
     parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
   end.parse!(argv)
-  options[:heavy] = true if options[:preset].to_s == "heavy"
   options
 end
 
 # All-subject generation is independent per person. Every subject is preflighted
 # before the first prediction, but one person's missing permission/model must not
 # prevent another subject with a complete, valid preflight from proceeding.
-def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil, heavy: false,
-                               chain_presets: [], discard_raw: false)
-  factory = series_factory || lambda { |subject|
-    Studio::Visual::SelfieSeries.new(subject:, inference_profile:, heavy:, chain_presets:, discard_raw:)
-  }
+def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil)
+  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:, inference_profile:) }
   prepared = subjects.map do |subject|
     begin
       series = factory.call(subject)
@@ -304,8 +297,7 @@ if $PROGRAM_NAME == __FILE__
 
       studio_all_subjects_render(
         subjects: %w[johann ragnhild merethe], count: options[:count] || 4,
-        inference_profile: options[:inference_profile], heavy: options[:heavy],
-        chain_presets: options[:chain_presets], discard_raw: options[:discard_raw]
+        inference_profile: options[:inference_profile]
       )
     elsif options[:series]
       # A series uses the subject's references and the catalogue default
@@ -314,8 +306,7 @@ if $PROGRAM_NAME == __FILE__
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
         subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile],
-        direction: options.fetch(:direction, "varied"), heavy: options[:heavy],
-        chain_presets: options[:chain_presets], discard_raw: options[:discard_raw]
+        direction: options.fetch(:direction, "varied")
       ).run(
         count: options[:count] || 4
       )
@@ -339,8 +330,8 @@ if $PROGRAM_NAME == __FILE__
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
         prompt, film: options[:film], duration: options[:duration],
-        preset: options[:heavy] ? nil : options.fetch(:preset, "house"),
-        chain_presets: options[:chain_presets], discard_raw: options[:discard_raw]
+        preset: options.fetch(:preset, "house"),
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true
       )
     end
   end

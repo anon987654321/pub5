@@ -206,6 +206,14 @@ class TestStudioLoraCli < Minitest::Test
     assert_empty arguments
   end
 
+  # The development decision is a house default, not something an operator has
+  # to remember: the flags that once set it are gone.
+  def test_photograph_cli_rejects_flags_for_the_house_development_defaults
+    %w[--heavy --chain-preset --discard-raw].each do |flag|
+      assert_raises(OptionParser::InvalidOption) { studio_photograph_options([flag]) }
+    end
+  end
+
   def test_photograph_api_defaults_to_four_images_for_a_subject
     captured = {}
     fake_series = Object.new
@@ -218,7 +226,7 @@ class TestStudioLoraCli < Minitest::Test
       captured[:subject] = subject
       captured[:engine] = engine
       captured[:inference_profile] = inference_profile
-      captured[:heavy] = rest.fetch(:heavy, false)
+      captured[:overrides] = rest
       fake_series
     }) do
       result = studio_photograph_actions.fetch("series").call({})
@@ -228,7 +236,8 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal "ragnhild", captured.fetch(:subject)
     assert_nil captured.fetch(:engine)
     assert_nil captured.fetch(:inference_profile)
-    assert_equal false, captured.fetch(:heavy)
+    assert_equal({ direction: "varied" }, captured.fetch(:overrides),
+                 "the series takes its development from the house defaults, not from the request")
     assert_equal 4, captured.fetch(:count)
   end
 

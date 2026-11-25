@@ -286,6 +286,12 @@ module Studio
                       pastel_portrait instant_pack aged_kodachrome street noir
                       saturated_negative golden_age contact_print analog_scan
                       vhs_tape crt_broadcast].freeze
+
+      # The house decision, so nobody has to remember a flag: every sitting is
+      # developed with its own named grade, then one shared second pass carries
+      # the series together, and only the developed frame is kept. Change the
+      # look here, once, rather than at each call site.
+      HOUSE_CHAIN = %w[aged_kodachrome].freeze
       SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
       SHOT_OPTIONAL = %w[preset key_side catchlight focus].freeze
       KEY_SIDE = {
