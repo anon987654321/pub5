@@ -20,7 +20,6 @@ no_new_markdown:
   established_doc_roots:
     - MASTER/README.md
     - MASTER/AGENTS.md
-    - MASTER/FACE_WORLD.md
     - AGENTS.md
     - README.md
     - CLAUDE.md
