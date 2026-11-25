@@ -128,6 +128,10 @@ module Studio
         if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
           raise ArgumentError, "unknown laboratory preset"
         end
+        unless grade_seed.nil?
+          grade_seed = Integer(grade_seed)
+          raise ArgumentError, "grade seed out of range" unless grade_seed.between?(0, 2_147_483_647)
+        end
         validate_model!
         if film
           validate_film_model!
@@ -135,7 +139,8 @@ module Studio
         end
         FileUtils.mkdir_p(@directory)
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
-        stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
+        default_stem = preset ? "#{@subject}_selfie_shot" : @subject
+        stem = [safe_stem(output_stem || default_stem), stamp, SecureRandom.hex(3)].join("_")
         @compiled_capture = compiled
         @prediction_budget = prediction_budget
         @capture_receipt = nil

@@ -324,6 +324,12 @@ class TestSelfieSeries < Minitest::Test
     assert_equal "24mm", phone.dig("shot", "lens")
   end
 
+  def test_named_render_refuses_invalid_seed_before_prediction
+    picture = Studio::Visual::IdeaPicture.new(subject: "probe", client: @client, directory: @dir)
+    assert_raises(ArgumentError) { picture.write("portrait", film: false, preset: "house", grade_seed: -1) }
+    assert_empty @client.predictions
+  end
+
   def test_prediction_budget_refuses_extra_dispatches
     budget = Studio::Visual::PredictionBudget.new(2)
     budget.consume!

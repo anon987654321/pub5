@@ -58,7 +58,8 @@ def studio_photograph_actions
         film_engine: request["film_engine"], film_resolution: request["film_resolution"],
         inference_profile: request["inference_profile"]
       ).write(
-        prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5)
+        prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
+        preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"]
       )
     end,
     "series" => lambda do |request|
@@ -162,6 +163,7 @@ def studio_photograph_options(argv)
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
     parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental or snapshot") { |value| options[:direction] = value }
+    parser.on("--preset NAME", "named laboratory grade for a single photograph (default house)") { |value| options[:preset] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -322,7 +324,8 @@ if $PROGRAM_NAME == __FILE__
         subject: options[:subject], film_engine: options[:film_engine],
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
-        prompt, film: options[:film], duration: options[:duration]
+        prompt, film: options[:film], duration: options[:duration],
+        preset: options.fetch(:preset, "house")
       )
     end
   end

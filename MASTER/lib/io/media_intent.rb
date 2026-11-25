@@ -45,7 +45,7 @@ module Master
       # operator confirms the spend.
       LORA_VIDEO_RE = /\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render|animate)\b.*\b(?:video|clip|animation|motion)\b/i.freeze
       LORA_IMAGE_RE = /\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b.*\blora\b|\blora\b.*\b(?:make|create|generate|render)\b.*\b(?:photo|portrait|image)\b/i.freeze
-      LORA_SELFIE_RE = /\b(?:make|create|generate|render|rerender|re-render)\b.*\b(?:selfies|selfie\s+series)\b/i.freeze
+      LORA_SELFIE_RE = /\b(?:make|create|generate|render|rerender|re-render|give\s+(?:us|me)\s+\d{1,2})\b.*\b(?:selfies|selfie\s+series)\b/i.freeze
       LORA_READINESS_RE = /\b(?:check|audit|inspect|assess|show|report|prepare)\b.{0,100}\b(?:lora|likeness|photographic|photography|holdout)\b/i.freeze
       LORA_PROFILE_RE = /\b(?:compare|benchmark|list|show)\b.{0,100}\b(?:lora|inference)\b.{0,40}\bprofiles?\b|\b(?:compare|benchmark)\b.{0,100}\bprofiles?\b.{0,40}\b(?:lora|inference)\b/i.freeze
       LORA_EXISTING_REVIEW_RE = /\b(?:review|inspect|assess)\b.{0,100}\b(?:lora|selfies?|portraits?|photographs?|renders?)\b/i.freeze
@@ -913,13 +913,15 @@ module Master
 
       def lora_subjects_in(text, root: MasterPaths.repo)
         names = lora_subject_names(root:).sort_by { |name| -name.length }
-        if text.to_s.match?(/\ball three of us\b/i) && names.size == 3
-          return names.sort
-        end
-        names.filter_map do |name|
+        named = names.filter_map do |name|
           match = text.to_s.match(/(?<![a-zA-Z0-9_-])#{Regexp.escape(name)}(?![a-zA-Z0-9_-])/i)
           [name, match.begin(0)] if match
         end.sort_by(&:last).map(&:first)
+        if named.empty? && text.to_s.match?(/\ball three of us\b/i) &&
+           !text.to_s.match?(/\b(?:except|excluding|without|not)\b/i) && names.size == 3
+          return names.sort
+        end
+        named
       end
 
       def lora_subject_for(text, root: MasterPaths.repo)
