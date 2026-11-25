@@ -2,9 +2,14 @@
    (SURFACES.md): its #000 grounds and print inversion follow no palette. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* No font is downloaded: the face sets brgen's one sans family (--font,
-   Helvetica Neue Pro to Arial) for chrome and the mono stack for the chat,
-   both installed faces. */
+/* Geist Mono is locally served; the BRGEN wordmark keeps the shared sans stack. */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
 
 /* BEGIN:generated-family-tokens - the :root of RAILS/__shared/public/styles/tokens.css */
 :root {
@@ -60,8 +65,8 @@
   --c-accent: var(--pub5-signal);
   --c-danger: var(--danger);
   --c-code: oklch(81% 0 0);
-  --font-mono: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
-  --font-label: "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+  --font-mono: "Geist Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  --font-label: "Geist Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
   color-scheme: dark;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
@@ -2145,4 +2150,77 @@ body.mission-control code {
 .syntax-string, .syntax-number, .syntax-comment, .syntax-success,
 .syntax-warning, .syntax-error, .syntax-operator {
   font-family: var(--font-mono);
+}
+
+/* The face and terminal occupy separate regions; never cover the transcript
+   with the particle canvas. Keep the existing face, input and voice owners. */
+body[data-layout="face"] {
+  --face-region-height: clamp(120px, 44dvh, 540px);
+  --face-region-top: calc(var(--face-bar-height) + var(--safe-top));
+  --terminal-region-top: calc(var(--face-region-top) + var(--face-region-height));
+}
+body[data-layout="face"] #face-region {
+  position: fixed;
+  inset: var(--face-region-top) 0 auto;
+  block-size: var(--face-region-height);
+  isolation: isolate;
+  overflow: hidden;
+}
+body[data-layout="face"] #face-region > canvas,
+body[data-layout="face"] #face-region > svg {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+}
+body[data-layout="face"] #primer {
+  inset: var(--face-region-top) 0 auto;
+  block-size: var(--face-region-height);
+  overflow: auto;
+  padding: 12px;
+}
+body[data-layout="face"] #primer .primer-title {
+  font-size: clamp(1.1rem, 3vw, 2rem);
+}
+body[data-layout="face"] #primer .tagline,
+body[data-layout="face"] #primer .primer-consent {
+  margin-block-start: 8px;
+}
+body[data-layout="face"] #chat-shell {
+  inset: var(--terminal-region-top) 0 calc(var(--safe-bottom) + var(--keyboard-inset, 0px));
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  pointer-events: auto;
+}
+body[data-layout="face"] #chat-log {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  max-height: none;
+  inline-size: 100%;
+  max-inline-size: 66ch;
+  margin-inline: auto;
+  scroll-behavior: auto;
+  user-select: text;
+  pointer-events: auto;
+}
+body[data-layout="face"] #prompt-form {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
+  max-width: 66ch;
+  margin-inline: auto;
+}
+body[data-layout="face"] #chat-log,
+body[data-layout="face"] #prompt-form,
+body[data-layout="face"] .msg-body {
+  font-feature-settings: normal;
+  font-variant-ligatures: none;
+}
+@media (max-height: 500px) {
+  body[data-layout="face"] { --face-region-height: 30dvh; }
+}
+@media (max-width: 479px) {
+  body[data-layout="face"] { --terminal-font-size: 1rem; }
 }

@@ -2,7 +2,12 @@
    (SURFACES.md): its #000 grounds and print inversion follow no palette. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* No font is downloaded: the face sets brgen's one sans family (--font,
-   Helvetica Neue Pro to Arial) for chrome and the mono stack for the chat,
-   both installed faces. */
+/* Geist Mono is locally served; the BRGEN wordmark keeps the shared sans stack. */
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/fonts/GeistMono-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
 
