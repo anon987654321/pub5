@@ -1477,7 +1477,9 @@ flows:
 
   - id: master_unlock_refuses_a_wrong_token
     app: master
-    description: A visitor cannot unlock tool access with a guess, and the refusal is a 401, not a 500 or a silent success.
+    description: >-
+      A visitor cannot reach operator commands from the browser, guessed token or not;
+      the refusal is a 403 naming the local CLI, not a 500 or a silent success.
     steps:
       - name: face
         get: /
@@ -1486,8 +1488,8 @@ flows:
         post: /chat/command
         params: { command: "/unlock not-the-token-$unique" }
         asset: true
-        expect_status: [401]
-        expect_body: ['unlock denied']
+        expect_status: [403]
+        expect_body: ['require the local CLI']
 
   - id: mrdamascy_quick_add_fills_the_cart
     app: mrdamascy
