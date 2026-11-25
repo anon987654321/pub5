@@ -34,7 +34,7 @@ module Master
             event_bus: @bus,
             judge_enabled: @judge_enabled,
             voice_personas: @speak_personas,
-          ).review(payload, context:, image:, required_veto_roles:)
+          ).review_convergent(payload, context:, image:, required_veto_roles:)
 
           return result unless result.ok?
 
