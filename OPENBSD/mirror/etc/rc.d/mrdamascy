@@ -22,7 +22,7 @@ for _bundle in /usr/local/bin/bundle /usr/local/bin/bundle[0-9]*; do
 done
 # Falcon binds to loopback; relayd remains the only public entrypoint.
 # The small Active Record pool matches this app's one-worker resource budget.
-_env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/mrdamascy PORT=${PORT}"
+_env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production BUNDLE_WITHOUT=development:test HOME=/home/mrdamascy PORT=${PORT}"
 _env="${_env} RAILS_MAX_THREADS=3 MRDAMASCY_HOST=mrd.brgen.no BUNDLE_VERSION=system"
 _exec="exec ${_bundle} exec falcon host ${APP_DIR}/falcon.rb"
 daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/mrdamascy.env && set +a && : \"\${SECRET_KEY_BASE:?missing SECRET_KEY_BASE in /etc/mrdamascy.env}\" && export ${_env} && ${_exec}'"

@@ -258,7 +258,11 @@ export PUB5_TASK_CACHE_KEY=$database
 export PUB5_TASK_RUBY=$ruby_path
 export SECRET_KEY_BASE
 unset RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS GEM_HOME GEM_PATH
-unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH BUNDLE_WITHOUT
+unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH
+# Production never installs or loads the development and test groups. Only
+# brgen happened to carry this in an untracked .bundle/config; amber, bsdports
+# and mrdamascy demanded rubocop, selenium and brakeman at deploy (2026-11-25).
+export BUNDLE_WITHOUT=development:test
 cd /home/$app/app
 $command"
 exec /usr/bin/su -m "$app" -c "$script"

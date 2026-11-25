@@ -59,7 +59,12 @@ _ruby_suffix=${_ruby##*/}
 _ruby_suffix=${_ruby_suffix#ruby}
 _bundle="/usr/local/bin/bundle${_ruby_suffix}"
 [ -x "$_bundle" ] || { echo "brgen: matching Bundler is unavailable" >&2; exit 1; }
-daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/brgen.env && set +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/brgen PUB5_ROOT=/home/dev/pub5 PUB5_RAILS_ROOT=/home/dev/pub5/RAILS && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+_env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production BUNDLE_WITHOUT=development:test HOME=/home/brgen"
+_roots="PUB5_ROOT=/home/dev/pub5 PUB5_RAILS_ROOT=/home/dev/pub5/RAILS"
+_serve="falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300"
+_exec="exec ${_bundle} exec ${_serve} --bind http://127.0.0.1:${PORT}"
+_load="cd ${APP_DIR} && set -a && . /etc/brgen.env && set +a"
+daemon_flags="-c '${_load} && export ${_env} ${_roots} BUNDLE_VERSION=system && ${_exec}'"
 daemon_user="brgen"
 daemon_execdir="/home/brgen/app"
 daemon_logger="daemon.notice"

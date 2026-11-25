@@ -34,7 +34,11 @@ daemon="/bin/ksh"
 for _bundle in /usr/local/bin/bundle /usr/local/bin/bundle[0-9]*; do
   if [ -x "$_bundle" ]; then break; fi
 done
-daemon_flags="-c 'cd ${APP_DIR} && set -a && . /etc/amber.env && set +a && export RUBY_YJIT_ENABLE=0 RAILS_ENV=production HOME=/home/amber && export BUNDLE_VERSION=system && exec ${_bundle} exec falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300 --bind http://127.0.0.1:${PORT}'"
+_env="RUBY_YJIT_ENABLE=0 RAILS_ENV=production BUNDLE_WITHOUT=development:test HOME=/home/amber"
+_serve="falcon serve -n ${FALCON_WORKERS:-1} --health-check-timeout 300"
+_exec="exec ${_bundle} exec ${_serve} --bind http://127.0.0.1:${PORT}"
+_load="cd ${APP_DIR} && set -a && . /etc/amber.env && set +a"
+daemon_flags="-c '${_load} && export ${_env} BUNDLE_VERSION=system && ${_exec}'"
 daemon_user="amber"
 daemon_execdir="/home/amber/app"
 daemon_logger="daemon.notice"
