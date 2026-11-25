@@ -482,6 +482,8 @@ module Master
       end
 
       def try_transcendent_synthesis(text_str, mode, voice:, style:, rate:, pitch:, voice_locked:, style_locked:)
+        return [false, nil] if Master::Ground::Pledge.web_locked?
+
         use_mode = (mode || synthesis_mode).to_s
         return [false, nil] unless use_mode == "transcendent" && Transcendent.enabled?
 
@@ -649,6 +651,10 @@ module Master
       end
 
       def edge_stream_written?(text_str, voice, style_config, output_path, on_chunk)
+        if Master::Ground::Pledge.web_locked?
+          voice_name = VOICES.fetch(voice.to_sym, VOICES[default_voice])
+          return attempt_socket_synthesis(text_str, voice_name, style_config, output_path, on_chunk)
+        end
         return false unless edge_tts_available?
 
         TtsSupervisor.ensure_daemon! unless fast_tts_mode?
@@ -658,6 +664,7 @@ module Master
       end
 
       def transcendent_streaming_enabled?(opts)
+        return false if Master::Ground::Pledge.web_locked?
         return false if opts[:transcendent] == false
         return true if opts[:transcendent] == true
         return true if ENV["MASTER_TTS_MODE"].to_s == "transcendent"
@@ -811,6 +818,8 @@ module Master
       # classic CLI speech where preserving the configured voice beats latency.
       # The per-call result cannot be erased by another utterance updating last_error.
       def edge_after_socket_miss(socket_failed, audio_path:, **speech)
+        return fast_mode_miss(socket_failed) if Master::Ground::Pledge.web_locked?
+
         fast_retry = fast_tts_mode? && synthesis_mode == "classic" && socket_failed
         return fast_mode_miss(socket_failed) if fast_tts_mode? && !fast_retry
 

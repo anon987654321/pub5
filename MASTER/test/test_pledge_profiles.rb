@@ -128,4 +128,19 @@ class PledgeProfileTest < Minitest::Test
   def test_unknown_profile_is_rejected
     assert_raises(KeyError) { Master::Ground::Pledge.profile(:unknown) }
   end
+  def test_native_web_plan_excludes_operator_state_and_execution
+    guard = Master::Ground::Pledge
+    root = Master::ROOT
+    plan = guard.web_plan(root:, web_root: File.join(root, "web"),
+      auth_path: File.join(root, ".master", "config.yml"),
+      socket_paths: [File.join(root, ".master", "tts.sock")], gem_paths: [])
+    assert_equal "r", plan.fetch(File.join(root, "lib"))
+    assert_equal "w", plan.fetch(File.join(root, ".master", "tts.sock"))
+    refute plan.key?(root)
+    refute plan.key?(File.join(root, ".master"))
+    refute plan.key?(Dir.home)
+    refute_includes guard::WEB_PROMISES.split, "exec"
+    refute_includes guard::WEB_PROMISES.split, "proc"
+    refute_includes guard::WEB_PROMISES.split, "unveil"
+  end
 end

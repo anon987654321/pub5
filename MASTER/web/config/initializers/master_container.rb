@@ -80,6 +80,23 @@ module MasterContainerLoader
   # runs assets:precompile as root, so a container built there spawns
   # tts-worker as root and leaves .master/tts-worker-*.log root-owned, which
   # the master user then cannot write.
+  # Irreversible and deliberately gated until the exact Falcon/TTS service
+  # layout passes a live OpenBSD smoke. A partial native lock must not retry.
+  def seal_native_web!(root)
+    require "master" unless defined?(Master::Ground::Pledge)
+    guard = Master::Ground::Pledge
+    sockets = Master::Voice::TtsSupervisor.pool_size.times.map do |index|
+      Master::Voice::TtsSupervisor.socket_path(root, index:)
+    end
+    raise Master::SecurityError, "web auth must be provisioned before sealing" if OperatorToken.read.empty?
+    FileUtils.mkdir_p(File.join(root, ".master", "pairing"), mode: 0o700)
+    guard.web_lock!(root:, web_root: Rails.root.to_s, auth_path: OperatorToken.config_path, socket_paths: sockets)
+    Rails.logger.info("master_container: native web sandbox sealed")
+  rescue StandardError => e
+    Rails.logger.fatal("master_container: native sandbox refused: #{e.class}: #{e.message}")
+    exit!(1)
+  end
+
   def ensure!(config = Rails.application.config)
     return if asset_task?
     return config.x.master_container if config.x.master_container
@@ -92,6 +109,7 @@ module MasterContainerLoader
       Master::Voice::TtsSupervisor.ensure_daemon!(root:)
       TtsJob.ensure_worker!
       container = Master::Builder.build_web(root:, state_root: Rails.root.join("tmp", "public_runtime").to_s)
+      seal_native_web!(root) if ENV["MASTER_WEB_NATIVE_SANDBOX"] == "1"
       config.x.master_container = container
       Rails.logger.info("master_container: ready")
       container

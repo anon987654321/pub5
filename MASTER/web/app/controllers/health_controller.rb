@@ -32,6 +32,7 @@ class HealthController < ActionController::API
 
   def tts_healthy?
     return true if Rails.env.test?
+    return tts_socket_alive? if Master::Ground::Pledge.web_locked?
 
     # Capability check, not socket liveness. The daemon socket is spun up on
     # demand and can be reaped under load on the 1-vCPU host, so requiring a
@@ -53,6 +54,7 @@ class HealthController < ActionController::API
   # broke makes the reader re-derive it on a box that is already failing.
   def tts_blocker
     return if Rails.env.test?
+    return "external TTS socket unavailable" if Master::Ground::Pledge.web_locked?
 
     Master::Voice::Speech.edge_tts_blocker
   rescue StandardError => e
@@ -70,13 +72,7 @@ class HealthController < ActionController::API
   # `dev`. Passing it per call keeps the fix in the thing that needs it rather
   # than in a global git config on the box, which nothing in this repo
   # provisions and which a rebuild would lose.
-  def git_healthy?
-    repo = Master::REPO_ROOT
-    system("git", "-c", "safe.directory=#{repo}", "-C", repo, "rev-parse", "--is-inside-work-tree",
-           out: File::NULL, err: File::NULL)
-  rescue StandardError => _
-    false
-  end
+  def git_healthy? = git_sha.to_s.match?(/\A[0-9a-f]{7,64}\z/i)
 
   def container_healthy?
     c = Rails.application.config.x.master_container
@@ -90,6 +86,7 @@ class HealthController < ActionController::API
   def deploy_confidence
     {
       git_sha:,
+      native_sandbox: Master::Ground::Pledge.web_locked?,
       voice_policy: Master::Voice::Policy.browser_payload,
       tts_socket: tts_socket_alive?,
       face_runtime_digest:,

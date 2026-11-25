@@ -176,9 +176,12 @@ module Master
         LEVELS.include?(value) ? value : "normal"
       end
 
+      def attachment_line(unit, parent, detail = nil)
+        detail.to_s.empty? ? "#{unit} at #{parent}" : "#{unit} at #{parent}: #{detail}"
+      end
+
       def attach(unit, parent, detail = nil, io: $stdout)
-        line = detail.to_s.empty? ? "#{unit} at #{parent}" : "#{unit} at #{parent}: #{detail}"
-        emit(line, io:)
+        emit(attachment_line(unit, parent, detail), io:)
       end
 
       def status(unit, msg, io: $stdout)

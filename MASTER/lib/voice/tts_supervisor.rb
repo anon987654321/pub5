@@ -85,6 +85,9 @@ module Master
       end
 
       def ensure_daemon!(root: Master::ROOT)
+        if Master::Ground::Pledge.web_locked?
+          return pool_size.times.any? { |i| socket_alive?(socket_path(root, index: i), root:) }
+        end
         return false unless Speech.worker_executable?
 
         FileUtils.mkdir_p(File.join(root, ".master"))
@@ -104,6 +107,7 @@ module Master
         idx = @pool_rr % size
         @pool_rr += 1
         path = socket_path(root, index: idx)
+        return File.socket?(path) ? path : nil if Master::Ground::Pledge.web_locked?
         return path if Speech.fast_tts_mode? && File.socket?(path)
         return path if socket_alive?(path, root:)
         return if Speech.fast_tts_mode?
@@ -116,6 +120,8 @@ module Master
       # A socket can belong to another MASTER process; its pathname is not
       # authority to discover and signal an arbitrary command-line match.
       def retire_socket(path, root: Master::ROOT)
+        return false if Master::Ground::Pledge.web_locked?
+
         expanded = File.expand_path(path.to_s)
         index = (0...pool_size).find do |candidate|
           expanded == File.expand_path(socket_path(root, index: candidate))

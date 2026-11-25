@@ -1172,3 +1172,5 @@ cd MASTER/tools && rake check
 ```
 
 The browser runtime is conversation-only: public web search, scoped dialogue, voice, and the particle face. Operator commands, schedulers and filesystem tools belong to the local CLI. Battery status is local and omitted when unsupported; the camera-shaped control opens the native photo picker, not a live camera. The 16 mask reliefs are deterministic and use one existing particle population.
+
+Native OpenBSD web sealing is available for rehearsal with `MASTER_WEB_NATIVE_SANDBOX=1`: `unveil(2)` limits paths and `pledge(2)` removes process execution. It requires a provisioned web auth token and an independently supervised TTS socket (the web process cannot restart the voice worker after sealing). It remains disabled until the production Falcon, SQLite, pairing, provider and voice paths pass on-host verification. `/health` reports observed native sandbox state.

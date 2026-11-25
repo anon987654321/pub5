@@ -62,7 +62,7 @@ class ChatController < ApplicationController
     render json: metrics_payload(c)
   end
   def sensory
-    render json: Master::Trace::SensoryState.snapshot(root: Master::ROOT)
+    render json: Master::Trace::SensoryState.snapshot(root: Rails.root.join("tmp", "public_runtime").to_s)
   rescue StandardError
     render json: {
       version: Master::Trace::SensoryState::VERSION,

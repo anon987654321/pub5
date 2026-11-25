@@ -241,7 +241,7 @@ conversation: nil, persona_note: nil)
     return if text.empty?
 
     @streamed = true
-    write_json_event("dmesg", "core0 at master0: #{text}")
+    write_json_event("dmesg", Master::Trace::Dmesg.attachment_line("core0", "master0", text))
     write_chunk(text)
   end
 
@@ -666,7 +666,7 @@ conversation: nil, persona_note: nil)
     desc = dmesg_description(event, payload, sub, rest)
     return if desc.nil?
 
-    "#{sub}0 at master0: #{desc}"
+    Master::Trace::Dmesg.attachment_line("#{sub}0", "master0", desc)
   end
 
   def dmesg_description(event, payload, sub, rest)

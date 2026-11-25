@@ -101,6 +101,39 @@ module Master
         GEM_DIRS.each { |d| (dir = File.join(Dir.home, d); unveil(dir, "r") if Dir.exist?(dir)) }
       end
 
+      # Web workers must not execute children after sealing. The socket-only
+      # voice service remains external; operator files are not a readable tree.
+      WEB_PROMISES = "stdio rpath wpath cpath fattr flock inet dns unix getpw prot_exec error".freeze
+
+      def web_locked? = @web_locked == true
+
+      def web_plan(root:, web_root:, auth_path:, socket_paths:, gem_paths: Gem.path)
+        read = %w[lib data law Gemfile Gemfile.lock bin/tts-worker].map { |path| File.join(root, path) }
+        read.concat([web_root, "/usr/lib", "/usr/local/lib", "/usr/share", "/usr/local/share",
+          "/etc/ssl", "/etc/resolv.conf", "/etc/hosts", "/etc/services", "/etc/localtime",
+          "/dev/urandom", auth_path])
+        read.concat(gem_paths)
+        write = %w[tmp log storage].map { |path| File.join(web_root, path) }
+        write << File.join(root, ".master", "pairing")
+        write.concat(["/tmp", "/dev/null"])
+        plan = {}
+        read.each { |path| plan[File.expand_path(path)] = "r" if File.exist?(path) }
+        write.each { |path| plan[File.expand_path(path)] = "rwc" if File.exist?(path) }
+        socket_paths.each { |path| plan[File.expand_path(path)] = "w" }
+        plan.freeze
+      end
+
+      def web_lock!(**options)
+        return true if web_locked?
+        raise SecurityError, "native web sandbox requires OpenBSD" unless openbsd?
+
+        plan = web_plan(**options)
+        plan.each { |path, permissions| unveil(path, permissions) }
+        lock_unveil!
+        pledge(WEB_PROMISES)
+        @web_locked = true
+      end
+
       def stage2_lock!
         lock_unveil!
         pledge(STAGE2_PROMISES)
