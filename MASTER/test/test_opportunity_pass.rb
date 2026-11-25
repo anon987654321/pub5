@@ -75,6 +75,8 @@ class OpportunityPassTest < Minitest::Test
 
       assert_equal Master::Fix::OpportunityPass::MAX_FINDINGS, findings.size
       assert(findings.any? { |finding| finding[:message].start_with?("duplicated module:") })
+      evidence = pass.run(target: File.join(root, "MASTER"), files: []).value.fetch(:assessment_evidence)
+      assert evidence.fetch(:reasons).any? { |reason| reason.include?("opportunities deferred") }
     end
   end
 end

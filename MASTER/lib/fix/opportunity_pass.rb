@@ -37,9 +37,9 @@ module Master
             file:,
             line:,
             severity: :warning,
-            confidence: 1.0,
-            reversibility: "cheap",
-            blast_radius: { files_touched: 1 },
+            confidence: 0.6,
+            reversibility: "unknown",
+            blast_radius: { files_touched: nil },
             message:,
             fix:,
           }
@@ -249,7 +249,26 @@ module Master
           collect_sprawl(findings, roots)
         end
         design = relative == "MASTER" ? collect_design : []
-        findings.first(MAX_FINDINGS - design.size.clamp(0, DESIGN_SLOTS)) + design.first(DESIGN_SLOTS)
+        # Keep the batch bounded, but disclose every deferred opportunity.
+        regular = diverse_batch(findings, MAX_FINDINGS - design.size.clamp(0, DESIGN_SLOTS))
+        selected = regular + diverse_batch(design, DESIGN_SLOTS)
+        deferred = findings.size + design.size - selected.size
+        @assessment_gaps << "#{deferred} opportunities deferred by batch limit" if deferred.positive?
+        selected
+      end
+
+      # Round-robin by defect family: one noisy detector must not crowd out
+      # independent structural opportunities.
+      def diverse_batch(rows, limit)
+        groups = rows.group_by { |row| row.message.split(":", 2).first }.values
+        selected = []
+        while selected.size < limit && groups.any? { |group| !group.empty? }
+          groups.each do |group|
+            break if selected.size >= limit
+            selected << group.shift unless group.empty?
+          end
+        end
+        selected
       end
 
       def collect_design

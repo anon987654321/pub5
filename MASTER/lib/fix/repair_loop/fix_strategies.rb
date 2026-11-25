@@ -48,7 +48,7 @@ module Master
           # A reply that is neither verdict (a tool call, a ramble) is asked for again, once, with the
           # reason it was refused. Only SAFE still approves, so a second non-verdict is still a refusal.
           unless reflexion_verdict?(response)
-            retry_prompt = "#{prompt}\nYour last reply was not a verdict. The diff above is the whole change; do not read files or call tools. Reply with exactly one line: SAFE, or UNSAFE: <reason>."
+            retry_prompt = "#{prompt}\nYour last reply was not a verdict. Judge only the supplied evidence; if context is incomplete, answer UNSAFE with the missing evidence. Do not call tools. Reply with exactly one line: SAFE, or UNSAFE: <reason>."
             response = Master::Review::LLMDispatcher::ModelPin.with(pin) { ask_once_agent(retry_prompt, image: @visual_image).to_s.strip }
           end
           handle_reflexion_response(response, path, proposed_src)
@@ -84,7 +84,7 @@ module Master
 
             VIOLATION: #{violation[:law]} line #{violation[:line]} - #{violation[:message]}
             #{scale_snap_rule(violation, for_verifier: true)}
-            The change, as a unified diff of the whole file:
+            The proposed change as a unified diff (a truncation marker means the evidence is incomplete; do not approve it):
             ```diff
             #{change_under_review(original_src, proposed_src)}
             ```
@@ -115,14 +115,16 @@ module Master
 
         CALLER_LINES = 30
 
-        # Every call site in the repository of a method whose parameter list the change rewrote.
+        # Bounded lexical caller hints, not a complete dispatch graph.
         def signature_callers(original_src, proposed_src)
           names = changed_signatures(original_src, proposed_src)
           return "" if names.empty?
 
-          sites = names.flat_map { |name| call_sites(name) }.uniq.first(CALLER_LINES)
-          listing = sites.empty? ? "(none found outside the definition)" : sites.join("\n")
-          "Callers of #{names.join(", ")}, whose parameters changed:\n```\n#{listing}\n```"
+          sites = names.flat_map { |name| call_sites(name) }.uniq
+          listing = sites.empty? ? "(no lexical matches; dynamic calls remain unresolved)" : sites.first(CALLER_LINES).join("\n")
+          omitted = sites.size - CALLER_LINES
+          listing += "\n... #{omitted} additional lexical matches omitted" if omitted.positive?
+          "Lexical caller hints for changed or removed methods #{names.join(", ")}; dynamic dispatch and ownership are not resolved:\n```\n#{listing}\n```"
         end
 
         DEF_LINE = /^\s*def\s+(?:self\.)?([a-z_]\w*[?!=]?)(.*)$/
@@ -131,7 +133,7 @@ module Master
           before, after = [original_src, proposed_src].map do |src|
             src.scan(DEF_LINE).to_h { |name, rest| [name, rest.strip] }
           end
-          before.select { |name, params| after.key?(name) && after[name] != params }.keys
+          before.select { |name, params| !after.key?(name) || after[name] != params }.keys
         end
 
         def call_sites(name)
