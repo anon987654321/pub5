@@ -41,9 +41,8 @@ class LinkPreviewsController < ApplicationController
     found = Shared::LinkEmbed.cached_thumbnail(params[:digest].to_s)
     return head :not_found unless found
 
-    # Digest-addressed content: the bytes never change under a URL, so the
-    # browser can hold it for a year.
-    expires_in 1.year, public: true
+    # The digest identifies the provider URL, not immutable image bytes.
+    expires_in 1.day, public: true
     send_file found.first, type: found.last, disposition: "inline"
   end
 end

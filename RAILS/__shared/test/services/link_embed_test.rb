@@ -3,6 +3,8 @@
 require "minitest/autorun"
 require "json"
 require "tmpdir"
+require "pathname"
+require "minitest/mock"
 require "yaml"
 require_relative "../../app/services/shared/outbound_http"
 require_relative "../../app/services/shared/link_embed"
@@ -159,6 +161,31 @@ def test_the_first_recognised_link_in_prose_or_editor_html_is_found
     refute youtube.thumbnail?("https://i.ytimg.com.evil.test/x.jpg")
     refute youtube.thumbnail?("http://i.ytimg.com/vi/d_HlPboLRL8/hqdefault.jpg")
     refute youtube.thumbnail?("https://i.ytimg.com:8443/vi/d_HlPboLRL8/hqdefault.jpg")
+  end
+
+  def test_first_party_thumbnail_cache_accepts_only_known_regular_files
+    embed = Shared::LinkEmbed
+    url = "https://i.ytimg.com/vi/example/hqdefault.jpg"
+    digest = embed.thumbnail_digest(url)
+    Dir.mktmpdir do |dir|
+      embed.stub(:thumbnail_cache_dir, Pathname.new(dir)) do
+        File.write(File.join(dir, "#{digest}.tmp"), "partial")
+        File.write(File.join(dir, "#{digest}.html"), "not an image")
+        File.symlink(File.join(dir, "#{digest}.html"), File.join(dir, "#{digest}.png"))
+        assert_nil embed.cached_thumbnail(digest)
+        refute embed.cache_thumbnail!(url, fetch: ->(_) { ["bad", "text/html"] })
+        refute embed.cache_thumbnail!(url, fetch: ->(_) { ["", "image/jpeg"] })
+        refute embed.cache_thumbnail!("https://example.com/x.jpg", fetch: ->(_) { flunk "unapproved host" })
+
+        bytes = "\xFF\xD8\xFF\xE0 fixture".b
+        assert embed.cache_thumbnail!(url, fetch: ->(_) { [bytes, "image/jpeg"] })
+        path, type = embed.cached_thumbnail(digest)
+        assert_equal "image/jpeg", type
+        assert_equal bytes, File.binread(path)
+        assert embed.cache_thumbnail!(url, fetch: ->(_) { flunk "cached image fetched again" })
+        assert_nil embed.cached_thumbnail("../#{digest}")
+      end
+    end
   end
 
   def test_a_stored_record_round_trips

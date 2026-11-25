@@ -25,9 +25,15 @@ class LinkEmbedRefreshTest < ActiveSupport::TestCase
 
   def recorded(name) = JSON.parse(FIXTURES.join("#{name}.json").read)
 
+  def perform_embed_jobs
+    Shared::LinkEmbed.stub(:fetch_thumbnail, ->(_) { nil }) do
+      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+    end
+  end
+
   def resolved_post(link, answer)
     post = Post.create!(user: @author, title: "Kveldsmusikk", content: link)
-    Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { answer }) { perform_enqueued_jobs(only: Shared::LinkEmbedJob) }
+    Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { answer }) { perform_embed_jobs }
     post.reload
   end
 
@@ -43,7 +49,7 @@ class LinkEmbedRefreshTest < ActiveSupport::TestCase
     travel 25.hours do
       Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { recorded("youtube") }) do
         Shared::LinkEmbedRefreshJob.perform_now("Post")
-        perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+        perform_embed_jobs
       end
     end
 
@@ -63,7 +69,7 @@ class LinkEmbedRefreshTest < ActiveSupport::TestCase
     travel 31.days do
       Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { nil }) do
         Shared::LinkEmbedRefreshJob.perform_now("Post")
-        perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+        perform_embed_jobs
       end
       record = post.reload.link_embed_record
 

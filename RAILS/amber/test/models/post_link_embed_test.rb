@@ -17,6 +17,12 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
 
   def recorded(name) = JSON.parse(FIXTURES.join("#{name}.json").read)
 
+  def perform_embed_jobs
+    Shared::LinkEmbed.stub(:fetch_thumbnail, ->(_) { nil }) do
+      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+    end
+  end
+
   test "a link in editor HTML is found, resolved off the request and stored" do
     body = %(<p>Musikk til antrekket: <a href="https://www.youtube.com/watch?v=d_HlPboLRL8&amp;t=12">AURORA</a></p>)
     post = Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { flunk "fetched inside the request" }) do
@@ -26,7 +32,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
     assert_enqueued_jobs 1, only: Shared::LinkEmbedJob
 
     Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { recorded("youtube") }) do
-      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+      perform_embed_jobs
     end
 
     record = post.reload.link_embed_record
@@ -38,7 +44,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
   test "a failed lookup is stored as failed, and a lookalike host is never an embed" do
     post = Post.create!(user: @author, body: "<p>https://soundcloud.com/kygo/stars-will-align</p>")
     Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { nil }) do
-      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+      perform_embed_jobs
     end
     assert_equal "failed", post.reload.link_embed["status"]
 

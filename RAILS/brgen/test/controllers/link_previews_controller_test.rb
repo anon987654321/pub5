@@ -15,8 +15,10 @@ class LinkPreviewsControllerTest < ActionDispatch::IntegrationTest
 
   test "a recognised link answers with the player facade it will become" do
     asked = []
-    Shared::LinkEmbed.stub(:fetch_oembed, ->(uri) { asked << uri.host; YOUTUBE }) do
-      get link_preview_path(url: "https://youtu.be/d_HlPboLRL8")
+    Shared::LinkEmbed.stub(:fetch_thumbnail, ->(_) { nil }) do
+      Shared::LinkEmbed.stub(:fetch_oembed, ->(uri) { asked << uri.host; YOUTUBE }) do
+        get link_preview_path(url: "https://youtu.be/d_HlPboLRL8")
+      end
     end
 
     assert_response :success

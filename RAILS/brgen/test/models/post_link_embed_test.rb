@@ -28,6 +28,12 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
 
   def recorded(name) = JSON.parse(FIXTURES.join("#{name}.json").read)
 
+  def perform_embed_jobs
+    Shared::LinkEmbed.stub(:fetch_thumbnail, ->(_) { nil }) do
+      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+    end
+  end
+
   test "a post with a supported link stores it pending and enqueues one lookup" do
     post = nil
     assert_enqueued_with(job: Shared::LinkEmbedJob) do
@@ -54,13 +60,17 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
     post = post_with("https://youtu.be/d_HlPboLRL8")
     before = post.reload.updated_at
 
+    cached = []
     travel 1.minute do
-      Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { recorded("youtube") }) do
-        perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+      Shared::LinkEmbed.stub(:cache_thumbnail!, ->(url) { cached << url }) do
+        Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { recorded("youtube") }) do
+          perform_embed_jobs
+        end
       end
     end
 
     record = post.reload.link_embed_record
+    assert_equal [recorded("youtube").fetch("thumbnail_url")], cached
     assert record.ok?
     assert_equal "AURORA - Runaway", record.title
     assert_equal "https://www.youtube-nocookie.com/embed/d_HlPboLRL8?autoplay=1", record.player_url
@@ -71,7 +81,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
     post = post_with("https://vimeo.com/1084537")
 
     Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { nil }) do
-      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+      perform_embed_jobs
     end
 
     assert_equal "failed", post.reload.link_embed["status"]
@@ -89,7 +99,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
   test "an edit that keeps the link keeps the resolved embed, and one that drops it clears it" do
     post = post_with("https://youtu.be/d_HlPboLRL8")
     Shared::LinkEmbed.stub(:fetch_oembed, ->(_uri) { recorded("youtube") }) do
-      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+      perform_embed_jobs
     end
 
     assert_no_enqueued_jobs(only: Shared::LinkEmbedJob) do
@@ -123,7 +133,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
     asked = []
 
     Shared::LinkEmbed.stub(:fetch_oembed, ->(uri) { asked << uri.host; recorded("vimeo") }) do
-      perform_enqueued_jobs(only: Shared::LinkEmbedJob)
+      perform_embed_jobs
     end
 
     assert_equal %w[vimeo.com], asked

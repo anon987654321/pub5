@@ -5,6 +5,7 @@ require "digest"
 require "fileutils"
 require "json"
 require "net/http"
+require "tempfile"
 require "time"
 require "uri"
 require "yaml"
@@ -42,7 +43,7 @@ module Shared
       # come from the provider's own image host.
       def thumbnail?(url)
         uri = URI(url.to_s)
-        uri.is_a?(URI::HTTPS) && uri.port == 443 && thumbnail_hosts.any? { |host| host === uri.host.to_s.downcase }
+        uri.is_a?(URI::HTTPS) && uri.port == 443 && uri.userinfo.nil? && uri.fragment.nil? && thumbnail_hosts.any? { |host| host === uri.host.to_s.downcase }
       rescue URI::InvalidURIError
         false
       end
@@ -261,21 +262,26 @@ module Shared
     # degrades to no image, never to a provider contact on page view, and the
     # next refresh (the job, or the compose preview) tries again.
     def cache_thumbnail!(url, fetch: method(:fetch_thumbnail))
-      return false unless url
+      return false unless PROVIDERS.any? { |provider| provider.thumbnail?(url) }
       return true if thumbnail_cached?(url)
 
       fetched = fetch.call(URI(url))
       return false unless fetched
 
       body, type = fetched
+      extension = THUMBNAIL_TYPES[type]
+      return false unless extension && body.is_a?(String) && !body.empty? && body.bytesize <= THUMBNAIL_MAX_BODY
+
       dir = thumbnail_cache_dir
       FileUtils.mkdir_p(dir)
-      # Write beside the target and rename, so a concurrent reader never sees a
-      # half-written image and two jobs racing land on one file.
-      tmp = dir.join("#{thumbnail_digest(url)}.#{Process.pid}.tmp")
-      # Images are bytes: a text write transcodes them and raised on 0xFF.
-      tmp.binwrite(body)
-      File.rename(tmp, dir.join("#{thumbnail_digest(url)}#{THUMBNAIL_TYPES.fetch(type)}"))
+      digest = thumbnail_digest(url)
+      # Each writer owns a unique temporary file, including jobs in one process.
+      Tempfile.create([digest, ".tmp"], dir.to_s, binmode: true) do |tmp|
+        tmp.write(body)
+        tmp.flush
+        tmp.close
+        File.rename(tmp.path, dir.join("#{digest}#{extension}"))
+      end
       true
     rescue *OutboundHttp::NETWORK_ERRORS, IOError, SystemCallError => e
       Rails.logger.warn("link_embed: thumbnail fetch failed: #{e.class}") if defined?(Rails.logger)
@@ -286,8 +292,11 @@ module Shared
     def thumbnail_file(digest)
       return unless digest.to_s.match?(/\A[0-9a-f]{32}\z/)
 
-      children = Dir.glob(thumbnail_cache_dir.join("#{digest}.*"))
-      children.reject { |path| path.end_with?(".tmp") }.first
+      THUMBNAIL_TYPES.values.each do |extension|
+        path = thumbnail_cache_dir.join("#{digest}#{extension}")
+        return path if File.file?(path) && !File.symlink?(path)
+      end
+      nil
     end
 
     def thumbnail_cached?(url)
@@ -299,7 +308,7 @@ module Shared
       file = thumbnail_file(digest)
       return unless file
 
-      type = THUMBNAIL_TYPES.key(file.extname)
+      type = THUMBNAIL_TYPES.key(File.extname(file))
       [file, type]
     end
 

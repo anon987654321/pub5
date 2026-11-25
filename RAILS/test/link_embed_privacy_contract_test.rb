@@ -43,7 +43,7 @@ class LinkEmbedPrivacyContractTest < Minitest::Test
     assert_includes controller, "head :not_found unless found"
     refute_match(/OutboundHttp|Net::HTTP|open_uri|URI\.parse\(params/, controller,
                  "the thumbnail action must serve the cache, not fetch on page view")
-    assert_includes controller, "expires_in 1.year, public: true"
+    assert_includes controller, "expires_in 1.day, public: true"
   end
 
   def test_the_cache_is_fetched_where_the_oembed_answer_arrives
@@ -61,7 +61,9 @@ class LinkEmbedPrivacyContractTest < Minitest::Test
     assert_includes controller, "Shared::LinkEmbed.cache_thumbnail!(fresh.thumbnail_url) if fresh.ok?"
 
     job = File.read(JOB)
-    assert_includes job, "Shared::LinkEmbed.cache_thumbnail!(stored.thumbnail_url) if stored.ok?"
+    assert_includes job, "Shared::LinkEmbed.cache_thumbnail!(resolved.thumbnail_url) if resolved.ok?"
+    assert_operator job.index("cache_thumbnail!(resolved.thumbnail_url)"), :<, job.index("record.update_columns")
+    assert_includes job, "record.link_embed_record&.to_h == stored.to_h"
   end
 
   def test_the_digest_endpoint_cannot_traverse

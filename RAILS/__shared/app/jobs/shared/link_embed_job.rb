@@ -19,11 +19,15 @@ module Shared
       # updated_at with it: feed cards are fragment-cached on the post, and a
       # write that leaves updated_at alone leaves every cached card without its
       # player.
-      record.update_columns(link_embed: answer(stored, current).to_h, updated_at: Time.current)
-      # The facade's image comes from the app's own cache (shared-029): fetch it
-      # where the provider is already being contacted. Also heals a cache that
-      # a wiped storage lost, without waiting a month for staleness.
-      Shared::LinkEmbed.cache_thumbnail!(stored.thumbnail_url) if stored.ok?
+      resolved = answer(stored, current)
+      # Cache the resolved image before publishing the new fragment cache key.
+      Shared::LinkEmbed.cache_thumbnail!(resolved.thumbnail_url) if resolved.ok?
+      record.with_lock do
+        # Do not replace a newer edit or another job's resolution.
+        return unless record.link_embed_record&.to_h == stored.to_h
+
+        record.update_columns(link_embed: resolved.to_h, updated_at: Time.current)
+      end
       # update_columns runs no callback, so a record that shows the player live
       # (brgen Post) is told here.
       record.try(:link_embed_resolved)
