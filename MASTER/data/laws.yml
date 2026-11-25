@@ -85,9 +85,7 @@ APPLICATION_IS_UNIFORM_constitution_self_governed:
 
 TRUTHFUL_STATUS:
   node: truthful_status
-  statement: >
-    Report observed state, not intended. A claim about state carries
-    evidence of its class.
+  statement: "Report observed state, not intent. Support claims with evidence of the right class."
   severity: error
   resolution: never
   mechanical: Master::Law::Interface#capability_status
@@ -209,7 +207,7 @@ EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
 
 ROBUSTNESS:
   node: robustness
-  statement: "Fail safe; security first; least authority; edge cases handled."
+  statement: "Anticipate failure. Fail safely, minimize authority and handle edge cases."
   severity: error
   resolution: review
   mechanical: Master::Law::Robustness#all
@@ -414,7 +412,7 @@ ROBUSTNESS_sclerotium:
 
 SINGULARITY:
   node: singularity
-  statement: "Every fact has one definition. Copies drift silently."
+  statement: "Give every fact one authoritative source."
   severity: error
   resolution: review
   mechanical: Master::Law::Universal#singularity
@@ -503,7 +501,7 @@ SINGULARITY_magic_color:
 
 LINEARITY:
   node: linearity
-  statement: "Sequential flow; minimal branches; one clear path."
+  statement: "Make progression clear; avoid needless branches."
   severity: error
   resolution: review
   mechanical: Master::Law::Structural#nesting
@@ -531,7 +529,7 @@ CURRENT_LOCATION_MARKED:
 
 PROXIMITY:
   node: proximity
-  statement: "Related things live together; a module is cohesive, not a shelf."
+  statement: "Keep related things together."
   severity: error
   resolution: review
   mechanical: Master::Law::Meta#file_sprawl
@@ -583,10 +581,7 @@ NEGATIVE_SPACE_GROUPING_particle_face:
 
 ABSTRACTION:
   node: abstraction
-  statement: >
-    Right level; no leaky boundary; appropriate hiding. A boundary
-    that requires the caller to know the implementation has no
-    boundary.
+  statement: "Expose what matters; hide implementation details behind coherent boundaries."
   severity: error
   resolution: review
   mechanical: Master::Law::StructuralQuestions#lazy_class
@@ -608,7 +603,7 @@ ABSTRACTION_leaky_boundary:
 
 DENSITY:
   node: density
-  statement: "Information-dense; no noise. What is absent cannot be wrong."
+  statement: "Remove what serves no purpose; preserve meaningful space and complexity."
   severity: error
   resolution: review
   mechanical: Master::Law::Universal#density
@@ -828,9 +823,7 @@ PAGE_WEIGHT_RATCHET:
 
 OPERATOR_RENDERED:
   node: operator_rendered
-  statement: >
-    Rendered values are operator-owned. The system names the operator's
-    choice; it never substitutes.
+  statement: "Preserve and identify operator-owned choices; never substitute them without authority."
   severity: error
   resolution: never
   mechanical: Master::Visual::Identity#substitution
@@ -885,9 +878,7 @@ OPERATOR_RENDERED_semantic_motion:
 
 INTER_MODEL_CONTRACT:
   node: inter_model_contract
-  statement: >
-    Every council turn uses a validated structured request and returns
-    evidence-backed findings.
+  statement: "Use validated structured requests and evidence-backed findings in every council turn."
   severity: error
   resolution: never
   mechanical: Master::Law::InterModel#contract
@@ -2324,7 +2315,7 @@ STEWARDSHIP_mono_no_aware:
 
 PRESERVE_FIRST:
   parent: STEWARDSHIP
-  statement: "Preserve working code and behaviour before improving it; never break what exists to build what does not yet exist."
+  statement: "Preserve working behavior, meaning and deliberate choices before improving."
   resolution: review
 
 PRESERVE_FIRST_media_provenance:
