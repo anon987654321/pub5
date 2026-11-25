@@ -226,6 +226,14 @@ workstreams:
     title: Measure capability outcomes and confidence calibration from explicit evidence
     implementation: MASTER/lib/cognition/self_model.rb
     proof: MASTER/test/test_cognition_affect.rb
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/lib/cognition/self_model.rb
+        - MASTER/test/test_cognition_affect.rb
+      done_when: "ruby MASTER/test/test_cognition_affect.rb"
   - id: cognition_measurement
     state: partial
     title: Report workspace activity and saved-state restoration completeness without consciousness claims
@@ -401,7 +409,7 @@ workstreams:
       scope_paths:
         - RAILS/amber/app/services/wears_well_with.rb
         - RAILS/amber/test/services/wears_well_with_test.rb
-      done_when: "cd RAILS/amber && ruby test/services/wears_well_with_test.rb"
+      done_when: "cd RAILS/amber && ruby -Itest test/services/wears_well_with_test.rb"
   - id: master_face_breath
     state: partial
     title: The live stipple field gathers over 5.2 seconds and retains one deterministic identity carrier
@@ -696,3 +704,11 @@ workstreams:
     title: Give a reader with no follows an honest, city-popular Following feed
     implementation: RAILS/brgen/lib/brgen/home_feed.rb; RAILS/brgen/app/controllers/home_controller.rb; RAILS/brgen/app/views/home/index.html.erb
     proof: RAILS/brgen/test/lib/home_feed_test.rb; RAILS/brgen/test/controllers/home_controller_test.rb (authored; NOT_RUN)
+    agent_task:
+      tree: RAILS
+      kind: mechanical
+      size: s
+      scope_paths:
+        - RAILS/brgen/lib/brgen/home_feed.rb
+        - RAILS/brgen/test/lib/home_feed_test.rb
+      done_when: "cd RAILS/brgen && ruby -Itest test/lib/home_feed_test.rb"

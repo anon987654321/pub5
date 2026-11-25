@@ -370,6 +370,7 @@ module Backlog
                       relative == "test/run_all.rb"
                   when "focused_tests"
                     relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO)/test/(?:test_.*|.*_test)\.rb\z}) ||
+                      relative.match?(%r{\ARAILS/(?:brgen|amber|bsdports|__shared)/test/.*_test\.rb\z}) ||
                       relative.match?(%r{\A(?:MASTER|RAILS|OPENBSD|STUDIO)/spec/.*_spec\.rb\z}) ||
                       relative.match?(%r{\Atest/(?:test_.*|.*_test)\.rb\z}) ||
                       relative.match?(%r{\Aspec/.*_spec\.rb\z})
@@ -682,12 +683,14 @@ module Backlog
     # Only a terminal Mission with delivery stage, a non-empty summary and
     # durable terminal delivery evidence can close an executor item. No checkbox writes.
     def record_completion!(record: @mission_class.current(root: @root))
-      return false unless record && record["origin"].to_s == "backlog"
+      return false unless record.is_a?(Hash) && record["origin"].to_s == "backlog"
       return false unless record["state"].to_s == "completed" && record["stage"].to_s == "deliver"
       return false if record["summary"].to_s.strip.empty?
-      return false unless record["repository_writes"].to_h.empty?
+      writes = record["repository_writes"]
+      return false unless writes.nil? || (writes.is_a?(Hash) && writes.empty?)
 
       plan = JSON.parse(record["plan"].to_s)
+      return false unless plan.is_a?(Hash)
       return false unless plan["executor"] == "owner_registry" && plan["item_id"] && plan["item_digest"]
       return false unless plan["proof_map_version"] == ProofMap::VERSION
       return false unless ProofMap.valid_types?(plan["proof_types"])
@@ -695,12 +698,15 @@ module Backlog
       return false unless proof["proof_map_version"] == plan["proof_map_version"]
       return false unless Array(proof["required_proof_types"]).map(&:to_s) == Array(plan["proof_types"]).map(&:to_s)
       return false unless proof["kind"] == "fix_pipeline" && proof["status"] == "pass"
-      return false unless Array(proof["scope_paths"]).sort == Array(plan["scope_paths"]).map(&:to_s).sort
+      return false unless proof["scope_paths"].is_a?(Array) && proof["scope_paths"].all? { |path| path.is_a?(String) }
+      return false unless plan["scope_paths"].is_a?(Array) && plan["scope_paths"].all? { |path| path.is_a?(String) }
+      return false unless proof["scope_paths"].sort == plan["scope_paths"].sort
       return false unless proof["report_digest"].to_s.match?(/\A[0-9a-f]{64}\z/i)
       return false unless proof["proof_summary"].to_s.match?(/fix done.*proof:/i)
       command_evidence = proof["command_evidence"].is_a?(Hash) ? proof["command_evidence"] : {}
       source_item = Backlog.generate.find { |item| item[:id] == plan["item_id"] }
       return false unless source_item && item_digest(source_item) == plan["item_digest"]
+      return false unless plan["scope_paths"].sort == Array(source_item[:scope_paths]).map(&:to_s).sort
       return false unless source_item[:registry_source].to_s == plan["registry_source"].to_s
       return false unless Backlog.registry_digest(source_item) == plan["registry_digest"].to_s
       return false unless source_item[:done_when].to_s == plan["done_when"].to_s

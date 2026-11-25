@@ -16,6 +16,7 @@ class TestOwnerRegistryTasks < Minitest::Test
     amber_similarity_right_sized master_fleet_panel free_compute_design_of_record
     installation fix_interruption_restart council_readiness_admission
     task_scoped_prediction cognition_learning_benchmark
+    self_model_calibration brgen_cold_start_feed
   ].sort.freeze
 
   def test_only_explicit_owner_registry_tasks_enter_unattended_intake
@@ -146,6 +147,29 @@ class TestOwnerRegistryTasks < Minitest::Test
     assert_equal "MASTER", spec.fetch(:cwd_relative)
     assert_equal Digest::SHA256.hexdigest(command), spec.fetch(:command_digest)
     assert_equal 1800, spec.fetch(:timeout)
+  end
+
+  def test_nested_rails_tests_are_admitted_without_admitting_arbitrary_scripts
+    map = Backlog::ProofMap
+    command = "cd RAILS/amber && ruby -Itest test/services/wears_well_with_test.rb"
+    spec = map.execution_spec(command, tree: "RAILS", repo_root: Master::REPO_ROOT)
+    refute_nil spec
+    assert_equal "RAILS/amber", spec.fetch(:cwd_relative)
+    assert_equal "focused_tests", spec.fetch(:proof_type)
+    assert_nil map.execution_spec("cd RAILS/amber && ruby test/../config/environment.rb",
+                                  tree: "RAILS", repo_root: Master::REPO_ROOT)
+  end
+
+  def test_completion_rejects_non_object_plans_and_invalid_pending_writes
+    Dir.mktmpdir do |root|
+      executor = Backlog::Executor.new(root:, repo_root: Master::REPO_ROOT)
+      record = { "origin" => "backlog", "state" => "completed", "stage" => "deliver",
+                 "summary" => "test receipt", "repository_writes" => {} }
+      [nil, [], 1, true, "invalid"].each do |value|
+        refute executor.record_completion!(record: record.merge("plan" => JSON.generate(value)))
+      end
+      refute executor.record_completion!(record: record.merge("repository_writes" => "invalid"))
+    end
   end
 
   def test_proof_map_does_not_guess_unknown_commands_or_empty_acceptance
