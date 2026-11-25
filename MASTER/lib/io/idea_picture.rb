@@ -39,11 +39,12 @@ module Master
 
       # replace: remains accepted for compatibility but cannot discard an
       # earlier portrait. STUDIO's selfie runner is append-only.
-      def selfie_series(subject:, count: 10, replace: false, timeout: 7_200)
+      def selfie_series(subject:, count: 10, replace: false, timeout: 7_200, direction: nil)
         argv = [
           RbConfig.ruby, @script, "--selfie-series", "--subject", subject.to_s,
           "--count", Integer(count).to_s,
         ]
+        argv += ["--direction", direction.to_s] if direction
         run(argv, timeout:, action: "STUDIO LoRA selfie series")
       end
 

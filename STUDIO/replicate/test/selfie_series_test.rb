@@ -313,6 +313,17 @@ class TestSelfieSeries < Minitest::Test
     assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
   end
 
+  def test_every_art_direction_has_twenty_four_distinct_valid_capture_plans
+    Studio::Lora::Selfie::DIRECTIONS.each_key do |direction|
+      recipes = (1..24).map { |n| Studio::Lora::Selfie.recipe(n, direction:) }
+      assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
+      assert recipes.all? { |recipe| recipe.fetch("direction") == direction }
+    end
+    phone = Studio::Lora::Selfie.recipe(1, direction: "snapshot")
+    assert_equal "selfie", phone.dig("shot", "distance")
+    assert_equal "24mm", phone.dig("shot", "lens")
+  end
+
   def test_count_is_bounded
     error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
     assert_match(/between 1 and/, error.message)

@@ -317,6 +317,8 @@ The photograph API accepts `action: plan` (no provider call) or `action: render_
 
 The selfie series now selects distinct sittings and named grades rather than an opaque random heavy pass. Optional key_side, catchlight and focus refine structured capture. Capture receipts are private, beside the retained original, and exclude provider upload URLs. Whole-frame technical assessment and before/after deltas are recorded separately from likeness and unreviewed artistic judgments. The refinement API returns stage-specific suggestions without automatically spending money or modifying the photographs. The existing ledger records the selected recipe, grade seed, likeness verdict and unreviewed status. Named laboratory presets are actual available Postpro looks, not a claim that unavailable consumer stocks have been physically reproduced. The historical research and its provenance live in guides.yml.
 
+The local `series_plan` action returns up to 24 proposed sittings before any paid call. The same series supports varied, natural, cinematic, editorial, experimental and snapshot directions, each with independent capture and laboratory decisions. MASTER's named selfie requests select these directions from an explicit brief. An operator can record an explicit approve/reject decision for a ledger candidate by series ID, zero-based index and SHA-256 through `review_candidate`; `preferences` summarizes the latest decisions by preset and direction. It never treats a generated image or metric as implicit approval. Preferences stay in the subject's ignored private cache, and are not automatically imposed on an unrelated brief.
+
 ## Default selfie route
 
 `ruby STUDIO/lora/photograph.rb --selfie-series --subject NAME` uses the

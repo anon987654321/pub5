@@ -13,7 +13,6 @@ require_relative "../replicate/client"
 require_relative "../replicate/models"
 require_relative "../replicate/subprocess"
 require_relative "consent"
-require_relative "judge"
 require_relative "../lora/lora"
 
 module Studio
@@ -117,6 +116,8 @@ module Studio
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
         @compiled_capture = compiled
         @capture_receipt = nil
+        @last_capture_model = @last_capture_input = nil
+        grade_seed ||= SecureRandom.random_number(2_147_483_647) if preset
         still = render_still(words, stem, grade_seed:, preset:)
         result = { "still" => still }
         result["capture"] = @capture_receipt if @capture_receipt
@@ -131,7 +132,8 @@ module Studio
       # as free-form requests. The compiled prompt already owns camera geometry.
       def write_shot(shot, grade_seed: nil)
         plan = Studio::Lora::Craft.compile_shot(shot)
-        result = write(plan.fetch("prompt"), film: false, grade_seed:, preset: plan.fetch("preset"), compiled: true)
+        result = write(plan.fetch("prompt"), film: false, output_stem: "#{@subject}_selfie_shot",
+                       grade_seed:, preset: plan.fetch("preset"), compiled: true)
         result.merge("plan" => plan)
       ensure
         @compiled_capture = false
@@ -492,7 +494,7 @@ module Studio
         desired["subject_reference"] = primary_reference_url if allowed.include?("subject_reference")
         desired["max_images"] = 1 if allowed.include?("max_images")
         desired["number_of_images"] = 1 if allowed.include?("number_of_images")
-        desired["prompt_optimizer"] = true if allowed.include?("prompt_optimizer")
+        desired["prompt_optimizer"] = !@compiled_capture if allowed.include?("prompt_optimizer")
         desired["resolution"] = "2K" if allowed.include?("resolution")
         desired["size"] = "2K" if allowed.include?("size")
         desired["output_format"] = "jpg" if allowed.include?("output_format")
@@ -844,6 +846,8 @@ module Studio
         raise "postpro produced no regular grade" unless File.file?(output) && !File.symlink?(output)
 
         File.chmod(0o600, output)
+        sidecar = "#{output}.json"
+        File.chmod(0o600, sidecar) if File.file?(sidecar) && !File.symlink?(sidecar)
         output
       end
 

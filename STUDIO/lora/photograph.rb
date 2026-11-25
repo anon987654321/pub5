@@ -32,6 +32,22 @@ def studio_photograph_actions
       result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     end,
     "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
+    "series_plan" => lambda do |request|
+      count = Integer(request.fetch("count", 4))
+      raise ArgumentError, "count must be between 1 and 24" unless count.between?(1, 24)
+      (1..count).map do |number|
+        Studio::Lora::Selfie.recipe(number, subject: request["subject"], direction: request.fetch("direction", "varied"))
+      end
+    end,
+    "preferences" => lambda do |request|
+      Studio::Visual::SelfieSeries.new(subject: request.fetch("subject")).preferences
+    end,
+    "review_candidate" => lambda do |request|
+      Studio::Visual::SelfieSeries.new(subject: request.fetch("subject")).review_candidate(
+        series_id: request.fetch("series_id"), index: request.fetch("index"),
+        sha256: request.fetch("sha256"), decision: request.fetch("decision")
+      )
+    end,
     "render" => lambda do |request|
       prompt = request["prompt"].to_s
       raise ArgumentError, "render needs a prompt" if prompt.empty?
@@ -47,7 +63,8 @@ def studio_photograph_actions
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(
-        subject:, engine: request["engine"], inference_profile: request["inference_profile"]
+        subject:, engine: request["engine"], inference_profile: request["inference_profile"],
+        direction: request.fetch("direction", "varied")
       ).run(
         count: request.fetch("count", 4)
       )
@@ -115,6 +132,7 @@ def studio_photograph_options(argv)
     parser.on("--selfie-series", "render portraits using the subject's references when present, otherwise the pinned LoRA") { options[:series] = true }
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
+    parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental or snapshot") { |value| options[:direction] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -251,7 +269,8 @@ if $PROGRAM_NAME == __FILE__
       # LoRA. An explicit --engine is an override, not a required choice.
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
-        subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile]
+        subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile],
+        direction: options.fetch(:direction, "varied")
       ).run(
         count: options[:count] || 4
       )

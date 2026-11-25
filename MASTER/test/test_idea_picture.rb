@@ -10,6 +10,18 @@ class TestIdeaPicture < Minitest::Test
     def success? = ok
   end
 
+  def test_selfie_series_passes_explicit_art_direction
+    with_script do |script|
+      runner = lambda do |*argv, **_options|
+        assert_equal ["--direction", "experimental"], argv.last(2)
+        ['[]', Status.new(true)]
+      end
+      Master::Io::Exec.stub(:capture2e, runner) do
+        assert_equal [], Master::Io::IdeaPicture.new(script:).selfie_series(subject: "probe", direction: "experimental")
+      end
+    end
+  end
+
   def test_write_uses_the_shared_runner_and_parses_result_keys
     with_script do |script|
       calls = []

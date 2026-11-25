@@ -592,7 +592,67 @@ module Studio
         ["portrait under a railway arch, distant daylight and a deliberate silhouette, head-and-shoulders framing, 85mm, eyes toward the light, quiet expression", "silver_gelatin"]
       ].freeze
 
-      def self.recipe(number, subject: nil)
+      DIRECTIONS = {
+        "natural" => [
+          ["window", "after_laugh", "85mm", "house"],
+          ["open_shade", "half_smile", "50mm", "pastel_portrait"],
+          ["overcast", "real_grin", "50mm", "reportage"],
+          ["golden_hour", "about_to_laugh", "85mm", "golden_age"]
+        ],
+        "cinematic" => [
+          ["practical", "mid_word", "50mm", "cinematic"],
+          ["mixed", "half_smile", "85mm", "house"],
+          ["neon", "about_to_laugh", "50mm", "neon_night"],
+          ["rembrandt", "after_laugh", "85mm", "silver_gelatin"]
+        ],
+        "editorial" => [
+          ["butterfly", "half_smile", "105mm", "house"],
+          ["hard", "mid_word", "85mm", "saturated_negative"],
+          ["split", "breath_held", "85mm", "noir"],
+          ["window", "after_laugh", "50mm", "pastel_portrait"]
+        ],
+        "experimental" => [
+          ["practical", "unguarded", "50mm", "aged_kodachrome"],
+          ["direct_flash", "mid_word", "35mm", "contact_print"],
+          ["mixed", "breath_held", "50mm", "vhs_tape"],
+          ["hard", "half_smile", "85mm", "analog_scan"]
+        ],
+        "snapshot" => [
+          ["direct_flash", "real_grin", "24mm", "instant_pack"],
+          ["overcast", "after_laugh", "24mm", "house"],
+          ["window", "about_to_laugh", "24mm", "pastel_portrait"],
+          ["mixed", "half_smile", "24mm", "analog_scan"]
+        ]
+      }.freeze
+      CONTEXTS = [
+        "a quiet café doorway", "a covered railway platform",
+        "a studio opening onto a courtyard", "a sheltered waterfront terrace",
+        "a record-shop entrance", "an old building's open arcade"
+      ].freeze
+
+      def self.directional_recipe(number, direction:)
+        treatments = DIRECTIONS.fetch(direction) { raise ArgumentError, "unknown photographic direction" }
+        index = Integer(number) - 1
+        raise ArgumentError, "sitting must be between 1 and 24" unless index.between?(0, 23)
+        light, moment, lens, preset = treatments.fetch(index % treatments.size)
+        context = CONTEXTS.fetch(index / treatments.size)
+        shot = {
+          "scene" => "a candid portrait at #{context}",
+          "framing" => index.even? ? "head and shoulders" : "chest-up environmental framing",
+          "distance" => direction == "snapshot" ? "selfie" : "3m",
+          "lens" => lens, "lighting" => light, "moment" => moment,
+          "gaze" => index.even? ? "eyes on the lens" : "eyes just past the lens",
+          "composition" => "one clear visual centre, deliberate negative space, readable depth planes",
+          "preset" => preset
+        }
+        plan = Craft.compile_shot(shot)
+        { "scene" => plan.fetch("prompt"), "preset" => preset, "sitting" => number,
+          "shot" => plan.fetch("shot"), "direction" => direction }
+      end
+
+      def self.recipe(number, subject: nil, direction: "varied")
+        return directional_recipe(number, direction:) unless direction == "varied"
+
         n = Integer(number)
         raise ArgumentError, "sitting must be positive" unless n.positive?
         scenes = SUBJECT_SCENES.fetch(subject.to_s, [])
