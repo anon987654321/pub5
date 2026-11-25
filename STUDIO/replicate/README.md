@@ -32,6 +32,24 @@ the inputs it decided, never an uploaded URL. Every step is a paid prediction,
 so a three-step chain costs three calls per frame; `--free` still applies to
 the first render only.
 
+## Promo cuts
+
+`promo.rb` assembles the piece the subject watches. It takes stills and clips
+in one call: clips lead, stills fill, one film look covers the whole cut and
+`dilla.wav` runs underneath. A clip is trimmed to `clip_seconds`, fitted to the
+frame, and crossfaded like a still, so a 12-second clip and a 4.5-second
+portrait mix without arithmetic drift.
+
+`segments_for_subject` chooses the material without being asked. If the subject
+has clips under `STUDIO/lora/<subject>/<subject>_film_*.mp4`, the cut uses
+them. Otherwise it uses the developed stills. `--subject merethe` needs no new
+argument.
+
+Clips cut together because each one starts where the last ended:
+`Motion.last_frame` pulls the final frame of a clip and the next prediction
+takes it as `first_frame_image`. `SelfieSeries#film_piece` does this in order,
+and `#promo` hands the result to the cut.
+
 ## Verify
 
 From the repository root:

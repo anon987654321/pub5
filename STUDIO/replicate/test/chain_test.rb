@@ -162,4 +162,23 @@ class TestStudioReplicateChain < Minitest::Test
     # the developed frame and its receipts remain.
     assert_equal 1, (Dir.children(@dir).grep(/\.jpg$/) - ["frame.jpg"]).length
   end
+
+  def test_every_chain_step_names_a_model_the_catalogue_knows_with_an_image_input
+    Studio::ReplicateClient::Chain.definitions.each do |name, steps|
+      refute_empty steps, "#{name} has no steps"
+      steps.each do |step|
+        inputs = Studio::ReplicateClient::Models.any_inputs_for(step.fetch("model"))
+        assert Studio::ReplicateClient::Chain::IMAGE_INPUTS.any? { |key| inputs.include?(key) },
+               "#{name}: #{step.fetch("model")} declares no image input"
+      end
+    end
+  end
+
+  def test_the_fallback_chain_names_only_models_the_catalogue_carries
+    Studio::ReplicateClient::Models.chain_for(Studio::ReplicateClient::Models.default_engine).each do |name|
+      next if name == "$subject_lora"
+
+      assert Studio::ReplicateClient::Models.any_engine(name), "#{name} is not in the catalogue"
+    end
+  end
 end

@@ -6,6 +6,8 @@ require "time"
 require "securerandom"
 require "digest"
 require_relative "idea_picture"
+require_relative "../replicate/motion"
+require_relative "../replicate/promo"
 require_relative "judge"
 require_relative "quality"
 require_relative "lora"
@@ -18,6 +20,9 @@ module Studio
     # written directly to STUDIO/lora/ with a subject/index prefix. No render
     # directory is created per person.
     class SelfieSeries
+      PROMO_CLIPS = 4
+      MOTION_PROMPT = "slow push in on the face, one shallow breath, eyes to the lens, " \
+                      "no camera shake, no morphing, film grain"
       LIMIT = 24
 
       # Subject-specific sittings live in lora/lora.rb with the rest of the craft.
@@ -102,6 +107,47 @@ module Studio
         end
 
         rendered
+      end
+
+      # Motion for the promo. One image-to-video call per clip, each starting on
+      # the previous clip's final frame, so the piece cuts together instead of
+      # restarting three times.
+      def film_piece(clips: 3, seconds: 12, still: nil)
+        total = Integer(clips)
+        raise ArgumentError, "clips must be between 1 and #{PROMO_CLIPS}" unless total.between?(1, PROMO_CLIPS)
+
+        length = Integer(seconds)
+        raise ArgumentError, "seconds must be between 1 and 10" unless length.between?(1, 10)
+
+        source = still || latest_still
+        raise ArgumentError, "no developed still for #{@subject}" unless source
+
+        piece = []
+        total.times do |index|
+          frame = nil
+          start = source
+          unless index.zero?
+            frame = File.join(@directory, "#{@subject}_frame_#{format("%02d", index)}.jpg")
+            start = Studio::ReplicateClient::Motion.last_frame(piece.last, out: frame)
+          end
+          clip = @series.animate(start, MOTION_PROMPT, duration: length).fetch("clip")
+          piece << clip
+          record("film", clip: File.basename(clip), index: index, seconds: length,
+                 continuous_from: index.zero? ? nil : File.basename(piece[index - 1]))
+        ensure
+          File.unlink(frame) if frame && File.exist?(frame)
+        end
+        piece
+      end
+
+      # The piece the subject watches: motion first, the dilla bed underneath.
+      def promo(audio:, out:, clips: 3, seconds: 12, still: nil, look: "dilla_heavy")
+        piece = film_piece(clips:, seconds:, still:)
+        Studio::Promo.render(clips: piece, audio:, out:, look:, clip_seconds: seconds)
+      end
+
+      def latest_still
+        Dir.glob(File.join(@directory, "#{@subject}_selfie_*.jpg")).sort.last
       end
 
       def review_candidate(series_id:, index:, sha256:, decision:)

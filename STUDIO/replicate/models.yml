@@ -31,11 +31,16 @@ verified_on: "2026-11-24"
 # the one engine that is about this person rather than people in general.
 default_engine: google/nano-banana-2.1
 fallback_chain:
+  - google/nano-banana-pro
+  - bytedance/seedream-5-pro
   - minimax/image-01
   - bytedance/seedream-5-lite
   - black-forest-labs/flux-kontext-max
   - bytedance/seedream-4.5
+  - black-forest-labs/flux-2-max
   - black-forest-labs/flux-2-flex
+  - black-forest-labs/flux-2-pro
+  - black-forest-labs/flux-2-klein-9b
   - black-forest-labs/flux-2-klein-4b
   - "$subject_lora"
   - black-forest-labs/flux-dev
@@ -55,6 +60,14 @@ text_to_image:
     likeness: reference
     inputs: [prompt, image_input, aspect_ratio, resolution, output_format]
     note: "Current Google reference-image model; accepts up to 14 images and 1K/2K/4K output. Use 2K for face review; 1K for economical drafts."
+  google/nano-banana-pro:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, output_format, resolution]
+    note: "Google's premium reference model. $0.035, $0.15 or $0.30 per image by output resolution, so 1K drafts and 2K finals. Strongest face retention; use it when the likeness matters more than the price."
+  bytedance/seedream-5-pro:
+    likeness: reference
+    inputs: [prompt, image_input, aspect_ratio, output_format]
+    note: "Seedream's pro tier: $0.0225, $0.045 or $0.09 per image by resolution. Holds a reference face and a plausible lens."
   minimax/image-01:
     likeness: reference
     inputs: [prompt, aspect_ratio, number_of_images, prompt_optimizer, subject_reference]
@@ -83,6 +96,18 @@ text_to_image:
     likeness: reference
     inputs: [prompt, image_input, aspect_ratio, size, max_images, sequential_image_generation]
     note: "Reference-photo generation up to 2K/4K; image_input is a list."
+  black-forest-labs/flux-2-max:
+    likeness: text
+    inputs: [prompt, aspect_ratio, width, height, resolution, output_format, output_quality, safety_tolerance, seed]
+    note: "FLUX 2 Max, prompt-only: $0.03 per megapixel, half the price of flex and the newer model. No reference input, so it cannot hold a likeness; it is a texture and light model, not a portrait one."
+  black-forest-labs/flux-2-pro:
+    likeness: text
+    inputs: [prompt, aspect_ratio, width, height, resolution, output_format, output_quality, safety_tolerance, seed]
+    note: "FLUX 2 Pro: $0.015 per megapixel, prompt-only. The economical text tier when a frame only needs to be plausible."
+  black-forest-labs/flux-2-klein-9b:
+    likeness: text
+    inputs: [prompt, aspect_ratio, megapixels, output_format, output_quality, go_fast, seed]
+    note: "Klein 9B: $0.015 per output megapixel, prompt-only, larger than the 4B row it supersedes."
   black-forest-labs/flux-2-klein-4b:
     likeness: reference
     inputs: [prompt, images, aspect_ratio, seed, output_format, output_megapixels, output_quality]

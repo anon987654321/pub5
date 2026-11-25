@@ -3,6 +3,7 @@
 require "fileutils"
 require "json"
 require "tmpdir"
+require "open3"
 require_relative "minitest_helper"
 require_relative "../../lora/selfie_series"
 
@@ -37,6 +38,30 @@ class TestSelfieSeries < Minitest::Test
 
       @downloads << path
       File.write(path, "render")
+      path
+    end
+  end
+
+  # A provider stand-in that writes a real clip, so the next prediction can
+  # start on this one's final frame.
+  class FilmClient < FakeClient
+    attr_reader :uploads
+
+    def initialize(clip_source)
+      super()
+      @clip_source = clip_source
+      @uploads = []
+    end
+
+    def input_names(_model_id) = %w[prompt first_frame_image duration resolution]
+
+    def upload_file(path, subject:)
+      @uploads << [path, subject]
+      "https://files.example/#{File.basename(path)}"
+    end
+
+    def download_url(_url, path)
+      FileUtils.cp(@clip_source, path)
       path
     end
   end
@@ -474,5 +499,60 @@ class TestSelfieSeries < Minitest::Test
   def ledger_rows(kind)
     path = File.join(@dir, "ledger.jsonl")
     File.file?(path) ? File.readlines(path).map { |line| JSON.parse(line) }.select { |row| row["kind"] == kind } : []
+  end
+
+  public
+
+  def test_film_piece_starts_each_clip_on_the_previous_clip_final_frame
+    skip "ffmpeg is not on PATH" unless Studio::Promo.ffmpeg?
+
+    Dir.mktmpdir do |dir|
+      source_clip = File.join(dir, "source.mp4")
+      Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                      "-i", "testsrc=size=64x64:rate=30:duration=2", "-pix_fmt", "yuv420p", source_clip)
+      subject_dir = File.join(dir, "probe")
+      FileUtils.mkdir_p(subject_dir)
+      still = File.join(subject_dir, "probe_selfie_01.jpg")
+      Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                      "-i", "color=c=navy:s=64x64", "-frames:v", "1", still)
+      File.chmod(0o600, still)
+
+      client = FilmClient.new(source_clip)
+      series = Studio::Visual::SelfieSeries.new(
+        subject: "probe", client:, directory: subject_dir, subjects_root: dir,
+        ledger_path: File.join(dir, "ledger.jsonl"), engine: "black-forest-labs/flux-dev"
+      )
+      piece = series.film_piece(clips: 2, seconds: 2, still:)
+
+      assert_equal 2, piece.length
+      assert_equal 2, client.predictions.length
+      first_frame = client.predictions[0][1][:first_frame_image]
+      second_frame = client.predictions[1][1][:first_frame_image]
+      refute_equal first_frame, second_frame, "each clip must start where the last one ended"
+      assert_match(/probe_selfie_01\.jpg/, client.uploads[0].first)
+      assert_match(/probe_frame_01\.jpg/, client.uploads[1].first)
+      assert_equal 2, Dir.glob(File.join(subject_dir, "*.mp4")).length
+      assert_empty Dir.glob(File.join(subject_dir, "*_frame_*.jpg")), "the pulled frame is an intermediate"
+      assert File.read(File.join(dir, "ledger.jsonl")).include?("\"kind\":\"film\"")
+    end
+  end
+
+  def test_film_piece_refuses_more_clips_than_the_house_limit
+    series = Studio::Visual::SelfieSeries.new(subject: "probe", ledger_path: "/tmp/unused-ledger.jsonl")
+
+    error = assert_raises(ArgumentError) { series.film_piece(clips: 5, seconds: 12) }
+    assert_match(/between 1 and 4/, error.message)
+    error = assert_raises(ArgumentError) { series.film_piece(clips: 2, seconds: 11) }
+    assert_match(/between 1 and 10/, error.message)
+  end
+
+  def test_film_piece_needs_a_developed_still
+    Dir.mktmpdir do |dir|
+      series = Studio::Visual::SelfieSeries.new(subject: "probe", directory: File.join(dir, "probe"),
+                                              ledger_path: File.join(dir, "ledger.jsonl"))
+
+      error = assert_raises(ArgumentError) { series.film_piece(clips: 1, seconds: 2) }
+      assert_match(/no developed still/, error.message)
+    end
   end
 end
