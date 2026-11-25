@@ -363,7 +363,9 @@ module Master
 
         # Mobile is the last to be dropped: a pass takes mobile captures, rotated so passes reach
         # every one, and a wider viewport only with room left after every mobile capture.
-        shown = rotated(mobile, room: cap, pass:)
+        wide_room = wide.empty? ? 0 : [cap / 4, 1].max
+        mobile_room = mobile.empty? ? 0 : [cap - wide_room, 1].max
+        shown = rotated(mobile, room: [mobile_room, cap].min, pass:)
         shown + rotated(wide, room: cap - shown.size, pass:)
       end
 
@@ -482,7 +484,7 @@ module Master
           The first attached image is a contact sheet containing every captured surface, exercised mobile state and cross-page overlay in this pass; further attached images are full-resolution overlays and renders. Each surface also has a persistent ghost stack: aligned renders from recent /fix passes are layered at low opacity, with a difference view for the newest two. Use these to spot optical drift and one-to-few-pixel misalignment before proposing a source change. The measurements below were
           collected from the same browser session across the listed surfaces.
           Mobile is the primary composition: every mobile surface is exercised through safe, non-destructive focus, validation, disclosure, and same-origin navigation journeys when those states exist. Navigation journeys include return-path evidence; journey screenshots are evidence, not a score. Treat web-platform probe findings as evidence about layout primitives, not automatic prescriptions; choose the smallest modern primitive that fits the rendered behavior and browser support.
-          Judge the render first. Source is supporting evidence.
+          Judge the render first. Source is supporting evidence. A technically compliant but visually weak page is not finished. Apply the operator’s canonical aesthetic laws to the entire composition: identify its dominant task, optical alignment, visual weight, proportion, negative space, type hierarchy and cross-page rhythm. Compare a subtractive composition with the existing arrangement before proposing a repair; retain the original if no material improvement is supported.
           #{product_review_context(captures)}
           Apply the executable MASTER design/usability constitution below. These are laws, not a scoring checklist. Identify only laws supported by rendered evidence.
           #{Master::Fix::VisualUsability.context}
