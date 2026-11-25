@@ -678,8 +678,17 @@ module Studio
         n = Integer(number)
         raise ArgumentError, "historical sitting out of range" unless n.between?(1, rows.size)
         row = rows.fetch(n - 1)
-        stock = row.fetch("stock").downcase
-        preset = case stock
+        preset = historical_preset(row.fetch("stock"))
+        prompt = [row.fetch("scene").gsub(/\bher\b/, "the subject\u0027s"), "key light: #{row.fetch("key")}",
+                  "camera distance: #{row.fetch("distance")}", row.fetch("lens"),
+                  "natural skin texture", "deliberate framing and eye-line"].join(", ")
+        { "scene" => prompt, "preset" => preset, "sitting" => n,
+          "direction" => direction, "historical_title" => row.fetch("title"),
+          "historical_source" => row }
+      end
+
+      def self.historical_preset(stock)
+        case stock.downcase
                  when /tri-x|trix/ then "silver_gelatin"
                  when /hp5/ then "reportage"
                  when /cinestill|vision3/ then "neon_night"
@@ -689,12 +698,29 @@ module Studio
                  when /polaroid|instax/ then "instant_pack"
                  else "house"
                  end
-        prompt = [row.fetch("scene").gsub(/\bher\b/, "the subject's"), "key light: #{row.fetch("key")}",
-                  "camera distance: #{row.fetch("distance")}", row.fetch("lens"),
-                  "natural skin texture", "deliberate framing and eye-line"].join(", ")
-        { "scene" => prompt, "preset" => preset, "sitting" => n,
-          "direction" => direction, "historical_title" => row.fetch("title"),
-          "historical_source" => row }
+      end
+
+      # Same numbered draws as the recovered composer; no provider calls.
+      def self.scenario_recipe(number)
+        n = Integer(number)
+        raise ArgumentError, "scenario must be positive" unless n.positive?
+        data = Guides.load.fetch("scenario_composer")
+        pools = data.fetch("pools")
+        strides = data.fetch("strides")
+        index = n - 1
+        pick = pools.to_h { |key, pool| [key, pool.fetch(index * strides.fetch(key) % pool.size)] }
+        lights = pools.fetch("lighting")
+        refused = data.fetch("conflicts").fetch(pick.fetch("background"), [])
+        light = (0...lights.size).map do |step|
+          lights.fetch((index * strides.fetch("lighting") + step * data.fetch("refusal_stride")) % lights.size)
+        end.find { |candidate| !refused.include?(candidate) }
+        raise ArgumentError, "no compatible scenario light" unless light
+        lighting = Craft::LIGHTING.fetch(light, light.tr("_", " ") + " key light")
+        scene = [*pick.values_at("expression", "pose", "wardrobe", "background"),
+                 lighting, "camera distance: #{pick.fetch("distance")}", pick.fetch("lens"),
+                 "chest-up framing, natural eye-line and skin texture"].join(", ")
+        { "scene" => scene, "preset" => historical_preset(pick.fetch("stock")),
+          "sitting" => n, "direction" => "scenarios" }
       end
 
       def self.directional_recipe(number, direction:)
@@ -718,6 +744,7 @@ module Studio
       end
 
       def self.recipe(number, subject: nil, direction: "varied")
+        return scenario_recipe(number) if direction == "scenarios"
         return historical_recipe(number, direction:) if %w[shoots warp best].include?(direction)
         return directional_recipe(number, direction:) unless direction == "varied"
 
@@ -726,12 +753,15 @@ module Studio
         scenes = SUBJECT_SCENES.fetch(subject.to_s, [])
         stocks = SUBJECT_SCENE_STOCKS.fetch(subject.to_s, [])
         index = n - 1
-        # Alternate authored archive sittings with the modern catalogue from
-        # the first batch; an experimental press shoot remains an explicit brief.
-        if n.even?
-          archived = Guides.load.fetch("historical_sittings").fetch("ideas").select { |row| row.fetch("set") == "shoots" }
-          offset = subject.to_s.bytes.sum % archived.size
-          return historical_recipe((offset + n / 2 - 1) % archived.size + 1, direction: "shoots")
+        # Keep fashion, authored portraits and procedural scenes in the ordinary
+        # series. Experimental Warp work remains a separate artistic brief.
+        offset = subject.to_s.bytes.sum
+        case index % 4
+        when 1
+          return historical_recipe((offset + index / 4) % 50 + 1, direction: "shoots")
+            .merge("sitting" => n, "direction" => "varied")
+        when 3
+          return scenario_recipe((offset + index / 4) % 200 + 1)
             .merge("sitting" => n, "direction" => "varied")
         end
         index /= 2
