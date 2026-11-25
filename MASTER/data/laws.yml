@@ -2398,6 +2398,20 @@ MERGE:
   resolution: review
   after: [HOIST]
 
+RADICAL_STRUCTURE:
+  root: one_source
+  statement: >
+    An operator-authorized radical structural pass (pack, embed, concat,
+    codegen or semantic merge) may rewrite the physical layout aggressively
+    only while one authoritative source remains for each fact, a reversible
+    receipt records every move before the pass is called complete, ownership
+    and census contracts not explicitly suspended for the session are
+    honoured or updated in the same change, and the suspended constraints
+    are named in that receipt and expire with the session.
+  severity: warning
+  resolution: review
+  after: [MERGE]
+
 RELOCATE:
   root: proximity
   statement: "Put a thing beside the concept that owns it."

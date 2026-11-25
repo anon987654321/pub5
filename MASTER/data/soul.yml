@@ -42,6 +42,20 @@ absolute:
   # operator may declare paths here again; a declared list is held to the
   # same safety rules and the master floor as before.
   sacred_paths: []
+  # Operator authority 2026-11-25: the operator may open a named radical
+  # session that relaxes selected structural constraints (for example a
+  # small-file preference or a load-boundary parity rule) for the duration
+  # of that session, so aggressive packing, embedding and regeneration can
+  # run without editing the laws themselves. Suspension is explicit, listed
+  # in the radical receipt, and does not delete the underlying Law: it
+  # expires with the session unless the operator renews it. The mutating
+  # /fix authorization rule (explicit --apply, named target, explicit mode)
+  # still applies to every radical pass.
+  radical_sessions:
+    allowed: true
+    require_named_session: true
+    require_receipt: true
+    default_expiry: session
   anti_simulation:
     forbidden:
       - will
