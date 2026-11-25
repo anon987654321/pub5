@@ -78,7 +78,11 @@ module Master
           Review the whole target with fresh eyes, from the tree and its measurements only. Say what
           stands out, what is odd, what is over-engineered (more machinery than the job needs), what is
           under-engineered (a thin spot the design claims to cover), what wants a refactor, what wants a
-          do-over, and where the target does not hold to the Laws. Prefer reduction to addition. Do not
+          do-over, and where the target does not hold to the Laws. Prefer subtraction before addition,
+          consolidation before extraction, native capabilities before wrappers, and conventions before
+          configuration. Compare total complexity across callers and owners; do not split merely to
+          satisfy size limits. Look for repeated decisions, pass-through methods, shallow modules,
+          purposeless markup/configuration nesting, and decorative or historical comments. Do not
           claim a caller, a test or a line you cannot see here, and do not recommend a rewrite of what
           works: the constitutional core is to be protected, the surface around it is to be reduced.
 
@@ -96,17 +100,15 @@ module Master
           Tree:
           #{TreeView.new(tree).render}
         PROMPT
-        text.byteslice(0, MAX_PROMPT_BYTES)
+        text.byteslice(0, MAX_PROMPT_BYTES).scrub("")
       end
 
       # Constitutional order is defined by Soul. The flat catalogue supplies
       # statements and source order, never a second priority field.
       def constitution
-        rows = Master.law_entries(root: @root)
         order = Master::Soul.invariant_order
-        rows.sort_by do |entry|
-          node = entry["node"]
-          [node ? order.index(node.to_s).to_i : order.length, rows.index(entry)]
+        Master.law_entries(root: @root).select { |entry| entry["node"] || %w[APPLICATION_IS_UNIFORM PRESERVE_FIRST DRY KISS SPARE_COMMENTS SOLID].include?(entry["id"]) }.sort_by do |entry|
+          order.index(entry["node"].to_s) || order.length
         end.map { |entry| "#{entry.fetch("id")}: #{entry.fetch("statement")}" }.join(" | ")
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "StructuralReview.constitution")
