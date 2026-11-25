@@ -49,6 +49,24 @@ envelope and phoneme shape.
 
 ## Primary material: particle stipple
 
+### Volumetric experiment and critique contract
+
+Evaluate a single persistent population of uniform, crisp, irregular ink marks
+on simplified three-dimensional sculptures. Prefer even organic separation,
+actual cavities and readable friendly anatomy over ornament, specular lighting
+or square voxels. Start with existing profiles before expanding the catalogue.
+The target material is approximately 1–2 CSS pixels with center spacing around
+2–3 diameters; these are hypotheses, not measured Pluribus production settings.
+Keep color constant, preserve identity through morphs, and let semantic forces
+rather than decoration drive movement. Reduced motion retains the same form.
+
+The existing council should challenge geometry, spacing, silhouette, friendliness,
+state communication, runtime cost and accessibility against front, profile and
+three-quarter renders. Use convergent deliberation and final arbitration; report
+missing visual evidence or unavailable reviewers as inconclusive, never as a pass.
+Do not add a renderer, law registry or product-wide particle decoration.
+
+
 The first-load introduction reuses this same field and renderer: deterministic
 seed-derived particles begin dispersed around the head, then an expanding signal
 front draws them onto the real face points over the token-defined interval.

@@ -101,7 +101,7 @@
   }
 
   // Local relief derivatives, not normals from the unrelated base portrait.
-  function normalAt(id, x, y) {
+  function normalAt(id, x, y, z = 0) {
     const p = PROFILES[profileIndex(id)];
     const shape = RELIEF[id];
     if (!p || !shape) return [0, 0, 1];
@@ -127,6 +127,11 @@
     const dx = (height(x + h, y) - height(x - h, y)) / (2 * h);
     const dy = (height(x, y + h) - height(x, y - h)) / (2 * h);
     const length = Math.hypot(dx, dy, 1);
+    if (z < 0) {
+      const nx = x / (p.w * p.w), ny = y / (p.h * p.h), nz = z / (.24 * .24);
+      const magnitude = Math.hypot(nx, ny, nz) || 1;
+      return [nx / magnitude, ny / magnitude, nz / magnitude];
+    }
     return [-dx / length, -dy / length, 1 / length];
   }
 
@@ -163,8 +168,12 @@
       const relief = .035 + .11 * Math.sqrt(Math.max(0, 1 - edge * edge)) +
         noseDepth * bridge + .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
       const light = Math.min(1, .19 + .29 * edge + .35 * bridge + .22 * brow + .18 * rim + .30 * cheek);
-      if (randomUnit(index, salt + 2) > light) continue;
-      const z = relief + (randomUnit(index, salt + 3) - .5) * .028;
+      // A minority of stable carriers describes the curved rear shell.
+      // Keep the same projected apertures through both sides of the mask.
+      const rear = index % 4 === 0;
+      if (!rear && randomUnit(index, salt + 2) > light) continue;
+      const z = rear ? -.24 * Math.sqrt(Math.max(0, 1 - edge * edge)) * width
+        : relief + (randomUnit(index, salt + 3) - .5) * .028;
       return [x, y, z];
     }
     // Bounded fallback on the silhouette, never in an eye or mouth void.

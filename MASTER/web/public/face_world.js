@@ -641,7 +641,8 @@
       normals = new Float32Array(facePositions.length);
       for (let offset = 0; offset < facePositions.length; offset += 3) {
         normals.set(window.MASTER_FACE_MASKS.normalAt(semanticDescriptor.maskProfile,
-          facePositions[offset] / MASK_PRIMARY_SCALE, facePositions[offset + 1] / MASK_PRIMARY_SCALE), offset);
+          facePositions[offset] / MASK_PRIMARY_SCALE, facePositions[offset + 1] / MASK_PRIMARY_SCALE,
+          facePositions[offset + 2] / MASK_PRIMARY_SCALE), offset);
       }
     }
     nativeSubjectField = form === "face"

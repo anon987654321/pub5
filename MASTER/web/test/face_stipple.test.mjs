@@ -1171,17 +1171,22 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
   });
   for (const mask of window.MASTER_FACE_MASKS.profiles) {
     const cells = new Set();
+    let rearCount = 0;
+    let frontCount = 0;
     const mouth = window.MASTER_FACE_MASKS.mouthGeometry(mask.id);
     for (let index = 0; index < 4096; index++) {
       const [x, y, z] = window.MASTER_FACE_MASKS.sample(mask.id, index);
-      const normal = window.MASTER_FACE_MASKS.normalAt(mask.id, x, y);
+      const normal = window.MASTER_FACE_MASKS.normalAt(mask.id, x, y, z);
+      if (z < -.05) rearCount += 1;
+      if (z > .05) frontCount += 1;
       assert.ok([x, y, z, ...normal].every(Number.isFinite), mask.id + " invalid relief");
-      assert.ok(normal[2] > 0 && Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
+      assert.ok((z < 0 ? normal[2] < 0 : normal[2] > 0) && Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
       cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
       const hole = (x / mouth.width) ** 2 + ((y - mouth.y) / mouth.height) ** 2;
       assert.ok(hole >= .98, mask.id + " mouth is occluded");
     }
     assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
+    assert.ok(rearCount > 400 && frontCount > 1000, mask.id + " lacks front or rear volume");
   }
 });
 
