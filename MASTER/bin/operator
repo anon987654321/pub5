@@ -450,6 +450,25 @@ rescue StandardError => error
   1
 end
 
+# A pane held after its deploy finished, whose collector never ran to the end
+# (SSH drop, closed laptop), blocked every new launch for the whole hold. A
+# finished pane is saved here, privately, and closed; a running one still blocks.
+def recover_finished_deploy_pane(session)
+  output, ok = ssh_capture(remote_deploy_capture_command(session), attempts: 1)
+  return unless ok && !output.include?("__PUB5_DEPLOY_NO_SESSION__")
+
+  exit_code = output[/PUB5_DEPLOY_EXIT=(\d{1,3})/, 1]
+  return puts("vps-deploy: session #{session} is still running a deploy; not starting another") unless exit_code
+
+  require "fileutils"
+  directory = ENV.fetch("PUB5_DEPLOY_LOG_DIR", File.expand_path("~/.pub5/deployments"))
+  FileUtils.mkdir_p(directory, mode: 0o700)
+  path = File.join(directory, "recovered-#{session}-#{Time.now.utc.strftime('%Y%m%dT%H%M%SZ')}.log")
+  File.open(path, File::WRONLY | File::CREAT | File::EXCL, 0o600) { |file| file.write(output) }
+  ssh_capture(Shellwords.join(["tmux", "kill-session", "-t", session]), attempts: 1)
+  puts "vps-deploy: closed finished session #{session} (exit #{exit_code}); its transcript: #{path}"
+end
+
 def tail_local_deploy_log(log_path, waiter)
   offset = 0
   status = nil
@@ -1395,6 +1414,7 @@ when "vps"
       log.append("assets: built here and staged on the box for #{sha}\n")
       session = "pub5-deploy"
       log_ref = "local://deploys/#{File.basename(log.path)}"
+      recover_finished_deploy_pane(session)
       launch_command = remote_deploy_launch_command(remote_command, log_ref:, session:)
       launch_output, launched = ssh_capture(launch_command, attempts: 1)
       log.append("remote launch (#{launched ? 'started' : 'failed'}):\n#{launch_output}\n")
