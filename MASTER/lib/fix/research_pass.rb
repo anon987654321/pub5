@@ -137,19 +137,21 @@ module Master
       def craft_context(domain, target)
         return "" if domain == "all"
 
-        medium = case domain
-                 when "music" then "music"
-                 when "visual" then "photography"
-                 when "rails" then "design"
-                 when "studio"
-                   target.to_s.match?(/(?:lora|photo)/i) ? "photography" :
-                     (target.to_s.match?(/(?:cinema|video|mov)/i) ? "cinema" : nil)
-                 when "conversation" then "writing"
-                 when "engineering", "openbsd" then "software"
-                 end
-        return "" unless medium
-
-        Master::Design::VisualLanguage.creative_context(medium)
+        media = case domain
+                when "music" then %w[music]
+                when "visual" then %w[photography design]
+                when "rails" then %w[design software]
+                when "studio"
+                  selected = []
+                  selected << "photography" if target.to_s.match?(/(?:lora|photo|selfie)/i)
+                  selected << "cinema" if target.to_s.match?(/(?:cinema|video|mov|film)/i)
+                  selected << "music" if target.to_s.match?(/(?:music|dilla|audio|sound)/i)
+                  selected.empty? ? %w[photography cinema music] : selected
+                when "conversation" then %w[writing]
+                when "engineering", "openbsd" then %w[software]
+                else []
+                end
+        Master::Design::VisualLanguage.creative_context(media)
       end
 
       def format_brief(status:, domain:, target:, records:, fetched:, independent_hosts:, minimum:, eligible_files:, coverage:)
