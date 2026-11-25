@@ -112,6 +112,8 @@ nb:
       on_its_way: "På vei"
       tracking: Sporing
       delivered: "Levert"
+    frequently_bought_together: "Ofte kjøpt sammen"
+    category_alternatives: "Mer i denne kategorien"
     buy_box_heading: "Anbefalt butikktilbud"
     other_sellers_from:
       one: "Én annen selger fra %{price}"

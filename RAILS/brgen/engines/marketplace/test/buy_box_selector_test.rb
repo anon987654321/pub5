@@ -53,6 +53,31 @@ class Marketplace::BuyBoxSelectorTest < ActiveSupport::TestCase
     assert_nil Marketplace::BuyBoxSelector.for(private_offer)
   end
 
+  test "checksum-valid GTIN representations share one product key" do
+    first = offer(user: @seller_a, store: @store_a, price: 4_000, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
+    second = offer(user: @seller_b, store: @store_b, price: 4_500, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
+    first.update!(buy_box_key: "EAN 4006381333931")
+    second.update!(buy_box_key: "GTIN 04006381333931")
+
+    assert_equal "GTIN 04006381333931", first.reload.buy_box_key
+    assert_equal first.buy_box_key, second.reload.buy_box_key
+    assert_equal [ first.id, second.id ].sort, Marketplace::BuyBoxSelector.for(first).offers.map(&:id).sort
+    assert_equal "EAN 4006381333930", Marketplace::Listing.normalize_product_key("EAN 4006381333930")
+  end
+
+  test "different conditions and ambiguous variant offers do not compete" do
+    first = offer(user: @seller_a, store: @store_a, price: 4_000, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
+    second = offer(user: @seller_b, store: @store_b, price: 4_500, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
+    first.update!(condition: "new_with_tags")
+    second.update!(condition: "good")
+    assert_equal [ first.id ], Marketplace::BuyBoxSelector.for(first).offers.map(&:id)
+
+    second.update!(condition: "new_with_tags")
+    Marketplace::Variant.create!(listing: second, stock: 2)
+    assert_equal [ first.id ], Marketplace::BuyBoxSelector.for(first).offers.map(&:id)
+    assert_nil Marketplace::BuyBoxSelector.for(second)
+  end
+
   test "does not compare minor units from different currencies" do
     local = offer(user: @seller_a, store: @store_a, price: 4_000, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
     foreign = offer(user: @seller_b, store: @store_b, price: 400, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)

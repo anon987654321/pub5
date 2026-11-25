@@ -112,6 +112,8 @@ en:
       on_its_way: "On its way"
       tracking: Tracking
       delivered: "Delivered"
+    frequently_bought_together: "Frequently bought together"
+    category_alternatives: "More in this category"
     buy_box_heading: "Recommended shop offer"
     other_sellers_from:
       one: "One other seller from %{price}"

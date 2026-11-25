@@ -55,6 +55,7 @@ module Marketplace
 
     def self.for(listing)
       return unless listing&.store_id.present? && listing.buy_box_key.present? && listing.city_id.present?
+      return if listing.varied?
 
       offers = eligible_offers(listing).to_a.select(&:buyable?)
       return if offers.empty?
@@ -65,15 +66,16 @@ module Marketplace
     end
 
     def self.eligible_offers(listing)
-      Marketplace::Listing.where(
+      Marketplace::Listing.publicly_visible.where(
         city_id: listing.city_id,
         category_id: listing.category_id,
         currency: listing.currency,
+        condition: listing.condition,
         kind: "goods",
         buy_box_key: listing.buy_box_key,
         status: "active"
       ).where.not(store_id: nil)
-       .where("expires_at IS NULL OR expires_at > ?", Time.current)
+       .where.not(id: Marketplace::Variant.select(:listing_id))
        .joins(:store)
        .merge(Marketplace::Store.active)
        .includes(:store, :user)

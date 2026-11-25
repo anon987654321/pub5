@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Marketplace::ListingsController < Marketplace::BaseController
-    include StorefrontSearch
+  include StorefrontSearch
   include Shared::TwoFactorAuth
 
   rate_limit to: 20, within: 3.minutes, only: %i[create],
@@ -74,6 +74,9 @@ class Marketplace::ListingsController < Marketplace::BaseController
     @reviews = @listing.reviews.includes(:user).order(created_at: :desc)
     @review = Marketplace::Review.new if Current.user.present? && @listing.reviewable_by?(Current.user)
     @nearby_listings = nearby_listings_for(@listing)
+    @co_purchases = @listing.frequently_bought_together.to_a
+    @alternatives = policy_scope(Marketplace::Listing).where(kind: @listing.kind, category_id: @listing.category_id, currency: @listing.currency)
+      .where.not(id: [ @listing.id, *@co_purchases.map(&:id) ]).ranked.limit(6) if @listing.category_id
     @questions = @listing.questions.includes(:user, :answered_by).for_display
     @variants = @listing.variants.ordered.includes(:options).in_stock
     @categories = Marketplace::Category.roots.includes(:children)

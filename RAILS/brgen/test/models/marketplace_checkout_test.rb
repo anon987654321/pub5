@@ -96,6 +96,25 @@ class MarketplaceCheckoutTest < ActiveSupport::TestCase
     assert_equal "unpaid", first.reload.payment_status, "nor one order paid while another failed"
   end
 
+  test "co-purchase discovery requires three distinct paid buyers" do
+    item = listing(stock: 10)
+    companion = listing(stock: 10)
+    other = listing(stock: 10)
+    3.times do |index|
+      buyer = User.strict_loading(false).create!(email_address: "mc_co_#{index}@brgen.no", password: "password123", city: @city)
+      basket = buyer.marketplace_checkouts.create!(currency: "NOK")
+      [ item, companion, other ].each do |product|
+        order = Marketplace::Order.create!(buyer: buyer, listing: product, quantity: 1, price_cents: product.price_cents, checkout: basket)
+        order.update!(payment_status: "paid") unless product == other && index == 2
+      end
+      assert_empty item.frequently_bought_together if index < 2
+    end
+
+    assert_equal [ companion.id ], item.frequently_bought_together.ids
+    companion.update!(status: "removed")
+    assert_empty item.frequently_bought_together
+  end
+
   test "a basket spanning sellers splits by seller" do
     checkout = @buyer.marketplace_checkouts.create!(marketplace_address: address, currency: "NOK")
     mine = order_for(listing(seller: @seller))

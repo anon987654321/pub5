@@ -23,7 +23,7 @@ class Playlist::HostedTracksController < Playlist::BaseController
     end
     scope = scope.where("LOWER(playlist_tracks.genre) = ?", @genre.downcase) if @genre.present?
     scope = scope.where(user_id: @creator) if @creator
-    @pagy, @tracks = pagy(scope.recent.includes(artwork_attachment: { blob: :variant_records }))
+    @pagy, @tracks = pagy(scope.recent.includes(:user, artwork_attachment: { blob: :variant_records }))
   end
 
   def show

@@ -342,6 +342,36 @@ class Marketplace::Listing < ApplicationRecord
     title.to_s.downcase.gsub(/[^a-z0-9]+/, " ").strip
   end
 
+  # GTIN-8/12/13/14 are the same identifier when left padded to 14 digits.
+  # Preserve older shop-defined model keys; only checksum-valid codes qualify
+  # for the canonical GTIN form.
+  def self.normalize_product_key(value)
+    key = value.to_s.strip.upcase.gsub(/\s+/, " ")
+    digits = key.sub(/\A(?:GTIN|EAN|UPC)(?:[- ]?(?:8|12|13|14))?[: ]+/, "").delete(" -")
+    if digits.match?(/\A(?:\d{8}|\d{12}|\d{13}|\d{14})\z/)
+      checksum = digits.chars.reverse.drop(1).each_with_index.sum { |digit, index| digit.to_i * (index.even? ? 3 : 1) }
+      return "GTIN #{digits.rjust(14, "0")}" if (10 - checksum % 10) % 10 == digits[-1].to_i
+    end
+
+    key.presence
+  end
+
+  # Co-purchases use actual paid basket lines, never browsing histories.
+  # A small minimum cohort prevents a single buyer's basket becoming public.
+  def frequently_bought_together(limit: 6)
+    return self.class.none unless goods? && city_id
+
+    paid = Marketplace::Order.where(payment_status: "paid").where.not(marketplace_checkout_id: nil)
+    baskets = paid.where(listing_id: id).select(:marketplace_checkout_id)
+    related = paid.where(marketplace_checkout_id: baskets)
+      .where.not(listing_id: id)
+      .where(listing_id: self.class.publicly_visible.where(city_id:, kind: "goods", currency: currency).select(:id))
+      .group(:listing_id).having("COUNT(DISTINCT buyer_id) >= ?", 3)
+      .order(Arel.sql("COUNT(DISTINCT buyer_id) DESC, listing_id ASC")).limit(limit)
+      .pluck(:listing_id)
+    self.class.publicly_visible.where(id: related).in_order_of(:id, related)
+  end
+
   def reviewable_by?(account)
     return false if account.blank? || account == user
     return false if reviews.exists?(user: account)
@@ -359,7 +389,7 @@ class Marketplace::Listing < ApplicationRecord
 
   def normalize_buy_box_key
     self.buy_box_key = nil if store_id.blank?
-    self.buy_box_key = buy_box_key.to_s.strip.upcase.gsub(/\s+/, " ") if buy_box_key.present?
+    self.buy_box_key = self.class.normalize_product_key(buy_box_key) if buy_box_key.present?
   end
 
   def set_expiry
