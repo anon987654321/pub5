@@ -41,7 +41,7 @@ module Master
         # informed one-line change rather than a guess.
         TOTAL_BUDGET_S = 600
         MIN_QUORUM = 3
-        CONVERGENCE_ROUNDS = 3
+        CONVERGENCE_ROUNDS = 4
         # How much of the council must agree before a round counts as converged.
         # The same number lived twice: here as a literal, and in council.yml as
         # `parameters.consensus_threshold`, which nothing read. Two copies of one
@@ -103,23 +103,26 @@ module Master
           Integer(Master.load_yaml(Master::COUNCIL_PATH, default: {}).dig("parameters", "local_panel") || 7)
         end
 
-        def review_convergent(code, context: nil, max_rounds: nil, image: nil)
-          max_rounds ||= self.class.local_posture? ? 1 : CONVERGENCE_ROUNDS
+        def review_convergent(code, context: nil, max_rounds: nil, image: nil, required_veto_roles: [])
+          max_rounds ||= CONVERGENCE_ROUNDS
           history = []
           round_context = context
           max_rounds.times do |index|
-            result = review_round(code, round_context, index + 1, max_rounds, image:)
+            @bus&.publish(:council_round_start, round: index + 1, max: max_rounds)
+            result = review(code, context: round_context, image:, required_veto_roles:, synthesize: false)
             return result if result.err?
 
-            history << result.value!
-            if history.size >= 2 && converged?(history[-2], history[-1])
-              @bus&.publish(:council_converged, round: index + 1)
-              break
-            end
-
-            round_context = feedback_summary(history.last, context)
+            history << result.value!.map { |entry| entry.merge(round: index + 1) }
+            round_context = feedback_summary(history.flatten(1), context)
           end
-          Result.ok(Array(history.last))
+          feedback = history.flatten(1)
+          append_judge_synthesis(feedback:, code:, context:, image:) if @judge_enabled
+          return deadline_result(feedback) if Master::Review::LLMDispatcher::PassClock.expired?
+          if @judge_enabled && feedback.none? { |entry| entry[:persona] == "Judge" }
+            return Result.err("council: final arbitration unavailable", category: :inconclusive)
+          end
+
+          Result.ok(feedback)
         end
 
         # The key check is one layer down, in LLMDispatcher#send_with_cache,
@@ -150,7 +153,7 @@ module Master
           review(code, context:, image:, required_veto_roles: ["Security"])
         end
 
-        def review(code, context: nil, personas: nil, image: nil, required_veto_roles: [])
+        def review(code, context: nil, personas: nil, image: nil, required_veto_roles: [], synthesize: true)
           active = active_personas(personas, required_veto_roles:)
           configuration_error = veto_role_configuration_error
           return configuration_error if configuration_error
@@ -186,7 +189,7 @@ module Master
           # to bypass quorum or a selected veto-capable reviewer's response.
           return deadline_result(feedback) if Master::Review::LLMDispatcher::PassClock.expired?
 
-          append_judge_synthesis(feedback:, code:, context:, image:)
+          append_judge_synthesis(feedback:, code:, context:, image:) if synthesize
           return deadline_result(feedback) if Master::Review::LLMDispatcher::PassClock.expired?
 
           publish_confidence(feedback)
