@@ -2138,10 +2138,10 @@ body.mission-control code {
   color: var(--c-code);
   white-space: break-spaces;
 }
-.syntax-command, .syntax-keyword { color: var(--c-accent); }
+.msg-body pre .syntax-command, .msg-body pre .syntax-keyword { color: #a7bfdb; } /* scan: intentional-colors — source syntax only */
 .syntax-flag, .syntax-path, .syntax-operator { color: var(--face-muted); }
-.syntax-string { color: color-mix(in srgb, var(--c-accent) 72%, white); }
-.syntax-number { color: color-mix(in srgb, var(--face-fg) 76%, var(--c-accent)); }
+.msg-body pre .syntax-string { color: #b8c9ad; } /* scan: intentional-colors — source syntax only */
+.msg-body pre .syntax-number { color: #cbb7d4; } /* scan: intentional-colors — source syntax only */
 .syntax-comment { color: var(--face-muted); font-style: italic; }
 .syntax-success { color: var(--c-accent); }
 .syntax-warning { color: color-mix(in srgb, var(--c-accent) 68%, white); }

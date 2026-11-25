@@ -11,7 +11,8 @@ module Master
       # operator. Elevation still checks dangerous tools inside full.
       module Profile
         CONFIG_PATH = Master.data_path("security.yml").freeze
-        NAMES = %i[public messaging full elevated].freeze
+        NAMES = %i[public messaging full elevated web].freeze
+        WEB_NAMES = %w[WebSearch].freeze
         FALLBACK = {
           "public" => %w[AskLlm WebSearch SubdomainOrchestrator],
           "messaging" => %w[AskLlm WebSearch SubdomainOrchestrator WebFetch MemoryRecord],
@@ -20,6 +21,7 @@ module Master
         module_function
 
         def current
+          return :web if Fiber[:master_web] == true
           return :public if Fiber[:master_visitor] && !Fiber[:master_paired]
           return :messaging if Fiber[:master_visitor] && Fiber[:master_paired]
           return :elevated if Fiber[:master_elevated]
@@ -31,6 +33,7 @@ module Master
 
         def allowlist(profile = current)
           key = profile.to_s
+          return WEB_NAMES if Fiber[:master_web] == true || key == "web"
           return if %w[full elevated].include?(key)
 
           configured = Array(profiles_config[key]).map(&:to_s)
@@ -49,6 +52,8 @@ module Master
 
         def session_note
           case current
+          when :web
+            "Session scope: browser conversation only. Public web search is available; local files, commands, private memory and mutations are not."
           when :public
             "Session scope: public visitor. Tools: #{public_names.join(', ')}. " \
               "Pairing required for personal memory."

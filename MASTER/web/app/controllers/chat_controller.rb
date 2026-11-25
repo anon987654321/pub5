@@ -121,49 +121,9 @@ class ChatController < ApplicationController
   end
 
   def command
-    cmd = (params[:command] || JSON.parse(request.body.read)["command"]).to_s.strip
-    if cmd.start_with?("/unlock ")
-      pw = cmd.sub(/^\/unlock\s+/, "").strip
-      token = OperatorToken.read
-      if token.empty? || pw.bytesize != token.bytesize || !Rack::Utils.secure_compare(pw, token)
-        render(json: { output: "unlock denied" }, status: :unauthorized) and return
-      end
-      set_unlock_cookie
-      render(json: { output: "unlocked — full tool access enabled." }) and return
-    end
-    if (code = pair_redeem_arg(cmd))
-      if pair_redeem_limited?
-        render(json: { output: "pair: too many tries — wait a minute" }, status: :too_many_requests)
-        return
-      end
-      result = Master::Ground::Pairing.redeem(code)
-      if result
-        set_pair_cookie(result[:token])
-        render(json: { output: Master::Ground::Pairing.redeem_notice(result) })
-      else
-        render(json: { output: "pair: invalid or expired code" }, status: :unprocessable_entity)
-      end
-      return
-    end
-    return head(:forbidden) if visitor?
-
-    operation_capture = nil
-    with_master_fiber(unlocked: unlocked?) do
-      operation_capture = begin_command_operation_capture(cmd)
-      result = container[:gateway].receive(channel: :cli, message: cmd)
-      value = result.ok? ? result.value! : nil
-      output = value.is_a?(Hash) ? (value[:rendered] || value.to_s) : (value || result.message)
-      client_actions = value.is_a?(Hash) ? Array(value[:client_actions]) : []
-      operation_log = publish_command_operation_log(cmd, result, operation_capture)
-      render json: { output:, client_actions:, operation_log: }
-    ensure
-      operation_capture&.close
-    end
-  rescue StandardError => e
-    operation_log = publish_command_operation_log(cmd, nil, operation_capture, status: "failure")
-    render json: { output: "Error: #{e.message}", operation_log: }, status: :internal_server_error
-  ensure
-    operation_capture&.close
+    # Browser authentication and pairing identify the user; neither grants
+    # access to the local command registry or its filesystem and shell tools.
+    render json: { output: "operator commands require the local CLI" }, status: :forbidden
   end
 
   def research
@@ -196,7 +156,7 @@ class ChatController < ApplicationController
     # Same fiber flags as /chat/message. Without them Tool::Profile.current is
     # :full, so a visitor enhance turn advertised ReadFile and could have the
     # model open .master/config.yml for the web token.
-    with_master_fiber(unlocked: unlocked?) do
+    with_master_fiber do
       result = Master::CLI::Stages::Enhance.run(msg, agent: container[:agent], event_bus: container[:bus])
       render json: result
     end
@@ -214,7 +174,7 @@ class ChatController < ApplicationController
     input = mp[:message].to_s.strip
     return head(:bad_request) if input.empty?
     return redeem_pair_from_chat(input) if visitor? && pair_redeem_arg(input)
-    return head(:forbidden) if visitor? && input.start_with?("/")
+    return head(:forbidden) if input.start_with?("/")
     return stream_smoke_reply(input) if smoke_chat_message?(input)
 
     conversation = conversation_id
@@ -229,7 +189,7 @@ class ChatController < ApplicationController
       stream: response.stream,
       logger: web_logger,
       tier: request.env["master.tier"].to_s,
-      unlocked: unlocked?,
+      unlocked: false,
       author: false,
       paired: pairing_active?,
       pair_token: cookies[:master_paired].to_s,
@@ -380,7 +340,7 @@ class ChatController < ApplicationController
     result = Master::Ground::Pairing.redeem(pair_redeem_arg(input))
     body = if result
              set_pair_cookie(result[:token])
-             Master::Ground::Pairing.redeem_notice(result)
+             "paired - browser conversation only; operator commands require the local CLI"
     else
              "pair: invalid or expired code"
     end

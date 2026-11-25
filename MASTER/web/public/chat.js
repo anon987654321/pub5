@@ -265,40 +265,35 @@ window._chatOnUser = (text) => {
 
 // Small dependency-free tokenizer for fenced source blocks. It emits only
 // escaped source text and fixed class names; model output never becomes markup.
-function highlightCode(source) {
-  const pattern = /(\/\/[^\n]*|#[^\n]*)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(--?[A-Za-z][\w-]*)|(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)|(\b(?:bin\/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|puts|warn|printf|echo|curl|pkg_add|service|rcctl)\b)|(\b\d+(?:\.\d+)?\b)|([A-Za-z0-9_.-]+\/[A-Za-z0-9_./-]+)|([=<>!|&+*-]+)/g;
-  let html = "";
-  let cursor = 0;
+function highlightCode(source, language = "") {
+  const lang = language.toLowerCase();
+  const ruby = /^(ruby|rb|sh|bash|zsh|shell|yaml|yml|python|py)$/.test(lang);
+  const js = /^(js|javascript|ts|typescript|jsx|tsx|css|scss|sass|json|c|cpp|go|rust|java)$/.test(lang);
+  const html = /^(html|xml|svg|erb)$/.test(lang);
+  const sql = lang === "sql";
+  if (!ruby && !js && !html && !sql) return escapeHtml(source);
+  const comment = html ? /<!--[\s\S]*?-->/ : sql ? /--[^\n]*|\/\*[\s\S]*?\*\// :
+    ruby ? /#[^\n]*/ : /\/\/[^\n]*|\/\*[\s\S]*?\*\//;
+  const strings = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\x60(?:\\.|[^\x60\\])*\x60/;
+  const words = html ? /<\/?[A-Za-z][\w:-]*|\b[\w:-]+(?=\s*=)/ :
+    /\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in|select|where|join|insert|update|delete|create|table|as|and|or|not)\b/i;
+  const numbers = /\b\d+(?:\.\d+)?\b/;
+  const cssValue = /#[0-9a-fA-F]{3,8}\b|--[\w-]+|[\w-]+(?=\s*:)/;
+  const roles = [[comment, "comment"], [strings, "string"], [words, "keyword"], [numbers, "number"]];
+  if (/^(css|scss|sass)$/.test(lang)) roles.unshift([cssValue, "keyword"]);
+  const pattern = new RegExp(roles.map(([re]) => "(" + re.source + ")").join("|"), sql ? "gi" : "g");
+  let output = "", cursor = 0;
   for (const match of source.matchAll(pattern)) {
-    const index = match.index;
-    html += escapeHtml(source.slice(cursor, index));
-    const token = match[0];
-    let role = "";
-    if (match[1]) role = "comment";
-    else if (match[2]) role = "string";
-    else if (match[3]) role = "flag";
-    else if (match[4]) role = "keyword";
-    else if (match[5]) {
-      const lineStart = source.slice(source.lastIndexOf("\n", index - 1) + 1, index).trim();
-      if (!lineStart) role = "command";
-    }
-    else if (match[6]) role = "number";
-    else if (match[7]) role = "path";
-    else if (match[8]) role = "operator";
-    html += role ? '<span class="syntax-' + role + '">' + escapeHtml(token) + '</span>' : escapeHtml(token);
-    cursor = index + token.length;
+    const role = roles[match.slice(1).findIndex((part) => part !== undefined)][1];
+    output += escapeHtml(source.slice(cursor, match.index));
+    output += '<span class="syntax-' + role + '">' + escapeHtml(match[0]) + '</span>';
+    cursor = match.index + match[0].length;
   }
-  return html + escapeHtml(source.slice(cursor));
+  return output + escapeHtml(source.slice(cursor));
 }
 
 function renderPlainText(source) {
-  return source.split("\n").map((line) => {
-    const match = line.match(/^(ok:|warn:|error:)(\s*)(.*)$/);
-    if (!match) return escapeHtml(line);
-    const role = match[1] === "ok:" ? "success" : match[1] === "warn:" ? "warning" : "error";
-    return '<span class="syntax-' + role + '">' + escapeHtml(match[1]) + '</span>' +
-      match[2] + escapeHtml(match[3]);
-  }).join("<br>");
+  return escapeHtml(source).replace(/\n/g, "<br>");
 }
 
 function renderTerminalText(source) {
@@ -308,12 +303,13 @@ function renderTerminalText(source) {
   for (const match of source.matchAll(fence)) {
     html += renderPlainText(source.slice(cursor, match.index));
     const language = match[1] ? ' data-language="' + escapeHtml(match[1]) + '"' : "";
-    html += "<pre" + language + "><code>" + highlightCode(match[2]) + "</code></pre>";
+    html += "<pre" + language + "><code>" + highlightCode(match[2], match[1]) + "</code></pre>";
     cursor = match.index + match[0].length;
   }
   return html + renderPlainText(source.slice(cursor));
 }
 
+const terminalSource = new WeakMap();
 let _chunkCount = 0;
 let _streamLiveTimer = null;
 window._chatOnChunk = (raw) => {
@@ -332,8 +328,9 @@ window._chatOnChunk = (raw) => {
     _streamEl.closest('.message')?.classList.add('msg-error-flash');
     setTimeout(() => _streamEl.closest('.message')?.classList.remove('msg-error-flash'), 120);
   }
-  const previousText = typeof _streamEl.innerText === 'string' ? _streamEl.innerText : _streamEl.textContent;
+  const previousText = terminalSource.get(_streamEl) || "";
   const text = previousText + raw.replace(/\n/g, '\\n').replace(/\\\\/g, '\\');
+  terminalSource.set(_streamEl, text);
   if (text.includes('```')) {
     _streamEl.innerHTML = renderTerminalText(text);
   } else {

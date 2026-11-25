@@ -24,17 +24,19 @@ module Master
           source = output_guard.sanitize(text.to_s, context: :routine)
           rows = []
           fenced = false
+          language = ""
 
           source.lines.each do |line|
             body = line.chomp
             if body.lstrip.start_with?("```")
+              language = fenced ? "" : body.lstrip.delete_prefix("```").strip.downcase
               fenced = !fenced
               rows << "" if rows.any? && !rows.last.empty?
               next
             end
 
             if fenced
-              rows << (body.empty? ? "" : "    #{highlight_terminal_code(body)}")
+              rows << (body.empty? ? "" : "    #{highlight_terminal_code(body, language:)}")
               next
             end
 
@@ -81,10 +83,17 @@ module Master
 
         # Highlight fenced source only when MASTER's output policy permits ANSI.
         # TTY detection, NO_COLOR and TERM=dumb have one owner in Renderer.
-        def highlight_terminal_code(line)
+        def highlight_terminal_code(line, language: "")
           return line unless terminal_color_enabled?
+          return line unless language.match?(/\A(?:ruby|rb|sh|bash|zsh|shell|yaml|yml|python|py|js|javascript|ts|typescript|jsx|tsx|css|scss|sass|json|html|xml|svg|erb|sql|c|cpp|go|rust|java)\z/)
 
-          line.gsub(TERMINAL_CODE_TOKENS) do |token|
+          pattern = case language
+                    when /\A(?:ruby|rb|sh|bash|zsh|shell|yaml|yml|python|py)\z/
+                      TERMINAL_CODE_TOKENS
+                    else
+                      Regexp.new(TERMINAL_CODE_TOKENS.source.sub('\\#[^\\n]*|', ''), Regexp::EXTENDED)
+                    end
+          line.gsub(pattern) do |token|
             captures = Regexp.last_match.captures
             case captures.index { |capture| !capture.nil? }
             when 0 then @p.dim(token)
