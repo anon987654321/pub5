@@ -42,6 +42,7 @@ module Master
             return unverified(path, what: "the verifier could not read the source", error: e)
           end
           prompt = reflexion_prompt(violation, original_src, proposed_src)
+          prompt += "\nActively seek a concrete counterexample: changed authorization, stale state, invalid inputs, partial failure or an affected caller. Do not approve merely because the cited finding disappears."
           # The verdict reads a diff and answers SAFE or UNSAFE; a cheaper model
           # (MASTER_FIX_VERIFIER_MODEL) can give it, and Opus keeps the repairs.
           pin = ENV.fetch("MASTER_FIX_VERIFIER_MODEL", "")
@@ -247,7 +248,7 @@ module Master
               @bus&.publish(
                 "repair_loop:candidate_proposed",
                 law: @law.id, file: path, candidate: index + 1,
-                approach: UserSimulation.approach(index).fetch(:name), format: :diff
+                approach: UserSimulation.approach(index + RunLedger.retry_attempt * UserSimulation.candidate_count).fetch(:name), format: :diff
               )
               candidate_proposal(applied.source, author_model)
             else
@@ -428,7 +429,7 @@ module Master
         end
 
         def candidate_prompt(violation:, src:, path:, style:, index:, suffix: nil)
-          approach = UserSimulation.approach(index)
+          approach = UserSimulation.approach(index + RunLedger.retry_attempt * UserSimulation.candidate_count)
           [
             build_prompt_for(violation:, src:, path:, style:),
             "Independent candidate #{index + 1}/#{UserSimulation.candidate_count}: #{approach.fetch(:name)}. Return only this candidate, not a comparison or a combined patch.",
@@ -463,7 +464,7 @@ module Master
             @bus&.publish(
               "repair_loop:candidate_proposed",
               law: @law.id, file: path, candidate: index + 1,
-              approach: UserSimulation.approach(index).fetch(:name), format: style
+              approach: UserSimulation.approach(index + RunLedger.retry_attempt * UserSimulation.candidate_count).fetch(:name), format: style
             )
             candidate_proposal(candidate, author_model)
           end

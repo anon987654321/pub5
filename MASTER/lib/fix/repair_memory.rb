@@ -90,6 +90,24 @@ module Master
         RepairOutcomes.new(root: @root).record(path, law_ids, outcomes)
       end
 
+      # Scheduling metadata only: never a verification result or a reason to
+      # suppress an unresolved finding. Reuse the locked, atomic memory store.
+      def rotate_opportunities(scope, active_keys)
+        with_store_lock do
+          data = load
+          schedules = (data["opportunities"] ||= {})
+          key = Digest::SHA256.hexdigest(scope.to_s)
+          counts = schedules.fetch(key, {}).slice(*active_keys)
+          selected = yield counts
+          selected.each { |id| counts[id] = counts.fetch(id, 0) + 1 }
+          schedules.delete(key)
+          schedules[key] = counts
+          schedules.shift while schedules.size > 16
+          save(data)
+          selected
+        end
+      end
+
       private
 
       # True when the stats changed: a first fingerprint, or a new detector.

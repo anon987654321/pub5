@@ -104,15 +104,20 @@ module Master
         end
 
         # Runs the block with the refusal in the prompts built inside it.
-        def retrying(note)
+        def retrying(note, attempt: 1)
           previous = Thread.current[:fix_retry_note]
+          previous_attempt = Thread.current[:fix_retry_attempt]
+          Thread.current[:fix_retry_attempt] = attempt
           Thread.current[:fix_retry_note] = note
           yield
         ensure
           Thread.current[:fix_retry_note] = previous
+          Thread.current[:fix_retry_attempt] = previous_attempt
         end
 
         # The paragraph a prompt adds on a retry; empty on a first attempt.
+        def retry_attempt = Thread.current[:fix_retry_attempt].to_i
+
         def retry_note
           note = Thread.current[:fix_retry_note]
           return "" if note.to_s.empty?

@@ -5,6 +5,7 @@ require "digest"
 require "json"
 require "set"
 require_relative "design_audit"
+require_relative "repair_memory"
 
 module Master
   module Fix
@@ -252,11 +253,14 @@ module Master
         end
         design = relative == "MASTER" ? collect_design : []
         # Keep the batch bounded, but disclose every deferred opportunity.
-        active = (findings + design).map { |row| opportunity_key(row) }.to_set
-        @offered.delete_if { |key, _| !active.include?(key) }
-        regular = diverse_batch(findings, MAX_FINDINGS - design.size.clamp(0, DESIGN_SLOTS))
-        selected = regular + diverse_batch(design, DESIGN_SLOTS)
-        selected.each { |row| key = opportunity_key(row); @offered[key] = @offered.fetch(key, 0) + 1 }
+        active = (findings + design).map { |row| opportunity_key(row) }.uniq
+        selected = []
+        RepairMemory.new(root: @root).rotate_opportunities(relative, active) do |counts|
+          @offered = counts
+          regular = diverse_batch(findings, MAX_FINDINGS - design.size.clamp(0, DESIGN_SLOTS))
+          selected = regular + diverse_batch(design, DESIGN_SLOTS)
+          selected.map { |row| opportunity_key(row) }.uniq
+        end
         deferred = findings.size + design.size - selected.size
         @assessment_gaps << "#{deferred} opportunities deferred by batch limit" if deferred.positive?
         selected
@@ -264,7 +268,9 @@ module Master
 
       # Round-robin by defect family: one noisy detector must not crowd out
       # independent structural opportunities.
-      def opportunity_key(row) = [row.file, row.line, row.message]
+      def opportunity_key(row)
+        Digest::SHA256.hexdigest([row.file, row.line, row.message].join("\0"))
+      end
 
       def diverse_batch(rows, limit)
         groups = rows.group_by { |row| row.message.split(":", 2).first }.values

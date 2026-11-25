@@ -283,7 +283,7 @@ module Master
             outcome = if attempts.zero?
                         attempt_fix(violation)
                       else
-                        RunLedger.retrying(note) { attempt_fix(violation) }
+                        RunLedger.retrying(note, attempt: attempts) { attempt_fix(violation) }
                       end
             note = RunLedger.take_refusal
             attempts += 1
