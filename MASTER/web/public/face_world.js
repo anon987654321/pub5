@@ -665,6 +665,11 @@
         !pendingSubjectForm) return next;
 
     if (window.MASTER_FACE?.faceMat?.uniforms?.uSubjectDirect) {
+      if (subjectTransitionTimer) clearTimeout(subjectTransitionTimer);
+      subjectTransitionTimer = null;
+      pendingSubjectForm = null;
+      pendingSubjectDescriptor = null;
+      subjectTransitionGeneration += 1;
       return setSubjectForm(next, descriptor);
     }
     const currentMorph = Number(window.MASTER_FACE?.morphCurrent);
