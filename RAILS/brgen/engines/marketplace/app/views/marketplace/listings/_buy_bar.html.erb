@@ -5,7 +5,16 @@
     <div class="listing-buy-bar-actions">
       <% dintero_ready = Marketplace::Payments::DinteroCheckout.configured? &&
            Marketplace::Payments::DinteroCheckout.supported_listing?(buybar_listing) %>
-      <% if dintero_ready %>
+      <% if buybar_listing.varied? %>
+        <%= form_with url: listing_orders_path(buybar_listing), method: :post do |f| %>
+          <div class="field">
+            <%= f.label :variant_id, t("marketplace.choose_variant"), for: "buy-variant-#{buybar_listing.id}" %>
+            <%= select_tag "order[variant_id]", options_for_select(buybar_listing.variants.in_stock.ordered.includes(:options).map { |variant| ["#{variant.label} — #{variant.price_display}", variant.id] }), include_blank: t("marketplace.choose_variant_blank"), required: true, id: "buy-variant-#{buybar_listing.id}" %>
+          </div>
+          <%= f.hidden_field :quantity, value: 1 %>
+          <%= f.submit t("marketplace.add_to_cart"), class: "button button-primary listing-buy-bar-cta" %>
+        <% end %>
+      <% elsif dintero_ready %>
         <%= button_to t("marketplace.buy_now_dintero"),
               checkout_path,
               params: { provider: "dintero", listing_id: buybar_listing.id },

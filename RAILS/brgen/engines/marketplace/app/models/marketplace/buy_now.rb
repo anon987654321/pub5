@@ -28,6 +28,9 @@ module Marketplace
       return Outcome.new(listing: @listing, refusal:) if refusal
 
       variant = @listing.variants.find_by(id: @variant_id)
+      if (@variant_id.present? && !variant) || (@listing.varied? && !variant&.in_stock?)
+        return Outcome.new(listing: @listing, refusal: "flash.marketplace.offer_failed")
+      end
       recent = recent_order(variant)
       return Outcome.new(order: recent, listing: @listing, in_flight: !recent.startable?) if recent
 
@@ -43,12 +46,12 @@ module Marketplace
       dintero_unready = @provider == "dintero" && !Payments::DinteroCheckout.supported_listing?(@listing)
       return "flash.marketplace.dintero_seller_not_ready" if dintero_unready
 
-      "flash.marketplace.offer_failed" if @listing.user_id == @buyer.id
+      "flash.marketplace.offer_failed" if @listing.user_id == @buyer.id || !User.where(id: @listing.user_id, deleted_at: nil, deletion_scheduled_at: nil).exists?
     end
 
     def recent_order(variant)
       mine = @listing.orders.where(buyer_id: @buyer.id, variant:, quantity: 1)
-      recent = mine.where(created_at: REUSE_WINDOW.ago.., payment_status: %w[unpaid pending failed])
+      recent = mine.where(status: Order::PAYABLE_STATUSES, created_at: REUSE_WINDOW.ago.., payment_status: %w[unpaid pending authorized failed])
       recent.order(:id).last
     end
 

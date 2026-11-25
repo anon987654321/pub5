@@ -136,6 +136,30 @@ class MarketplaceVariantsTest < ActionDispatch::IntegrationTest
     assert_equal [ 1, 2, 3 ], @listing.variants.ordered.pluck(:position)
   end
 
+  test "the purchase control selects a variant and records its own price" do
+    @medium.update!(price_cents: 95_000)
+    @listing.update!(stock: 0)
+    sign_in_as(@buyer)
+
+    get marketplace.listing_path(@listing)
+    assert_response :success
+    assert_select ".listing-buy-bar select[name='order[variant_id]'] option[value=?]", @medium.id.to_s
+    assert_select ".listing-buy-bar select[name='order[variant_id]'] option[value=?]", @large.id.to_s, count: 0
+    assert_difference -> { Marketplace::Order.count }, 1 do
+      post marketplace.listing_orders_path(@listing), params: { quantity: 1, order: { variant_id: @medium.id } }
+    end
+    order = Marketplace::Order.where(buyer_id: @buyer.id, listing_id: @listing.id).sole
+    assert_equal @medium.id, order.variant_id
+    assert_equal 95_000, order.price_cents
+  end
+
+  test "a seller cannot order their own product" do
+    sign_in_as(@seller)
+    assert_no_difference -> { Marketplace::Order.count } do
+      post marketplace.listing_orders_path(@listing), params: { quantity: 1, order: { variant_id: @medium.id } }
+    end
+  end
+
   test "the listing page offers the versions in stock" do
     sign_in_as(@buyer)
 

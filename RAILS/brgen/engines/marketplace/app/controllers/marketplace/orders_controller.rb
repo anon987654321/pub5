@@ -27,16 +27,25 @@ class Marketplace::OrdersController < Marketplace::BaseController
   end
 
   def create
-    if @listing.expired? || @listing.status != "active"
+    unless @listing.buyable? && @listing.user_id != Current.user.id && policy(@listing).show?
       redirect_to listing_path(@listing), alert: t("flash.marketplace.offer_failed")
       return
     end
 
-    quantity = params[:quantity].to_i.positive? ? params[:quantity].to_i : 1
+    quantity = params[:quantity].nil? ? 1 : Integer(params[:quantity].to_s, exception: false)
+    unless quantity&.positive?
+      redirect_to listing_path(@listing), alert: t("flash.marketplace.offer_failed")
+      return
+    end
 
     # The variant is what is bought when the listing has any, and its price is
     # the one to record — the listing's is the fallback for a listing with none.
-    variant = @listing.variants.find_by(id: params.dig(:order, :variant_id))
+    variant_id = params.dig(:order, :variant_id).presence
+    variant = @listing.variants.find_by(id: variant_id)
+    if variant_id && !variant
+      redirect_to listing_path(@listing), alert: t("flash.marketplace.offer_failed")
+      return
+    end
 
     @order = @listing.orders.build(
       buyer: Current.user,

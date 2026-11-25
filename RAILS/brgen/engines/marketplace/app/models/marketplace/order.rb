@@ -72,7 +72,7 @@ class Marketplace::Order < ApplicationRecord
   def available_quantity
     if variant_id
       selected = association(:variant).loaded? ? variant : Marketplace::Variant.find_by(id: variant_id, listing_id: listing_id)
-      return 0 unless selected
+      return 0 unless selected && selected.listing_id == listing_id
       return selected.stock # nil means unlimited for variants only
     end
 
@@ -197,7 +197,8 @@ class Marketplace::Order < ApplicationRecord
     listed = association(:listing).loaded? ? listing : Marketplace::Listing.find_by(id: listing_id)
     return false unless listed
 
-    listed.status == "active" && !listed.expired? && quantity_available?
+    listed.goods? && listed.status == "active" && !listed.expired? && quantity_available? &&
+      User.where(id: listed.user_id, deleted_at: nil, deletion_scheduled_at: nil).exists?
   end
 
   # Returnable only against a shop. The right to send a purchase back is a right
@@ -313,7 +314,7 @@ class Marketplace::Order < ApplicationRecord
 
   def listing_must_be_live
     return if listing.blank?
-    return if listing.status == "active" && !listing.expired? && listing.in_stock?
+    return if listing.buyable?
 
     errors.add(:listing, :unavailable)
   end

@@ -204,7 +204,16 @@ class Marketplace::Listing < ApplicationRecord
 
   def one_of_a_kind? = stock.nil?
   def varied? = variants.exists?
-  def in_stock? = one_of_a_kind? ? !sold? : stock.to_i.positive?
+  def in_stock?
+    if association(:variants).loaded?
+      rows = variants.to_a
+      return rows.any?(&:in_stock?) if rows.any?
+    elsif varied?
+      return variants.in_stock.exists?
+    end
+
+    one_of_a_kind? ? !sold? : stock.to_i.positive?
+  end
 
   def available_quantity = one_of_a_kind? ? (sold? ? 0 : 1) : stock.to_i
 
@@ -277,7 +286,7 @@ class Marketplace::Listing < ApplicationRecord
 
   def expired? = expires_at.present? && expires_at <= Time.current
   def expires_in_days = expires_at.nil? ? nil : ((expires_at - Time.current) / 1.day).ceil
-  def buyable? = status == "active" && !expired? && in_stock?
+  def buyable? = goods? && status == "active" && !expired? && in_stock?
 
   # Renewing restarts the window from now rather than extending the old one, so
   # a listing renewed a week late does not immediately expire again.
