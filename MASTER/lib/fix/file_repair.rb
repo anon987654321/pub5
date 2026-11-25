@@ -19,8 +19,8 @@ module Master
       # Called when the graph cannot see every caller: the repair may change a body, not a name.
       def lock_interface! = @interface_locked = true
 
-      GOLDEN = "Golden rule: preserve, then improve, never break. Make the smallest change " \
-               "that removes each finding; touch nothing else."
+      GOLDEN = "Preserve behavior. Resolve related findings through one root-cause repair; " \
+               "prefer removing redundancy to adding machinery."
 
       def initialize(findings:, rules:, agent:, scanner:, root:, context_files: [], context_root: nil,
                      expected_target_sha256: nil, **options)
@@ -44,7 +44,7 @@ module Master
       # The rules this repair put to the model, once run has filtered out what
       # waits for a person or fails the confidence check.
       def asked_rules
-        repairable.map { |finding| finding[:law].to_s }.uniq
+        @findings.map { |finding| finding[:law].to_s }.uniq
       end
 
       def run(path)

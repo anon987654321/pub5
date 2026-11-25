@@ -52,6 +52,21 @@ class TestStreamGraphRefresh < Minitest::Test
     end
   end
 
+  def test_restored_mtime_cannot_hide_changed_source
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "a.rb").tap { |file| File.write(file, "A = 1\n") }
+      graph = FakeGraph.new([path])
+      stage = Stage.new
+      original = File.mtime(path)
+      stage.instance_variable_set(:@graph_built_at, Time.now.to_f)
+      File.write(path, "A = 2\n")
+      File.utime(original, original, path)
+
+      assert stage.indexed?(graph, path)
+      assert_equal 1, graph.builds
+    end
+  end
+
   def test_an_unchanged_file_does_not_rebuild
     Dir.mktmpdir do |dir|
       path = File.join(dir, "a.rb").tap { |file| File.write(file, "A = 1\n") }

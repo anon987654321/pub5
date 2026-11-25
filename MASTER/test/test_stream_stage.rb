@@ -180,6 +180,11 @@ class StreamStageTest < Minitest::Test
     assert(unstreamed(found, streamed).all? { |row| row[:law] == "DRY" })
   end
 
+  def test_streamed_identity_ignores_absolute_or_relative_path_spelling
+    found = [{ file: "/repo/a.rb", law: "LONG_METHOD" }, { file: "a.rb", law: "DRY" }]
+    assert_equal [found.last], unstreamed(found, Set.new([["a.rb", "LONG_METHOD"]]))
+  end
+
   def test_findings_are_refreshed_after_a_stream_repair
     @repair_state = {}
     @loop_scanner = RepairAwareScanner.new(@repair_state)

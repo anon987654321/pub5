@@ -269,7 +269,9 @@ module Master
             ordered = left
             taken, left = limit ? ordered.partition.with_index { |_, index| index < limit } : [ordered, []]
             taken.each { |item| queue << item }
-            left.each { |path, rows| rows.each { |row| streamed << [path.delete_prefix("#{@root}/"), row[:law].to_s] } }
+            STREAMED_LOCK.synchronize do
+              left.each { |path, rows| rows.each { |row| streamed << [path.delete_prefix("#{@root}/"), row[:law].to_s] } }
+            end
 
             detail = if left.empty?
                        "#{taken.size} file(s)"
@@ -356,7 +358,7 @@ module Master
             end
 
             note_pending(later.uniq)
-            untouched = found.reject { |finding| touched.include?(finding[:file].to_s) }
+            untouched = found.reject { |finding| touched.include?(File.expand_path(finding[:file].to_s, @root).delete_prefix("#{@root}/")) }
             resolve_violations(untouched + fresh)
           end
 
@@ -427,6 +429,7 @@ module Master
             # Only what the model was asked counts: a split filtered out before the
             # call is no decline, and counting it kept those rules from retiring.
             repair_memory.record(path, repair.asked_rules, result[:breakdown])
+            @human_decision_required ||= result[:status] == :human_decision
             tally_rule_results([[repair.scope, result]], breakdown: stream.breakdown, pass: stream.pass)
           end
 
@@ -440,12 +443,11 @@ module Master
 
           def indexed_at?(graph, path, digest) = graph.includes_path?(path) && graph.source_digest(path) == digest
 
-          def refresh_graph_for(graph, path)
+          def refresh_graph_for(graph, path, digest: Digest::SHA256.file(path).hexdigest)
             GRAPH_LOCK.synchronize do
-              next unless File.mtime(path).to_f > (@graph_built_at || 0)
+              next if indexed_at?(graph, path, digest)
 
               graph.build(refresh: true)
-              @graph_built_at = Time.now.to_f
               Master::Trace::Dmesg.status("understand0", GRAPH_REBUILT)
             end
           end
@@ -470,7 +472,7 @@ module Master
             end
 
             target_sha256 = Digest::SHA256.hexdigest(target_source)
-            refresh_graph_for(graph, path) unless indexed_at?(graph, path, target_sha256)
+            refresh_graph_for(graph, path, digest: target_sha256) unless indexed_at?(graph, path, target_sha256)
             return incomplete_repair_context(NOT_INDEXED) unless indexed_at?(graph, path, target_sha256)
 
             radius = graph.blast_radius(path)
@@ -666,7 +668,7 @@ module Master
 
           def run_streamed_rules(runnable, path, rel, stream)
             results = runnable.map do |rule|
-              stream.streamed << [rel, rule.id.to_s]
+              STREAMED_LOCK.synchronize { stream.streamed << [rel, rule.id.to_s] }
               [rule, run_law_once(rule, [path], stream.pass)]
             end
             @human_decision_required ||= results.any? { |_rule, result| result[:status] == :human_decision }
@@ -689,7 +691,10 @@ module Master
           def unstreamed(found, streamed)
             return found if streamed.empty?
 
-            found.reject { |violation| streamed.include?([violation[:file].to_s, violation[:law].to_s]) }
+            found.reject do |violation|
+              relative = File.expand_path(violation[:file].to_s, @root).delete_prefix("#{@root}/")
+              streamed.include?([relative, violation[:law].to_s])
+            end
           end
         end
       end
