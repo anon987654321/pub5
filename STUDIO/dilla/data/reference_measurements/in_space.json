@@ -211,6 +211,44 @@
       },
       "note": "Steps are 16ths from the harmonic bar start (chord changes land on the bar). The sampled break is syncopated and the drum stem carries harmonic bleed, so single-lane grids are approximate and phase-sensitive; the recreation treats these as accents, not a transcription."
     },
+    "prior_canon_analysis": {
+      "source_commit": "7f65674b41b4691f979805669978147981464ede",
+      "method": "per stem: band energy shares (kick<130Hz, snare 150-1200Hz bp@400, hats>5kHz), onset flux peak-picking, tempo via onset-envelope autocorrelation 55-200bpm folded to 60-180, 16-slot grid via best-phase quantization (+-45ms), swing from off-8th residuals; mix: chroma (FFT 8192 @22050, 55-2200Hz) + Krumhansl key correlation - identical to the measured_canon pipeline",
+      "tempo_confidence": 2.52,
+      "on_grid_share": 0.67,
+      "bars_spanned": 39,
+      "onsets": {
+        "kick": 209,
+        "snare": 168,
+        "hat": 291
+      },
+      "mix_chroma": [
+        0.569,
+        0.492,
+        0.617,
+        0.478,
+        0.964,
+        1,
+        0.459,
+        0.83,
+        0.717,
+        0.692,
+        0.303,
+        0.335
+      ],
+      "mix_levels": {
+        "rms_dbfs": -18.39,
+        "peak_dbfs": 1.8,
+        "crest_db": 20.18
+      },
+      "limits": [
+        "SoundCloud transcodes can decode above 0 dBFS; levels are relative evidence only",
+        "key estimate is single-method (Krumhansl, r=0.51 is weak); chroma peaks E/F/G/A guided the study voicings",
+        "swing assumes off-8th placement; the 16-slot grid is best-phase within +-45 ms, so slot placement is the analyzer's phase, not a score",
+        "sample identity of the record is unverified; no artist harmony is claimed"
+      ],
+      "note": "Historical canon analysis retained separately from the newer stem analysis; grid, tempo, swing and band shares are already recorded in the current measurements. Not independent listening acceptance."
+    },
     "source_reproduction": {
       "analyzer": "render_evidence/tools/dilla_stem_analyze.js 1.0 (node)",
       "drums_stem": {
