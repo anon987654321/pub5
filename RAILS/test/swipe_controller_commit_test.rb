@@ -82,6 +82,41 @@ class SwipeControllerCommitTest < Minitest::Test
     assert_equal({ "cards" => 1, "queued" => 0 }, result)
   end
 
+  def test_a_redirect_to_sign_in_is_not_a_recorded_like
+    result = run_page(<<~JS)
+      console.log(JSON.stringify(await swipe(() => ({ ok: true, status: 200, redirected: true }), (c) => c.like())))
+    JS
+
+    assert_equal({ "cards" => 1, "queued" => 0 }, result)
+  end
+
+  def test_double_click_submits_one_choice
+    result = run_page(<<~JS)
+      let calls = 0
+      const result = await swipe(() => { calls++; return { ok: true, status: 204 } }, (c) => {
+        c.like()
+        c.like()
+      })
+      console.log(JSON.stringify({ ...result, calls }))
+    JS
+
+    assert_equal({ "cards" => 0, "queued" => 0, "calls" => 1 }, result)
+  end
+
+  def test_cancelled_drag_does_not_commit
+    result = run_page(<<~JS)
+      let calls = 0
+      const result = await swipe(() => { calls++; return { ok: true, status: 204 } }, (c) => {
+        c.pointerDown({ target: { closest: () => null }, clientX: 0, preventDefault() {} })
+        c.pointerMove({ clientX: 200 })
+        c.pointerCancel()
+      })
+      console.log(JSON.stringify({ ...result, calls }))
+    JS
+
+    assert_equal({ "cards" => 1, "queued" => 0, "calls" => 0 }, result)
+  end
+
   def test_a_recorded_like_removes_the_card
     result = run_page(<<~JS)
       console.log(JSON.stringify(await swipe(() => ({ ok: true, status: 200 }), (c) => c.like())))

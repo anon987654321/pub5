@@ -49,9 +49,17 @@ class Dating::BaseController < ApplicationController
     Block.counterparts_for(Current.user)
   end
 
+  def swipe_subjects
+    scope = Dating::Profile.visible.with_photos
+    return scope unless Current.user
+
+    scope = scope.where.not(user_id: Current.user.id).where.not(user_id: dating_blocked_users)
+    current_dating_profile ? scope.oriented_for(current_dating_profile) : scope
+  end
+
   def candidate_scope
     # joins(:user) drops orphan profiles (visible but user deleted) that crash the card.
-    scope = Dating::Profile.visible.with_photos.joins(:user).includes(:user, :neighborhood, :prompts, photos_attachments: :blob)
+    scope = swipe_subjects.includes(:user, :neighborhood, :prompts, photos_attachments: :blob)
     return scope unless Current.user.present?
 
     profile = current_dating_profile
@@ -60,11 +68,7 @@ class Dating::BaseController < ApplicationController
     profile_user_id = Dating::Profile.arel_table[:user_id]
     liked = Dating::Like.where(liker_id: Current.user.id).where(Dating::Like.arel_table[:likee_id].eq(profile_user_id))
     disliked = Dating::Dislike.where(disliker_id: Current.user.id).where(Dating::Dislike.arel_table[:dislikee_id].eq(profile_user_id))
-    scope = scope.where.not(user_id: Current.user.id).where(liked.arel.exists.not).where(disliked.arel.exists.not)
-    # Orientation: mutual gender preference, so it's a dating app rather than a
-    # random-person feed. See Dating::Profile.oriented_for.
-    scope = scope.oriented_for(profile) if profile
-    scope = scope.where.not(user_id: dating_blocked_users)
+    scope = scope.where(liked.arel.exists.not).where(disliked.arel.exists.not)
     if (neigh = profile&.neighborhood)
       scope = scope.in_neighborhood(neigh)
     end

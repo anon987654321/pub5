@@ -83,6 +83,19 @@ class DatingLikesTest < ActionDispatch::IntegrationTest
     assert_equal photo.id, like.reload.photo_attachment_id
   end
 
+  test "JSON swipes acknowledge only accepted choices" do
+    sign_in_as(@me)
+    in_dating
+    post dating.likes_path, params: { user_id: @them.id }, as: :json
+    assert_response :no_content
+    assert Dating::Like.exists?(liker_id: @me.id, likee_id: @them.id)
+
+    Block.create!(blocker_id: @them.id, blocked_id: @me.id)
+    post dating.dislikes_path, params: { user_id: @them.id }, as: :json
+    assert_response :not_found
+    assert_not Dating::Dislike.exists?(disliker_id: @me.id, dislikee_id: @them.id)
+  end
+
   test "a plain like with no comment is still a like" do
     sign_in_as(@me)
     in_dating

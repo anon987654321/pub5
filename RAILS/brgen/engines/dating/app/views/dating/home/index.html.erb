@@ -47,7 +47,7 @@
         data-swipe-like-url-value="<%= likes_path %>"
         data-swipe-dislike-url-value="<%= dislikes_path %>"
         data-action="pointerdown->swipe#pointerDown pointermove->swipe#pointerMove pointerup->swipe#pointerUp
-                     pointercancel->swipe#pointerUp keydown.left@window->swipe#pass keydown.right@window->swipe#like"
+                     pointercancel->swipe#pointerCancel keydown.left@window->swipe#pass keydown.right@window->swipe#like"
         class="dating-discover"
       >
         <%# The card leaves the deck silently; this says what the choice was. %>
@@ -67,7 +67,7 @@
                   { label: t("dating.edit_profile"), path: edit_profile_path } :
                   { label: t("dating.create_profile"), path: new_profile_path } %>
         <% end %>
-        <turbo-frame id="dating-next" src="<%= next_path %>" loading="lazy" hidden></turbo-frame>
+        <turbo-frame id="dating-next" src="<%= next_path(exclude_user_ids: @profiles.map(&:user_id)) %>" loading="lazy" hidden></turbo-frame>
       </section>
     </turbo-frame>
   </section>

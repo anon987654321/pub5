@@ -25,7 +25,8 @@ class Dating::HomeController < Dating::BaseController
   end
 
   def next
-    @profile = candidate_scope.ranked_for(Current.user).first
+    excluded = Array(params[:exclude_user_ids]).first(20).filter_map { |value| Integer(value, exception: false) }
+    @profile = candidate_scope.where.not(user_id: excluded).ranked_for(Current.user).first
     head :no_content unless @profile
   end
 

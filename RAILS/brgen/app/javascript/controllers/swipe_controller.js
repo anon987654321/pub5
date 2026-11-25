@@ -16,6 +16,7 @@ export default class extends Controller {
     this.startX = 0
     this.currentX = 0
     this.isDragging = false
+    this.committing = false
     this.threshold = 80
     this.maxRotate = 18
     this.thresholdBuzzed = false
@@ -40,13 +41,14 @@ export default class extends Controller {
   }
 
   pointerDown(e) {
-    if (this._interactiveTarget(e)) return
+    if (this.committing || this._interactiveTarget(e)) return
     if (this.mode === "dating" && !this.currentCard) return
     if (this.mode === "carousel" && !this.gallery) return
     if (this.mode === "queue" && !this.hasListenUrlValue) return
     this.isDragging = true
     this.thresholdBuzzed = false
     this.startX = e.clientX ?? (e.touches && e.touches[0].clientX) ?? 0
+    this.currentX = 0
     if (this.currentCard) this.currentCard.classList.add("dragging")
     if (this.gallery) this.gallery.classList.add("dragging")
     e.preventDefault()
@@ -86,6 +88,17 @@ export default class extends Controller {
     }
   }
 
+  pointerCancel() {
+    this.isDragging = false
+    this.currentX = 0
+    this.thresholdBuzzed = false
+    if (this.currentCard) {
+      this.currentCard.classList.remove("dragging")
+      if (this.currentCard) this._springBack(this.currentCard)
+    }
+    if (this.gallery) this.gallery.classList.remove("dragging")
+  }
+
   async pointerUp(e) {
     if (!this.isDragging) return
     this.isDragging = false
@@ -114,7 +127,8 @@ export default class extends Controller {
       return
     }
 
-    if (Math.abs(delta) > this.threshold) {
+    if (this.currentCard && Math.abs(delta) > this.threshold) {
+      this.committing = true
       const isLike = delta > 0
       const url = isLike ? this.likeUrlValue : this.dislikeUrlValue
       const userId = this.currentCard.dataset.userId
@@ -135,7 +149,12 @@ export default class extends Controller {
       // already subscribes to. A match appears only when it is actually mutual.
       const kept = await this._postChoice(url, userId)
       if (kept) this._announce(card, isLike)
-      setTimeout(() => (kept ? this._removeCard(card) : this._springBack(card)), 180)
+      setTimeout(() => {
+        this.committing = false
+        if (!kept) return this._springBack(card)
+        this._removeCard(card)
+        this._hydrateNextCard()
+      }, 180)
     } else {
       this._springBack(this.currentCard)
     }
@@ -179,7 +198,7 @@ export default class extends Controller {
       response = await fetch(url, {
         method: "POST",
         body,
-        headers: { "X-CSRF-Token": this._csrfToken(), "Accept": "text/vnd.turbo-stream.html, text/html" }
+        headers: { "X-CSRF-Token": this._csrfToken(), "Accept": "application/json" }
       })
     } catch (err) {
       console.error("swipe commit failed", err)
@@ -187,7 +206,7 @@ export default class extends Controller {
       return true
     }
     if (!response.ok) console.error(`swipe commit refused: ${response.status}`)
-    return response.ok
+    return response.ok && !response.redirected
   }
 
   _csrfToken() {
@@ -209,18 +228,19 @@ export default class extends Controller {
 
   // Button fallbacks
   like(e) {
-    if (this._foreignKey(e) || !this.currentCard) return
+    if (this.committing || this._foreignKey(e) || !this.currentCard) return
     this.currentX = this.threshold + 10
     this._commitLike()
   }
 
   pass(e) {
-    if (this._foreignKey(e) || !this.currentCard) return
+    if (this.committing || this._foreignKey(e) || !this.currentCard) return
     this.currentX = -(this.threshold + 10)
     this._commitLike()
   }
 
   async _commitLike() {
+    this.committing = true
     const isLike = this.currentX > 0
     const url = isLike ? this.likeUrlValue : this.dislikeUrlValue
     const card = this.currentCard
@@ -232,6 +252,7 @@ export default class extends Controller {
     const kept = await this._postChoice(url, card.dataset.userId)
     if (kept) this._announce(card, isLike)
     setTimeout(() => {
+      this.committing = false
       if (!kept) return this._springBack(card)
       this._removeCard(card)
       if (this.mode === "dating") this._hydrateNextCard()
@@ -281,9 +302,9 @@ export default class extends Controller {
     const frame = document.getElementById("dating-next")
     if (!frame) return
     const nextCard = frame.querySelector(".swipe-card")
-    if (!nextCard) {
+    if (!nextCard || this.cards.some(card => card.dataset.userId === nextCard.dataset.userId)) {
       const src = frame.getAttribute("src")
-      if (src) frame.setAttribute("src", `${src.split("?")[0]}?reload=${Date.now()}`)
+      if (src) this._refreshNextFrame(frame, src)
       return
     }
 
@@ -295,6 +316,14 @@ export default class extends Controller {
     this.currentCard = this.cards[this.cards.length - 1]
 
     const src = frame.getAttribute("src")
-    if (src) frame.setAttribute("src", `${src.split("?")[0]}?reload=${Date.now()}`)
+    if (src) this._refreshNextFrame(frame, src)
+  }
+
+  _refreshNextFrame(frame, src) {
+    const url = new URL(src, window.location.href)
+    url.searchParams.delete("exclude_user_ids[]")
+    this.cards.forEach(card => url.searchParams.append("exclude_user_ids[]", card.dataset.userId))
+    url.searchParams.set("reload", Date.now())
+    frame.setAttribute("src", url.toString())
   }
 }

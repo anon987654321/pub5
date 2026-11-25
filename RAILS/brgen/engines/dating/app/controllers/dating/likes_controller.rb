@@ -4,20 +4,15 @@ class Dating::LikesController < Dating::BaseController
   before_action :require_user_session
   # A swipe takes any visible user_id; nothing bounded how fast a script could like.
   rate_limit to: 120, within: 1.hour, only: :create, name: "likes",
-    with: -> { redirect_back fallback_location: root_path, alert: t("shared.flash.rate_limited") }
+    with: -> { request.format.json? ? head(:too_many_requests) : redirect_back(fallback_location: root_path, alert: t("shared.flash.rate_limited")) }
 
   # A like may carry a prompt it is about and a sentence about it — the Hinge
   # interaction — or neither, which is still a like.
   def create
     # Only someone the deck could have shown: a paused or under-age profile, or
     # an account with no profile at all, is not somebody to like by id.
-    profile = Dating::Profile.visible.with_photos.includes(:user).find_by!(user_id: params[:user_id])
-    user = profile.user
-    if Current.user.respond_to?(:blocking?) && (Current.user.blocking?(user) || user.blocking?(Current.user))
-      redirect_back fallback_location: root_path, alert: t("shared.flash.not_authorized")
-      return
-    end
-    like = Dating::Like.find_or_initialize_by(liker: Current.user, likee: user)
+    profile = swipe_subjects.includes(:user).find_by!(user_id: params[:user_id])
+    like = Dating::Like.find_or_initialize_by(liker: Current.user, likee: profile.user)
     like.dating_prompt_id = prompt_id_for(profile)
     like.photo_attachment_id = nil
     if params[:subject].present?
@@ -34,9 +29,9 @@ class Dating::LikesController < Dating::BaseController
     end
     like.comment = params[:comment].presence
     if like.save
-      redirect_back fallback_location: root_path
+      request.format.json? ? head(:no_content) : redirect_back(fallback_location: root_path)
     else
-      redirect_back fallback_location: root_path, alert: like.errors.full_messages.to_sentence
+      request.format.json? ? head(:unprocessable_entity) : redirect_back(fallback_location: root_path, alert: like.errors.full_messages.to_sentence)
     end
   end
 

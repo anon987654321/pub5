@@ -66,7 +66,7 @@
       data-track-id="<%= set_track.track.id %>"
       data-controller="swipe"
       data-swipe-listen-url-value="<%= listens_path(track_id: set_track.track.id) %>"
-      data-action="pointerdown->swipe#pointerDown pointermove->swipe#pointerMove pointerup->swipe#pointerUp pointercancel->swipe#pointerUp touchstart->swipe#pointerDown touchmove->swipe#pointerMove touchend->swipe#pointerUp"
+      data-action="pointerdown->swipe#pointerDown pointermove->swipe#pointerMove pointerup->swipe#pointerUp pointercancel->swipe#pointerCancel touchstart->swipe#pointerDown touchmove->swipe#pointerMove touchend->swipe#pointerUp"
       class="track-row"
     >
       <div> <%# scan: intentional — an anonymous text block; the flex row is the layout and a name here would have no reader %>
