@@ -30,6 +30,8 @@ class StructuralStageTest < Minitest::Test
       finding = structural_findings(files: Dir.glob(File.join(dir, "*.rb"))).first
 
       assert_equal "cohesion", finding[:source]
+      assert_equal Dir.glob(File.join(dir, "*.rb")).sort, finding.fetch(:related_paths).sort
+      assert_empty structural_findings(files: [File.join(dir, "thing_a.rb")]), "do not propose a change outside the selected scope"
       assert_equal %w[SINGULARITY ABSTRACTION DENSITY PROXIMITY KISS], finding[:laws]
       assert finding[:evidence].key?(:internal_references)
       assert finding[:evidence].key?(:external_references)

@@ -83,6 +83,15 @@ class TestProblemGraph < Minitest::Test
     assert_equal problems.map(&:id), @graph.call(rows.reverse).map(&:id)
   end
 
+  def test_cohesion_uses_existing_merge_route_and_deduplicates_observations
+    row = finding("MASTER/lib/a.rb", "STRUCTURAL_COHESION", "shared owner", ["MASTER/lib/b.rb"])
+    problem = @graph.call([row, row]).first
+
+    assert_equal 1, problem.size
+    assert_equal "merge", problem.primary_operation
+    assert_includes problem.candidate_operations, "simplify"
+  end
+
   def test_retired_size_only_laws_have_no_structural_operation
     %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
       refute Master::Fix::ProblemGraph::LAW_OPERATIONS.key?(id)

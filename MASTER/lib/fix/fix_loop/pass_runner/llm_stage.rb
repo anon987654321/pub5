@@ -16,11 +16,11 @@ module Master
             ordered = @law_order.ordered(violation_counts: @violation_counts)
             runnable = ordered.select { |rule| rule_violations.key?(rule.id.to_s) }
             runnable += semantic_rule_adapters(rule_violations, ordered)
-            if runnable.empty? && rule_violations.any?
+            missing = rule_violations.keys - runnable.map { |rule| rule.id.to_s }
+            if missing.any?
               Master::Trace::Dmesg.status(
                 "fix0",
-                "no registered rule fixes #{rule_violations.keys.first(5).join(", ")}; " \
-                "registered: #{ordered.map { |r| r.id.to_s }.first(5).join(", ")}",
+                "no file repair route: #{missing.join(", ")}; structural findings require the restructure sweep",
               )
             end
             fixed = run_dependency_levels(runnable, files:, pass:, rule_violations:, deadline:, council:)

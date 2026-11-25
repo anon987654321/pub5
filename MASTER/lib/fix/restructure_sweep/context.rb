@@ -4,6 +4,7 @@
 # listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
 require_relative "context/surfaces"
 require_relative "context/references"
+require_relative "../fix_loop/structural_stage"
 
 module Master
   module Fix
@@ -39,7 +40,10 @@ module Master
             Master::Ground::Swallow.log(e, context: "restructure.findings", path:)
             []
           end
-          local + cross_file_findings(target) + dead_subtree_findings(target) + surface_findings(target)
+          cohesion = FixLoop::StructuralStage.structural_findings(files: production_files(target)).map do |finding|
+            [finding.fetch(:file), finding.fetch(:law), finding.fetch(:message), finding.fetch(:related_paths)]
+          end
+          local + cohesion + cross_file_findings(target) + dead_subtree_findings(target) + surface_findings(target)
         end
 
         def self.dead_subtree_findings(target)

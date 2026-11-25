@@ -1,26 +1,34 @@
 # frozen_string_literal: true
 
+require "set"
 require_relative "../../../tools/cohesion"
 
 module Master
   module Fix
     class FixLoop
       module StructuralStage
+        extend self
+
         RULE_ID = "STRUCTURAL_COHESION"
 
         def structural_findings(files:)
-          directories = files.filter_map do |path|
+          scope = files.map { |path| File.expand_path(path) }.to_set
+          directories = scope.filter_map do |path|
             next unless path.to_s.end_with?(".rb")
             File.dirname(path)
           end.uniq
 
           directories.flat_map do |dir|
-            ::Operator::Cohesion.plans_for(dir).map do |plan|
+            ::Operator::Cohesion.plans_for(dir).filter_map do |plan|
+              related = plan.fetch(:files).map { |file| File.join(dir, file) }
+              next unless related.all? { |path| scope.include?(path) }
+
               {
                 law: RULE_ID,
                 laws: %w[SINGULARITY ABSTRACTION DENSITY PROXIMITY KISS],
                 source: "cohesion",
-                file: File.join(dir, plan.fetch(:files).first),
+                file: related.first,
+                related_paths: related,
                 line: 1,
                 message: structural_message(dir, plan),
                 evidence: plan.fetch(:evidence, {}),

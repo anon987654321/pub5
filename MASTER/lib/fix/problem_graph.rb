@@ -20,6 +20,7 @@ module Master
         "PARALLEL_HIERARCHY" => "merge",
         "CYCLIC_DEPENDENCY" => "decouple",
         "FILE_SPRAWL" => "flatten",
+        "STRUCTURAL_COHESION" => "merge",
         "NO_GOD_CLASS" => "split",
         "STALE_PATH_REFERENCE" => "rename",
         "PROSE_DUPLICATION" => "merge",
@@ -33,7 +34,7 @@ module Master
         "decouple" => %w[decouple split relocate simplify],
         "flatten" => %w[flatten merge remove simplify],
         "merge" => %w[merge defragment flatten simplify],
-        "split" => %w[split decouple relocate simplify],
+        "split" => %w[split simplify decouple relocate],
         "relocate" => %w[relocate defragment flatten rename],
         "rename" => %w[rename relocate simplify],
         "reorder" => %w[reorder reflow simplify],
@@ -61,7 +62,7 @@ module Master
       end
 
       def call(findings)
-        rows = Array(findings).filter_map { |row| normalize(row) }
+        rows = Array(findings).filter_map { |row| normalize(row) }.uniq
         return [] if rows.empty?
 
         components(rows.sort_by { |path, law, message, related| [path, law, message, related.sort] }).map { |group| problem(group) }
