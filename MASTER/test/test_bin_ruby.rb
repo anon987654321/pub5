@@ -68,6 +68,48 @@ class TestBinRuby < Minitest::Test
     ENV["PATH"] = old_path
   end
 
+  def test_wrapper_rejects_failed_or_malformed_version_probes
+    Dir.mktmpdir do |dir|
+      fake = File.join(dir, "ruby")
+      ["printf 3..8", "printf 3.3.", "printf .3.8", "printf 3.3.8; exit 1"].each do |probe|
+        File.write(fake, "#!/bin/sh\n#{probe}\n")
+        File.chmod(0o755, fake)
+        _, err, status = unbundled { Open3.capture3({ "PUB5_RUBY" => fake }, BIN, "go") }
+        refute status.success?, probe
+        assert_includes err, "not a compatible Ruby"
+      end
+    end
+  end
+
+  def test_wrapper_leaves_unused_private_ca_directory_untouched
+    Dir.mktmpdir do |dir|
+      master = staged_master_with_tools_ruby(dir, version: "3.3.6", marker: "PRIVATE")
+      wrapper = File.join(master, "bin", "ruby")
+      FileUtils.cp(BIN, wrapper)
+      host = File.join(dir, "host_ruby")
+      File.write(host, "#!/bin/sh\nprintf 3.3.8\n")
+      File.chmod(0o755, host)
+
+      out, err, status = unbundled { Open3.capture3({ "PUB5_RUBY" => host }, wrapper, "go") }
+      assert status.success?, err
+      assert_equal "3.3.8", out
+      refute File.exist?(File.join(master, ".tools", "ruby", "ssl"))
+    end
+  end
+
+  def test_wrapper_selects_private_ruby_without_preexisting_ca_directory
+    Dir.mktmpdir do |dir|
+      master = staged_master_with_tools_ruby(dir, version: "3.3.6", marker: "PRIVATE")
+      wrapper = File.join(master, "bin", "ruby")
+      FileUtils.cp(BIN, wrapper)
+      private_ruby = File.join(master, ".tools", "ruby", "bin", "ruby")
+
+      out, err, status = unbundled { Open3.capture3({ "PUB5_RUBY" => private_ruby }, wrapper, "go") }
+      assert status.success?, err
+      assert_includes out, "PRIVATE"
+    end
+  end
+
   def test_deleted_running_interpreter_path_is_not_returned_for_child_checks
     Dir.mktmpdir do |dir|
       master = staged_master_with_tools_ruby(dir, version: "3.4.2", marker: "FALLBACK-RUBY")
