@@ -90,9 +90,9 @@ end
 Law.define(:FACE_POINT_IS_ONE_PIXEL) do
   source "pixel_perfection - MASTER/data/laws.yml, extended to WebGL"
   detect do |line|
-    line.match?(/gl_PointSize\s*=/) && !line.match?(/gl_PointSize\s*=\s*1\.0\s*;/)
+    line.match?(/gl_PointSize\s*=/) && !line.match?(/gl_PointSize\s*=\s*1\.[05]\s*;/)
   end
-  fix "One point, one pixel: gl_PointSize=1.0. Put depth and curvature into brightness, not size."
+  fix "Use fixed crisp points: gl_PointSize=1.0 or 1.5. Put depth and curvature into brightness, not size."
   bad  "  gl_PointSize=clamp(uSize*(260./-mv.z)*sizeBoost,2.0,4.0);"
   good "  gl_PointSize=1.0;"
 end

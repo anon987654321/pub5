@@ -195,7 +195,7 @@
         "void main(){",
         "  vec4 mv = modelViewMatrix * vec4(position,1.0);",
         "  gl_Position = projectionMatrix * mv;",
-        "  gl_PointSize = 1.0;",
+        "  gl_PointSize = 1.5;",
         "  vOpacity = aOpacity * clamp(uSize * uViewportHeight * projectionMatrix[1][1] * 0.12 / max(0.001, -mv.z), 0.48, 1.0);",
         "}"
       ].join("\n"),
@@ -434,7 +434,7 @@
       : localParticleLimit;
     const distanceDensity = clamp((6.8 - cameraDistance) / 2.4, 0.24, 1);
     const minimum = profile.mode === "super_void" ? 8 : 14;
-    const requested = Math.min(maxActive, Math.max(minimum, Math.round(profile.count * Number(SPEC.density_scale || 1) * distanceDensity)));
+    const requested = Math.min(maxActive, Math.max(minimum, Math.round(profile.count * Number(SPEC.density_scale || 0.5) * distanceDensity)));
     const focus = clamp(state.focus ?? state.attention ?? 0.8);
     const confidence = clamp(state.confidence ?? 0.86);
     const risk = clamp(state.risk ?? 0);

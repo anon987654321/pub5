@@ -62,7 +62,7 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.match(system, /attribute float aSolo;/);
   assert.match(system, /vSolo = aSolo;/);
   assert.equal((system.match(/varying float vSolo;/g) || []).length, 2);
-  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
   assert.match(system, /if \(vSolo < 0\.5 && \(vThreshold > uDensity \|\| length\(p\) > 0\.5\)\) discard;/);
   assert.match(system, /vec3 ink = mix\(uColor \* zoneTone \* depthTone, vec3\(1\.0\), solo\)/);
   assert.match(system, /float alpha = mix\(vAlpha \* uOpacity, 1\.0, solo\)/);
@@ -112,7 +112,7 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.equal(JSON.stringify(samples), JSON.stringify(stipple.defaultSamples(512)), "the new geometry remains deterministic");
 });
 
-test("fingerprint ridges and radial signal waves stay inside the bounded one-pixel field", () => {
+test("fingerprint ridges and radial signal waves stay inside the bounded fixed-size field", () => {
   assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0\s*\n\s+strength: 0\.48/);
   assert.match(tokens, /intro_wave_strength: 0\.28/);
   assert.match(tokens, /desktop_points: 10800\s*\n\s+mobile_points: 3200/);
@@ -123,12 +123,12 @@ test("fingerprint ridges and radial signal waves stay inside the bounded one-pix
   assert.match(system, /float ridgeCoordinate = ridgeRadius \+/);
   assert.match(system, /float ridgePattern = 0\.5 \+ 0\.5 \* cos\(/);
   assert.match(system, /ridgeTone, 0\.0, 1\.0\)/);
-  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
   assert.doesNotMatch(system, /requestAnimationFrame/);
 });
 
-test("Hollow Gaze and Faultline are semantic, bounded voids in the one-pixel field", () => {
-  assert.match(tokens, /particle_spacing_scale:\s*1\.075/);
+test("Hollow Gaze and Faultline are semantic, bounded voids in the fixed-size field", () => {
+  assert.match(tokens, /particle_spacing_scale:\s*1\.15/);
   assert.match(tokens, /voids:\s*\n\s+eye_aperture_scale:\s*1\.14/);
   assert.match(tokens, /mouth_width:\s*0\.225/);
   assert.match(tokens, /mouth_height:\s*0\.072/);
@@ -138,8 +138,8 @@ test("Hollow Gaze and Faultline are semantic, bounded voids in the one-pixel fie
   assert.match(system, /vFaultline = \(1\.0 - smoothstep\(uFaultlineHalfWidth/);
   assert.match(system, /if \(vSolo < 0\.5 && fault > 0\.62\) discard;/);
   assert.match(system, /faultlineStrengthForState\(mode, voids\.faultline\)/);
-  assert.match(system, /gl_PointSize = 1\.0;/);
-  assert.match(tokens, /density_scale:\s*0\.90/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
+  assert.match(tokens, /density_scale:\s*0\.45/);
 });
 
 test("aliased face contours use bounded tokenised position quantisation without enlarging points", () => {
@@ -149,7 +149,7 @@ test("aliased face contours use bounded tokenised position quantisation without 
   assert.match(system, /uniform float uAliasGrid;/);
   assert.match(system, /floor\(p\.xy \/ uAliasGrid \+ 0\.5\) \* uAliasGrid/);
   assert.match(system, /p\.xy = mix\(p\.xy, stepped, uAliasStrength\)/);
-  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
 });
 
 test("MASTER randomly morphs among the four original abstract face expressions", () => {
@@ -206,7 +206,7 @@ test("face expression cycle preserves its exact blend across reduced motion and 
     location: { search: "" },
     MASTER_FACE_CONTRACT: {
       stipple: {
-        density_scale: 0.90,
+        density_scale: 0.45,
         expressions: {
           enabled: true,
           order: ["waterform", "architect", "forest_geometry", "monument"],
@@ -296,7 +296,7 @@ test("stipple breath is luminance-only, survives idle stillness and freezes for 
   assert.match(system, /float breath = 1\.0 \+ uBreathScale \* 0\.05 \* sin\(uTime \* 0\.5712\)/);
   assert.match(system, /u\.uBreathScale\.value = reducedMotionEnabled\(state\) \? 0 : 1;/);
   assert.match(system, /u\.uMotionScale\.value = motion;/);
-  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
   assert.match(system, /uLuminosity \* breath/);
 });
 
@@ -580,19 +580,19 @@ test("stipple shares face state and obeys point and motion budgets", () => {
   assert.match(system, /uDepthReferenceDistance: \{ value: clamp\(depth\.reference_distance/);
   assert.match(system, /float depthScale = clamp\(uDepthReferenceDistance/);
   assert.doesNotMatch(tokens, /point_size:\s*$/m);
-  // FACE_POINT_IS_ONE_PIXEL: depth scales alpha; no point-size controls survive.
+  // Depth scales alpha; point size stays fixed.
   // The clamp folds in every brightness factor — depth and, since faa8e102's
   // contour ridges, the ridge tone — but never a size.
-  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
   assert.match(system, /vAlpha = clamp\([^;]*\* depthScale[^;]*, 0\.0, 1\.0\)/);
   assert.doesNotMatch(system, /uPointSize(?:Base|Bias|Reference|Distance|Output)/);
   assert.match(system, /vThreshold = aThreshold/);
   assert.match(system, /vThreshold > uDensity/);
-  assert.match(tokens, /density_scale:\s*0\.90/);
-  assert.match(tokens, /particle_spacing_scale:\s*1\.075/);
+  assert.match(tokens, /density_scale:\s*0\.45/);
+  assert.match(tokens, /particle_spacing_scale:\s*1\.15/);
   assert.match(system, /uParticleSpacingScale: \{ value: particleSpacingScale\(\) \}/);
   assert.match(system, /p = spacingOrigin \+ \(p - spacingOrigin\) \* uParticleSpacingScale;/);
-  assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.90, 0\.7, 1\.0\)/);
+  assert.match(system, /const densityScale = clamp\(window\.MASTER_FACE_CONTRACT\?\.stipple\?\.density_scale, 0\.45, 0\.3, 1\.0\)/);
 });
 
 test("the swarm geometry, force constants, modes and glyph ramp live in face tokens", () => {
@@ -938,7 +938,7 @@ test("stipple module boots and builds from the canonical idle profile", () => {
   assert.equal(api.glyphForDepth(1), "●");
   assert.equal(api.canonicalSwarmMode({ mode: "listening" }), "attentive");
   assert.equal(api.modeMultipliersFor({ mode: "thinking" }).noise, 0.22);
-  assert.match(system, /gl_PointSize = 1\.0;/);
+  assert.match(system, /gl_PointSize = 1\.5;/);
 
   const moving = api.buildFromSamples(THREE, [
     { x: 0.8, y: 0, z: 0, zone: 0, bias: 1 },

@@ -624,7 +624,7 @@ test("face.modules.bundle.js is generated from face module entry", () => {
   assert.match(sparse, /master:law/);
   assert.match(sparse, /super_void/);
   // FACE_POINT_IS_ONE_PIXEL: depth attenuates brightness, never point size.
-  assert.match(sparse, /gl_PointSize = 1\.0;/);
+  assert.match(sparse, /gl_PointSize = 1\.5;/);
   assert.doesNotMatch(sparse, /gl_PointSize = clamp\(/);
   assert.match(sparse, /vOpacity = aOpacity \* clamp\([^;]*-mv\.z\)/);
   assert.match(sparse, /getPropertyValue\("--c-accent"\)/, "face particles stay neutral grey");
@@ -999,7 +999,7 @@ test("face.css carries no knob for a glow that no longer exists", () => {
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
   assert.doesNotMatch(css, /body::after/);
   // This used to assert --face-glow-scale: 1.22, pinning the additive halo pass
-  // in place. The pass is gone and particle size is fixed at one pixel by
+  // in place. The pass is gone and particle size is fixed by
   // FACE_POINT_IS_ONE_PIXEL, so both vars are asserted absent instead — a knob
   // whose only legal value is its default is not a knob.
   assert.doesNotMatch(css, /--face-glow-scale/);

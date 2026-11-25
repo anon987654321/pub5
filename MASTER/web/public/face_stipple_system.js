@@ -187,7 +187,7 @@
   function particleSpacingScale() {
     return clamp(
       window.MASTER_FACE_CONTRACT?.stipple?.particle_spacing_scale,
-      1.075, 1.0, 1.10
+      1.15, 1.0, 1.15
     );
   }
 
@@ -555,13 +555,13 @@
           vec3 nextForm = expressionPoint(p, uExpressionTo);
           p = mix(p, mix(currentForm, nextForm, uExpressionBlend), uExpressionStrength);
           // Quantise a controlled share of the face's position field. This creates
-          // deliberate stepped contours without changing the one-pixel point budget.
+          // deliberate stepped contours without changing the fixed-size point budget.
           if (uAliasEnabled > 0.5 && uAliasStrength > 0.0) {
             vec2 stepped = floor(p.xy / uAliasGrid + 0.5) * uAliasGrid;
             p.xy = mix(p.xy, stepped, uAliasStrength);
           }
           // A tiny spatial expansion creates actual breathing room between carriers.
-          // It moves their centres; the one-pixel sprite itself is never enlarged.
+          // It moves their centres; the fixed-size sprite itself is never enlarged.
           vec3 spacingOrigin = vec3(0.0, 0.05, 0.0);
           p = spacingOrigin + (p - spacingOrigin) * uParticleSpacingScale;
 
@@ -584,7 +584,7 @@
           float audioInward = clamp(uAudioWarp * 0.035 * uMotionScale, 0.0, 0.035);
           p.xy *= 1.0 - audioInward;
           // Fingerprint-like curved contours modulate luminance only. They do not
-          // change the canonical one-pixel point size or add another render pass.
+          // change the canonical fixed-size point size or add another render pass.
           float ridgeTone = 1.0;
           if (uFingerprintEnabled > 0.5 && uFingerprintStrength > 0.0) {
             vec2 ridgePoint = vec2(p.x * 0.92, p.y - 0.05) -
@@ -599,17 +599,17 @@
           }
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
-          // One point, one pixel: depth and bias belong in brightness (vAlpha
+          // Fixed-size points: depth and bias belong in brightness (vAlpha
           // already folds zone weight, bias and luminosity), not in point size.
           // The face breathes: luminosity sways about five percent over ~11 s,
           // the pace of a resting breath, so the field is never perfectly
           // still while it waits. The breath rides brightness only — the same
-          // seam the one-pixel law owns — and freezes twice over under reduced
+          // seam the fixed-size law owns — and freezes twice over under reduced
           // motion: uTime stops and uMotionScale goes to 0.
           float breath = 1.0 + uBreathScale * 0.05 * sin(uTime * 0.5712);
           float depthScale = clamp(uDepthReferenceDistance / max(1.0, -mv.z),
             uDepthScaleMin, uDepthScaleMax);
-          gl_PointSize = 1.0;
+          gl_PointSize = 1.5;
           vThreshold = aThreshold;
           vDepthRank = aDepthRank;
           vAlpha = clamp((0.34 + zoneWeight * 0.56) * aBias * uLuminosity * breath * (1.0 - uEntropy * 0.08) * depthScale * ridgeTone, 0.0, 1.0);
@@ -712,7 +712,7 @@
         : clamp(pressureRaw, 0, 0, 1);
     const entropy = clamp(state.pressureFields?.entropy ?? state.entropy ?? 0.18, 0.18, 0, 1);
     const mode = String(state.mode || state.mood || "idle").toLowerCase();
-    const densityScale = clamp(window.MASTER_FACE_CONTRACT?.stipple?.density_scale, 0.90, 0.7, 1.0);
+    const densityScale = clamp(window.MASTER_FACE_CONTRACT?.stipple?.density_scale, 0.45, 0.3, 1.0);
     const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(mode) ?? mode === "idle";
     const motion = reducedMotionEnabled(state) || stillMode ? 0 : 1;
     const u = system.material.uniforms;

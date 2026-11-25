@@ -51,7 +51,7 @@ tokens:
         - "Truth, provenance, accessibility and task clarity outrank stylistic effect."
         - "The shared grammar never imposes one palette, typography, layout or material on every product."
       material_boundary: >
-        Greyscale one-pixel particle stipple is the distinctive material of the MASTER face.
+        Greyscale crisp particle stipple is the distinctive material of the MASTER face.
         RAILS, OPENBSD and STUDIO inherit its principles, not a compulsory particle skin.
       motion_grammar:
         stages: [individual, signal, response, formation, residual_stillness]
@@ -66,7 +66,7 @@ tokens:
           Empty space is an active shape with its own edge, scale and duration. It gives
           individual carriers room to remain distinct and lets a signal become legible.
         face:
-          - "Preserve deliberate gaps between neighbouring one-pixel carriers."
+          - "Preserve deliberate gaps between neighbouring carriers."
           - "Use larger quiet pockets around important facial features rather than uniformly thinning the whole face."
           - "Keep the silhouette readable while allowing selected contours to break into silence."
         interface:
@@ -550,10 +550,9 @@ tokens:
         strength: 0.48
         center: [0.08, 0.06]
         intro_wave_strength: 0.28
-      # Keep the normal carrier population; open small gaps by spacing positions, not by
-      # discarding dots. The point sprite remains exactly one pixel.
-      density_scale: 0.90
-      particle_spacing_scale: 1.10
+      # Sparse, separated carriers preserve negative space.
+      density_scale: 0.45
+      particle_spacing_scale: 1.15
       # Hollow Gaze: open larger orbital and mouth apertures without thinning the carrier field.
       # Faultline is a temporary, state-bound void along the right contour; ready restores it.
       voids:
@@ -579,7 +578,7 @@ tokens:
         max_interval_ms: 16000
         transition_ms: 1800
         strength: 0.78
-      # Point sprites stay one pixel; camera depth changes brightness, never size.
+      # Point sprites stay small; camera depth changes brightness, never size.
       depth_response:
         reference_distance: 5.0
         scale_min: 0.75
@@ -1292,7 +1291,7 @@ tokens:
         memory_ghost_limit: 48
         evidence_trail_limit: 12
         law_resonance_limit: 56
-        density_scale: 1.0
+        density_scale: 0.50
         motion_vocabulary: [orbit, drift, attract, repel, bloom, collapse, fragment, remember, connect, breathe, resolve]
   # BRGEN_OLD dark — dark-inverted port of the real 2014 desktop.css/mobile.css
   # from pub/__OLD_BACKUPS/BRGEN_OLD. True neutral grayscale, no accent hue,
@@ -1879,7 +1878,7 @@ tokens:
     # rather than only scanned for it; FACE_POINT_IS_ONE_PIXEL and
     # NO_WEBGL_GLOW_PASS in law/javascript.rb are what enforce them.
     - additive second pass behind a point cloud
-    - gl_PointSize above 1.0
+    - gl_PointSize above 1.5
     forbidden_patterns:
     - 'box-shadow\s*:'
     - 'text-shadow\s*:'
