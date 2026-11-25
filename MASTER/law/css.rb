@@ -219,8 +219,8 @@ end
 
 Law.define(:INTRINSIC_LAYOUT) do
   source "Modern CSS intrinsic layout - web.dev Learn CSS"
-  ask "Does the layout solve content and component sizing with fixed dimensions or breakpoint patches where intrinsic sizing could express the relationship?"
-  fix "Prefer min/max-content, fit-content, auto, flex/grid, clamp(), and content-sized controls before adding fixed dimensions or breakpoint overrides."
+  ask "Does the layout use fixed dimensions, absolute positioning for ordinary alignment, sibling margin chains, breakpoint patches, redundant wrappers or JavaScript sizing where native content-driven layout would be simpler? Identify the actual relationship and preserve intentional overlays, media crops and product designs."
+  fix "Use flex with gap and wrapping for one-dimensional flow; grid with minmax(), auto-fit or auto-fill for two-dimensional alignment; min-inline-size: 0 where shrinking is intended; logical properties, clamp() and aspect-ratio when appropriate. Reuse the owning shared primitive. Preserve source order, focus, semantics and intended appearance; verify narrow and wide renders and long content."
   bad "card { width: 420px; }"
   good "card { width: min(100%, 28rem); }"
 end
@@ -235,8 +235,8 @@ end
 
 Law.define(:MODERN_FORMS) do
   source "CSS field-sizing - Baseline 2026"
-  ask "Does a form control use brittle fixed sizing where its content, label, validation state, or user input should determine its size?"
-  fix "Prefer intrinsic form sizing and field-sizing when it improves the control without harming predictability."
+  ask "Do forms use brittle sizing, repeated control selectors, redundant layout wrappers or competing overrides where shared, intrinsic controls and scoped state styles would be simpler? Consider labels, errors, long translations, mobile keyboards and autofill."
+  fix "Consolidate control selectors without changing cascade order or specificity; prefer parent gap, flexible input tracks, logical sizing and supported field-sizing where useful. Keep native labels, validation, focus, touch targets and protected product styles."
   bad "textarea { height: 96px; }"
   good "textarea { field-sizing: content; }"
 end

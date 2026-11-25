@@ -108,7 +108,7 @@ module Master
       # "path:line" of the first rule line in the shared layer that defines the
       # class, else in the app's own application.scss.
       def owner_of(name, root:, near: nil)
-        candidates = Dir.glob(File.join(root, SHARED_DIR, "*.scss")).sort
+        candidates = Dir.glob(File.join(root, SHARED_DIR, "**", "*.scss")).sort
         app = near.to_s[%r{RAILS/([^/]+)/}, 1]
         candidates << File.join(root, "RAILS", app, "app", "assets", "stylesheets", "application.scss") if app
         candidates.each do |file|
@@ -129,7 +129,7 @@ module Master
       end
 
       def shared_classes(root)
-        Dir.glob(File.join(root, SHARED_DIR, "*.scss")).each_with_object({}) do |file, found|
+        Dir.glob(File.join(root, SHARED_DIR, "**", "*.scss")).each_with_object({}) do |file, found|
           File.read(file, encoding: "UTF-8").scan(RULE_RE).flatten.each do |selector|
             selector.scan(CLASS_RE).flatten.each { |name| found[name] = true }
           end

@@ -33,8 +33,8 @@ end
 
 Law.define(:RAILS_VIEW_PURITY) do
   source "MASTER Rails architecture - view purity"
-  ask "If this is a Rails view or partial, does it contain queries, persistence, or multi-step business condition trees that belong in helpers, models, or presenters? Prefer CLEAN when it only presents assigns."
-  fix "Move business logic out of the view; pass prepared assigns and use focused presentation helpers or presenters."
+  ask "If this is a Rails view or partial, does it contain queries, persistence, business condition trees, duplicated form wiring, manually assembled dynamic attributes, or styling-only wrappers that native Rails builders, existing helpers or semantic elements would simplify? Return CLEAN when it already presents assigns idiomatically; plain static HTML is not a defect."
+  fix "Move business logic out of the view; pass prepared assigns. Prefer form_with, builder labels and fields, tag.*, class_names, link_to, button_to and collection rendering where shorter or safer. Reuse existing shared helpers rather than inventing a DSL. Preserve form names, methods, errors, CSRF, Turbo targets, Stimulus bindings, accessibility and user-visible behavior."
   bad <<~X
     <% orders = Order.where(user_id: current_user.id).select { |o| o.total > 1000 } %>
     <% orders.each { |order| order.update!(reviewed: true) } %>
