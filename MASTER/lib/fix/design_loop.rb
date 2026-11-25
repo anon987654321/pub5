@@ -29,7 +29,6 @@ module Master
 
       TIE = 0.05
       OTHERS_TOLERANCE = 1.0
-      STALL_LIMIT = 4
       TRIES_PER_SURFACE = DesignPrompts::VARIANTS.size
       MIN_PAGE_TOKENS = 8
       SHARED = "/RAILS/__shared/"
@@ -60,14 +59,11 @@ module Master
         @state = measured(@plan.surfaces)
         raise "design baseline incomplete" unless complete_capture?(@plan.surfaces, @state)
         survey
-        stalls = 0
         results = []
         @plan.rounds.times do |index|
           break unless (@target = weakest)
 
           results << attempt(index + 1)
-          stalls = results.last.outcome == :kept ? 0 : stalls + 1
-          break if stalls >= STALL_LIMIT
         end
         results
       end

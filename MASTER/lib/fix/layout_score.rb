@@ -14,7 +14,7 @@ module Master
     #   measure  paragraph line length in characters; 45-75 is full marks, linear to 0 at 20 characters outside
     #   heading  h1-h3 size against the body size as a power of the modular-scale ratio; off-integer exponents lose marks
     #   density  painted share of the viewport; 0.25-0.60 is full marks, linear to 0 at 0 and 1
-    #   balance  evenness of vertical gaps between stacked blocks (1 - coefficient of variation)
+    #   balance  recurrence within spacing bands, allowing larger intervals between groups
     #   centering horizontal centroid of painted content against the viewport centre; 4% of the width is free
     #   focal    one dominant typographic voice: the largest text size against the next-largest
     #            (or the body when it stands alone); full marks at FOCAL_DOMINANT, diluted voices
@@ -48,7 +48,7 @@ module Master
       ACTION_FLOOR = 0.2
       ACTION_MIN_H = 40
       ACTION_MIN_W = 88
-      VERSION = 4
+      VERSION = 5
       Result = Data.define(:score, :subs, :facts)
 
       module_function
@@ -124,7 +124,7 @@ module Master
       end
 
       def measure(els, facts)
-        rows = els.select { |e| e["text_lines"].to_i >= 2 && e["font_size"].to_f.positive? }
+        rows = els.select { |e| %w[p blockquote].include?(e["tag"]) && e["text_lines"].to_i >= 2 && e["font_size"].to_f.positive? }
         return if rows.empty?
 
         scores = rows.map do |e|
@@ -154,7 +154,7 @@ module Master
 
       def body_size(payload, els)
         median = payload.dig("visual", "typography", "body_median_px")
-        return median.to_f if median
+        return median.to_f if median.to_f.positive?
 
         sizes = els.select { |e| e["text"].to_s != "" && !e["tag"].to_s.match?(/\Ah\d\z/) && e["font_size"].to_f >= 10 }.map { |e| e["font_size"].to_f }.sort
         sizes[sizes.size / 2] unless sizes.empty?
@@ -223,9 +223,15 @@ module Master
       def balance(gaps)
         return if gaps.size < 3
 
-        mean = gaps.sum / gaps.size
-        deviation = Math.sqrt(gaps.sum { |g| (g - mean)**2 } / gaps.size)
-        clamp(1.0 - deviation / mean)
+        bands = gaps.sort.slice_when { |a, b| b > a * 1.5 }.to_a
+        # Repeated small intervals and deliberately larger group intervals are compatible.
+        bands.sum do |band|
+          mean = band.sum / band.size.to_f
+          next 0.0 unless mean.positive?
+
+          deviation = Math.sqrt(band.sum { |gap| (gap - mean)**2 } / band.size)
+          band.size * clamp(1.0 - deviation / mean)
+        end / gaps.size
       end
 
       # The identity contract gives a first screen one dominant focal point and

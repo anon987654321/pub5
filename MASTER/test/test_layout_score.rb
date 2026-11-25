@@ -73,6 +73,17 @@ class LayoutScoreTest < Minitest::Test
     assert_operator compute([para.(300)]).subs["measure"], :<, 1.0
   end
 
+  def test_measure_excludes_multiline_headings_and_controls
+    rows = [el(16, 0, 100, 100, "tag" => "h1", "text_lines" => 4, "font_size" => 32),
+            el(16, 110, 100, 60, "tag" => "button", "text_lines" => 2, "font_size" => 16)]
+    assert_nil compute(rows).subs["measure"]
+  end
+
+  def test_balance_accepts_deliberate_group_spacing
+    assert_equal 1.0, L.balance([8, 8, 32, 8, 8, 32])
+    assert_operator L.balance([8, 11, 15, 19]), :<, 1.0
+  end
+
   def test_heading_ratio_follows_the_modular_scale
     vis = { "typography" => { "body_median_px" => 16 } }
     head = ->(px) { el(16, 0, 300, 40, "tag" => "h1", "font_size" => px) }

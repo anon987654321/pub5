@@ -43,6 +43,7 @@ module Master
           Which better serves the content and task through optical balance, relative scale, typographic hierarchy,
           alignment, grouping, deliberate whitespace and a clear focal point? Do not reward uniformity for its
           own sake. Reject clipped, cramped or less legible content and lost interaction affordances.
+          Distinguish prose measure from display type, and intentional group separation from accidental irregularity.
           Name the specific visible relationship that improves. Say "same" if neither is demonstrably better.
           Return only JSON: {"better": "A" or "B" or "same", "why": "<one short sentence>"}.
         TEXT
@@ -55,7 +56,7 @@ module Master
       def prompt(sources, variant)
         <<~TEXT
           The image is the current render of #{@target[:surface].id}.
-          Its layout score is #{@target[:score].round(1)} of 100.
+          Its diagnostic layout score is #{@target[:score].round(1)} of 100; this is not a beauty score.
           Weakest measures (0 to 1): #{weakest_measures}.
           Elements the checks flagged (kind: element keys): #{@target[:offender_keys].inspect}.
           The largest elements on this page, as key [x y w h]:
