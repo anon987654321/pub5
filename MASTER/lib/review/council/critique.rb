@@ -50,8 +50,18 @@ module Master
           return inconclusive_run_result(payload, feedback) if feedback_inconclusive?(feedback)
 
           issues = panel_issue_entries(feedback)
-          ideation_result = ideate(preset, feedback:)
-          cherry = CherryPick.call(feedback, ideation_result)
+          judge = Array(feedback).find { |entry| entry[:persona] == "Judge" }
+          return Master::Result.err("critique: final judge missing", category: :inconclusive) unless judge
+
+          # Only the final judge may select repairs. Do not resurrect rejected
+          # alternatives through lexical similarity or a second ideation pass.
+          cherry = Array(judge[:structured_findings]).filter_map do |finding|
+            repair = finding.fetch("proposed_repair", "").to_s.strip
+            next if repair.empty? || repair.casecmp?("none")
+
+            [finding.fetch("location"), finding.fetch("claim"), repair].join(" — ").gsub(/\s+/, " ")
+          end.uniq
+          ideation_result = Master::Result.ok(ideas: [], final: judge[:feedback])
           visual_clean = @mode[:preset_key] == "ui_critique" && issues.empty? && cherry.empty?
           @bus&.publish(@mode[:done_event], cherry_picks: cherry.size, visual_clean:)
           harvest = harvest_path(payload:, feedback:, ideation_result:, cherry:)
