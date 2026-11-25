@@ -185,7 +185,9 @@
       const maxLabel = Math.max(8, Math.min(64, Math.floor(finite(SEMANTIC_SUBJECT.max_label_chars, 48))));
       const label = String(subject.label || subject.name || "object")
         .replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLabel);
-      return Object.freeze({ kind, label: label || "object", confidence, features: sequence, sequence, parts });
+      const maskProfile = String(subject.maskProfile || "");
+      const localMask = window.MASTER_FACE_MASKS?.hasProfile?.(maskProfile) ? maskProfile : null;
+      return Object.freeze({ kind, label: label || "object", confidence, features: sequence, sequence, parts, maskProfile: localMask });
     }
 
     const allowed = subjectFeatures(kind);
@@ -401,9 +403,10 @@
       const feature = ordered[stage];
       const b = seeded(i, 81 + stage);
       const c = seeded(i, 97 + stage);
-      const point = custom
+      const maskPoint = descriptor.maskProfile ? window.MASTER_FACE_MASKS?.sample?.(descriptor.maskProfile, i) : null;
+      const point = maskPoint || (custom
         ? customPrimitivePoint(partByKey.get(feature), local, b, c)
-        : semanticFeaturePoint(descriptor.kind, feature, local, b, c);
+        : semanticFeaturePoint(descriptor.kind, feature, local, b, c));
       const offset = i * 3;
       positions[offset] = point[0] * scale;
       positions[offset + 1] = point[1] * scale;
@@ -554,7 +557,7 @@
   }
 
   function subjectSignature(subject) {
-    return subject ? [subject.kind, subject.label, subject.sequence.join(",")].join("|") : "";
+    return subject ? [subject.kind, subject.label, subject.maskProfile || "", subject.sequence.join(",")].join("|") : "";
   }
 
   function setSubjectForm(value, descriptor = null) {

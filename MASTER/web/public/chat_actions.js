@@ -133,7 +133,7 @@ async function startNewConversation() {
     // browser event advances the existing particle-mask profile exactly once;
     // reload then renders the matching server-selected profile and an empty log.
     window.dispatchEvent(new CustomEvent("master:conversation-created", {
-      detail: { conversationId: faceSession }
+      detail: { conversationId: faceSession, faceProfile: String(payload?.face_profile || "") }
     }));
     window.location.reload();
     return true;

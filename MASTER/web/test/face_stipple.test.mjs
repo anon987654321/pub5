@@ -1112,3 +1112,41 @@ test("stipple lifecycle is observable and reversible", () => {
   assert.match(system, /installing,/);
 });
 
+
+test("mask reliefs are deterministic, bounded and distinct for all sixteen designs", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { runInNewContext } = await import("node:vm");
+  const storage = new Map();
+  const listeners = new Map();
+  const window = {
+    MASTER_FACE_MASK_SESSION: "test-session",
+    MASTER_FACE_MASK_PROFILE: "iatmul-concentric",
+    MASTER_FACE_WORLD: { setSubjectForm() {} },
+    addEventListener(name, callback) { listeners.set(name, callback); },
+    dispatchEvent() {}
+  };
+  const document = { readyState: "complete", documentElement: { dataset: {} },
+    querySelector() { return null; }, getElementById() { return null; } };
+  runInNewContext(readFileSync(new URL("../public/face_mask_profiles.js", import.meta.url), "utf8"), {
+    window, document, sessionStorage: { getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value) },
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
+  });
+  const masks = window.MASTER_FACE_MASKS;
+  assert.equal(masks.profiles.length, 16);
+  assert.equal(masks.rotationProfiles.length, 5);
+  const fingerprints = new Set();
+  for (const profile of masks.profiles) {
+    const points = Array.from({ length: 512 }, (_, index) => masks.sample(profile.id, index));
+    assert.equal(JSON.stringify(points[40]), JSON.stringify(masks.sample(profile.id, 40)));
+    assert.ok(points.every(point => point.every(value => Number.isFinite(value) && Math.abs(value) < 0.8)));
+    fingerprints.add(JSON.stringify(points));
+  }
+  assert.equal(fingerprints.size, 16);
+  assert.equal(masks.sample("unknown", 0), null);
+  listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "elema-hollow" } });
+  assert.equal(masks.current().id, "elema-hollow");
+  assert.equal(masks.descriptor().maskProfile, "elema-hollow");
+  masks.next();
+  assert.equal(masks.current().id, "iatmul-concentric");
+});

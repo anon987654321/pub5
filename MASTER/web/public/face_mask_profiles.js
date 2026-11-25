@@ -1,5 +1,5 @@
 /* MASTER pixel-mask profile catalogue.
- * Eight bounded parts morph the existing face point field; no second renderer,
+ * A bounded relief sampler morphs the existing face point field; no second renderer,
  * bitmap, connected mesh, or downloaded asset is introduced. Cultural labels
  * identify reference families, not claims of ceremonial authenticity.
  */
@@ -55,11 +55,82 @@
     const cheekKey = profile.inner ? "inner-face" : profile.lattice ? "lattice" : "cheeks";
     return {
       kind: "custom",
+      maskProfile: profile.id,
       label: profile.name,
       confidence: 1,
       sequence: ["outer", "brow", "left-eye", "right-eye", "nose", cheekKey, "mouth", "jaw"],
       parts
     };
+  }
+
+
+  // Original geometric reliefs, not photographs or traced ceremonial designs.
+  // Profiles vary independently in silhouette, eye voids, cheek fullness,
+  // bridge depth and mouth proportions. All coordinates remain bounded.
+  const RELIEF = Object.freeze({
+    "abelam-shield":    [.14, 2.8, .25, .14, .12, .075, .20, .12],
+    "abelam-prow":      [.42, 2.2, .34, .19, .10, .050, .28, .06],
+    "iatmul-river":     [.47, 1.7, .43, .17, .10, .055, .32, .08],
+    "iatmul-concentric":[.06, 2.0, .18, .22, .15, .095, .17, .22],
+    "sepik-split":      [.30, 2.6, .38, .19, .13, .048, .30, .13],
+    "elema-tower":      [.32, 3.2, .49, .17, .13, .055, .24, .05],
+    "elema-hollow":     [-.12,2.5, .10, .23, .19, .105, .14, .30],
+    "tatanua-crest":    [.22, 2.1, .28, .19, .12, .075, .20, .16],
+    "malangan-double":  [.10, 2.4, .24, .21, .13, .075, .18, .26],
+    "woven-void":       [.20, 1.8, .20, .21, .16, .090, .16, .10],
+    "mak-yong-court":   [.27, 2.0, .26, .18, .11, .040, .12, .12],
+    "mak-yong-character":[.21,2.8,.20, .20, .13, .065, .20, .16],
+    "mek-mulung-hero":  [.00, 2.4, .22, .23, .13, .060, .19, .24],
+    "jikey-comic":      [-.16,2.2, .12, .23, .16, .100, .10, .25],
+    "mah-meri-organic": [.13, 1.6, .25, .20, .14, .080, .17, .20],
+    "jah-hut-angular":  [.35, 3.0, .31, .18, .12, .045, .24, .12]
+  });
+  const randomUnit = (index, salt) => {
+    let n = Math.imul((index + 1) ^ Math.imul(salt + 1, 0x9e3779b1), 0x85ebca6b);
+    n = Math.imul(n ^ (n >>> 13), 0xc2b2ae35);
+    return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+  };
+  const gaussian = (v, width) => Math.exp(-Math.pow(v / width, 2));
+  function sample(id, index) {
+    const p = PROFILES[profileIndex(id)];
+    const shape = RELIEF[id];
+    if (!p || !shape) return null;
+    const [taper, exponent, forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
+    const eyeY = .15 - forehead * .25;
+    const mouthY = -.26 - forehead * .09;
+    const mouthW = (p.mouth ?? p.crown * .62) * .56;
+    const mouthH = .035 + cheeks * .11;
+    const w = p.w, h = p.h;
+    // Bounded rejection sampling leaves real holes rather than drawing dark
+    // sprites over a solid face. Same index and profile always yield same point.
+    for (let attempt = 0; attempt < 48; attempt += 1) {
+      const salt = attempt * 4;
+      const v = randomUnit(index, salt) * 2 - 1;
+      const u = randomUnit(index, salt + 1) * 2 - 1;
+      const y = v * h;
+      const width = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent);
+      const jaw = 1 - taper * Math.max(0, -v);
+      const x = u * w * width * jaw + p.asym * v * .45;
+      const absoluteX = Math.abs(x);
+      const eye = Math.pow((absoluteX - eyeX) / eyeW, 2) + Math.pow((y - eyeY) / eyeH, 2);
+      const mouth = Math.pow(x / mouthW, 2) + Math.pow((y - mouthY) / mouthH, 2);
+      if (eye < 1 || mouth < 1) continue;
+      const edge = Math.abs(u);
+      const brow = gaussian(y - eyeY - eyeH * 1.35, .045) * gaussian(absoluteX - eyeX, .15);
+      const bridge = gaussian(x, .035 + noseDepth * .12) * gaussian(y + .025, p.nose * .64);
+      const cheek = gaussian(absoluteX - w * .60, .095) * gaussian(y + .12, .18);
+      const rim = gaussian(eye - 1.22, .65) + gaussian(mouth - 1.24, .78);
+      const relief = .035 + .11 * Math.sqrt(Math.max(0, 1 - edge * edge)) +
+        noseDepth * bridge + .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
+      const light = Math.min(1, .19 + .29 * edge + .35 * bridge + .22 * brow + .18 * rim + .30 * cheek);
+      if (randomUnit(index, salt + 2) > light) continue;
+      const z = relief + (randomUnit(index, salt + 3) - .5) * .028;
+      return [x, y, z];
+    }
+    // Bounded fallback on the silhouette, never in an eye or mouth void.
+    const angle = randomUnit(index, 193) * Math.PI * 2;
+    const v = Math.sin(angle);
+    return [Math.cos(angle) * w * (1 - taper * Math.max(0, -v)), v * h, .025];
   }
 
   function hash(value) {
@@ -190,7 +261,8 @@
     const nextKey = String(event?.detail?.conversationId || event?.detail?.id || "");
     if (!nextKey || nextKey === activeKey) return false;
     activeKey = nextKey;
-    rotationIndex = (rotationIndex + 1) % ROTATION_PROFILE_IDS.length;
+    const serverIndex = ROTATION_PROFILE_IDS.indexOf(String(event?.detail?.faceProfile || ""));
+    rotationIndex = serverIndex >= 0 ? serverIndex : (rotationIndex + 1) % ROTATION_PROFILE_IDS.length;
     current = profileIndex(ROTATION_PROFILE_IDS[rotationIndex]);
     try { sessionStorage.setItem("master.mask." + nextKey, String(current)); } catch (_) {}
     return apply(current, "new-conversation");
@@ -215,6 +287,8 @@
     current: () => PROFILES[current],
     source: () => sourceFor(PROFILES[current]),
     descriptor: () => descriptor(PROFILES[current]),
+    sample,
+    hasProfile: (id) => profileIndex(id) >= 0,
     applyCurrent: (reason = "restore") => apply(current, reason),
     select: (id) => {
       const index = profileIndex(id);
