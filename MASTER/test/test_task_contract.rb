@@ -1042,6 +1042,36 @@ class TestTaskContract < Minitest::Test
     end
   end
 
+  # A push that leaves OPENBSD/ untouched keeps the receipt; one that edits it,
+  # or a receipt from an unrelated commit, does not.
+  def test_saved_openbsd_preflight_survives_descendants_that_leave_openbsd_unchanged
+    preflight = Master::Fix::OpenBSDManualPreflight
+    Dir.mktmpdir("rtfm-head") do |repo|
+      git_in(repo, "init", "-q")
+      read = commit_in(repo, path: "OPENBSD/rc.conf", body: "a\n")
+      commit_in(repo, path: "MASTER/web.rb", body: "b\n")
+
+      assert preflight.openbsd_unchanged_since?(read, root: repo)
+      refute preflight.openbsd_unchanged_since?("0" * 40, root: repo)
+      commit_in(repo, path: "OPENBSD/rc.conf", body: "changed\n")
+      refute preflight.openbsd_unchanged_since?(read, root: repo)
+    end
+  end
+
+  def git_in(repo, *argv)
+    out, status = Open3.capture2e("git", "-C", repo, "-c", "user.name=t", "-c", "user.email=t@t", *argv)
+    assert status.success?, "git #{argv.join(' ')}: #{out}"
+    out.strip
+  end
+
+  def commit_in(repo, path:, body:)
+    FileUtils.mkdir_p(File.dirname(File.join(repo, path)))
+    File.write(File.join(repo, path), body)
+    git_in(repo, "add", path)
+    git_in(repo, "commit", "-qm", path)
+    git_in(repo, "rev-parse", "HEAD")
+  end
+
   def test_saved_openbsd_preflight_rejects_expired_receipts
     contract = CONTRACT.build(
       intent: "functional_change", scope: ["OPENBSD/**"], preserve: [], proof: []

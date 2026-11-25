@@ -684,8 +684,25 @@ module Master
         raise TaskContract::Invalid, "saved OpenBSD preflight has unknown fields: #{unknown.join(', ')}" unless unknown.empty?
         head = attributes.fetch("head_sha").to_s
         raise TaskContract::Invalid, "saved OpenBSD preflight HEAD is invalid" unless head.match?(/\A[0-9a-f]{40,64}\z/)
-        raise TaskContract::Invalid, "saved OpenBSD preflight belongs to another checkout revision" unless repository_head(root:) == head
+        validate_saved_receipt_head!(head, root:)
         validate_saved_receipt_age!(attributes.fetch("created_at").to_s)
+      end
+
+      def validate_saved_receipt_head!(head, root:)
+        return if repository_head(root:) == head || openbsd_unchanged_since?(head, root:)
+
+        raise TaskContract::Invalid, "saved OpenBSD preflight belongs to another checkout revision"
+      end
+
+      # The receipt reads OPENBSD/ only. A later commit that is a descendant and
+      # leaves OPENBSD/ byte-identical cannot invalidate that reading; requiring
+      # the exact HEAD made every unrelated push lock vm23 out until a re-read.
+      def openbsd_unchanged_since?(head, root: Master::REPO_ROOT)
+        git = ->(*argv) { Open3.capture2e("git", "-C", root, *argv).last.success? }
+        git.call("merge-base", "--is-ancestor", head, "HEAD") &&
+          git.call("diff", "--quiet", head, "HEAD", "--", "OPENBSD")
+      rescue SystemCallError
+        false
       end
 
       def validate_saved_receipt_age!(created_at)
