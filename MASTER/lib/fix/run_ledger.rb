@@ -105,10 +105,11 @@ module Master
 
         # Runs the block with the refusal in the prompts built inside it.
         def retrying(note)
+          previous = Thread.current[:fix_retry_note]
           Thread.current[:fix_retry_note] = note
           yield
         ensure
-          Thread.current[:fix_retry_note] = nil
+          Thread.current[:fix_retry_note] = previous
         end
 
         # The paragraph a prompt adds on a retry; empty on a first attempt.
@@ -116,7 +117,7 @@ module Master
           note = Thread.current[:fix_retry_note]
           return "" if note.to_s.empty?
 
-          "Your previous proposal was refused: #{note}\nMake a smaller change that avoids exactly that, touching only the lines the finding names."
+          "Your previous proposal was refused: #{note}\nDo not repeat the rejected approach. Diagnose its cause; compare a smaller local repair with a root-cause repair at the existing owner. Choose the least disruptive approach that actually resolves the defect, preserves contracts, and can be verified."
         end
 
         # "patch_rejected 3, model_said_unchanged 2" for the heartbeat; nil when there is nothing to say.

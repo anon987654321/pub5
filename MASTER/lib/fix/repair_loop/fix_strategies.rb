@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "tempfile"
+require "ripper"
 require_relative "../../io/exec"
 require_relative "../best_of_n"
 require_relative "../unified_diff"
@@ -130,10 +131,38 @@ module Master
         DEF_LINE = /^\s*def\s+(?:self\.)?([a-z_]\w*[?!=]?)(.*)$/
 
         def changed_signatures(original_src, proposed_src)
-          before, after = [original_src, proposed_src].map do |src|
-            src.scan(DEF_LINE).to_h { |name, rest| [name, rest.strip] }
+          before, after = [original_src, proposed_src].map { |src| method_signatures(src) }
+          before.select { |name, signatures| after[name] != signatures }.keys
+        end
+
+        # Ripper supplies complete parameter trees, including multiline defaults,
+        # keyword arguments and singleton definitions. Keep duplicate names rather
+        # than letting a later definition silently overwrite an earlier one.
+        def method_signatures(src)
+          tree = Ripper.sexp(src)
+          return src.scan(DEF_LINE).group_by(&:first).transform_values { |rows| rows.map(&:last) } unless tree
+
+          signatures = Hash.new { |hash, name| hash[name] = [] }
+          visit = lambda do |node|
+            return unless node.is_a?(Array)
+
+            case node.first
+            when :def
+              signatures[node[1][1]] << [:instance, signature_shape(node[2])]
+            when :defs
+              signatures[node[3][1]] << [:singleton, signature_shape(node[1]), signature_shape(node[4])]
+            end
+            node.each { |child| visit.call(child) if child.is_a?(Array) }
           end
-          before.select { |name, params| !after.key?(name) || after[name] != params }.keys
+          visit.call(tree)
+          signatures
+        end
+
+        def signature_shape(node)
+          return node unless node.is_a?(Array)
+          return node.first(2) if node.first.to_s.start_with?("@")
+
+          node.map { |child| signature_shape(child) }
         end
 
         def call_sites(name)
@@ -166,10 +195,10 @@ module Master
 
         # Only SAFE approves. A reply that was neither word, a refusal, a rambling
         # paragraph, an empty string, approved the fix before.
-        def reflexion_verdict?(response) = response.to_s.match?(/\A(?:SAFE|UNSAFE)\b/)
+        def reflexion_verdict?(response) = response.to_s.match?(/\A(?:SAFE|UNSAFE(?:: [^\n]+)?)\z/)
 
         def handle_reflexion_response(response, path, proposed_src)
-          unless response.match?(/\ASAFE\b/)
+          unless response == "SAFE"
             # The log and the retry note must not call a non-answer an UNSAFE verdict.
             reason = reflexion_verdict?(response) ? response[0, 160] : "no verdict from the reviewer (it replied: #{response[0, 100]})"
             Thread.current[:reflexion_reason] = reason
@@ -312,9 +341,9 @@ module Master
           baseline = rescan_candidate(original, path)
           viable = Array(candidates).map(&:to_s).reject(&:empty?).uniq.filter_map do |candidate|
             count = rescan_candidate(candidate, path)
-            next if count > baseline
+            next if candidate == original || count > baseline
 
-            { source: candidate, findings: count, diff_bytes: (candidate.bytesize - original.bytesize).abs, author_models: proposal_authors.fetch(candidate, []) }
+            { source: candidate, findings: count, diff_bytes: UnifiedDiff.between(original, candidate, context: 0).to_s.bytesize, author_models: proposal_authors.fetch(candidate, []) }
           end
           return if viable.empty?
 

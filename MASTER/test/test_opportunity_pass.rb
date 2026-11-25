@@ -77,6 +77,8 @@ class OpportunityPassTest < Minitest::Test
       assert(findings.any? { |finding| finding[:message].start_with?("duplicated module:") })
       evidence = pass.run(target: File.join(root, "MASTER"), files: []).value.fetch(:assessment_evidence)
       assert evidence.fetch(:reasons).any? { |reason| reason.include?("opportunities deferred") }
+      next_batch = pass.run(target: File.join(root, "MASTER"), files: []).value.fetch(:findings)
+      assert_operator (next_batch.map { |row| row[:message] } - findings.map { |row| row[:message] }).size, :>, 0
     end
   end
 end

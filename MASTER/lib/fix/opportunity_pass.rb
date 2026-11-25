@@ -3,6 +3,7 @@
 require_relative "../boot/paths"
 require "digest"
 require "json"
+require "set"
 require_relative "design_audit"
 
 module Master
@@ -49,6 +50,7 @@ module Master
       def initialize(root:, bus: nil)
         @root = File.expand_path(root)
         @bus = bus
+        @offered = {}
       end
 
       def applicable?(target)
@@ -250,8 +252,11 @@ module Master
         end
         design = relative == "MASTER" ? collect_design : []
         # Keep the batch bounded, but disclose every deferred opportunity.
+        active = (findings + design).map { |row| opportunity_key(row) }.to_set
+        @offered.delete_if { |key, _| !active.include?(key) }
         regular = diverse_batch(findings, MAX_FINDINGS - design.size.clamp(0, DESIGN_SLOTS))
         selected = regular + diverse_batch(design, DESIGN_SLOTS)
+        selected.each { |row| key = opportunity_key(row); @offered[key] = @offered.fetch(key, 0) + 1 }
         deferred = findings.size + design.size - selected.size
         @assessment_gaps << "#{deferred} opportunities deferred by batch limit" if deferred.positive?
         selected
@@ -259,8 +264,12 @@ module Master
 
       # Round-robin by defect family: one noisy detector must not crowd out
       # independent structural opportunities.
+      def opportunity_key(row) = [row.file, row.line, row.message]
+
       def diverse_batch(rows, limit)
         groups = rows.group_by { |row| row.message.split(":", 2).first }.values
+        groups.each { |group| group.sort_by! { |row| [@offered.fetch(opportunity_key(row), 0), row.file, row.line] } }
+        groups.sort_by! { |group| @offered.fetch(opportunity_key(group.first), 0) }
         selected = []
         while selected.size < limit && groups.any? { |group| !group.empty? }
           groups.each do |group|

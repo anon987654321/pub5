@@ -502,6 +502,7 @@ class TestRepairLoopPolicy < Minitest::Test
   def test_reflexion_approves_only_on_safe
     assert_equal "puts :y\n", verdict_for("SAFE")
     assert_nil verdict_for("UNSAFE: drops a branch")
+    assert_nil verdict_for("SAFE but this drops a branch")
     assert_nil verdict_for("I think this looks reasonable overall.")
     assert_nil verdict_for(-> { raise "provider down" })
   end
@@ -521,6 +522,14 @@ class TestRepairLoopPolicy < Minitest::Test
 
   # The verifier cannot read files: a changed signature carries its callers, and a partial
   # repair of a group is judged on correctness, not on fixing every finding.
+  def test_structural_signature_detects_multiline_changes_and_removal
+    loop = Master::Fix::RepairLoop.allocate
+    before = "def example(\n  first,\n  second: true\n)\nend\ndef removed = 1\n"
+    after = "def example(\n  first,\n  second: false\n)\nend\n"
+    assert_equal %w[example removed], loop.send(:changed_signatures, before, after)
+    assert_empty loop.send(:changed_signatures, before, "\n" + before)
+  end
+
   def test_reflexion_sees_the_callers_of_a_changed_signature
     original = "def zz_reflexion_probe(lines, path)\n  lines\nend\n"
     proposed = "def zz_reflexion_probe(lines, path:)\n  lines\nend\n"
@@ -528,7 +537,7 @@ class TestRepairLoopPolicy < Minitest::Test
     prompt = build_loop(root: Dir.pwd, bus: FakeBus.new, scanner: Scanner.new, agent: ScriptedAgent.new("SAFE"))
                .send(:reflexion_prompt, finding, original, proposed)
 
-    assert_includes prompt, "Callers of zz_reflexion_probe, whose parameters changed"
+    assert_includes prompt, "Lexical caller hints for changed or removed methods zz_reflexion_probe"
     assert_includes prompt, "Judge correctness, not completeness"
   end
 
