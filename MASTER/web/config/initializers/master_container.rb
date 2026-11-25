@@ -10,7 +10,7 @@ Rails.application.config.x.master_bootstrap_started = false
 # then running installed, so a test of the warming path would read a live
 # container or not depending on how long the boot took.
 Rails.application.config.after_initialize do
-  next if MasterContainerLoader.asset_task?
+  next if MasterContainerLoader.task_run?
 
   MasterContainerLoader.warm_shared_namespace!
   MasterContainerLoader.rearm! unless Rails.env.test?
@@ -19,8 +19,11 @@ end
 module MasterContainerLoader
   module_function
 
-  # assets:precompile boots the whole app to resolve helpers, and it is not a
-  # server -- nothing will ever serve a request from it. Building a container
+  # A Rails task boots the whole app and is not a server -- nothing will ever
+  # serve a request from it. assets:precompile was the first case; db:prepare
+  # in vps_deploy_master.sh is the second: it runs as a different uid than the
+  # service, so the container it built refused the service-owned state root
+  # ("web runtime state has incorrect owner") on every deploy. Building a container
   # there costs a container nobody uses and leaves a tts-worker daemon behind
   # for every precompile, which is why rc_pre kept accumulating orphaned
   # workers.
@@ -31,8 +34,8 @@ module MasterContainerLoader
   # redirects the child's stdio to a log and passes close_others, so no worker
   # ever held rc.d's pipe. Recorded because the first explanation here said it
   # did, and a wrong reason in a comment outlives the bug it misdescribes.
-  def asset_task?
-    ARGV.any? { |arg| arg.start_with?("assets:") }
+  def task_run?
+    ARGV.any? { |arg| arg.match?(/\A[a-z_]+:[a-z_:]+\z/) }
   end
 
   # Master::Ground is loaded here, on the main thread, before the bootstrap
@@ -102,7 +105,7 @@ module MasterContainerLoader
   end
 
   def ensure!(config = Rails.application.config)
-    return if asset_task?
+    return if task_run?
     return config.x.master_container if config.x.master_container
 
     config.x.master_container_mutex.synchronize do
