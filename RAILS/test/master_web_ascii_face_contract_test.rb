@@ -79,11 +79,11 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     refute_match(/getElementById\(["']face["']\)\s*\.getContext/, read(PUBLIC, "face_2d_fallback.js"))
   end
 
-  def test_the_particle_head_uses_neutral_depth_shading_and_single_pixel_points
+  def test_the_particle_head_uses_uniform_fixed_bitmap_points
     part2 = read(PUBLIC, "face.part2.txt")
 
-    assert_includes part2, "gl_PointSize=1.0"
-    assert_includes part2, "vec3 depthTone=mix(vec3(0.74),vec3(1.0),depth);"
+    assert_includes part2, "gl_PointSize=3.0"
+    assert_includes part2, "vColor=vec3(0.9333333);"
     refute_includes part2, "vec3(0.74,0.66,0.58)"
     refute_includes part2, "vec3(1.0,0.98,0.94)"
   end
