@@ -1157,3 +1157,27 @@ test("direct subject mouth deformation is anatomical and mask-only", () => {
   assert.match(faceSource, /uMaskMouth\.w \* \(1\.0 - localMorph\)/);
   assert.match(faceWorld, /mouth && nativeSubjectField \? 1 : 0/);
 });
+
+test("mask geometry has enough projected coverage to read at terminal size", () => {
+  const storage = new Map();
+  const window = { MASTER_FACE_MASK_SESSION: "coverage", MASTER_FACE_MASK_PROFILE: "iatmul-concentric",
+    MASTER_FACE_WORLD: { setSubjectForm() {} }, addEventListener() {}, dispatchEvent() {} };
+  const document = { readyState: "complete", documentElement: { dataset: {} },
+    querySelector() { return null; }, getElementById() { return null; } };
+  runInNewContext(readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8"), {
+    window, document, sessionStorage: { getItem: key => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value) },
+    CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
+  });
+  for (const mask of window.MASTER_FACE_MASKS.profiles) {
+    const cells = new Set();
+    const mouth = window.MASTER_FACE_MASKS.mouthGeometry(mask.id);
+    for (let index = 0; index < 4096; index++) {
+      const [x, y] = window.MASTER_FACE_MASKS.sample(mask.id, index);
+      cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
+      const hole = (x / mouth.width) ** 2 + ((y - mouth.y) / mouth.height) ** 2;
+      assert.ok(hole >= .98, mask.id + " mouth is occluded");
+    }
+    assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
+  }
+});

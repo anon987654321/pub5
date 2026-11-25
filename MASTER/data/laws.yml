@@ -101,6 +101,14 @@ TRUTHFUL_STATUS_false_ready:
   statement: "A capability reported ready when unavailable."
   resolution: never
 
+TRUTHFUL_STATUS_sensory_indicators:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    Sensory and battery indicators report measured local device state only.
+    Unsupported measurements are omitted. Permission or a file picker is not
+    proof of live capture, and browser authentication is not operator authority.
+  resolution: never
+
 TRUTHFUL_STATUS_unverified_claim:
   parent: TRUTHFUL_STATUS
   statement: >
@@ -547,6 +555,16 @@ NEGATIVE_SPACE_GROUPING:
   parent: PROXIMITY
   statement: "Space between groups exceeds space within them, and no accidental void opens between content."
   severity: warning
+  resolution: review
+
+NEGATIVE_SPACE_GROUPING_particle_face:
+  parent: NEGATIVE_SPACE_GROUPING
+  statement: >
+    MASTER uses one conserved monochrome particle population, with one-pixel
+    marks and actual negative-space apertures. Mask identity is recognizable
+    by geometry rather than labels. Morphs and articulation communicate state;
+    idle motion, glow, solid skin and unrelated decorative layers must not
+    obscure the silhouette or the independent terminal.
   resolution: review
 
 # ---

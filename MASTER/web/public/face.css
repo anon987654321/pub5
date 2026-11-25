@@ -2224,3 +2224,57 @@ body[data-layout="face"] .msg-body {
 @media (max-width: 479px) {
   body[data-layout="face"] { --terminal-font-size: 1rem; }
 }
+
+/* Compact measured sensory chrome. Camera opens the native photo picker;
+   it is not an assertion that a live camera stream exists. */
+body[data-layout="face"] #voice-indicators {
+  inset-block-start: var(--safe-top);
+  align-items: center;
+  block-size: var(--face-bar-height);
+}
+body[data-layout="face"] #voice-indicators #photo-button {
+  display: grid;
+  place-items: center;
+  inline-size: var(--tap-min);
+  block-size: var(--tap-min);
+  border: 0;
+  background: transparent;
+  color: var(--chrome-band-muted);
+  pointer-events: auto;
+}
+body[data-layout="face"] #voice-indicators #photo-button svg {
+  inline-size: 18px;
+  block-size: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+body[data-layout="face"] #battery-indicator:not([hidden]) {
+  position: relative;
+  display: block;
+  inline-size: 20px;
+  block-size: 10px;
+  margin-inline: 4px 10px;
+  border: 1px solid currentColor;
+  color: var(--chrome-band-muted);
+}
+body[data-layout="face"] #battery-indicator::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  background: linear-gradient(to right, currentColor var(--battery-level), transparent var(--battery-level));
+}
+body[data-layout="face"] #battery-indicator::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -3px;
+  inset-block: 2px;
+  inline-size: 2px;
+  background: currentColor;
+}
+body[data-layout="face"] #battery-indicator[hidden],
+body[data-layout="face"] #prompt-form #music-loop-button,
+body[data-layout="face"] #prompt-form #pause-speech-button {
+  display: none;
+}
+body[data-layout="face"] .master-titlebar { padding-inline-end: calc(var(--inset-r) + 164px); }

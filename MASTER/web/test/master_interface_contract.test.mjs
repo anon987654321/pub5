@@ -310,3 +310,12 @@ test("terminal retains decoded source text without re-escaping it", () => {
   assert.ok(chat.indexOf("const nearBottom = log.scrollHeight", chat.indexOf("const previousText = terminalSource")) <
     chat.indexOf("if (text.includes", chat.indexOf("const previousText = terminalSource")));
 });
+
+test("browser chrome is measured, not simulated, and operator commands are absent", () => {
+  assert.match(chatIndex, /window\.MASTER_COMMANDS = \[\]/);
+  assert.match(chatIndex, /id="battery-indicator" role="img" hidden/);
+  assert.match(chat, /typeof navigator\.getBattery !== 'function'/);
+  assert.match(chat, /battery\.addEventListener\('levelchange'/);
+  assert.match(chat, /const commandHistory = \[\]/);
+  assert.match(chat, /historyIndex === commandHistory\.length \? historyDraft/);
+});
