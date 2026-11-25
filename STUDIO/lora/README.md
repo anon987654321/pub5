@@ -146,6 +146,9 @@ default rather than a flag. A chain grades only its final frame, and only when
 `--postpro` names a preset; whether chains should share the house default is
 the operator's call.
 
+The apparatus rig (slit-scan, motion-drawing, envelope cutting) and the survey
+behind it are recorded in [APPARATUS.md](APPARATUS.md).
+
 ## Sources
 
 Focal length and distance: [DIYP](https://www.diyphotography.net/85mm-portrait-lens-guide/),
