@@ -170,10 +170,10 @@ validate_payload() {
   [[ ! -f $MIRROR/etc/mail/smtpd.conf ]] || /usr/sbin/smtpd -n -f "$MIRROR/etc/mail/smtpd.conf"
   [[ ! -f $MIRROR/etc/ssh/sshd_config ]] || /usr/sbin/sshd -t -f "$MIRROR/etc/ssh/sshd_config"
   if [[ -f $MIRROR/var/nsd/etc/nsd.conf ]]; then
-    /usr/local/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf" || return 1
+    /usr/sbin/nsd-checkconf "$MIRROR/var/nsd/etc/nsd.conf" || return 1
     local zone
     for zone in "$MIRROR"/var/nsd/zones/master/*.zone(N); do
-      /usr/local/sbin/nsd-checkzone "${zone:t:r}" "$zone" || {
+      /usr/sbin/nsd-checkzone "${zone:t:r}" "$zone" || {
         print -u2 -- "OPERATOR: NSD zone validation failed: $zone"
         return 1
       }
@@ -211,7 +211,7 @@ restore_signed_zones() {
     base=${zone_file:t}
     [[ -f $dir/$base ]] && cp -p "$dir/$base" "$zone_file" || return 1
   done
-  /usr/local/sbin/nsd-control reload && /usr/local/sbin/nsd-control notify
+  /usr/sbin/nsd-control reload && /usr/sbin/nsd-control notify
 }
 
 backup_file() {
@@ -544,7 +544,7 @@ case "$ACTION" in
             failures=1
             break
           fi
-          /usr/local/sbin/nsd-checkzone "${source_zone:t:r}" "$signed_zone" || {
+          /usr/sbin/nsd-checkzone "${source_zone:t:r}" "$signed_zone" || {
             print -u2 -- "OPERATOR: signed DNSSEC zone failed validation: $signed_zone"
             failures=1
             break
@@ -555,7 +555,7 @@ case "$ACTION" in
         if (( NSD_CONFIG_CHANGED )); then
           /usr/sbin/rcctl restart nsd && /usr/sbin/rcctl check nsd || failures=1
         else
-          /usr/local/sbin/nsd-control reload && /usr/local/sbin/nsd-control notify || failures=1
+          /usr/sbin/nsd-control reload && /usr/sbin/nsd-control notify || failures=1
         fi
       fi
     fi
