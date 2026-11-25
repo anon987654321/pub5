@@ -15,6 +15,7 @@ class TestOwnerRegistryTasks < Minitest::Test
     inconclusive_aging constitution_self_budget brgen_feed_ranking_deterministic
     amber_similarity_right_sized master_fleet_panel free_compute_design_of_record
     installation fix_interruption_restart council_readiness_admission
+    task_scoped_prediction cognition_learning_benchmark
   ].sort.freeze
 
   def test_only_explicit_owner_registry_tasks_enter_unattended_intake

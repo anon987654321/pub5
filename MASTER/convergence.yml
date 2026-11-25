@@ -203,6 +203,14 @@ workstreams:
     title: Keep event prediction streams separate across correlated tasks
     implementation: MASTER/lib/cognition/prediction.rb
     proof: MASTER/test/test_cognition.rb
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/lib/cognition/prediction.rb
+        - MASTER/test/test_cognition.rb
+      done_when: "ruby MASTER/test/test_cognition.rb"
   - id: prediction_evaluation
     state: partial
     title: Compare contextual event prediction with a shared-stream baseline using walk-forward scoring
@@ -233,6 +241,15 @@ workstreams:
     title: Prequential outcome benchmark with a no-learning ablation and a constant baseline
     implementation: MASTER/lib/cognition/benchmark.rb
     proof: MASTER/test/test_cognition_outcome_model.rb
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/lib/cognition/benchmark.rb
+        - MASTER/lib/cognition/outcome_model.rb
+        - MASTER/test/test_cognition_outcome_model.rb
+      done_when: "ruby MASTER/test/test_cognition_outcome_model.rb"
   - id: model_laboratory
     state: landed
     title: Provider/model outcome history and routing evidence
