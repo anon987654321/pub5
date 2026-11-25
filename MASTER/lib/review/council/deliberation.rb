@@ -113,6 +113,10 @@ module Master
             return result if result.err?
 
             history << result.value!.map { |entry| entry.merge(round: index + 1) }
+            if history.size >= 3 && converged?(history[-2], history[-1])
+              @bus&.publish(:council_converged, round: index + 1, basis: :stable_findings)
+              break
+            end
             round_context = feedback_summary(history.flatten(1), context)
           end
           feedback = history.flatten(1)
