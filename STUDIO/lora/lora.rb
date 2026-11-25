@@ -43,12 +43,13 @@ module Studio
         return run_flags(argv) unless argv.empty? && wizard.tty?
 
         choice = wizard.choose("What would you like to do with a LoRA subject?", [
+          ["Render a selfie series", :selfie],
+          ["Create a photograph or animate a still", :photograph],
+          ["Produce a finished selfie film", :film],
           ["Validate a subject's training plan", :validate],
           ["Audit photographic quality and subject readiness", :quality],
           ["Review an existing portrait series against holdout photographs", :review],
           ["Review or restore local private source material", :recover],
-          ["Render a selfie series", :selfie],
-          ["Produce finished selfie films", :film],
         ])
         case choice
         when :validate then validate
@@ -58,7 +59,10 @@ module Studio
           review_command(["--subject", subject])
         when :recover then puts JSON.pretty_generate(recovery_command([]))
         when :selfie then selfie(wizard)
-        when :film then film_command([])
+        when :photograph then photograph_command([])
+        when :film
+          subject = wizard.ask("Subject", default: "ragnhild")
+          film_command(["--subject", subject])
         end
       end
 
@@ -170,6 +174,11 @@ module Studio
         success ? 0 : ($?.exitstatus || 1)
       end
 
+      def photograph_command(argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("photograph.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
+      end
+
       def film_command(argv)
         success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("selfie_film.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
@@ -195,7 +204,8 @@ module Studio
           puts JSON.pretty_generate(recovery_command(argv.drop(1)))
           0
         when "--json", "--subject" then validate_with_flags(argv)
-        when "selfie" then selfie(Studio::Interactive.new(input: $stdin, output: $stdout, tty: false))
+        when "selfie" then photograph_command(["--selfie-series", *argv.drop(1)])
+        when "photograph", "photo" then photograph_command(argv.drop(1))
         when "film" then film_command(argv.drop(1))
         when "train" then train_command(argv.drop(1))
         when "-h", "--help", nil then puts help
@@ -228,9 +238,7 @@ module Studio
         count = wizard.number("How many sittings", default: 4, range: 1..24)
         # A selfie series means the subject's own reference photographs first;
         # the trained identity is the fallback.
-        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("photograph.rb", __dir__),
-                        "--selfie-series", "--subject", subject, "--count", count.to_s)
-        success ? 0 : ($?.exitstatus || 1)
+        photograph_command(["--selfie-series", "--subject", subject, "--count", count.to_s])
       end
 
       def help
@@ -247,7 +255,9 @@ module Studio
             ruby STUDIO/lora/lora.rb quality --json   read-only photography/profile/holdout audit
             ruby STUDIO/lora/lora.rb review --subject NAME
                                                        review the latest series against independent holdouts
-            ruby STUDIO/lora/lora.rb selfie          render a selfie series after likeness approval
+            ruby STUDIO/lora/lora.rb photograph      create a photograph or animate a still
+            ruby STUDIO/lora/lora.rb selfie --subject NAME
+                                                       render a selfie series after likeness approval
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
