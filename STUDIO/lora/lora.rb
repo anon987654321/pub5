@@ -181,7 +181,7 @@ module Studio
         count = request.fetch("count", 4).to_i.clamp(1, 24)
         engine = request["engine"]
         series = Studio::Visual::SelfieSeries.new(
-          subject:, engine:, inference_profile: request["inference_profile"]
+          subject:, engine:, inference_profile: request["inference_profile"], direction: request.fetch("direction", "varied")
         )
         { "subject" => subject, "rendered" => series.run(count:), "prior_renders_retained" => true }
       end
@@ -668,12 +668,12 @@ module Studio
                  when /polaroid|instax/ then "instant_pack"
                  else "house"
                  end
-        prompt = [row.fetch("scene"), "key light: #{'#{row.fetch("key")}'}",
-                  "camera distance: #{'#{row.fetch("distance")}'}", row.fetch("lens"),
-                  "natural skin texture"].join(", ")
+        prompt = [row.fetch("scene").gsub(/\bher\b/, "the subject's"), "key light: #{row.fetch("key")}",
+                  "camera distance: #{row.fetch("distance")}", row.fetch("lens"),
+                  "natural skin texture", "deliberate framing and eye-line"].join(", ")
         { "scene" => prompt, "preset" => preset, "sitting" => n,
           "direction" => direction, "historical_title" => row.fetch("title"),
-          "shot" => row }
+          "historical_source" => row }
       end
 
       def self.directional_recipe(number, direction:)
@@ -705,6 +705,15 @@ module Studio
         scenes = SUBJECT_SCENES.fetch(subject.to_s, [])
         stocks = SUBJECT_SCENE_STOCKS.fetch(subject.to_s, [])
         index = n - 1
+        # Alternate authored archive sittings with the modern catalogue from
+        # the first batch; an experimental press shoot remains an explicit brief.
+        if n.even?
+          archived = Guides.load.fetch("historical_sittings").fetch("ideas").select { |row| row.fetch("set") == "shoots" }
+          offset = subject.to_s.bytes.sum % archived.size
+          return historical_recipe((offset + n / 2 - 1) % archived.size + 1, direction: "shoots")
+            .merge("sitting" => n, "direction" => "varied")
+        end
+        index /= 2
         if index < scenes.size
           body = scenes.fetch(index)
           preset = PRESET_BY_STOCK.fetch(stocks.fetch(index))
