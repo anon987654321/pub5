@@ -45,11 +45,23 @@ module Master
         def converged?(previous, current)
           return false if previous.empty? || current.empty? || previous.size != current.size
 
-          similarities = current.zip(previous).map do |now, before|
-            text_similarity(now[:feedback].to_s, before[:feedback].to_s)
+          before = previous.to_h { |entry| [entry[:persona], entry] }
+          return false unless before.size == previous.size && current.map { |entry| entry[:persona] }.uniq.size == current.size
+          return false unless current.all? { |entry| before.key?(entry[:persona]) }
+
+          current.all? do |entry|
+            prior = before.fetch(entry[:persona])
+            next false unless entry[:position] && entry[:position] == prior[:position]
+            next false unless entry[:structured_findings].is_a?(Array) && prior[:structured_findings].is_a?(Array)
+
+            finding_signature(entry) == finding_signature(prior)
           end
-          similarities.count { |score| score >= Deliberation::CONVERGENCE_TEXT_SIM }.to_f / current.size >=
-            Deliberation::CONVERGENCE_OVERLAP
+        end
+
+        def finding_signature(entry)
+          entry[:structured_findings].map do |finding|
+            %w[location claim severity proposed_repair].map { |key| finding.fetch(key, "").to_s.gsub(/\\s+/, " ").strip }
+          end.sort
         end
 
         def text_similarity(first, second)
