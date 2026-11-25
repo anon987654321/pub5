@@ -275,6 +275,35 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_failed_runner_cannot_settle_a_replacement_mission
+    initial = { "id" => "first", "origin" => "fold", "auto_continue" => true,
+                "state" => "waiting", "goal" => "finish the task" }
+    replacement = initial.merge("id" => "second", "state" => "running")
+    [
+      ->(**) { raise "provider overload" },
+      ->(**) { Master::Result.err("provider overload", category: :infrastructure) },
+    ].each do |runner|
+      reads = 0
+      current = ->(**) { reads += 1; reads == 1 ? initial : replacement }
+      steward = Master::Fix::TaskSteward.new(root: Dir.tmpdir, bus: nil, runner:)
+      Master::Fix::Mission.stub(:current, current) do
+        steward.stub(:settle_mission_failure, ->(*) { flunk "replacement mission was settled" }) do
+          assert steward.tick!.err?
+        end
+      end
+    end
+  end
+
+  def test_waiting_mission_does_not_spin_on_due_or_invalid_wake_time
+    record = { "id" => "first", "origin" => "fold", "auto_continue" => true, "state" => "waiting" }
+    steward = Master::Fix::TaskSteward.new(root: Dir.tmpdir, bus: nil, runner: ->(**) {})
+    ["", Time.now.utc.iso8601, "invalid"].each do |wake|
+      Master::Fix::Mission.stub(:current, record.merge("next_wake_at" => wake)) do
+        assert_operator steward.send(:wait_seconds), :>=, 1
+      end
+    end
+  end
+
   def test_contextless_continuation_is_blocked_instead_of_replayed_forever
     Dir.mktmpdir do |root|
       write_mission(root, goal: "Let's do it!")

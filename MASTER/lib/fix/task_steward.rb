@@ -107,13 +107,13 @@ module Master
         result = Master::Trace::WorkerReceipt.around(@bus, worker: "task_steward", job: "mission #{record["id"]}") do
           @runner.call(goal:, mission: record)
         end
-        recover_failed_result(result)
+        recover_failed_result(result, mission_id: record["id"])
         ok = result_ok?(result)
         @bus&.publish("task_steward:result", mission: record["id"], ok:)
         notify_after_run(result)
         result
       rescue StandardError => e
-        defer_failed_mission(e)
+        defer_failed_mission(e, mission_id: record && record["id"])
         @bus&.publish("task_steward:error", error: "#{e.class}: #{e.message}")
         result = Master::Result.err("task steward: #{e.message}", category: :infrastructure)
         notify_after_run(result)
@@ -188,13 +188,13 @@ module Master
       def wait_seconds
         record = Mission.current(root: @root)
         return POLL_SECONDS unless record && %w[fold backlog].include?(record["origin"].to_s) && record["auto_continue"] == true
-        return 0 if record["state"].to_s == "waiting" && due?(record)
-
         if record["state"].to_s == "waiting"
           wake = record["next_wake_at"].to_s
-          return POLL_SECONDS if wake.empty?
+          return 1 if wake.empty?
 
-          [Time.iso8601(wake) - Time.now.utc, POLL_SECONDS].min.clamp(0, POLL_SECONDS)
+          # Even an already-due mission gets a bounded pause if the runner
+          # did not advance it; wake! still admits newly queued work immediately.
+          [Time.iso8601(wake) - Time.now.utc, POLL_SECONDS].min.clamp(1, POLL_SECONDS)
         else
           POLL_SECONDS
         end
@@ -203,18 +203,23 @@ module Master
         POLL_SECONDS
       end
 
-      def defer_failed_mission(error)
+      def defer_failed_mission(error, mission_id:)
+        return if mission_id.to_s.empty?
+
         record = Mission.current(root: @root)
+        return unless record && record["id"] == mission_id
+
         settle_mission_failure(record, "#{error.class}: #{error.message}")
       rescue StandardError => e
         @bus&.publish("task_steward:defer_error", error: "#{e.class}: #{e.message}")
       end
 
-      def recover_failed_result(result)
+      def recover_failed_result(result, mission_id:)
         return unless result.respond_to?(:err?) && result.err?
+        return if mission_id.to_s.empty?
 
         record = Mission.current(root: @root)
-        return unless record && record["state"].to_s == "running"
+        return unless record && record["id"] == mission_id && record["state"].to_s == "running"
 
         settle_mission_failure(record, result.message.to_s)
       rescue StandardError => e
