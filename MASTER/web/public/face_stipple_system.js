@@ -599,20 +599,11 @@
           }
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
-          // Fixed-size points: depth and bias belong in brightness (vAlpha
-          // already folds zone weight, bias and luminosity), not in point size.
-          // The face breathes: luminosity sways about five percent over ~11 s,
-          // the pace of a resting breath, so the field is never perfectly
-          // still while it waits. The breath rides brightness only — the same
-          // seam the fixed-size law owns — and freezes twice over under reduced
-          // motion: uTime stops and uMotionScale goes to 0.
-          float breath = 1.0 + uBreathScale * 0.05 * sin(uTime * 0.5712);
-          float depthScale = clamp(uDepthReferenceDistance / max(1.0, -mv.z),
-            uDepthScaleMin, uDepthScaleMax);
+          // Flat bitmap ink: geometry determines position, never ink weight.
           gl_PointSize = 1.5;
           vThreshold = aThreshold;
           vDepthRank = aDepthRank;
-          vAlpha = clamp((0.34 + zoneWeight * 0.56) * aBias * uLuminosity * breath * (1.0 - uEntropy * 0.08) * depthScale * ridgeTone, 0.0, 1.0);
+          vAlpha = 1.0;
           vZone = aZone;
           vSolo = aSolo;
         }
@@ -632,23 +623,15 @@
         varying float vFaultline;
         void main() {
           vec2 p = gl_PointCoord - vec2(0.5);
-          if (vSolo < 0.5 && (vThreshold > uDensity || length(p) > 0.5)) discard;
+          // Identical solid marks, including peripheral carriers.
+          if (length(p) > 0.5) discard;
+          if (vSolo < 0.5 && vThreshold > uDensity) discard;
           float fault = clamp(vFaultline * uFaultlineStrength, 0.0, 1.0);
           if (vSolo < 0.5 && fault > 0.62) discard;
-          float zoneTone = vZone < 2.0 ? 1.0 : (vZone > 5.0 ? 0.84 : 0.93);
-          // One-pixel law: the shared depth rank affects brightness, never size.
-          float depthRank = clamp(vDepthRank, 0.0, 1.0);
-          float depthBucket = floor(depthRank * (uDepthSteps - 1.0) + 0.5);
-          float depthTone = uDepthFromRank > 0.5
-            ? mix(0.68, 1.0, depthBucket / max(1.0, uDepthSteps - 1.0))
-            : 1.0;
-          float solo = step(0.5, vSolo);
-          vec3 ink = mix(uColor * zoneTone * depthTone, vec3(1.0), solo);
-          float alpha = mix(vAlpha * uOpacity, 1.0, solo) * mix(1.0, 0.12, fault);
-          gl_FragColor = vec4(ink, alpha);
+          gl_FragColor = vec4(vec3(0.9333333), 1.0);
         }
       `,
-      transparent: true, depthWrite: false, depthTest: true
+      transparent: false, depthWrite: true, depthTest: true
     });
     const points = new THREE.Points(geometry, material);
     points.name = "MASTER_FACE_STIPPLE";
