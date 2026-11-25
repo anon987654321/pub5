@@ -67,6 +67,26 @@ class OperatorIntentTest < Minitest::Test
     end
   end
 
+  # "redeploy MASTER web to vm23" was refused whenever the classifier was down.
+  def test_one_named_app_on_vm23_resolves_without_the_model
+    with_inventory do |root|
+      agent = FakeAgent.new("", [])
+      intent = Master::CLI::OperatorIntent.new(root:, agent:)
+
+      result = intent.call("please redeploy Control Web to vm23")
+      assert_equal :deploy, result.status
+      assert_equal %w[control_web], result.selected
+      assert_equal :deploy, intent.call("deploy Wardrobe App on production").status
+      assert_empty agent.calls, "a single named app is deterministic"
+
+      inventory = Deploy::Inventory.new(root:)
+      ["deploy city_app and wardrobe_app to vm23", "deploy city_app to staging", "deploy city_app",
+       "deploy everything except city_app on vm23", "deploy rails to vm23"].each do |text|
+        assert_nil intent.send(:single_named_app, text, inventory), text
+      end
+    end
+  end
+
   def test_pub5_deployment_resolves_to_all_registered_surfaces_without_model_guessing
     with_inventory do |root|
       agent = FakeAgent.new("", [])
@@ -359,8 +379,9 @@ class OperatorIntentTest < Minitest::Test
         "target_type" => "app", "target" => "city_app",
         "confidence" => 0.97, "reason" => "One named app.",
       )
+      # Not one plainly named app, so the reply contract is what decides.
       result = Master::CLI::OperatorIntent.new(root:, agent: FakeAgent.new(reply, [])).call(
-        "deploy city_app to vm23"
+        "deploy the town application to vm23"
       )
 
       assert_equal :deploy, result.status
@@ -375,8 +396,9 @@ class OperatorIntentTest < Minitest::Test
         "target_type" => "app", "target" => "city_app", "exclude" => [],
         "confidence" => 0.97, "reason" => "One named app.", "confirm" => true,
       )
+      # Not one plainly named app, so the reply contract is what decides.
       result = Master::CLI::OperatorIntent.new(root:, agent: FakeAgent.new(reply, [])).call(
-        "deploy city_app to vm23"
+        "deploy the town application to vm23"
       )
 
       assert_equal :unavailable, result.status
@@ -390,8 +412,9 @@ class OperatorIntentTest < Minitest::Test
         "target_type" => "app", "target" => "city_app",
         "reason" => "Confidence omitted entirely.",
       )
+      # Not one plainly named app, so the reply contract is what decides.
       result = Master::CLI::OperatorIntent.new(root:, agent: FakeAgent.new(reply, [])).call(
-        "deploy city_app to vm23"
+        "deploy the town application to vm23"
       )
 
       assert_equal :unavailable, result.status

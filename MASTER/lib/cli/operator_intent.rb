@@ -81,7 +81,7 @@ module Master
 
         destination = destination_of(request)
         destination.to_s.downcase == "vm23" &&
-          (full_inventory_scope?(request) || complete_stack_components?(request))
+          (full_inventory_scope?(request) || complete_stack_components?(request) || request.match?(/\bpub5\b/i))
       end
 
       # Source inspection is a research task even when the same sentence names a
@@ -91,7 +91,7 @@ module Master
         request = text.to_s
         request.match?(/\A\s*(?:please\s+)?(?:analy[sz]e|inspect|audit|review|trace|read|study|scan)\b/i) &&
           request.match?(/\b(?:deploy|re[- ]?deploy)\b/i) &&
-          complete_stack_components?(request) &&
+          complete_stack_components?(request) && request.match?(/\bmaster\b/i) &&
           destination_of(request).to_s.downcase == "vm23"
       end
 
@@ -150,11 +150,8 @@ module Master
           )
         end
 
-        if repository_wide_deployment?(text, inventory)
-          selected = inventory.ordered_apps
-          @bus&.publish("operator:intent_resolved", operation: "deploy", target: "all", app_count: selected.length)
-          return Result.new(status: :deploy, target: "all", selected: selected.map(&:name))
-        end
+        local = local_deploy(text, inventory)
+        return local if local
         return Result.new(status: :unavailable, message: "Operator intent is unavailable; no action was taken.") unless @agent.respond_to?(:ask_once)
 
         raw = @agent.ask_once(
@@ -229,6 +226,50 @@ module Master
           request.match?(/\b#{Regexp.escape(name)}\b/i)
         end
         !named_app && !named_group
+      end
+
+      # Deploys that need no classifier: the whole repository, or one plainly
+      # named app. Provider availability must not decide an explicit release.
+      def local_deploy(text, inventory)
+        if repository_wide_deployment?(text, inventory)
+          target, selected = "all", inventory.ordered_apps
+        else
+          app = single_named_app(text, inventory) or return
+          target, selected = app.name, [app]
+        end
+        @bus&.publish("operator:intent_resolved", operation: "deploy", target:, app_count: selected.length)
+        Result.new(status: :deploy, target:, selected: selected.map(&:name))
+      end
+
+      # A direct vm23 deploy that names exactly one registered app, by id, title
+      # or domain, and no group or exclusion: "redeploy MASTER web to vm23" was
+      # refused whenever the classifier model was unavailable or answered outside
+      # its enum. Anything less plain goes to the model.
+      def single_named_app(text, inventory)
+        request = text.to_s
+        return unless plain_vm23_deploy?(request) && !names_group?(request, inventory)
+
+        named = inventory.ordered_apps.select do |app|
+          [app.name, app.title, app.domain].any? { |value| names?(request, value) }
+        end
+        named.first if named.one?
+      end
+
+      def plain_vm23_deploy?(request)
+        return false unless request.match?(DIRECT_DEPLOY_REQUEST_RE)
+        return false if request.match?(NON_PRODUCTION_ENV_RE) || request.match?(EXCLUSION_RE)
+        return false if self.class.full_inventory_scope?(request) || self.class.complete_stack_components?(request)
+
+        VM23_DESTINATIONS.include?(self.class.destination_of(request).to_s.downcase)
+      end
+
+      # A group that is not also an app name asks for more than one app.
+      def names_group?(request, inventory)
+        (inventory.group_names - inventory.app_names).any? { |name| names?(request, name) }
+      end
+
+      def names?(request, value)
+        !value.to_s.empty? && request.match?(/\b#{Regexp.escape(value.to_s)}\b/i)
       end
 
       # "Everything" means the active registered deployment inventory, not
