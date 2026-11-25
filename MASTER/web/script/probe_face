@@ -155,7 +155,7 @@ begin
     original = browser.evaluate("window.MASTER_FACE_MASKS.current().id")
     receipts = []
     profiles.each do |profile|
-      selected = browser.evaluate("window.MASTER_FACE_MASKS.select(#{'#{profile.to_json}'})")
+      selected = browser.evaluate("window.MASTER_FACE_MASKS.select(#{profile.to_json})")
       deadline = Time.now + 8
       settled = false
       until Time.now > deadline
@@ -177,13 +177,13 @@ begin
       receipt["settled"] = settled
       receipt["selected"] = selected
       receipts << receipt
-      failures << "mask #{'#{profile}'} failed projection" unless selected && settled && receipt["profile"] == profile &&
+      failures << "mask #{profile} failed projection" unless selected && settled && receipt["profile"] == profile &&
         receipt["points"].to_i.positive? && receipt["disjoint"]
       browser.screenshot(path: File.join(target, "#{profile}.png"))
     end
-    browser.evaluate("window.MASTER_FACE_MASKS.select(#{'#{original.to_json}'})")
+    browser.evaluate("window.MASTER_FACE_MASKS.select(#{original.to_json})")
     File.write(File.join(target, "receipts.json"), JSON.pretty_generate(receipts) + "\n")
-    puts "mask probe: #{'#{receipts.size}'} captures, #{'#{target}'}"
+    puts "mask probe: #{receipts.size} captures, #{target}"
   end
 
   puts "\n=== console log tail ==="
