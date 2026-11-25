@@ -15,7 +15,7 @@ module PlaylistHelper
 
     # Before that import, retain the existing external-reference radio.
     manifest = radio_interleave(Brgen::RadioBergenManifest.youtube_tracks, Brgen::RadioBergenManifest.whyp_tracks)
-    hosted = Playlist::Track
+    hosted = Playlist::Track.publicly_visible.unexpired
       .where(source_type: %w[youtube direct])
       .where.not(source_url: [ nil, "" ])
       .limit(8)
@@ -33,11 +33,12 @@ module PlaylistHelper
 
     playlist = Playlist::Playlist.public_playlists
       .where(name: name)
-      .includes(playlist_tracks: { track: { audio_file_attachment: :blob } })
+      .includes(:user, playlist_tracks: { track: [ :user, { audio_file_attachment: :blob }, { artwork_attachment: :blob } ] })
       .order(:id)
       .detect do |candidate|
         rows = candidate.playlist_tracks.to_a
-        rows.size == expected_count && rows.all? { |row| row.track.audio_file.attached? }
+        candidate.user.present? && candidate.user.deleted_at.nil? && candidate.user.deletion_scheduled_at.nil? &&
+          rows.size == expected_count && rows.all? { |row| row.track.playable_by?(nil) && row.track.audio_file.attached? }
       end
     return [] unless playlist
 
@@ -47,7 +48,7 @@ module PlaylistHelper
         title: track.title,
         artist: track.artist.presence || "Radio Bergen",
         id: "local-#{track.id}",
-        src: main_app.url_for(track.audio_file),
+        src: Playlist::Engine.routes.url_helpers.audio_hosted_track_path(track),
         artwork: (main_app.url_for(track.artwork) if track.artwork.attached?),
       }.compact
     end

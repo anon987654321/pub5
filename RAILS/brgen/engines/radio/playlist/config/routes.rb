@@ -34,5 +34,10 @@ Playlist::Engine.routes.draw do
       end
     end
     resources :listens, only: :create
-    resources :hosted_tracks
+    resources :hosted_tracks do
+      member do
+        get :audio
+        get "versions/:version_id/audio", action: :version_audio, as: :version_audio
+      end
+    end
 end

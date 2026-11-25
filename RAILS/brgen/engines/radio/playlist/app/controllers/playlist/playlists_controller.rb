@@ -47,6 +47,8 @@ class Playlist::PlaylistsController < Playlist::BaseController
   end
 
   def embed
+    return head :not_found unless @playlist.public_access? && owner_active?
+
     @tracks = playlist_tracks(viewer: nil)
     @embed_options = {
       color: embed_color,
@@ -86,7 +88,7 @@ class Playlist::PlaylistsController < Playlist::BaseController
 
   def local_discovery_tracks
     scope = Playlist::Track.publicly_visible.unexpired
-      .includes(:user, :audio_file_attachment, :artwork_attachment)
+      .includes(:user, audio_file_attachment: :blob, artwork_attachment: { blob: :variant_records })
       .joins(:user)
     scope = scope.where(users: { city_id: Current.city_record.id }) if Current.city_record
     scope.recent.limit(24).to_a

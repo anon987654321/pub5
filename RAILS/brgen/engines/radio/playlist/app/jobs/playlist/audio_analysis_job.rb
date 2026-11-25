@@ -18,7 +18,7 @@ class Playlist::AudioAnalysisJob < ApplicationJob
 
     blob = ActiveStorage::Blob.find_by(id: blob_id)
     return unless blob && blob.byte_size <= Shared::AttachmentLimits::KINDS.fetch(:audio).fetch(:max_bytes)
-    return if blob.metadata.key?(CACHE_KEY)
+    return if blob.metadata.key?(CACHE_KEY) && blob.metadata.key?("playlist_duration_seconds")
 
     attachments = ActiveStorage::Attachment.where(record_type: "Playlist::Track", name: "audio_file", blob_id: blob_id)
     return unless attachments.exists?
@@ -27,7 +27,7 @@ class Playlist::AudioAnalysisJob < ApplicationJob
     return unless result
 
     blob.with_lock do
-      blob.update!(metadata: blob.metadata.merge(CACHE_KEY => result.fetch(:peaks)))
+      blob.update!(metadata: blob.metadata.merge(CACHE_KEY => result.fetch(:peaks), "playlist_duration_seconds" => result.fetch(:duration).round))
     end
 
     # Only current references to this blob receive its measured metadata.

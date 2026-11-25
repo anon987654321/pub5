@@ -6,7 +6,7 @@
 <section class="playlist-queue" aria-label="<%= t("playlist.queue") %>">
   <h2 class="playlist-queue-heading"><%= t("playlist.queue") %></h2>
   <% rows.each_with_index do |track, index| %>
-    <% track_src = track.audio_file.attached? ? main_app.url_for(track.audio_file) : (track.source_type == "direct" ? track.source_url : nil) %>
+    <% track_src = track.audio_file.attached? ? audio_hosted_track_path(track) : (track.source_type == "direct" ? track.source_url : nil) %>
     <% track_embed = track.external_embed_url %>
     <% track_art = track.artwork.attached? ? main_app.url_for(track.artwork) : nil %>
     <button

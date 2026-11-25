@@ -5,10 +5,10 @@
 # resolves to the Playlist::Playlist *model* first, so `Playlist::Set` became
 # `Playlist::Playlist::Set` and both index actions raised NameError.
 class Playlist::HostedTracksController < Playlist::BaseController
-  allow_unauthenticated_access only: %i[index show]
-  before_action :require_real_user, except: %i[index show]
-  before_action :set_track, only: %i[show edit update destroy]
-  before_action :authorize_owner!, only: %i[edit update destroy]
+  allow_unauthenticated_access only: %i[index show audio]
+  before_action :require_real_user, except: %i[index show audio]
+  before_action :set_track, only: %i[show audio version_audio edit update destroy]
+  before_action :authorize_owner!, only: %i[edit update destroy version_audio]
 
   def index
     @mine = authenticated? && params[:mine] == "1"
@@ -29,6 +29,23 @@ class Playlist::HostedTracksController < Playlist::BaseController
   def show
     @comments = @track.timestamped_comments.chronological.limit(200)
     @versions = @track.audio_versions.with_attached_audio_file.recent.limit(30) if Current.user&.id == @track.user_id
+  end
+
+  # Every new range request starts at a URL that rechecks track visibility.
+  # Do not publish permanent Active Storage signed IDs in player markup.
+  def audio
+    raise ActiveRecord::RecordNotFound unless @track.playable_by?(Current.user, direct_link: true) && @track.audio_file.attached?
+
+    redirect_to_audio(@track.audio_file.blob)
+  end
+
+  def version_audio
+    raise ActiveRecord::RecordNotFound unless @track.playable_by?(Current.user)
+
+    version = @track.audio_versions.with_attached_audio_file.find(params[:version_id])
+    raise ActiveRecord::RecordNotFound unless version.audio_file.attached?
+
+    redirect_to_audio(version.audio_file.blob)
   end
 
   def new
@@ -78,6 +95,8 @@ class Playlist::HostedTracksController < Playlist::BaseController
     end
 
     redirect_to hosted_track_path(@track), notice: t("playlist.track_updated")
+  rescue ActiveRecord::RecordInvalid
+    render :edit, status: :unprocessable_entity
   end
 
   def destroy
@@ -86,6 +105,11 @@ class Playlist::HostedTracksController < Playlist::BaseController
   end
 
   private
+
+  def redirect_to_audio(blob)
+    response.headers["Cache-Control"] = "private, no-store"
+    redirect_to main_app.rails_blob_path(blob, expires_in: 5.minutes, disposition: "inline")
+  end
 
   def set_track
     @track = Playlist::Track.includes(:user, audio_file_attachment: :blob, artwork_attachment: :blob).find(params[:id])

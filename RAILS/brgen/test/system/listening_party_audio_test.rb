@@ -35,7 +35,7 @@ class ListeningPartyAudioTest < ApplicationSystemTestCase
     audio = "document.querySelector('[data-party-audio-target=audio]')"
     assert wait_until { evaluate_script("!#{audio}.paused && #{audio}.currentTime >= 3") },
            "the guest's audio is not playing from the host's position"
-    assert_includes evaluate_script("#{audio}.src"), "regn.wav"
+    assert_includes evaluate_script("#{audio}.src"), "/hosted_tracks/#{@track.id}/audio"
   end
 
   test "the host's player reports where it is" do

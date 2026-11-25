@@ -40,7 +40,7 @@
           <li>
             <%= version.original_filename %> · <%= l(version.created_at.to_date) %>
             <% if version.audio_file.attached? && @track.playable_by?(Current.user) %>
-              <%= audio_tag main_app.url_for(version.audio_file), controls: true, preload: "none" %>
+              <%= audio_tag version_audio_hosted_track_path(@track, version_id: version.id), controls: true, preload: "none" %>
               <%= button_to t("playlist.restore_version"), hosted_track_path(@track), method: :patch, params: { track: { restore_version_id: version.id } }, class: "button button-ghost" %>
             <% end %>
           </li>

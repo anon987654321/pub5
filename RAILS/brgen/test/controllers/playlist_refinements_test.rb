@@ -125,6 +125,32 @@ class PlaylistRefinementsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "hosted audio rechecks privacy on every new playback request" do
+    track = Playlist::Track.new(title: "Original", user: @owner, privacy: "public")
+    track.audio_file.attach(io: StringIO.new("ID3fake"), filename: "original.mp3", content_type: "audio/mpeg")
+    track.save!
+    sign_in_as(@friend)
+
+    get playlist.hosted_track_path(track)
+    assert_response :success
+    assert_select "[data-playlist-player-src-value=?]", playlist.audio_hosted_track_path(track)
+    assert_not_includes response.body, "/rails/active_storage/blobs/redirect/"
+    get playlist.audio_hosted_track_path(track)
+    assert_response :redirect
+    assert_includes response.headers["Cache-Control"], "no-store"
+
+    track.update!(privacy: "private")
+    get playlist.audio_hosted_track_path(track)
+    assert_response :not_found
+    sign_in_as(@owner)
+    get playlist.audio_hosted_track_path(track)
+    assert_response :redirect
+
+    track.update!(expires_at: 1.minute.ago)
+    get playlist.audio_hosted_track_path(track)
+    assert_response :not_found
+  end
+
   test "a private track cannot be play-counted by id" do
     hidden = track_for(@owner, privacy: "private")
     sign_in_as(@friend)

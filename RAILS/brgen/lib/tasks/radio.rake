@@ -6,7 +6,7 @@ namespace :radio do
     limit = ENV.fetch("BATCH", "20").to_i.clamp(1, 20)
     attempted = 0
     ActiveStorage::Attachment.where(record_type: "Playlist::Track", name: "audio_file").includes(:blob).find_each do |attachment|
-      next if attachment.blob.metadata.key?("playlist_waveform_v1")
+      next if attachment.blob.metadata.key?("playlist_waveform_v1") && attachment.blob.metadata.key?("playlist_duration_seconds")
 
       Playlist::AudioAnalysisJob.perform_now(attachment.blob_id)
       attempted += 1

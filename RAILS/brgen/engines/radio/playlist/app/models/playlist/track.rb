@@ -80,13 +80,17 @@ class Playlist::Track < ApplicationRecord
   end
 
   def replace_audio!(file, actor: nil)
-    if audio_file.attached?
-      version = audio_versions.create!(user: actor, original_filename: audio_file.filename.to_s, byte_size: audio_file.byte_size)
-      version.audio_file.attach(audio_file.blob)
-    end
+    transaction do
+      if audio_file.attached?
+        version = audio_versions.create!(user: actor, original_filename: audio_file.filename.to_s, byte_size: audio_file.byte_size)
+        version.audio_file.attach(audio_file.blob)
+      end
 
-    audio_file.attach(file)
-    touch(:audio_replaced_at)
+      self.audio_file = file
+      self.duration_seconds = audio_file.blob.metadata["playlist_duration_seconds"]
+      self.audio_replaced_at = Time.current
+      save!
+    end
   end
 
   def expired?

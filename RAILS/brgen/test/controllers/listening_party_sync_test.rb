@@ -35,7 +35,7 @@ class ListeningPartySyncTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller=party-audio] audio[data-party-audio-target=audio]"
     sync = css_select("#listening_party_sync[data-party-audio-target=sync]").first
     assert sync, "the sync element is missing"
-    assert_includes sync["data-src"], "regn.wav"
+    assert_equal playlist.audio_hosted_track_path(@track), sync["data-src"]
     assert_equal @track.id.to_s, sync["data-track-id"]
   end
 
