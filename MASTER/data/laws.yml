@@ -2846,7 +2846,9 @@ SELFIE_DEPARTMENT_RECIPE:
     focus, light setup, negative and print, halation and diffusion, grade
     and finishing named per shot and never interchangeable sliders. A
     collection is ten distinct photographic treatments, not ten backdrops
-    off one instruction.
+    off one instruction. Capture geometry, motivated light, eye focus,
+    expression and subject emphasis before development; do not substitute
+    added texture for absent detail or a grade for failed likeness.
   severity: warning
   resolution: review
 
@@ -2878,7 +2880,10 @@ SELFIE_CONTACT_REVIEW:
     Quality control judges photographs, not pixels: composition, identity,
     optics, realism, light and set coherence are measured, metrics rank and
     reject, and the contact sheet ends with the operator - no portrait is
-    finished on a metric's word alone.
+    finished on a metric's word alone. Record the actual capture model and
+    supported inference parameters, original and final hashes, laboratory
+    preset and seed; a missing measurement is inconclusive. A failed
+    identity check remains a rejected candidate, not an aesthetic penalty.
   severity: warning
   resolution: review
 

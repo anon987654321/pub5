@@ -301,6 +301,18 @@ class TestSelfieSeries < Minitest::Test
     assert_kind_of Integer, row.fetch("grade_seed")
   end
 
+  def test_refinement_routes_identity_and_exposure_to_responsible_stages
+    report = { "identity" => { "state" => "FAIL" },
+               "faults" => [{ "metric" => "clipping", "remedy" => "inspect exposure" }] }
+    hints = Studio::Lora::Judge.refinement(report)
+    assert_equal %w[capture exposure_and_grade operator], hints.map { |hint| hint.fetch("stage") }
+  end
+
+  def test_generic_series_also_has_twenty_four_distinct_sittings
+    recipes = (1..24).map { |n| Studio::Lora::Selfie.recipe(n) }
+    assert_equal 24, recipes.map { |recipe| recipe.fetch("scene") }.uniq.size
+  end
+
   def test_count_is_bounded
     error = assert_raises(ArgumentError) { series.run(count: Studio::Visual::SelfieSeries::LIMIT + 1) }
     assert_match(/between 1 and/, error.message)

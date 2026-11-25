@@ -33,6 +33,8 @@ module Studio
         "optical_realism" => "Do skin texture, highlights, eyes and fine detail read as photographic?",
         "colour_and_tone" => "Are skin tones, highlight roll-off and shadow detail convincing?",
         "technical_integrity" => "Are focus, edges, hands, teeth, jewellery and background details intact?",
+        "originality" => "Does this frame convey a distinct intentional moment rather than a generic output?",
+        "set_coherence" => "Does the frame contribute a materially different treatment while preserving the subject and the brief?",
       }.freeze
 
       class Error < StandardError; end

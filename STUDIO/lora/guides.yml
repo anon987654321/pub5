@@ -45,12 +45,12 @@ layers:
       smiles, so this is a dataset selection rule as much as a prompt one.
   optical_signature:
     decided_at: postpro
-    grade_can_fix: true
+    grade_can_fix: partial
     rule: >-
-      Models learn from retouched photography and have no account of subsurface
-      scattering, so skin is too clean and speculars are uniform. Grain,
-      halation and an H&D curve are the opposite of what a diffusion model
-      omits, which is why the grade is the right tool for this layer.
+      Generated faces can lack convincing microtexture and show uniform
+      speculars. Film-like grain, halation and an H&D curve change the optical
+      signature; they cannot recover real pores, facial anatomy or missing
+      scene information. Compare the ungraded original with the finished grade.
     ai_tells: [clean_skin, uniform_speculars, perfect_eye_reflections]
 
 # Per-model prompting. A negative prompt does nothing on a guidance-distilled
@@ -92,8 +92,8 @@ prompting:
 # the rest a tool can.
 checks:
   identity: a render passes only when its face similarity clears a threshold set from the subject's own references
-  light: the prompt names a direction and a source, and the frame shows catchlights
-  lens: the prompt names a focal length between 50 and 85 mm and a distance
+  light: the prompt names a direction and a source, and catchlights agree with that source when visible
+  lens: the shot names framing, distance and focal length independently; deliberate wide or telephoto perspectives are valid
   grade: exposure and white balance first, skin on the vectorscope, one grade for the whole piece
   spend: one test frame, reviewed full size, before any batch
   film: >-

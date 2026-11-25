@@ -23,11 +23,15 @@ def studio_photograph_actions
     "render_shot" => lambda do |request|
       shot = request.fetch("shot")
       Studio::Lora::Craft.compile_shot(shot)
-      Studio::Visual::IdeaPicture.new(
+      picture = Studio::Visual::IdeaPicture.new(
         subject: request.fetch("subject", "ragnhild"), engine: request["engine"],
         inference_profile: request["inference_profile"]
-      ).write_shot(shot, grade_seed: request["grade_seed"])
+      )
+      result = picture.write_shot(shot, grade_seed: request["grade_seed"])
+      quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     end,
+    "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
     "render" => lambda do |request|
       prompt = request["prompt"].to_s
       raise ArgumentError, "render needs a prompt" if prompt.empty?

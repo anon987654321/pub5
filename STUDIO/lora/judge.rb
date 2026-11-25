@@ -70,7 +70,7 @@ module Studio
         "texture" => {
           direction: :floor,
           fault: "waxy, over-smoothed skin — the model rendered a face with no pores",
-          remedy: "lower guidance_scale, or add grain in postpro; the negative prompt already asks against it",
+          remedy: "inspect the original skin texture; try lower guidance if the model supports it, and never treat added grain as recovered facial detail",
         },
         "tonal_range" => {
           direction: :floor,
@@ -358,6 +358,52 @@ module Studio
 
           { metric: metric, value: value, limit: limit, fault: spec[:fault], remedy: spec[:remedy] }
         end
+      end
+
+      def assess(candidate:, original: nil, likeness: nil)
+        reading = Postpro::Uncanny.read(candidate)
+        faults = faults_for(reading, load_thresholds)
+        before = original && Postpro::Uncanny.read(original)
+        delta = before && reading.to_h.to_h do |key, value|
+          earlier = before.public_send(key)
+          [key, value && earlier ? value - earlier : nil]
+        end
+        identity = likeness || { "state" => "INCONCLUSIVE", "reason" => "not assessed" }
+        technical = if faults.any?
+                      "FAIL"
+                    elsif reading.specular_spread.nil?
+                      "INCONCLUSIVE"
+                    else
+                      "PASS"
+                    end
+        { "technical" => technical, "identity" => identity, "measurements" => reading.to_h,
+          "grade_delta" => delta, "faults" => faults, "review" => "NOT_REVIEWED",
+          "delivery" => identity["state"] == "FAIL" || technical == "FAIL" ? "REJECTED_CANDIDATE" : "AWAITING_OPERATOR" }
+      rescue StandardError => error
+        { "technical" => "INCONCLUSIVE", "identity" => likeness || { "state" => "INCONCLUSIVE" },
+          "reason" => "#{error.class}: #{error.message[0, 160]}", "review" => "NOT_REVIEWED",
+          "delivery" => likeness && likeness["state"] == "FAIL" ? "REJECTED_CANDIDATE" : "AWAITING_OPERATOR" }
+      end
+
+      # The evidence points to the responsible layer; a repair suggestion is
+      # not an automatic mutation or authorization for another paid prediction.
+      def refinement(report)
+        hints = []
+        if report.dig("identity", "state") == "FAIL"
+          hints << { "stage" => "capture", "action" => "review independent references and identity inference; do not conceal likeness drift with a grade" }
+        end
+        Array(report["faults"]).each do |fault|
+          metric = (fault[:metric] || fault["metric"]).to_s
+          remedy = fault[:remedy] || fault["remedy"]
+          stage = case metric
+                  when "clipping", "tonal_range" then "exposure_and_grade"
+                  when "texture" then "capture_and_optical_signature"
+                  else "lighting"
+                  end
+          hints << { "stage" => stage, "action" => remedy }
+        end
+        hints << { "stage" => "operator", "action" => "inspect the original and grade at full size; assess geometry, expression, lighting and composition" }
+        hints
       end
 
       def run(argv)

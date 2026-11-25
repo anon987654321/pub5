@@ -13,6 +13,7 @@ require_relative "../replicate/client"
 require_relative "../replicate/models"
 require_relative "../replicate/subprocess"
 require_relative "consent"
+require_relative "judge"
 require_relative "../lora/lora"
 
 module Studio
@@ -115,11 +116,15 @@ module Studio
         stamp = Time.now.utc.strftime("%Y%m%dT%H%M%S%6N")
         stem = [safe_stem(output_stem || @subject), stamp, SecureRandom.hex(3)].join("_")
         @compiled_capture = compiled
+        @capture_receipt = nil
         still = render_still(words, stem, grade_seed:, preset:)
+        result = { "still" => still }
+        result["capture"] = @capture_receipt if @capture_receipt
         @compiled_capture = false
-        return { "still" => still } unless film
-
-        { "still" => still, "clip" => render_film(words, still, stem, duration) }
+        result["clip"] = render_film(words, still, stem, duration) if film
+        result
+      ensure
+        @compiled_capture = false
       end
 
       # Explicit structured shots use the same inference and consent boundary
@@ -345,9 +350,30 @@ module Studio
         File.chmod(0o600, path)
         graded = preset ? grade(path, seed: grade_seed, preset:) : grade(path, seed: grade_seed)
         File.chmod(0o600, graded)
+        if preset
+          @capture_receipt = {
+            "schema" => "studio.capture.v1", "model" => @last_capture_model,
+            "input" => @last_capture_input, "original" => path, "grade" => graded,
+            "original_sha256" => Digest::SHA256.file(path).hexdigest,
+            "grade_sha256" => Digest::SHA256.file(graded).hexdigest,
+            "preset" => preset, "grade_seed" => grade_seed, "review" => "NOT_REVIEWED"
+          }
+          # Postpro already owns the grade sidecar. Record capture provenance
+          # beside the ungraded original without modifying the lab receipt.
+          write_capture_receipt(path, @capture_receipt)
+        end
         # The provider original and its grade are separate project assets.
         # Keep both; grading must never destroy the original still.
         graded
+      end
+
+      def write_capture_receipt(path, receipt)
+        destination = "#{path}.json"
+        Tempfile.create([".capture-", ".json"], File.dirname(path), mode: 0o600) do |file|
+          file.write(JSON.pretty_generate(receipt) + "\n")
+          file.flush
+          File.link(file.path, destination)
+        end
       end
 
       # STUDIO must render on Replicate, and must not stop for want of a credit.
@@ -361,7 +387,13 @@ module Studio
         chain.each_with_index do |candidate, index|
           model = resolve_engine(candidate)
           begin
-            return client.predict(model, still_input(words, candidate), timeout:)
+            input = still_input(words, candidate)
+            output = client.predict(model, input, timeout:)
+            @last_capture_model = model
+            # Never persist uploaded reference URLs, tokens, or arbitrary provider inputs.
+            allowed = %w[prompt model aspect_ratio resolution size num_inference_steps guidance_scale guidance lora_scale seed go_fast output_format output_quality]
+            @last_capture_input = input.transform_keys(&:to_s).select { |key, value| allowed.include?(key) && (value.is_a?(String) || value.is_a?(Numeric) || value == true || value == false) }
+            return output
           rescue StandardError => error
             failures << "#{candidate} (#{error.message})"
             warn "STUDIO: #{candidate} failed, falling back" unless index == chain.length - 1

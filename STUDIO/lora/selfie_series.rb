@@ -66,13 +66,13 @@ module Studio
           grade_seed = Studio::Lora::Selfie.grade_seed(index + 1, @subject)
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
-            path = @series.write(
-              scene, film: false, output_stem: stem,
-              grade_seed:, preset: recipe.fetch("preset")
-            ).fetch("still")
+            result = @series.write(scene, film: false, output_stem: stem, grade_seed:, preset: recipe.fetch("preset"))
+            path = result.fetch("still")
             likeness = Studio::Lora::Judge.likeness(reference: @reference_files.first, candidate: path)
+            quality = Studio::Lora::Judge.assess(candidate: path, original: result.dig("capture", "original"), likeness:)
             record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness,
-                   recipe: recipe, grade_seed: grade_seed, review: "NOT_REVIEWED")
+                   recipe: recipe, grade_seed: grade_seed, review: "NOT_REVIEWED",
+                   quality: quality, refinement: Studio::Lora::Judge.refinement(quality))
             rendered << path
           rescue StandardError => error
             record("render_attempt", series_id:, index: index, scene: scene,

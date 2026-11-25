@@ -287,11 +287,21 @@ module Studio
                       saturated_negative golden_age contact_print analog_scan
                       vhs_tape crt_broadcast].freeze
       SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
+      SHOT_OPTIONAL = %w[preset key_side catchlight focus].freeze
+      KEY_SIDE = {
+        "short" => "key light on the side turned away from the camera",
+        "broad" => "key light on the side facing the camera",
+        "even" => "even light across the face"
+      }.freeze
+      SHOT_FOCUS = {
+        "eyes" => FOCUS, "face" => "the face in sharp focus",
+        "deep" => "subject and background in deep focus"
+      }.freeze
       CAMERA_DISTANCES = %w[1m 2m 3m 5m selfie].freeze
 
       def self.compile_shot(shot)
         raise ArgumentError, "shot must be an object" unless shot.is_a?(Hash)
-        unknown = shot.keys - (SHOT_AXES + %w[preset])
+        unknown = shot.keys - (SHOT_AXES + SHOT_OPTIONAL)
         raise ArgumentError, "unknown shot fields: #{unknown.join(', ')}" unless unknown.empty?
         SHOT_AXES.each do |axis|
           value = shot.fetch(axis, nil)
@@ -307,9 +317,13 @@ module Studio
         raise ArgumentError, "unknown laboratory preset" unless LABORATORY.include?(preset)
         raise ArgumentError, "phone distance conflicts with a portrait lens" if distance == "selfie" && lens != "24mm"
         raise ArgumentError, "portrait distance conflicts with phone perspective" if distance != "selfie" && lens == "24mm" && shot.fetch("framing").include?("phone")
+        key_side = shot["key_side"] && KEY_SIDE.fetch(shot["key_side"]) { raise ArgumentError, "unknown key side" }
+        catchlight = shot["catchlight"] && CATCHLIGHT.fetch(shot["catchlight"]) { raise ArgumentError, "unknown catchlight" }
+        focus = SHOT_FOCUS.fetch(shot.fetch("focus", "eyes")) { raise ArgumentError, "unknown focus" }
         clauses = [shot.fetch("scene"), shot.fetch("framing"), SUBJECT_DISTANCE.fetch(distance),
-                   LENS.fetch(lens), LIGHTING.fetch(shot.fetch("lighting")), MOMENT.fetch(shot.fetch("moment")),
-                   shot.fetch("gaze"), shot.fetch("composition"), SKIN, FOCUS, "no text in the frame"]
+                   LENS.fetch(lens), LIGHTING.fetch(shot.fetch("lighting")), key_side, catchlight,
+                   MOMENT.fetch(shot.fetch("moment")), shot.fetch("gaze"), shot.fetch("composition"),
+                   SKIN, focus, "no text in the frame"].compact
         prompt = clauses.join(", ")
         hits = backfiring_words(prompt)
         raise ArgumentError, "prompt works against itself: #{hits.keys.join(', ')}" unless hits.empty?
@@ -347,6 +361,7 @@ module Studio
         "rembrandt" => "Rembrandt key light, triangle of light on the shadow-side cheek",
         "split" => "split lighting, one half of the face lit and the other in shadow",
         "loop" => "loop lighting, small nose shadow angled down the cheek",
+        "butterfly" => "butterfly lighting, elevated on-axis key with a small shadow under the nose",
         "rim" => "rim light separating the subject from a dark background",
         "practical" => "lit only by practical lamps inside the scene, mixed colour temperature",
         "neon" => "neon sign lighting, saturated magenta and cyan on skin",
@@ -370,6 +385,9 @@ module Studio
         "mixed" => "warm and cool catchlights",
         "backlit" => "faint catchlights",
         "hard" => "hard sun catchlights",
+        "softbox" => "rectangular catchlights high in the eyes",
+        "beauty_dish" => "round catchlights with a darker centre",
+        "twin" => "key and fill catchlights at ten and two o'clock",
       }.freeze
 
       # The moment, not the performance. A smile asked for by name collapses to
@@ -378,6 +396,8 @@ module Studio
       # face settles.
       MOMENT = {
         "after_laugh" => "the moment just after a laugh, the face still settling",
+        "real_grin" => "a wide spontaneous grin, cheeks lifted, eyes bright",
+        "about_to_laugh" => "amused and about to laugh",
         "half_smile" => "a lopsided half-smile, one corner of the mouth higher",
         "eye_crinkle" => "fine lines at the outer corners of the eyes from a real expression",
         "breath_held" => "a breath held, lips just closed",
@@ -556,14 +576,20 @@ module Studio
       # Different environments first; then genuinely different photographic
       # treatments, rather than silently repeating the first six sittings.
       ALTERNATE_TREATMENTS = [
-        ["clinical frontal composition, institutional practical lighting", "contact_print"],
-        ["documentary hard-light portrait, decisive gesture and clean frame edges", "street"],
-        ["oblique reflection through glass, foreground obstruction and layered depth", "aged_kodachrome"],
-        ["graphic silhouette, negative space and a clear shadow side", "noir"],
-        ["found-media framing, an unguarded expression and a real practical source", "analog_scan"],
-        ["editorial close-up, one visual centre and a sculptural shadow", "portrait"],
-        ["observational photograph from a low vantage point, deliberate negative space", "cinematic"],
-        ["frontal documentary portrait, direct gaze and clean silhouette", "reportage"]
+        ["clinical frontal portrait in an empty tiled hall, fluorescent ceiling practicals, chest-up framing, 50mm, direct gaze, calm expression", "contact_print"],
+        ["documentary portrait outside a closed theatre, hard sidelight, chest-up framing, 85mm, eyes just past the lens, mid-conversation", "street"],
+        ["oblique portrait through rain-streaked glass, layered reflections, overcast light, head-and-shoulders framing, 85mm, thoughtful gaze past the lens", "aged_kodachrome"],
+        ["graphic portrait on a stairwell landing, one bare practical lamp, strong shadow side and negative space, chest-up framing, 50mm, quiet direct gaze", "noir"],
+        ["found-media portrait in a quiet hotel corridor, warm practical lighting, waist-up framing, 50mm, a fleeting grin at the lens", "analog_scan"],
+        ["editorial close-up in an empty studio, short-side Rembrandt light, 85mm, eyes on the lens, the moment after a laugh", "portrait"],
+        ["observational portrait at an empty railway platform, blue-hour sky and warm practical fill, low vantage point, waist-up framing, 35mm, eyes off frame, reflective expression", "cinematic"],
+        ["frontal documentary portrait beside a pale stone wall, soft open shade, head-and-shoulders framing, 85mm, direct gaze, settled half-smile", "reportage"],
+        ["portrait in a silent library aisle, one green reading lamp and cool window fill, waist-up framing, 50mm, eyes on an open book, absorbed expression", "house"],
+        ["night portrait outside a record store, neon reflection in a shop window, chest-up framing, 50mm, amused eyes on the lens", "neon_night"],
+        ["portrait on an empty seaside promenade, low sunlight across the cheek, chest-up framing, 85mm, direct gaze and genuine laughter", "golden_age"],
+        ["portrait at a florist doorway, cloudy daylight and a muted floral backdrop, chest-up framing, 50mm, eyes just past the lens, relaxed half-smile", "pastel_portrait"],
+        ["portrait at a small concert after soundcheck, direct flash and deep background, waist-up framing, 35mm, eyes on the lens, a spontaneous grin", "instant_pack"],
+        ["portrait under a railway arch, distant daylight and a deliberate silhouette, head-and-shoulders framing, 85mm, eyes toward the light, quiet expression", "silver_gelatin"]
       ].freeze
 
       def self.recipe(number, subject: nil)
@@ -581,9 +607,7 @@ module Studio
           preset = PRESET_BY_STOCK.fetch(SCENE_STOCKS.fetch(general))
         else
           alternate = index - scenes.size - SCENES.size
-          treatment, preset = ALTERNATE_TREATMENTS.fetch(alternate % ALTERNATE_TREATMENTS.size)
-          body = SCENES.fetch(alternate % SCENES.size).gsub(/\bher\b/, "the subject's")
-          body = "#{body}, #{treatment}"
+          body, preset = ALTERNATE_TREATMENTS.fetch(alternate % ALTERNATE_TREATMENTS.size)
         end
         # Keep capture neutral; the authoritative laboratory develops it once.
         body = body.gsub(/, (?:documentary colour-negative photography|rich Tri-X silver tones|tactile HP5 documentary grain|muted Fuji colour|natural colour-negative film)/i, "")
