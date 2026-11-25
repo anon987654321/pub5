@@ -1125,3 +1125,27 @@ historical_sittings:
     "n": 22
     why: one eye, hard catchlight, black surround — a sleeve detail that works at any
       crop
+
+# Recovered procedural pools: pub4@edc5dd959138bb6d0847ceb6a19bdba5504d18e9.
+scenario_composer:
+  pools:
+    expression: ["a calm neutral expression","a slight natural smile","a direct steady gaze","mid-laugh candid expression","a thoughtful downward glance","eyes closed, head slightly tilted","an unguarded expression caught between two others"]
+    pose: ["facing camera directly","three-quarter turn","profile turn","looking over one shoulder","leaning slightly forward","turning away from the camera"]
+    wardrobe: ["wool coat","simple knit sweater","plain white shirt","denim jacket","dark turtleneck","oversized raincoat","linen shirt, sleeves rolled","heavy fisherman's jumper"]
+    background: ["plain studio backdrop","fjord shoreline","Bergen street corner","cafe window","mountain road","empty car park at night","wooden dock in rain","stairwell with a single window","birch woodland"]
+    lighting: ["soft","hard","backlit","window","golden_hour","rembrandt","split","butterfly","loop","rim","practical","neon","candlelight","firelight","overcast","open_shade","direct_flash","mixed","projector","underwater"]
+    stock: ["Kodak Portra 400 color negative scan","Kodak Portra 800 color negative","Kodak Gold 200 warm consumer color","Kodak UltraMax 400 consumer negative","Kodak Ektar 100","Fujifilm Pro 400H","Fujifilm Superia 400","Agfa Vista 200","Fujifilm Provia 100F","Fujifilm Velvia 50 reversal","Kodak Ektachrome E100 slide film","Kodachrome 64","CineStill 800T tungsten-balanced","Kodak Vision3 500T motion picture negative","Kodak Tri-X 400 black and white","Ilford HP5 Plus 400 black and white","Ilford FP4 Plus 125 black and white","Ilford Delta 3200 black and white","Ilford Pan F Plus 50 black and white","Polaroid SX-70 instant film","Fujifilm Instax instant print","cross-processed E-6 in C-41 chemistry","expired film stock"]
+    distance: ["2m","3m","5m"]
+    lens: ["50mm","85mm","105mm","135mm"]
+  strides: {expression: 1, pose: 5, wardrobe: 3, background: 4, lighting: 3, distance: 2, lens: 3, stock: 5}
+  refusal_stride: 7
+  conflicts:
+    "empty car park at night": ["window","golden_hour","overcast","open_shade","backlit","underwater"]
+    "wooden dock in rain": ["golden_hour","hard","backlit","projector","underwater"]
+    "stairwell with a single window": ["golden_hour","overcast","open_shade","underwater"]
+    "cafe window": ["firelight","underwater"]
+    "plain studio backdrop": ["golden_hour","overcast","open_shade","window","underwater"]
+    "mountain road": ["candlelight","firelight","practical","neon","underwater","projector"]
+    "fjord shoreline": ["candlelight","practical","neon","projector"]
+    "birch woodland": ["neon","projector","underwater"]
+    "Bergen street corner": ["candlelight","firelight","underwater"]
