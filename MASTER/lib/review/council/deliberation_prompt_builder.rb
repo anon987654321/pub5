@@ -32,7 +32,7 @@ module Master
           values = prompt_values(persona, code, context)
           prompt = format(Deliberation.prompts.fetch("juror"), **values)
           InterModelContract.wrap_prompt(
-            [@rules&.kernel_block, prompt, "Inspect purpose, whole, relationships, parts and details where relevant. Identify the evidence and trade-off for each proposed transformation; challenge improvements that harm the whole."].compact.join("\n\n"), role: "critic",
+            [(@rules.kernel_block if @rules.respond_to?(:kernel_block)), prompt, "Inspect purpose, whole, relationships, parts and details where relevant. Identify the evidence and trade-off for each proposed transformation; challenge improvements that harm the whole."].compact.join("\n\n"), role: "critic",
             task: "Review the supplied artifact against the assigned persona charge and named Laws.",
             success_criteria: "Return a schema-valid JSON response with explicit position evidence and structured findings.",
             constraints: (Array(persona.respond_to?(:emphasizes) ? persona.emphasizes : []) +

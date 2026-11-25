@@ -41,6 +41,11 @@ class TestAxioms < Minitest::Test
     block = @laws.kernel_block
     assert block.include?("## Kernel Laws")
     assert block.include?("PRESERVE_FIRST")
+    document = Master.laws_document(root: Master::ROOT)
+    @laws.kernel.each_key do |id|
+      question = document.fetch(id).fetch("question")
+      assert_includes block, "Ask: #{question}"
+    end
   end
 
   def test_philosophy_block_limit

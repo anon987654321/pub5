@@ -260,7 +260,7 @@ creative_lenses:
     software: "Prefer native capabilities and explicit invariants over ornamental abstractions."
   review:
     laws: [MASS_GENERATE_CURATE, OPERATOR_RENDERED]
-    design: "Compare representative rendered states at phone and desktop widths; preserve approved identity."
+    design: "Compare representative rendered states at narrow, intermediate and wide widths; preserve approved identity. A score is a diagnostic, not a verdict; retain a visible, specific reason for improvement."
     music: "Compare level-matched audio and arrangement evidence; listening remains human."
     photography: "Compare original and grade at full size; likeness and aesthetic review remain separate."
     cinema: "Inspect temporal continuity, edit rhythm, sound sync and operator intent."
@@ -270,7 +270,7 @@ creative_lenses:
 
   scale:
     laws: [LEVELS_OF_SCALE]
-    design: "Relate detail, component, page and product; preserve hierarchy across viewport sizes."
+    design: "Relate detail, component, page and product; preserve hierarchy across viewport sizes. Judge optical weight, not bounding-box equality; compare glyph, word, line, column, group and page as distinct scales."
     music: "Relate individual attacks, measures, phrases and sections."
     photography: "Balance fine texture, subject and overall silhouette."
     cinema: "Relate shot scale, scene and narrative structure."
@@ -279,7 +279,7 @@ creative_lenses:
     software: "Keep method, module and system responsibilities legible."
   rhythm:
     laws: [INTENTIONAL_TEMPORAL_FORM, CONSISTENCY]
-    design: "Use recurring alignment and spacing; vary them for meaningful emphasis."
+    design: "Use recurring alignment and spacing; vary them for meaningful emphasis. Keep intra-group intervals smaller than inter-group intervals where proximity communicates meaning."
     music: "Preserve groove anchors while allowing expressive timing."
     photography: "Use recurring shapes and intervals to guide the eye."
     cinema: "Let shot duration and movement follow the scene, not a fixed tempo."
@@ -297,7 +297,7 @@ creative_lenses:
     software: "Make exceptional behavior visibly distinct from normal flow."
   coherence:
     laws: [CONSISTENCY, STRONG_CENTERS]
-    design: "Make components reinforce a shared interaction language."
+    design: "Make components reinforce a shared interaction language. Compare the whole before and after every local transformation; preserve meaningful differences and asymmetry."
     music: "Relate motifs, harmony, timbre and groove to the intended whole."
     photography: "Align framing, lighting and grade with the subject."
     cinema: "Maintain motivated continuity across picture, sound and narrative."
@@ -315,13 +315,23 @@ creative_lenses:
     software: "Respect established project conventions without preserving defects."
   adaptation:
     laws: [FORM_FOLLOWS_FUNCTION, CONVENTION_OVER_CONFIG]
-    design: "Adapt to real devices, tasks and accessibility needs."
+    design: "Adapt to real devices, tasks and accessibility needs. Use content-driven reflow; keep reading size independent of viewport width when a wider canvas alone is not a reason to enlarge it."
     music: "Adapt arrangement to the brief, available voices and listening context."
     photography: "Adapt exposure and treatment to actual light and subject."
     cinema: "Adapt coverage and pacing to performance and story."
     architecture: "Respond to site, climate and occupants; verify physical performance separately."
     writing: "Adapt vocabulary and structure to audience and purpose."
     software: "Prefer sensible defaults and native platform capabilities; verify fallbacks."
+  unfolding:
+    lineage: "Christopher Alexander, The Nature of Order, volume 2; Karl Gerstner, Designing Programmes; Donald Knuth and Michael Plass, Breaking Paragraphs into Lines. Interpretive synthesis, not numerical proof of beauty."
+    laws: [PRESERVE_FIRST, PROPORTION, STEWARDSHIP]
+    design: "Establish purpose and centers; explore materially different compositions, then refine macro, meso and micro relationships. Prefer generative constraints to copied layouts. Verify the whole and retain the reason a change succeeds."
+    music: "Develop motifs and contrast through phrase and arrangement; compare the entire piece, not just an isolated sound."
+    photography: "Develop framing, light and tonal relationships while preserving the subject and evidence."
+    cinema: "Evaluate each edit in the scene and narrative, not merely as an isolated shot."
+    architecture: "Develop spatial relationships through structure-preserving transformations; compare the site and inhabited whole."
+    writing: "Revise the argument before optimizing sentences; retain meaning and evidence."
+    software: "Compare materially different designs; strengthen ownership and relationships before polishing local code. Verify the whole and retain demonstrated lessons."
   economy:
     laws: [ECONOMY_OF_MECHANISM, FORM_FOLLOWS_FUNCTION]
     design: "Remove chrome that does not support orientation, action or identity."

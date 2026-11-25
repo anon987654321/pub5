@@ -22,6 +22,8 @@ class DesignAuthoringTest < Minitest::Test
     assert_includes text, "CREATIVE CRAFT"
     assert_includes text, "STRONG_CENTERS"
     assert_includes text, "Whitespace groups related things"
+    assert_includes text, "macro, meso and micro relationships"
+    assert_includes text, "generative constraints"
     assert_includes text, "not a universal score"
     music = Master::Design::VisualLanguage.creative_context("music")
     assert_includes music, "Silence, rests"

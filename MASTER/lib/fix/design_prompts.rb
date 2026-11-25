@@ -34,7 +34,7 @@ module Master
       def direction_summary
         surface = @target[:surface]
         language = Master::Design::VisualLanguage
-        "#{DIRECTION} This page: #{language.purpose_for(surface)} (#{language.direction_for(surface)})."
+        "This page: #{language.purpose_for(surface)} (#{language.direction_for(surface)}). #{language.direction_lines(surface, language.direction_for(surface)).strip}"
       end
 
       def vision_prompt
