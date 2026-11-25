@@ -94,6 +94,15 @@ class TestTripleMemory < Minitest::Test
     end
   end
 
+  def test_offline_syntax_diagnostic_uses_a_guarded_probe
+    command = Master::CLI::CoreCommand
+    model = command.model_for("check Ruby syntax", { offline_check: "lib/core.rb" }, memory: @memory)
+    assert_equal 2, model.turns
+    effect = model.propose([], verbs: Master::Core::VERBS)
+    assert_equal :probe, effect.verb
+    assert_equal ["ruby", "-c", "lib/core.rb"], effect.args[:argv]
+  end
+
   def test_offline_recipe_cannot_mutate_and_stops_on_refused_effects
     core = Master::Core
     assert_raises(ArgumentError) do
@@ -110,13 +119,13 @@ class VerbClosureTest < Minitest::Test
   CLOSED = Master::Core::VERBS.freeze
 
   def test_closed_verb_set_matches_proposal
-    expected = %i[read write probe exec git http ask note critique done]
+    expected = %i[read write probe exec git http browser ask note critique done]
     assert_equal expected.sort, CLOSED.sort
   end
 
   def test_model_system_prompt_lists_only_closed_verbs
     prompt = Master::Core::Model::SYSTEM
-    %w[read write probe exec git http ask note critique done].each do |verb|
+    %w[read write probe exec git http browser ask note critique done].each do |verb|
       assert_match(/\b#{verb}\b/, prompt, "prompt must document #{verb}")
     end
   end
