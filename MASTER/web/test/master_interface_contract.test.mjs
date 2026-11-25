@@ -124,6 +124,40 @@ test("voice surface coordinates typing suspension and explicit recovery", () => 
   assert.match(voice, /retry voice/);
 });
 
+test("voice projection does not overwrite typed drafts or reuse previous recognition text", () => {
+  const events = new Map(), inputEvents = new Map(), formEvents = new Map();
+  const node = { value: "typed draft", dataset: {}, setAttribute() {},
+    addEventListener: (name, fn) => inputEvents.set(name, fn),
+    form: { addEventListener: (name, fn) => formEvents.set(name, fn) } };
+  const transcript = { textContent: "" };
+  const document = { getElementById: id => id === "prompt-input" ? node : id === "voice-transcript" ? transcript : null };
+  const window = { addEventListener: (name, fn) => events.set(name, fn) };
+  runInNewContext(voice, { window, document, navigator: {} });
+  assert.ok(formEvents.has("submit"));
+  events.get("stt:start")();
+  events.get("stt:partial")({ detail: { text: "late voice" } });
+  assert.equal(node.value, "typed draft");
+  assert.equal(node.dataset.voiceDraft, undefined);
+
+  node.value = "";
+  events.get("stt:start")();
+  events.get("stt:partial")({ detail: { text: "new voice" } });
+  assert.equal(node.value, "new voice");
+  assert.equal(node.dataset.voiceDraft, "partial");
+  node.value = "my edited text";
+  inputEvents.get("input")();
+  events.get("stt:end")({ detail: { text: "old voice" } });
+  assert.equal(node.value, "my edited text");
+  assert.equal(node.dataset.voiceDraft, undefined);
+
+  events.get("stt:abort")();
+  node.value = "";
+  events.get("stt:start")();
+  events.get("stt:end")({ detail: {} });
+  assert.equal(node.value, "");
+  assert.equal(window.MASTER_VOICE_SURFACE.lastVoiceText(), "");
+});
+
 test("task and workspace projections expose stable IDs and provenance", () => {
   assert.match(tasks, /taskCreate/);
   assert.match(tasks, /provenance/);

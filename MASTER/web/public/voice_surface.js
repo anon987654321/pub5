@@ -4,7 +4,6 @@
   "use strict";
 
   let lastVoiceText = "";
-  let activeVoiceTurn = null;
   let draftKind = "typed";
   let resumeVoiceAfterTyping = false;
 
@@ -57,9 +56,9 @@
     lastVoiceText = value;
     transcript().textContent = value;
     const node = input();
-    if (node) {
+    if (node && draftKind === "voice") {
       node.dataset.voiceDraft = final ? "final" : "partial";
-      if (!node.value || draftKind === "voice") node.value = value;
+      node.value = value;
     }
   }
 
@@ -97,16 +96,17 @@
     node.addEventListener("focus", suspendForTyping);
     node.addEventListener("input", () => {
       draftKind = "typed";
+      delete node.dataset.voiceDraft;
       clearRecovery();
       window.MasterInteraction?.setInteraction?.("idle", { source: "typing" });
     });
     node.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && event.shiftKey) return;
+      if (event.isComposing || event.keyCode === 229 || (event.key === "Enter" && event.shiftKey)) return;
       if (event.key === "Enter" && !event.shiftKey) {
         window.MasterInteraction?.setInteraction?.("processing", { source: "typed-submit" });
       }
     });
-    document.querySelector("form")?.addEventListener("submit", () => {
+    node.form?.addEventListener("submit", () => {
       clearRecovery();
       resumeAfterTyping();
     }, { capture: true });
@@ -116,8 +116,10 @@
   }
 
   window.addEventListener("stt:start", () => {
-    activeVoiceTurn = window.MasterInteraction?.snapshot?.().turn?.id || activeVoiceTurn;
-    draftKind = "voice";
+    lastVoiceText = "";
+    const node = input();
+    // A late recognition start must not take ownership of a typed draft.
+    if (!node?.value || draftKind === "voice") draftKind = "voice";
     setMicState("listening");
   });
   window.addEventListener("stt:partial", (event) => {
@@ -128,13 +130,20 @@
     setMicState("processing");
   });
   window.addEventListener("stt:abort", () => {
+    lastVoiceText = "";
+    draftKind = "typed";
+    const node = input();
+    if (node) delete node.dataset.voiceDraft;
     setMicState("closed");
     window.MasterInteraction?.discardTurn?.("speech-abort");
   });
   window.addEventListener("turn:committed", (event) => {
     if (event.detail?.source === "voice") showTranscript(event.detail.text, true);
     setMicState("processing");
-    activeVoiceTurn = null;
+    draftKind = "typed";
+    lastVoiceText = "";
+    const node = input();
+    if (node) delete node.dataset.voiceDraft;
   });
   window.addEventListener("tts:playback:start", () => setMicState("processing"));
   window.addEventListener("tts:playback:end", () => setMicState("closed"));
