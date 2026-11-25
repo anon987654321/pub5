@@ -6551,6 +6551,7 @@ visual_rubric:
   
   dimensions:
     hierarchy: "One clear primary action; visual emphasis follows the task."
+    composition: "Judge the whole viewport: optical balance, proportion, visual weight, deliberate negative space, and coherent grouping. A compliant collection of components can still be a poor composition."
     alignment: "Edges, baselines, controls, and repeated elements share the established grid."
     rhythm: "Spacing and typography use the existing token scales; no arbitrary one-off values."
     density: "Worst-case content remains calm, legible, and free of accidental crowding or overflow."
@@ -6563,7 +6564,7 @@ visual_rubric:
   judgment:
     first_read: "Describe what the eye notices first and whether that matches the task."
     falsification: "State what observation could disprove the claimed visual defect."
-    pairwise: "Prefer before/after or sibling-surface comparisons when deciding between two compliant alternatives."
+    pairwise: "Compare before and after at whole-viewport scale and at detail scale; choose the alternative that materially improves the owning Laws, not merely the one with fewer scanner findings."
     anti_sycophancy: "Name the five strongest observable weaknesses before proposing a refinement."
     console_first: "For MASTER CLI surfaces, OpenBSD dmesg is the primary visual reference; shell-prompt trends and decorative polish are subordinate."
   
