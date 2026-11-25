@@ -1042,7 +1042,9 @@ module Master
 
       def lora_art_direction(text)
         case text.to_s
-        when /\b(?:warp records|experimental|artist photography|degraded media)\b/i then "experimental"
+        when /\b(?:warp records|artist photography|degraded media)\b/i then "warp"
+        when /\b(?:best of|curated portraits)\b/i then "best"
+        when /\bexperimental\b/i then "experimental"
         when /\b(?:fashion editorial|editorial portrait)\b/i then "editorial"
         when /\b(?:snapshot|phone selfie|point.and.shoot)\b/i then "snapshot"
         when /\b(?:cinematic|cinematographic)\b/i then "cinematic"
