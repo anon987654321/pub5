@@ -36,7 +36,8 @@ class Marketplace::Order < ApplicationRecord
   validate :listing_must_be_live, on: :create
   validate :variant_belongs_to_listing
   validate :variant_chosen_when_the_listing_has_them, on: :create
-  validate :quantity_fits_stock, on: :create
+  validates :quantity, numericality: { only_integer: true, greater_than: 0 }
+  validate :quantity_fits_stock, if: -> { new_record? || will_save_change_to_quantity? || will_save_change_to_variant_id? }
   before_validation { self.status ||= "pending" }
   before_validation { self.payment_status ||= "unpaid" }
   before_validation { self.fulfilment_status ||= "unfulfilled" }
@@ -66,7 +67,23 @@ class Marketplace::Order < ApplicationRecord
   # price_cents on the order is what the two of them agreed.
   def unit_price_cents = price_cents.presence || variant&.price_cents_or_listing || listing.price_cents || 0
   def total_cents = unit_price_cents * (quantity.presence || 1).to_i
-  def total_display = Shared::MoneyDisplay.format(total_cents, listing.currency || "NOK")
+  def total_display = Shared::MoneyDisplay.format(total_cents, payment_currency)
+
+  def available_quantity
+    if variant_id
+      selected = association(:variant).loaded? ? variant : Marketplace::Variant.find_by(id: variant_id, listing_id: listing_id)
+      return 0 unless selected
+      return selected.stock # nil means unlimited for variants only
+    end
+
+    listed = association(:listing).loaded? ? listing : Marketplace::Listing.find_by(id: listing_id)
+    listed&.available_quantity || 0
+  end
+
+  def quantity_available?(amount = quantity)
+    available = available_quantity
+    amount.to_i.positive? && (available.nil? || amount.to_i <= available)
+  end
 
   def accept!
     raise "order cannot be accepted" unless open_offer?
@@ -176,7 +193,7 @@ class Marketplace::Order < ApplicationRecord
     listed = association(:listing).loaded? ? listing : Marketplace::Listing.find_by(id: listing_id)
     return false unless listed
 
-    listed.status == "active" && !listed.expired? && listed.in_stock?
+    listed.status == "active" && !listed.expired? && quantity_available?
   end
 
   # Returnable only against a shop. The right to send a purchase back is a right
@@ -303,10 +320,8 @@ class Marketplace::Order < ApplicationRecord
   end
 
   def quantity_fits_stock
-    return if listing.blank? || listing.one_of_a_kind?
-
-    qty = (quantity.presence || 1).to_i
-    return if qty <= listing.available_quantity
+    return if listing_id.blank? && listing.blank?
+    return if quantity_available?
 
     errors.add(:quantity, :exceeds_stock)
   end

@@ -143,6 +143,22 @@ class MarketplaceReturnsTest < ActionDispatch::IntegrationTest
     assert_not order.returnable_by?(@buyer)
   end
 
+  test "a received return cannot be reopened and a refused return cannot restock" do
+    order = delivered_order(@shop_listing)
+    returned = order.returns.create!(reason: "Feil farge")
+    returned.receive!(by: @seller)
+    assert_equal false, returned.approve!(by: @seller)
+    assert_equal false, returned.refuse!(by: @seller)
+    assert_equal "received", returned.reload.status
+
+    other = delivered_order(@shop_listing).returns.create!(reason: "Annet")
+    other.refuse!(by: @seller)
+    stock = @shop_listing.reload.stock
+    assert_equal false, other.receive!(by: @seller)
+    assert_equal "refused", other.reload.status
+    assert_equal stock, @shop_listing.reload.stock
+  end
+
   test "only the seller decides" do
     order = delivered_order(@shop_listing)
     sent_back = order.returns.create!(reason: "For små")

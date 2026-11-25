@@ -27,12 +27,14 @@ class Marketplace::ReturnsController < Marketplace::BaseController
     marketplace_return = @order.returns.find(params[:id])
     return head :forbidden unless @order.seller == Current.user
 
-    case params[:decision]
+    result = case params[:decision]
     when "approve" then marketplace_return.approve!(by: Current.user, note: params[:note])
     when "refuse" then marketplace_return.refuse!(by: Current.user, note: params[:note])
     when "receive" then marketplace_return.receive!(by: Current.user)
     else return redirect_to(order_path(@order), alert: t("flash.marketplace.return_no_decision"))
     end
+    return redirect_to(order_path(@order), alert: t("flash.marketplace.return_no_decision")) if result == false
+
     redirect_to order_path(@order), notice: t("flash.marketplace.return_updated")
   end
 

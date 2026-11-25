@@ -30,12 +30,12 @@
           <% end %>
           <%# A one-of-a-kind listing has one to buy, so only stocked lines get a
               quantity to change. %>
-          <% if item.listing.one_of_a_kind? %>
-            <div><%= item.listing.price_display %> × <%= item.quantity || 1 %></div> <%# scan: intentional — a line of text inside the item block %>
+          <% if !item.variant_id && item.listing.one_of_a_kind? %>
+            <div><%= Shared::MoneyDisplay.format(item.unit_price_cents, item.payment_currency) %> × <%= item.quantity || 1 %></div> <%# scan: intentional — a line of text inside the item block %>
           <% else %>
             <%= form_with url: cart_item_path(item), method: :patch, class: "cart-quantity" do |f| %>
-              <span><%= item.listing.price_display %> ×</span>
-              <%= f.number_field :quantity, value: item.quantity || 1, min: 1, max: item.listing.available_quantity,
+              <span><%= Shared::MoneyDisplay.format(item.unit_price_cents, item.payment_currency) %> ×</span>
+              <%= f.number_field :quantity, value: item.quantity || 1, min: 1, max: item.available_quantity,
                     inputmode: "numeric", aria: { label: t("marketplace.order_quantity") } %>
               <%= f.submit t("marketplace.update_quantity"), class: "button button-ghost" %>
             <% end %>
