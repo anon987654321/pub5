@@ -23,6 +23,18 @@ class Playlist::AudioVersionTest < ActiveSupport::TestCase
     assert Playlist::AudioVersion.new(track: @track).valid?
   end
 
+  test "replacing audio retains the original blob on its version" do
+    @track.audio_file.attach(io: StringIO.new("old mix"), filename: "old.mp3", content_type: "audio/mpeg")
+    original = @track.audio_file.blob.id
+
+    @track.replace_audio!({ io: StringIO.new("new mix"), filename: "new.mp3", content_type: "audio/mpeg" }, actor: @user)
+
+    version = Playlist::AudioVersion.where(track_id: @track.id).with_attached_audio_file.sole
+    assert_equal original, version.audio_file.blob.id
+    assert_equal "old mix", version.audio_file.download
+    assert_equal "new mix", Playlist::Track.with_attached_audio_file.find(@track.id).audio_file.download
+  end
+
   test "recent lists the newest upload first" do
     older = Playlist::AudioVersion.create!(track: @track, created_at: 2.days.ago)
     newer = Playlist::AudioVersion.create!(track: @track, created_at: 1.hour.ago)

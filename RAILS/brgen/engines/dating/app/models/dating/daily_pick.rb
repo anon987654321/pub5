@@ -22,8 +22,8 @@ class Dating::DailyPick < ApplicationRecord
   # same five faces do not come back every morning, and anyone already liked or
   # passed on, because a pick you have answered is not a pick.
   def self.for_today(viewer, scope:, day: Date.current)
-    existing = picked(viewer, day)
-    return existing if existing.any?
+    existing = picked(viewer, day, scope)
+    return existing if where(user_id: viewer.id, picked_on: day).exists?
 
     recent = where(user_id: viewer.id, picked_on: (day - 6)..day).pluck(:profile_id)
     chosen = scope.where.not(id: recent).limit(PER_DAY).to_a
@@ -36,12 +36,12 @@ class Dating::DailyPick < ApplicationRecord
     end
     # After a race the other tab's rows are today's list, so read them back
     # rather than showing faces this tab drew and the database refused.
-    raced ? picked(viewer, day) : chosen
+    raced ? picked(viewer, day, scope) : chosen
   end
 
-  def self.picked(viewer, day)
-    where(user_id: viewer.id, picked_on: day)
-      .includes(profile: [ :user, { photos_attachments: :blob } ]).map(&:profile)
+  def self.picked(viewer, day, scope)
+    ids = where(user_id: viewer.id, picked_on: day).order(:id).pluck(:profile_id)
+    scope.where(id: ids).to_a.index_by(&:id).values_at(*ids).compact
   end
   private_class_method :picked
 end

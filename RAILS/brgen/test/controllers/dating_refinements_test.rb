@@ -88,6 +88,21 @@ class DatingRefinementsTest < ActionDispatch::IntegrationTest
     assert_equal "Ansiktet er ikke synlig", verification.reload.review_note
   end
 
+  test "incoming likes from blocked or paused profiles are hidden" do
+    blocked = user_with_profile("dr_blocked")
+    paused = user_with_profile("dr_paused")
+    visible = user_with_profile("dr_visible")
+    [ blocked, paused, visible ].each { |user| Dating::Like.create!(liker: user, likee: @me) }
+    Block.create!(blocker: blocked, blocked: @me)
+    profile_for(paused).update!(visible: false)
+    sign_in_as(@me)
+
+    get dating.likes_path
+    assert_response :success
+    assert_select ".like-card", count: 1
+    assert_select "form[action=?]", dating.likes_path(user_id: visible.id)
+  end
+
   test "reading the crossings page writes nothing" do
     other = user_with_profile("dr_expired")
     Dating::LocationPing.create!(city: @city, user: other, latitude: 60.392, longitude: 5.323, expires_at: 1.minute.ago)

@@ -29,6 +29,9 @@ def studio_photograph_actions
       )
       result = picture.write_shot(shot, grade_seed: request["grade_seed"])
       quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      # The original is read for the grade delta above, then discarded: the
+      # studio keeps developed frames only.
+      picture.discard_raw_renders(result)
       result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     end,
     "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
@@ -59,7 +62,8 @@ def studio_photograph_actions
         inference_profile: request["inference_profile"]
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
-        preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"]
+        preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"],
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true
       )
     end,
     "series" => lambda do |request|
@@ -111,6 +115,7 @@ def studio_render_candidates(request)
     begin
       result = picture.write_shot(shot, grade_seed: request["grade_seed"], prediction_budget: budget)
       quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
+      picture.discard_raw_renders(result)
       result.merge("index" => index, "state" => quality.fetch("delivery"),
                    "quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     rescue StandardError => error
@@ -325,7 +330,8 @@ if $PROGRAM_NAME == __FILE__
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
         prompt, film: options[:film], duration: options[:duration],
-        preset: options.fetch(:preset, "house")
+        preset: options.fetch(:preset, "house"),
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true
       )
     end
   end

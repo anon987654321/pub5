@@ -26,6 +26,17 @@ esac
 
 [[ "$(id -u)" -eq 0 ]] || { echo "rails-task: must run as root through the fixed helper" >&2; exit 77; }
 
+# The app's production secrets live in /etc/<app>.env, which rc.d/<app> also
+# sources. This only re-exported whatever SECRET_KEY_BASE the caller had, so a
+# db:prepare from a clean root shell refused with "Missing secret_key_base for
+# production" (vm23, 2026-11-25). Root reads it here; su -m carries it over.
+env_file="/etc/$app.env"
+if [[ -f $env_file && ! -L $env_file ]]; then
+  set -a
+  . "$env_file"
+  set +a
+fi
+
 app_uid=$(/usr/bin/id -u "$app")
 [ -d /home ] && [ ! -L /home ] && [ "$(stat -f %u /home)" -eq 0 ] || {
   echo "rails-task: /home must be a real root-owned directory" >&2

@@ -25,7 +25,8 @@ module Studio
       SCENES = Studio::Lora::Selfie::SCENES
 
       def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil,
-                     inference_profile: nil, subjects_root: nil, direction: "varied")
+                     inference_profile: nil, subjects_root: nil, direction: "varied",
+                     discard_raw: true, chain_presets: Studio::Lora::Craft::HOUSE_CHAIN)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @direction = direction.to_s
@@ -34,6 +35,8 @@ module Studio
         end
         @scenes = scenes.nil? ? nil : Array(scenes)
         raise ArgumentError, "selfie series needs at least one scene" if @scenes&.empty?
+        @discard_raw = discard_raw ? true : false
+        @chain_presets = Array(chain_presets).map(&:to_s)
 
         @directory = File.expand_path(directory || IdeaPicture::SUBJECTS)
         @subjects_root = File.expand_path(subjects_root || IdeaPicture::SUBJECTS)
@@ -71,10 +74,12 @@ module Studio
                    end
           scene = recipe.fetch("scene")
           grade_seed = Studio::Lora::Selfie.grade_seed(index + 1, @subject)
+          result = nil
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             result = @series.write(scene, film: false, output_stem: stem, grade_seed:,
-                                   preset: recipe.fetch("preset"), compiled: recipe.key?("shot"))
+                                   preset: recipe.fetch("preset"), compiled: recipe.key?("shot"),
+                                   chain_presets: @chain_presets)
             path = result.fetch("still")
             likeness = Studio::Lora::Judge.likeness(reference: reference, candidate: path)
             quality = Studio::Lora::Judge.assess(candidate: path, original: result.dig("capture", "original"), likeness:)
@@ -86,6 +91,11 @@ module Studio
           rescue StandardError => error
             record("render_attempt", series_id:, index: index, scene: scene,
                    error: "#{error.class}: #{error.message[0, 200]}")
+          ensure
+            # The original is read for the grade delta first; an operator who
+            # asked for developed frames only still gets the raw discarded when
+            # the assessment itself fails.
+            @series.discard_raw_renders(result) if @discard_raw && result
           end
         end
 

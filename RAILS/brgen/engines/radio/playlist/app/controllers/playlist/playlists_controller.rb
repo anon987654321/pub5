@@ -113,6 +113,7 @@ class Playlist::PlaylistsController < Playlist::BaseController
   def playlist_tracks
     @playlist.playlist_tracks.joins(:track).merge(Playlist::Track.unexpired)
              .includes(track: [ { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
+             .select { |entry| entry.track.playable_by?(Current.user) }
   end
 
   # The canvas fillStyle wants a CSS colour; the embed links pass bare hex

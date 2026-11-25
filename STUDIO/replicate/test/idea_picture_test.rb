@@ -282,6 +282,65 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  # flux-2-flex counts megapixels and rejects a "2K" string; each engine gets
+  # the value its own schema declares.
+  def test_reference_input_sends_each_engine_its_own_sizing_vocabulary
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      references = File.join(subject_root, "probe", "references")
+      FileUtils.mkdir_p(references)
+      File.write(File.join(references, "01.jpg"), "reference")
+      client = Object.new
+      client.define_singleton_method(:upload_file) { |_path, subject:| "https://files.replicate.delivery/#{subject}.jpg" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root
+      )
+
+      flex = picture.send(:reference_input, "portrait", "black-forest-labs/flux-2-flex")
+      assert_equal "2 MP", flex.fetch("resolution")
+      assert_equal ["https://files.replicate.delivery/probe.jpg"], flex.fetch("input_images")
+
+      seedream = picture.send(:reference_input, "portrait", "bytedance/seedream-5-lite")
+      assert_equal "2K", seedream.fetch("size")
+    end
+  end
+
+  # Developed frames only: the ungraded original and any intermediate grade are
+  # removed, the final grade and its capture receipt stay.
+  def test_discard_raw_renders_keeps_the_developed_frame_and_its_provenance
+    Dir.mktmpdir do |dir|
+      raw = File.join(dir, "probe_selfie_shot_1.png")
+      mid = File.join(dir, "postpro_probe_selfie_shot_1_noir_v1.png")
+      final = File.join(dir, "postpro_probe_selfie_shot_1_noir_v1_house_v1.png")
+      [raw, mid, final].each { |path| File.write(path, "render") }
+      File.write("#{raw}.json", "{}")
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: dir)
+
+      result = picture.discard_raw_renders(
+        "still" => final, "intermediates" => [mid], "capture" => { "original" => raw }
+      )
+
+      refute File.exist?(raw), "the ungraded original is discarded"
+      refute File.exist?(mid), "an intermediate grade is discarded"
+      assert File.exist?(final), "the developed frame is kept"
+      assert File.exist?("#{raw}.json"), "capture provenance is kept"
+      assert result.fetch("discarded_raw")
+    end
+  end
+
+  def test_discard_render_refuses_a_path_outside_the_subject_directory
+    Dir.mktmpdir do |dir|
+      outside = File.join(File.dirname(dir), "elsewhere.png")
+      File.write(outside, "render")
+      picture = Studio::Visual::IdeaPicture.new(subject: "probe", directory: dir)
+
+      assert_raises(RuntimeError) { picture.send(:discard_render, outside) }
+      assert File.exist?(outside)
+    ensure
+      FileUtils.rm_f(outside)
+    end
+  end
+
   def test_reference_files_fall_back_to_published_sources
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "probe")

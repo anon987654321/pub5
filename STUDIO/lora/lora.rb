@@ -286,6 +286,12 @@ module Studio
                       pastel_portrait instant_pack aged_kodachrome street noir
                       saturated_negative golden_age contact_print analog_scan
                       vhs_tape crt_broadcast].freeze
+
+      # The house decision, so nobody has to remember a flag: every sitting is
+      # developed with its own named grade, then one shared second pass carries
+      # the series together, and only the developed frame is kept. Change the
+      # look here, once, rather than at each call site.
+      HOUSE_CHAIN = %w[aged_kodachrome].freeze
       SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
       SHOT_OPTIONAL = %w[preset key_side catchlight focus].freeze
       KEY_SIDE = {
@@ -515,10 +521,10 @@ module Studio
         ].freeze,
         "ragnhild" => [
           "a painter's-studio selfie beside a large unfinished canvas, wearing a sharply tailored oxblood wool jacket with matching high-waisted trousers and an ivory silk-charmeuse blouse, the clean lapel and fluid blouse visible in a waist-up crop, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, eyes returning to the lens, soft rectangular catchlights, restrained editorial framing, 85mm",
-          "a gallery-evening selfie after the visitors have left, wearing a rich-purple velvet blazer over a dark plum satin blouse and fluid tailored black trousers, the velvet and silk textures visible under warm track lights, paintings behind and gentle cool fill from the windows, waist-up framing, thoughtful expression, eyes drifting past the lens, honest skin texture, 50mm",
+          "a gallery-evening selfie after the visitors have left, wearing a rich-purple velvet blazer over a dark plum satin blouse and fluid tailored black trousers, the velvet and silk textures visible under warm track lights, paintings behind and gentle cool fill from the windows, waist-up framing, thoughtful expression, eyes drifting past the lens, soft even skin, 50mm",
           "a waterfront selfie on a windy Bergen afternoon, wearing a dark chestnut suede coat with a soft shearling collar over a pale cashmere knit, the collar and knit clearly framed against the grey sea and distant mountains, soft overcast light, hair moving naturally, the moment just after a laugh, eyes bright at the lens, 50mm",
           "a small old-town café selfie on a rainy afternoon, wearing a structured black leather blazer over a vivid chartreuse fine-gauge merino sweater and dark tailored trousers, the clean leather shoulders and bright knit visible in the crop, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, eyes on the lens, 85mm",
-          "a monochrome studio portrait selfie in front of a charcoal drawing, head-and-shoulders framing, one Rembrandt key light and a clear shadow side, direct calm gaze, nothing performed, tactile HP5 documentary grain, 85mm",
+          "a monochrome studio portrait selfie in front of a charcoal drawing, head-and-shoulders framing, soft clamshell light with a gentle fill and no hard shadow edge, direct calm gaze, nothing performed, tactile HP5 documentary grain, 85mm",
           "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, chest-up framing, a reflective unposed expression, eyes past the lens, muted Fuji colour, 50mm",
         ].freeze,
         "merethe" => [

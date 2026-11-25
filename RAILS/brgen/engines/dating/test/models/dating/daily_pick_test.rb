@@ -30,6 +30,18 @@ class Dating::DailyPickTest < ActiveSupport::TestCase
     end
   end
 
+  test "stored picks no longer expose a profile excluded by the current scope" do
+    ActsAsTenant.with_tenant(@city) do
+      original = Dating::DailyPick.for_today(@viewer, scope: pool)
+      hidden = original.first
+      remaining = Dating::DailyPick.for_today(@viewer, scope: pool.where.not(id: hidden.id))
+
+      assert_equal original.drop(1).map(&:id), remaining.map(&:id)
+      assert_empty Dating::DailyPick.for_today(@viewer, scope: pool.none)
+      assert_equal Dating::DailyPick::PER_DAY, Dating::DailyPick.for_day.where(user_id: @viewer.id).count
+    end
+  end
+
   test "a profile picked this week is not picked again tomorrow" do
     ActsAsTenant.with_tenant(@city) do
       today = Dating::DailyPick.for_today(@viewer, scope: pool).map(&:id)

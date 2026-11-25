@@ -5,7 +5,7 @@ class Playlist::ListensController < Playlist::BaseController
 
   def create
     track = Playlist::Track.find(params[:track_id])
-    raise ActiveRecord::RecordNotFound unless track.visible_to?(Current.user) || track.privacy.to_s == "unlisted"
+    raise ActiveRecord::RecordNotFound unless track.playable_by?(Current.user, direct_link: true)
 
     render json: { ok: true, counted: Playlist::Listen.record(user: Current.user, track:) }
   end

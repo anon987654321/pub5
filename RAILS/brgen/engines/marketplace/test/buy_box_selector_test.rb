@@ -53,6 +53,15 @@ class Marketplace::BuyBoxSelectorTest < ActiveSupport::TestCase
     assert_nil Marketplace::BuyBoxSelector.for(private_offer)
   end
 
+  test "does not compare minor units from different currencies" do
+    local = offer(user: @seller_a, store: @store_a, price: 4_000, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
+    foreign = offer(user: @seller_b, store: @store_b, price: 400, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
+    foreign.update_columns(currency: "EUR")
+    local.update_columns(currency: "NOK")
+
+    assert_equal [ local.id ], Marketplace::BuyBoxSelector.for(local.reload).offers.map(&:id)
+  end
+
   test "does not select offers from another city" do
     first = offer(user: @seller_a, store: @store_a, price: 4_000, delivery: 2, performance: 0.8, stock: 3, fulfilment: 1)
     other_city = City.where.not(id: @city.id).first || City.create!(name: "Other Buy Box City", slug: "other-buybox-city", domain: "other-buybox.test", country_code: "NO", locale: "nb", currency: "NOK")

@@ -68,6 +68,7 @@ module Marketplace
       Marketplace::Listing.where(
         city_id: listing.city_id,
         category_id: listing.category_id,
+        currency: listing.currency,
         kind: "goods",
         buy_box_key: listing.buy_box_key,
         status: "active"
