@@ -214,10 +214,11 @@ class TestStudioLoraCli < Minitest::Test
       []
     end
 
-    Studio::Visual::SelfieSeries.stub(:new, lambda { |subject:, engine:, inference_profile:|
+    Studio::Visual::SelfieSeries.stub(:new, lambda { |subject:, engine:, inference_profile:, **rest|
       captured[:subject] = subject
       captured[:engine] = engine
       captured[:inference_profile] = inference_profile
+      captured[:heavy] = rest.fetch(:heavy, false)
       fake_series
     }) do
       result = studio_photograph_actions.fetch("series").call({})
@@ -227,6 +228,7 @@ class TestStudioLoraCli < Minitest::Test
     assert_equal "ragnhild", captured.fetch(:subject)
     assert_nil captured.fetch(:engine)
     assert_nil captured.fetch(:inference_profile)
+    assert_equal false, captured.fetch(:heavy)
     assert_equal 4, captured.fetch(:count)
   end
 

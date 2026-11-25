@@ -115,6 +115,41 @@ class TestSelfieSeries < Minitest::Test
     )
   end
 
+  # --heavy opts a series back into the legacy random pass, so every frame is
+  # developed without a recipe preset; the default keeps the named grade.
+  def test_series_sends_recipe_presets_unless_heavy_is_requested
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      FileUtils.mkdir_p(File.join(subject_root, "probe", "references"))
+      File.write(File.join(subject_root, "probe", "references", "01.jpg"), "reference")
+
+      captured = []
+      recorder = Object.new
+      recorder.define_singleton_method(:inference_profile) { nil }
+      recorder.define_singleton_method(:engine) { "probe/engine" }
+      recorder.define_singleton_method(:validate_model!) { {} }
+      recorder.define_singleton_method(:write) do |_words, **kwargs|
+        captured << kwargs[:preset]
+        path = File.join(dir, "still_#{captured.length}.png")
+        File.write(path, "render")
+        { "still" => path }
+      end
+
+      [false, true].each do |heavy|
+        series = Studio::Visual::SelfieSeries.new(
+          subject: "probe", directory: dir, subjects_root: subject_root,
+          ledger_path: File.join(dir, "ledger.jsonl"), heavy:
+        )
+        series.instance_variable_set(:@series, recorder)
+        series.run(count: 1)
+      end
+
+      assert_equal 2, captured.length
+      refute_nil captured.first
+      assert_nil captured.last
+    end
+  end
+
   def test_a_series_renders_stills_with_subject_prefixed_filenames_in_the_lora_root
     rendered = run_series(series, count: 3)
 

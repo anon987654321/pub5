@@ -525,11 +525,20 @@ module Studio
         desired["max_images"] = 1 if allowed.include?("max_images")
         desired["number_of_images"] = 1 if allowed.include?("number_of_images")
         desired["prompt_optimizer"] = !@compiled_capture if allowed.include?("prompt_optimizer")
-        desired["resolution"] = "2K" if allowed.include?("resolution")
-        desired["size"] = "2K" if allowed.include?("size")
+        sizing = output_sizing(engine_name)
+        desired["resolution"] = sizing if allowed.include?("resolution")
+        desired["size"] = sizing if allowed.include?("size")
         desired["output_format"] = "jpg" if allowed.include?("output_format")
         desired["output_quality"] = 95 if allowed.include?("output_quality")
         desired
+      end
+
+      # Each provider names its output size in its own vocabulary, and a value
+      # from another provider's schema fails the prediction. 2K is the studio
+      # target; flux-2-flex counts megapixels instead (2048px cap, 2 MP
+      # recommended by its own schema).
+      def output_sizing(engine_name)
+        engine_name == "black-forest-labs/flux-2-flex" ? "2 MP" : "2K"
       end
 
       # A text model has only the prompt; the descriptor carries what likeness it

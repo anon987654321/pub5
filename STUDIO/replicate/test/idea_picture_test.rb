@@ -282,6 +282,29 @@ class TestIdeaPictureOutput < Minitest::Test
     end
   end
 
+  # flux-2-flex counts megapixels and rejects a "2K" string; each engine gets
+  # the value its own schema declares.
+  def test_reference_input_sends_each_engine_its_own_sizing_vocabulary
+    Dir.mktmpdir do |dir|
+      subject_root = File.join(dir, "subjects")
+      references = File.join(subject_root, "probe", "references")
+      FileUtils.mkdir_p(references)
+      File.write(File.join(references, "01.jpg"), "reference")
+      client = Object.new
+      client.define_singleton_method(:upload_file) { |_path, subject:| "https://files.replicate.delivery/#{subject}.jpg" }
+      picture = Studio::Visual::IdeaPicture.new(
+        subject: "probe", client:, directory: dir, subjects_root: subject_root
+      )
+
+      flex = picture.send(:reference_input, "portrait", "black-forest-labs/flux-2-flex")
+      assert_equal "2 MP", flex.fetch("resolution")
+      assert_equal ["https://files.replicate.delivery/probe.jpg"], flex.fetch("input_images")
+
+      seedream = picture.send(:reference_input, "portrait", "bytedance/seedream-5-lite")
+      assert_equal "2K", seedream.fetch("size")
+    end
+  end
+
   def test_reference_files_fall_back_to_published_sources
     Dir.mktmpdir do |dir|
       subject = File.join(dir, "probe")

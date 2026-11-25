@@ -59,14 +59,14 @@ def studio_photograph_actions
         inference_profile: request["inference_profile"]
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
-        preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"]
+        preset: request["heavy"] ? nil : request.fetch("preset", "house"), grade_seed: request["grade_seed"]
       )
     end,
     "series" => lambda do |request|
       subject = request.fetch("subject", "ragnhild")
       paths = Studio::Visual::SelfieSeries.new(
         subject:, engine: request["engine"], inference_profile: request["inference_profile"],
-        direction: request.fetch("direction", "varied")
+        direction: request.fetch("direction", "varied"), heavy: request["heavy"] ? true : false
       ).run(
         count: request.fetch("count", 4)
       )
@@ -149,7 +149,7 @@ end
 
 def studio_photograph_options(argv)
   options = {
-    film: false, duration: 5, count: 4, all_subjects: false, inference_profile: nil,
+    film: false, duration: 5, count: 4, all_subjects: false, inference_profile: nil, heavy: false,
     subject: ENV.fetch("STUDIO_PHOTOGRAPH_SUBJECT", "ragnhild")
   }
   OptionParser.new do |parser|
@@ -163,7 +163,8 @@ def studio_photograph_options(argv)
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
     parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental or snapshot") { |value| options[:direction] = value }
-    parser.on("--preset NAME", "named laboratory grade for a single photograph (default house)") { |value| options[:preset] = value }
+    parser.on("--preset NAME", "named laboratory grade (default house); \"heavy\" is the legacy random pass") { |value| options[:preset] = value }
+    parser.on("--heavy", "develop with the legacy random heavy pass instead of the recipe's named grade") { options[:heavy] = true }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
@@ -174,14 +175,15 @@ def studio_photograph_options(argv)
     parser.on("--models", "list the Replicate engines and exit") { options[:models] = true }
     parser.on("--check-model", "verify the subject's local manifest or private Replicate model") { options[:check_model] = true }
   end.parse!(argv)
+  options[:heavy] = true if options[:preset].to_s == "heavy"
   options
 end
 
 # All-subject generation is independent per person. Every subject is preflighted
 # before the first prediction, but one person's missing permission/model must not
 # prevent another subject with a complete, valid preflight from proceeding.
-def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil)
-  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:, inference_profile:) }
+def studio_all_subjects_render(subjects:, count:, inference_profile: nil, series_factory: nil, heavy: false)
+  factory = series_factory || ->(subject) { Studio::Visual::SelfieSeries.new(subject:, inference_profile:, heavy:) }
   prepared = subjects.map do |subject|
     begin
       series = factory.call(subject)
@@ -292,7 +294,7 @@ if $PROGRAM_NAME == __FILE__
 
       studio_all_subjects_render(
         subjects: %w[johann ragnhild merethe], count: options[:count] || 4,
-        inference_profile: options[:inference_profile]
+        inference_profile: options[:inference_profile], heavy: options[:heavy]
       )
     elsif options[:series]
       # A series uses the subject's references and the catalogue default
@@ -301,7 +303,7 @@ if $PROGRAM_NAME == __FILE__
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
         subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile],
-        direction: options.fetch(:direction, "varied")
+        direction: options.fetch(:direction, "varied"), heavy: options[:heavy]
       ).run(
         count: options[:count] || 4
       )
@@ -325,7 +327,7 @@ if $PROGRAM_NAME == __FILE__
         film_resolution: options[:film_resolution], inference_profile: options[:inference_profile]
       ).write(
         prompt, film: options[:film], duration: options[:duration],
-        preset: options.fetch(:preset, "house")
+        preset: options[:heavy] ? nil : options.fetch(:preset, "house")
       )
     end
   end
