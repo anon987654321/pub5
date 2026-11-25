@@ -1205,6 +1205,41 @@ test("mask uses depth, discrete neutral ink and fixed footprints", () => {
   assert.match(faceSource, /transparent: false, depthWrite: true, depthTest: true/);
   assert.match(system, /active\.primary\.visible = !showPreview/);
   assert.match(system, /const showPreview = preview && subject === "face"/);
+  assert.match(faceWorld, /world\.visible = !\(nativeSubjectField \|\| \(portrait && semanticForm === "face"\)\)/);
+  assert.match(sparseField, /if \(primaryOwnsPortrait\(\)\) \{\s+if \(layer\) layer\.visible = false/);
   assert.match(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
   assert.match(faceSource, /gl_FragColor=vec4\(vColor,1\.0\)/);
+});
+
+
+test("default stipple installation does not allocate or dispose a second portrait", async () => {
+  const uniforms = Object.fromEntries(["uExpressionFrom", "uExpressionTo", "uExpressionBlend", "uExpressionStrength"]
+    .map(name => [name, { value: 0 }]));
+  let calls = 0, disposed = false, additions = 0;
+  const material = { uniforms, dispose() { disposed = true; } };
+  const primary = { type: "Points", material, visible: true };
+  const root = { children: [primary], add() { additions++; } };
+  const scene = { children: [root] };
+  root.parent = scene;
+  const render = () => { calls++; };
+  const renderer = { render, domElement: { addEventListener() {}, removeEventListener() {} } };
+  const window = {
+    location: { search: "" }, MASTER_FACE_CONTRACT: {}, MASTER_ASSET_PATHS: { threeModule: "three.js" },
+    MASTER_FACE: { renderer, faceMat: material, State: {} }, addEventListener() {}, dispatchEvent() {}
+  };
+  const document = {
+    documentElement: { dataset: { faceSubject: "object" } }, hidden: false,
+    body: { classList: { contains: () => true } }, addEventListener() {}, removeEventListener() {}
+  };
+  runInNewContext(system, { window, document, URLSearchParams, performance: { now: () => 100 },
+    CustomEvent: class {}, Math, Object, Array, Number, String });
+  await window.MASTER_FACE_STIPPLE.install();
+  renderer.render(scene, {});
+  assert.equal(calls, 1);
+  assert.equal(additions, 0);
+  assert.equal(primary.visible, true);
+  assert.equal(window.MASTER_FACE_STIPPLE.snapshot().pointCount, 0);
+  assert.equal(window.MASTER_FACE_STIPPLE.uninstall(), true);
+  assert.equal(renderer.render, render);
+  assert.equal(disposed, false);
 });

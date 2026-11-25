@@ -281,18 +281,16 @@
   }
 
   function start() {
+    const search = window.location?.search || "";
+    // The opt-in material laboratory uses the unmasked portrait; production
+    // always starts with the selected volume.
+    if (!/(?:^|[?&])stipple=0(?:&|$)/.test(search) &&
+        /(?:^|[?&])(?:stipple|playground)=1(?:&|$)/.test(search)) {
+      window.MASTER_FACE_WORLD?.setSubjectForm?.("face");
+      return;
+    }
     apply(current, "conversation-start");
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
-  else start();
-  window.addEventListener("master:face-ready", start, { once: true });
-  window.addEventListener("master:conversation-created", rotate);
-  window.addEventListener("master:bus", (event) => {
-    const detail = event.detail || {};
-    if (detail.type === "conversation:created" || detail.type === "chat:created") {
-      rotate({ detail: detail.payload || detail });
-    }
-  });
   window.MASTER_FACE_MASKS = Object.freeze({
     profiles: PROFILES,
     rotationProfiles: ROTATION_PROFILE_IDS,
@@ -321,6 +319,17 @@
       const conversationId = String(id || "").trim();
       if (!conversationId) return false;
       return rotate({ detail: { conversationId, faceProfile } });
+    }
+  });
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start, { once: true });
+  else start();
+  window.addEventListener("master:face-ready", start, { once: true });
+  window.addEventListener("master:conversation-created", rotate);
+  window.addEventListener("master:bus", (event) => {
+    const detail = event.detail || {};
+    if (detail.type === "conversation:created" || detail.type === "chat:created") {
+      rotate({ detail: detail.payload || detail });
     }
   });
 })();

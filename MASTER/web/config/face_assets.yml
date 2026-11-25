@@ -3,8 +3,8 @@
 #
 # Before this file, chat/index.html.erb named them four different ways — a
 # MASTER_ASSET_PATHS object literal, individual <script src> tags, a
-# javascript_include_tag list of *bare names* (no .js), and the face.runtime.js
-# blob — and no single place enumerated the set. Two consequences:
+# javascript_include_tag list of *bare names* (no .js), and the generated
+# runtime — and no single place enumerated the set. Two consequences:
 #
 #   * /etc/rc.d/master's precompile-skip digest covers ~10 named files and
 #     silently misses the other ~30, so editing one and restarting keeps a stale

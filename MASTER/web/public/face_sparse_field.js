@@ -414,9 +414,20 @@
     ringMaterial.opacity = life * (0.12 + resonance.energy * 0.48);
   }
 
+  function primaryOwnsPortrait(face = window.MASTER_FACE) {
+    const topology = window.MASTER_FACE_STATE?.snapshot?.()?.topology || face?.State?.topology || "carved-field";
+    return Boolean(face?.faceMat && (face.faceMat.uniforms?.uSubjectDirect?.value ||
+      ["face", "carved-field", "papua-mask"].includes(topology)));
+  }
+
   function update(time) {
+    if (primaryOwnsPortrait()) {
+      if (layer) layer.visible = false;
+      return;
+    }
     if (!layer && !loading) attach();
     if (!layer || !points) return;
+    layer.visible = true;
 
     const face = window.MASTER_FACE;
     const state = window.MASTER_FACE_STATE?.snapshot?.() || face?.State || {};
@@ -595,7 +606,7 @@
   }
 
   async function attach() {
-    if (attached || loading) return;
+    if (attached || loading || primaryOwnsPortrait()) return;
     loading = true;
     try {
       const url = new URL(
@@ -603,7 +614,7 @@
         document.baseURI
       ).href;
       THREE = await import(url);
-      attached = build();
+      if (!primaryOwnsPortrait()) attached = build();
     } catch (error) {
       window.MASTER_LOG?.warn?.("face_sparse_field:attach", error);
     } finally {

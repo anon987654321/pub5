@@ -312,7 +312,10 @@ test("five masks rotate across conversations on the shared renderer", () => {
   };
   const window = {
     MASTER_FACE_WORLD: {
-      setSubjectForm(form, descriptor) { calls.push({ form, descriptor }); return form; }
+      setSubjectForm(form, descriptor) {
+        assert.ok(window.MASTER_FACE_MASKS, "sampler must be registered before initial geometry");
+        calls.push({ form, descriptor }); return form;
+      }
     },
     addEventListener(type, listener) { (listeners[type] ||= []).push(listener); },
     dispatchEvent() {}

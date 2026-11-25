@@ -1281,6 +1281,9 @@
     const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(state.mode) ?? state.mode === "idle";
     const topology = String(state.topology || "carved-field");
     const portrait = topology === "face" || topology === "carved-field" || topology === "papua-mask";
+    // The portrait is exclusively the native field. Keep the world available
+    // for camera ownership and compatibility subjects, not as another skin.
+    world.visible = !(nativeSubjectField || (portrait && semanticForm === "face"));
     const topologyProfile = TOPOLOGY_PROFILES[topology] || TOPOLOGY_PROFILES["papua-mask"] || {};
     const kernel = window.ParticleKernel;
     const eyePool = window.MASTER_FACE?.eyePool;
