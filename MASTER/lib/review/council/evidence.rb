@@ -56,6 +56,29 @@ module Master
           status == :inconclusive
         end
 
+        # Compare only the same artifact and probe contract. Numeric deltas
+        # are observations, never a verdict about quality.
+        def compare(candidate)
+          return { status: :inconclusive, reason: "missing actionable evidence" } unless
+            candidate.is_a?(Evidence) && actionable? && candidate.actionable?
+          return { status: :inconclusive, reason: "different artifact or probe contract" } unless
+            artifact == candidate.artifact && domain == candidate.domain &&
+            provenance[:probe] && provenance[:probe] == candidate.provenance[:probe] &&
+            provenance[:conditions].is_a?(Hash) && !provenance[:conditions].empty? &&
+            provenance[:conditions] == candidate.provenance[:conditions] &&
+            anchors.sort == candidate.anchors.sort
+
+          deltas = measurements.filter_map do |key, value|
+            other = candidate.measurements[key]
+            next unless value.is_a?(Numeric) && other.is_a?(Numeric) &&
+              value.real? && other.real? && value.finite? && other.finite?
+
+            delta = other - value
+            [key, delta] if delta.finite?
+          end.to_h
+          { status: :observed, deltas:, before: to_h, after: candidate.to_h }
+        end
+
         def to_h
           {
             artifact:,
