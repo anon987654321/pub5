@@ -9,7 +9,8 @@ require "json"
 URL = ARGV[0] || "http://localhost:53187/"
 WAIT = Integer(ENV.fetch("PROBE_WAIT", "12"))
 BROWSER_TIMEOUT = Integer(ENV.fetch("PROBE_BROWSER_TIMEOUT", "20"))
-FORCE = ENV["PROBE_FORCE_BROWSER"] == "1"
+STRICT_MASKS = ENV["PROBE_MASKS"] == "1"
+FORCE = ENV["PROBE_FORCE_BROWSER"] == "1" || STRICT_MASKS
 CHROME_PATHS = [
   ENV["CHROME_PATH"],
   "/usr/local/bin/chromium",
@@ -54,7 +55,7 @@ end
 
 def skip_probe(reason)
   puts "probe: SKIP (#{reason})"
-  exit 0
+  exit(STRICT_MASKS ? 1 : 0)
 end
 
 chrome = pick_chrome
@@ -148,7 +149,7 @@ begin
   end
   failures << "MASTER_FACE missing after 60s" unless state["faceType"] == "object"
 
-  if ENV["PROBE_MASKS"] == "1" && failures.empty?
+  if STRICT_MASKS && failures.empty?
     target = File.expand_path(ENV.fetch("PROBE_MASK_DIR", "tmp/mask-probe"))
     FileUtils.mkdir_p(target)
     profiles = browser.evaluate("window.MASTER_FACE_MASKS.profiles.map(p => p.id)")

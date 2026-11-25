@@ -1173,7 +1173,10 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
     const cells = new Set();
     const mouth = window.MASTER_FACE_MASKS.mouthGeometry(mask.id);
     for (let index = 0; index < 4096; index++) {
-      const [x, y] = window.MASTER_FACE_MASKS.sample(mask.id, index);
+      const [x, y, z] = window.MASTER_FACE_MASKS.sample(mask.id, index);
+      const normal = window.MASTER_FACE_MASKS.normalAt(mask.id, x, y);
+      assert.ok([x, y, z, ...normal].every(Number.isFinite), mask.id + " invalid relief");
+      assert.ok(normal[2] > 0 && Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
       cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
       const hole = (x / mouth.width) ** 2 + ((y - mouth.y) / mouth.height) ** 2;
       assert.ok(hole >= .98, mask.id + " mouth is occluded");

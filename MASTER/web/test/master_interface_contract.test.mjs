@@ -327,10 +327,11 @@ test("canonical theme token reaches CSS, routes and PWA manifest", () => {
 
 test("session chrome is mobile-first, nuanced, flat and touch-ready", () => {
   assert.ok(faceChrome.includes("background: var(--chrome-band)"));
-  assert.ok(faceChrome.includes("background: var(--chrome-surface-active)"));
+  assert.match(faceChrome, /#turn-control:hover[^}]*background: var\(--chrome-hover\)/);
   assert.ok(faceChrome.includes("outline: 2px solid var(--chrome-focus)"));
   assert.doesNotMatch(faceChrome, /master-session-tabs|master-session-tab/);
-  assert.ok(faceChrome.includes("var(--safe-left)"));
+  assert.ok(faceChrome.includes("var(--inset-l)"));
+  assert.match(faceCss, /--inset-l: calc\(var\(--chrome-inset\) \+ var\(--safe-left\)\);/);
   assert.ok(faceChrome.includes("var(--safe-bottom)"));
   assert.ok(faceChrome.includes("min-block-size: var(--tap-min)"));
   assert.match(faceChrome, /@media \(min-width: 480px\)/);
