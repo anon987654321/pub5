@@ -75,8 +75,10 @@ Keep terminal output legible at every size. Use one factual event per line,
 allow the emulator to wrap long text, and never pad fields into fixed columns.
 MASTER uses semantic ANSI colour only on an eligible TTY; pipes, NO_COLOR
 and dumb terminals receive plain text. Nerd Font private-use icons are optional
-and never replace words or ASCII-safe output. The browser transcript uses the
-same monospaced roles at 20px with 1.5 leading and a 66ch measure.
+and never replace words or ASCII-safe output. The browser uses locally served Geist Mono, with JetBrains Mono as fallback,
+at 20px on desktop and 16px on narrow screens, 1.5 leading and a 66ch measure.
+The face occupies its own region above the scrollable transcript. The native
+terminal may select Geist Mono or keep JetBrains Mono Nerd Font for optional glyphs.
 
 These choices follow Strunk and White's directness and Bringhurst's hierarchy,
 measure and rhythm: the reader should see the information first, not the

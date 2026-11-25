@@ -10,7 +10,7 @@ class ApplicationController < ActionController::Base
 
   allow_browser versions: :modern
 
-  VISITOR_ALLOWED_TOOLS = Master::Ground::Tool::Profile.public_names.freeze
+  VISITOR_ALLOWED_TOOLS = Master::Ground::Tool::Profile::WEB_NAMES
   AUTHENTICATED_ACTIONS = %i[history live metrics metrics_prometheus].freeze
   TTS_SYNTH_ACTIONS = %i[show].freeze
   TTS_POLL_ACTIONS = %i[status stream].freeze
@@ -195,12 +195,14 @@ class ApplicationController < ActionController::Base
   # Fiber storage is copied into a fiber when it is created, and Falcon serves every request in
   # its own fiber, so a CLI session's Fiber[:master_visitor] never reaches a web request.
   def with_master_fiber(unlocked: false)
-    Fiber[:master_visitor] = visitor?
-    Fiber[:master_elevated] = unlocked
+    Fiber[:master_web] = true
+    Fiber[:master_visitor] = true
+    Fiber[:master_elevated] = false
+    Fiber[:master_paired] = false
     Fiber[:master_conversation] = conversation_id
-    Master::Ground::Pairing.apply_token!(cookies[:master_paired].to_s)
     yield
   ensure
+    Fiber[:master_web] = nil
     Fiber[:master_visitor] = nil
     Fiber[:master_elevated] = nil
     Fiber[:master_paired] = nil

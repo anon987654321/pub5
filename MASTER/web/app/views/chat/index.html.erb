@@ -116,8 +116,10 @@
   </header>
   <div id="error-live" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
   <div id="ascii-star" aria-hidden="true"></div>
-  <canvas id="cognition-ecology" aria-hidden="true"></canvas>
-  <canvas id="face" role="img" aria-label="<%= t("face.face_aria") %>" tabindex="-1"></canvas>
+  <div id="face-region">
+    <canvas id="cognition-ecology" aria-hidden="true"></canvas>
+    <canvas id="face" role="img" aria-label="<%= t("face.face_aria") %>" tabindex="-1"></canvas>
+  </div>
   <%# The mic toggle and TTS playback state float together above the face.
       Both remain visible when idle; only the active ring fills. The microphone
       keeps its 44px touch target while the TTS ring is informational. %>

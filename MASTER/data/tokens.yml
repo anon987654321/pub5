@@ -443,9 +443,9 @@ tokens:
       c_accent: "var(--pub5-signal)"
       c_danger: "oklch(60% 0.14 35)"
       c_code: "oklch(81% 0.10 268)"
-    # The family's code stack (shared_chrome.font_code), not a face-only copy.
-    font_mono: *shared_font_code
-    font_label: '"JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace'
+    # MASTER owns its terminal typeface; other apps retain the shared code stack.
+    font_mono: '"Geist Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace'
+    font_label: '"Geist Mono", "JetBrainsMono Nerd Font", "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace'
     # A literal, not var(--bg): the views print it into <meta name="theme-color">.
     # It equals social.bg, and design_tokens_test asserts that.
     face_bg: "#000000"

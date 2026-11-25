@@ -132,42 +132,51 @@ module Master
 
       def with_journal_lock
         directory = File.dirname(@journal)
-        FileUtils.mkdir_p(directory, mode: 0o700)
-        directory_stat = File.lstat(directory)
-        raise IOError, "undo journal directory is not a real directory" unless directory_stat.directory? && !directory_stat.symlink?
-
-        # The journal contains full pre-write file contents. A pre-existing
-        # permissive .master directory defeats the journal's 0600 file mode.
-        unless (directory_stat.mode & 0o7777) == 0o700
-          File.chmod(0o700, directory)
-          secured = File.lstat(directory)
-          unless secured.directory? && !secured.symlink? &&
-                 secured.dev == directory_stat.dev && secured.ino == directory_stat.ino &&
-                 (secured.mode & 0o7777) == 0o700
-            raise IOError, "undo journal directory could not be secured"
-          end
-        end
+        directory_stat = secure_journal_directory(directory)
 
         lock_path = "#{@journal}#{LOCK_SUFFIX}"
         flags = File::RDWR | File::CREAT
         flags |= File::NOFOLLOW if File.const_defined?(:NOFOLLOW, false)
         File.open(lock_path, flags, 0o600) do |lock|
-          lock_stat = File.lstat(lock_path)
-          opened_stat = lock.stat
-          unless lock_stat.file? && !lock_stat.symlink? &&
-                 lock_stat.dev == opened_stat.dev && lock_stat.ino == opened_stat.ino
-            raise IOError, "undo journal lock is not a stable regular file"
-          end
+          assert_stable_lock!(lock, lock_path)
           lock.chmod(0o600)
           lock.flock(File::LOCK_EX)
+          changed = !same_directory?(directory, directory_stat)
+          raise IOError, "undo journal directory changed while locking" if changed
 
-          current_directory = File.lstat(directory)
-          unless current_directory.directory? && !current_directory.symlink? &&
-                 current_directory.dev == directory_stat.dev && current_directory.ino == directory_stat.ino
-            raise IOError, "undo journal directory changed while locking"
-          end
           yield
         end
+      end
+
+      # The journal contains full pre-write file contents, so others must never
+      # reach its directory. A deliberate group hand-off is kept
+      # (MasterPaths.private_dir_mode): on vm23 .master is dev:master for the
+      # daemon, and a flat 0700 here locked the daemon out after every dev
+      # boot, then raised EPERM in the daemon's own boot (2026-11-25). chmod is
+      # the owner's alone; anyone else gets the check.
+      def secure_journal_directory(directory)
+        FileUtils.mkdir_p(directory, mode: 0o700)
+        stat = File.lstat(directory)
+        raise IOError, "undo journal directory is not a real directory" unless stat.directory? && !stat.symlink?
+
+        expected = MasterPaths.private_dir_mode(directory)
+        File.chmod(expected, directory) if (stat.mode & 0o7777) != expected && File.owned?(directory)
+        secured = same_directory?(directory, stat) && (File.lstat(directory).mode & 0o007).zero?
+        raise IOError, "undo journal directory could not be secured" unless secured
+
+        stat
+      end
+
+      def same_directory?(directory, stat)
+        current = File.lstat(directory)
+        current.directory? && !current.symlink? && current.dev == stat.dev && current.ino == stat.ino
+      end
+
+      def assert_stable_lock!(lock, lock_path)
+        lock_stat = File.lstat(lock_path)
+        opened = lock.stat
+        stable = lock_stat.file? && !lock_stat.symlink? && lock_stat.dev == opened.dev && lock_stat.ino == opened.ino
+        raise IOError, "undo journal lock is not a stable regular file" unless stable
       end
 
       def delete_tmp_file(path)

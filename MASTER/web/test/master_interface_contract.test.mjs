@@ -295,3 +295,12 @@ test("served face.css is generated from the ordered editable sources", () => {
     + parts.slice(1).map(name => readFileSync(join(root, "styles", "face", name), "utf8")).join("");
   assert.equal(faceCss, expected, "public/face.css drifted from its authoritative source modules");
 });
+
+test("face and terminal occupy separate regions and the terminal uses local Geist Mono", () => {
+  assert.match(chatIndex, /<div id="face-region">\s*<canvas id="cognition-ecology"[\s\S]*?<canvas id="face"[\s\S]*?<\/div>/);
+  assert.ok(chatIndex.indexOf('id="face-region"') < chatIndex.indexOf('id="chat-shell"'));
+  assert.match(faceChrome, /#face-region\s*\{[\s\S]*?block-size: var\(--face-region-height\)/);
+  assert.match(faceChrome, /#chat-shell\s*\{\s*inset: var\(--terminal-region-top\)/);
+  assert.match(faceCss, /--font-mono: "Geist Mono", "JetBrainsMono Nerd Font"/);
+  assert.match(faceCss, /url\("\/fonts\/GeistMono-Variable\.woff2"\)/);
+});

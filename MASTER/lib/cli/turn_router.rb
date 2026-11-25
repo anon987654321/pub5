@@ -18,6 +18,11 @@ module Master
       def call(message:, container:, felt_sense: nil, on_turn: nil, on_chunk: nil, image: nil, cancellation: nil)
         text = message.to_s.strip
         return Master::Result.err("empty message", category: :validation) if text.empty?
+        if Fiber[:master_web] == true
+          return Master::Result.err("operator commands require the local CLI", category: :policy) if text.start_with?("/")
+
+          return casual_reply(text, container:, felt_sense:, on_chunk:, image:)
+        end
         if visitor? && text.start_with?("/") && !visitor_pair_redemption?(text)
           return Master::Result.err("slash commands are not available to visitors", category: :policy)
         end

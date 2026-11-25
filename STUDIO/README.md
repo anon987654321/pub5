@@ -32,7 +32,7 @@ voice of the creative work.
   Generated output is append-only. A new run never replaces or deletes an
   earlier still, film, sidecar, source photograph, dataset, weight or model
   manifest. Existing renders remain available for comparison.
-- `dilla/rg69/rg69.html`, `dilla/rg69/rg69.css` and `dilla/rg69/rg69.js` — the RG-69 browser beat machine. Its page, styles and application code are separate assets under MASTER's HTML Laws; Tone.js 14.8.49 is vendored in `dilla/vendor/tone/` with its MIT license and failure is reported visibly.
+- `dilla/rg69/rg69.html` — the RG-69 browser beat machine, one self-contained page. The operator asked for the styles and the application code to live in the page itself, so `<style>` and `<script>` blocks carry them and `rg69.css`/`rg69.js` no longer exist; `dilla_test.rb` fails if a separate asset comes back. Tone.js 14.8.49 is vendored in `dilla/vendor/tone/` with its MIT license, loaded without `defer` so the inlined engine finds `window.Tone` during parse, and its failure is reported visibly.
 - `lora/selfies/selfies.html`, `lora/selfies/selfies.css` and `lora/selfies/selfies.js` — the selfie gallery. A Swiper
   rail (vendored and version-pinned in `lora/vendor/swiper/`) of a subject's stills
   and films over the dilla bed, built from the generated `lora/selfies/manifest.js`

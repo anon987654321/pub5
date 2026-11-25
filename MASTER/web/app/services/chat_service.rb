@@ -178,10 +178,11 @@ conversation: nil, persona_note: nil)
     # one, and Agent#conversation_context hands the model whatever a stranger
     # typed last.
     Fiber[:master_conversation] = @conversation
-    Fiber[:master_visitor] = @tier != "authenticated"
-    Fiber[:master_elevated] = @unlocked || @author
-    Fiber[:master_paired] = @paired
-    Fiber[:master_pair_subject] = Master::Ground::Pairing.subject_for(@pair_token.to_s) if @paired
+    Fiber[:master_web] = true
+    Fiber[:master_visitor] = true
+    Fiber[:master_elevated] = false
+    Fiber[:master_paired] = false
+    Fiber[:master_pair_subject] = nil
     Fiber[:master_persona_note] = @persona_note.empty? ? nil : @persona_note
   end
 
@@ -431,6 +432,7 @@ conversation: nil, persona_note: nil)
   end
 
   def clear_fiber_flags
+    Fiber[:master_web] = nil
     Fiber[:master_conversation] = nil
     Fiber[:master_visitor] = nil
     Fiber[:master_elevated] = nil

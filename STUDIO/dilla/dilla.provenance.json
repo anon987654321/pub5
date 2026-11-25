@@ -1,21 +1,76 @@
 {
   "engine": "dilla",
-  "version": "4.2.0",
-  "created_at": "2026-11-13T03:26:20Z",
-  "ruby": "3.3.8",
-  "seed": "random",
-  "performer": "vinyl_tap",
+  "version": "4.3.0",
+  "created_at": "2026-11-24T19:02:14Z",
+  "ruby": "3.3.13",
+  "ruby_engine": "ruby",
+  "ruby_platform": "x86_64-linux-gnu",
+  "execution": {
+    "mode": "render",
+    "style": "j_dilla",
+    "renderer_path": "/workspace/project/pub5/STUDIO/dilla/dilla.rb",
+    "renderer_sha256": "5ec67197fee1512ce51bb466f39e7dcb13e60eef27c058cd2c7853652f232c58",
+    "music_theory_path": "/workspace/project/pub5/STUDIO/dilla/data/music_theory.json",
+    "music_theory_sha256": "2eb81ba7392f216db986df7491394482cc676dee302a6e7a75073b9f9b1fe8e9",
+    "engine_sources": {
+      "dilla.rb": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/dilla.rb",
+        "sha256": "5ec67197fee1512ce51bb466f39e7dcb13e60eef27c058cd2c7853652f232c58"
+      },
+      "analog_core.rb": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/analog_core.rb",
+        "sha256": "e7f25f0eff2667d4d40e34904f8cf37d6c669821e52849ffa66a0d6c6387ef61"
+      },
+      "data/curated_references.json": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/data/curated_references.json",
+        "sha256": "4faea30864b70ec14f8c668e81241d1515b59522382f7557ca2b0a5b93b2ed65"
+      },
+      "data/dilla.json": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/data/dilla.json",
+        "sha256": "d3c2beead6c3441428ff00529237fbc9ff59c2b5b27a9a20114e8a39d1fdab65"
+      },
+      "data/music_theory.json": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/data/music_theory.json",
+        "sha256": "2eb81ba7392f216db986df7491394482cc676dee302a6e7a75073b9f9b1fe8e9"
+      },
+      "data/recovered_music.json": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/data/recovered_music.json",
+        "sha256": "7e0213dc314cd74c7a54f616d26300c086e4a95c7687cd56ab1206efb10eef3e"
+      },
+      "data/showcase.json": {
+        "path": "/workspace/project/pub5/STUDIO/dilla/data/showcase.json",
+        "sha256": "07090e1e007f759d08fe720b796e04b40b8d9e5251815372435130d94715c51f"
+      }
+    }
+  },
+  "seed": 20261124,
+  "performer": "dusty_44",
+  "source": {
+    "progression_id": "players",
+    "progression_tier": "recovered",
+    "sample_rights_status": "not_used",
+    "sample": {
+      "status": "not_used"
+    }
+  },
+  "human_acceptance": {
+    "listening": "not_reviewed",
+    "reviewer": null,
+    "reviewed_at": null
+  },
   "flags": {
-    "out": "dilla.wav",
+    "out": "STUDIO/dilla/dilla.wav",
     "progression": null,
     "drums": null,
     "midi": false,
     "midi_out": null,
+    "mp3": false,
+    "video": false,
     "foley": false,
     "profile": null,
     "groove": null,
     "bpm": null,
-    "bars": null,
+    "bars": "24",
     "kit": null,
     "voice": null,
     "rig": null,
@@ -31,19 +86,21 @@
   },
   "render": {
     "wav": "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
-    "duration_s": 47.25,
+    "duration_s": 64.54,
     "lufs": -9.5,
-    "bytes": 8335152,
-    "sha256": "3f8d5e13c7b9ab072d6dc25d8e0b5f9c584bf2deccf1c3719b25911f12a851b9"
+    "bytes": 11384104,
+    "sha256": "636198844d3ae439adb5db8ef52ce34f4384554190f2a2be206786eeb49dc2ce"
   },
-  "source": {
-    "progression_id": "blue_hour",
-    "progression_tier": "engine",
-    "sample_rights_status": "not_used"
-  },
-  "human_acceptance": {
-    "listening": "not_reviewed",
-    "reviewer": null,
-    "reviewed_at": null
+  "files": {
+    "quality": {
+      "path": "/workspace/project/pub5/STUDIO/dilla/dilla.quality.json",
+      "bytes": 345,
+      "sha256": "875441b7bf3ef313b32fad020fe4e72254a430ea815f3f0ff76b54485c13f6ec"
+    },
+    "session": {
+      "path": "/workspace/project/pub5/STUDIO/dilla/dilla.session.json",
+      "bytes": 683,
+      "sha256": "c2b11a76e18ed985bda342e6ff0f55746b3d7f1c32ac6c644060c5e2a0ee4a31"
+    }
   }
 }

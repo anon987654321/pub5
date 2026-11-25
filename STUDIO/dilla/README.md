@@ -178,9 +178,20 @@ under `$XDG_DATA_HOME/dilla-renders/`, falling back to `~/Downloads/dilla-render
 reference-root` answer the same policy for MASTER. `out/`, `samples/` and
 `crate/` inside this directory are yours; none of it is tracked.
 
+One take is the exception: `dilla.wav` sits beside `dilla.rb` with its
+`.provenance.json`, `.quality.json` and `.session.json` sidecars, so a fresh
+checkout can audition the engine before rendering anything. It is the only
+audio file tracked in the repository, and it is a canon-checked take: the
+`j_dilla` style (players, Ebm, 93 BPM, 24 bars), measured 6/6 inside the
+canon envelope in `render_evidence/render_vs_canon_20261124.json`. Rebuild it
+deliberately with `--overwrite`; the seed reproduces it byte for byte:
+
+    ruby STUDIO/dilla/dilla.rb --style j_dilla --bars 24 --seed 20261124 \
+      --out STUDIO/dilla/dilla.wav --overwrite
+
 ## RG-69 browser renderer
 
-`rg69/rg69.js` reads the `tonejs_profiles.rg69` adapter in this catalogue. The adapter reuses `kit_break`, `prophet_5` and the dry `basement` rig, then maps their kit tuning, voice brightness and room sends into the browser's Tone.js instruments. The adapter is a translation layer: it does not claim that a Tone.js synth is the same instrument or circuit as Dilla's Ruby renderer.
+`rg69/rg69.html` (one self-contained page: markup, styles and engine) reads the `tonejs_profiles.rg69` adapter in this catalogue. The adapter reuses `kit_break`, `prophet_5` and the dry `basement` rig, then maps their kit tuning, voice brightness and room sends into the browser's Tone.js instruments. The adapter is a translation layer: it does not claim that a Tone.js synth is the same instrument or circuit as Dilla's Ruby renderer.
 
 Live playback and WAV export call the same Tone.js instrument builder. The drum pitch/filter settings and kit pan/level, FM keys, voice pan, chorus/tremolo/drive chain, pad voice and its filters, the room's delay/reverb controls, and the vinyl/crackle bed come from that profile. If the catalogue cannot be fetched, a matching embedded RG-69 fallback keeps the browser page usable; the page reports which path it used.
 
@@ -403,11 +414,16 @@ over declared harmony; limits stay attached to the numbers.
   curated list (SoundCloud title-matched with honest match classes) + 8 honest
   `no_match` rows. Per-stem band shares, onset grids, swing placement, tempo
   locks, mix chroma/Krumhansl.
-- `render_vs_canon.json` — the closed-loop verdict: the rendered `dilla.wav`
-  take (players, Ebm, 93 BPM, los_angeles) measured with the same analyzer and
-  compared against the canon envelope. 6/6 bounded metrics inside the canon
-  range.
-- The render-vs-canon section below gives the human-readable verdict and its honest gaps.
+- `render_vs_canon.json` — the 2026-11-22 closed-loop verdict: the rendered
+  `dilla.wav` take (players, Ebm, 93 BPM, los_angeles) measured with the same
+  analyzer and compared against the canon envelope. 6/6 bounded metrics inside
+  the canon range. Superseded by the 2026-11-24 record for any claim about the
+  current engine.
+- `render_vs_canon_20261124.json` — the re-check on engine 4.3.0, take
+  `players` / seed 20261124, which is the wav committed at
+  `STUDIO/dilla/dilla.wav`. 6/6 inside canon.
+- The render-vs-canon sections below give the human-readable verdicts and
+  their honest gaps, plus the two-stem-vs-four-stem method trap.
 - `tools/` — the pipeline that produced the record:
   - `dilla_stem_analyze.js` — pure Node analyzer (stdin: f32le mono 22050 Hz;
     stdout: one JSON). Band shares, onset flux, tempo autocorrelation, 16-slot
@@ -505,3 +521,61 @@ off-8th residuals; mix chroma (FFT 8192 @ 22.05 kHz, 55–2200 Hz) + Krumhansl.
 Canon: 13 measured rows from the operator-curated 22-track list recovered
 from pub git history (index.html a3185f4), SoundCloud title-matched with
 honest match classes.
+
+### Re-check 2026-11-24 — engine 4.3.0, take players / seed 20261124
+
+The verdict above was measured on 2026-11-22, before the analog work in
+dilla 4.3.0 (per-stroke tune/decay drift, velocity-shaped click and crack, a
+soft-knee tape stage). Nothing in that record covers this engine, so the
+protocol was re-run on it rather than inherited.
+
+Machine-readable record: `render_evidence/render_vs_canon_20261124.json`.
+
+Take identity: progression `players` (recovered), Ebm, 93 BPM, 24 bars, seed
+20261124, style `j_dilla` (drums `dilla_shadow_full`, kit `kit_dust`, voice
+`rhodes_mark1`, rig `dilla_night`, groove `los_angeles`, sonitex subtle).
+Wav SHA-256 `6361988…` is the file committed at `STUDIO/dilla/dilla.wav`, so
+these numbers describe the audio a checkout actually carries.
+
+| metric | render | canon median | canon range | verdict |
+|---|---|---|---|---|
+| drum swing position (%) | 48.6 | 49.6 | 45.0 – 52.8 | PASS |
+| on-grid share (16-slot) | 0.39 | 0.66 | 0.35 – 1.00 | PASS |
+| off-8th residual (ms) | -13.6 | -1.5 | -47.7 – +19.8 | PASS |
+| kick low-band share (<130 Hz) | 0.738 | 0.672 | 0.375 – 0.807 | PASS |
+| snare mid-band share (bp@400) | 0.082 | 0.099 | 0.055 – 0.202 | PASS |
+| hat high-band share (>5 kHz) | 0.015 | 0.018 | 0.002 – 0.033 | PASS |
+
+6/6 inside the canon envelope. Tempo: drums raw 62 folds to 93, mix locks
+93.1 directly, inside the 85–95 window.
+
+One engine edit came out of the re-check. The drum trigger carried a
+5 %-probability ±32 ms "scatter tail" justified by a code comment rather than
+a canon row. Measured both ways on the same take: with the tail, off-8th
+residual -21.9 ms; without it, -13.6 ms, closer to the canon median of -1.5.
+Both variants passed, so removing it is a move toward the median, not a
+rescue. The tail is gone.
+
+Method trap, recorded so nobody repeats it: a two-stem demucs pass
+(`--two-stems=drums`) is **not** comparable to this record. On the identical
+file it reported +36.3 ms and 53.8 % swing — outside canon — where four stems
+reported -21.9 ms and 47.7 %. The two-stem "drums" output leaks bass and
+chords into the stem and drags the onset picker. Canon comparisons use four
+stems or nothing.
+
+Honest gaps:
+
+- Nobody has listened to this take. `dilla.audit.json` reads
+  `technical_state: PASS`, `state: INCONCLUSIVE` because the listening
+  checklist is unsigned. The metrics bound the groove and the band balance;
+  they do not certify that it moves anyone.
+- Key estimate: F minor, r=0.71, against a declared Eb progression. The
+  analyzer's own `players` canon row estimates F major at r=0.26, and chroma
+  cosine against the reference `players` mix is 0.844 (0.734 in the 2026-11-22
+  record), so the harmony space matches even though the single-method key
+  estimate disagrees. Not treated as evidence of a wrong key.
+- Demucs here is 4.1.0 on torch 2.15 CPU; the canon rows were separated on the
+  earlier host. Same model (`htdemucs`), same analyzer, different release.
+- Levels not compared; canon rows are transcoded previews.
+- `sample_flip=null`: no Dilla audio material is used. The claim is measured
+  groove, band balance and harmony, not sample identity.

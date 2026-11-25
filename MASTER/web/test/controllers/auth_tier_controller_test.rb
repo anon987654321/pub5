@@ -62,44 +62,17 @@ class AuthTierControllerTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
-  test "authenticated client can post chat command" do
-    gateway = Class.new do
-      def receive(channel:, message:)
-        Master::Result.ok({ rendered: "help ok", client_actions: [] })
-      end
-    end.new
-    Rails.application.config.x.master_container[:gateway] = gateway
-
-    post "/chat/command", params: { command: "/help" }, headers: auth_headers, as: :json
-
-    assert_response :success
-    body = JSON.parse(response.body)
-    assert_equal "help ok", body["output"]
+  test "browser command and unlock are forbidden even for authenticated clients" do
+    ["/help", "/fix RAILS", "/unlock #{TEST_WEB_TOKEN}"].each do |command|
+      post "/chat/command", params: { command: }, headers: auth_headers, as: :json
+      assert_response :forbidden
+    end
+    assert_nil cookies[:master_unlocked]
   end
 
-  test "visitor can unlock with web token" do
-    post "/chat/command",
-         params: { command: "/unlock #{TEST_WEB_TOKEN}" },
-         as: :json
-
-    assert_response :success
-    assert_includes response.body, "unlocked"
-    refute_equal "1", cookies[:master_unlocked]
-    assert cookies[:master_unlocked].to_s.match?(/\A[0-9a-f]{64}\z/)
-  end
-
-  test "a forged master_unlocked=1 cookie is not elevation" do
-    cookies[:master_unlocked] = "1"
-    post "/chat/command", params: { command: "/help" }, as: :json
-
+  test "authenticated browser cannot send slash commands through chat" do
+    post "/chat/message", params: { message: "/shell ls" }, headers: auth_headers
     assert_response :forbidden
-  end
-
-  test "visitor cannot unlock with wrong token" do
-    post "/chat/command", params: { command: "/unlock wrong-token" }, as: :json
-
-    assert_response :unauthorized
-    assert_includes response.body, "unlock denied"
   end
 
   test "visitor can post canvas mood events" do

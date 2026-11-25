@@ -1494,8 +1494,11 @@ module Dilla
     # top, tanh saturation, 12-bit quantize. The 40 Hz sub layer is rendered
     # separately by the sequencer so it can gate against the mix.
     def kick(vel)
-      tune = @kit["kick"]["tune"].to_f
-      decay = @kit["kick"]["decay"].to_f
+      # Analog tuning and decay move a few cents and a few percent per stroke.
+      # Identical repeats are the sampler tell; the drift is seeded, so the
+      # same seed still renders the same take.
+      tune = @kit["kick"]["tune"].to_f + (@rng.rand * 2.0 - 1.0) * 0.035
+      decay = @kit["kick"]["decay"].to_f * (0.94 + @rng.rand * 0.12)
       tone = @kit["kick"]["tone"].to_f
       base = 52.0 * (2.0**(tune / 12.0))
       len = (decay * SAMPLE_RATE).to_i + 1
@@ -1503,13 +1506,14 @@ module Dilla
       phase = 0.0
       mod_phase = 0.0
       attack = 24
-      drop_coef = Math.exp(-1.0 / (0.045 * SAMPLE_RATE))
+      drop_coef = Math.exp(-1.0 / ((0.045 * (0.90 + @rng.rand * 0.20)) * SAMPLE_RATE))
       decay_coef = Math.exp(-1.0 / (decay * 0.38 * SAMPLE_RATE))
       fm_ratio = @kit["kick"].fetch("fm_ratio", 2.37).to_f
       fm_index = @kit["kick"].fetch("fm_index", 3.7).to_f
       fm_decay = Math.exp(-1.0 / (@kit["kick"].fetch("fm_decay", 0.018).to_f.clamp(0.002, 0.2) * SAMPLE_RATE))
       freq = base * 2.6
       click_len = (0.004 * SAMPLE_RATE).to_i
+      click_gain = 0.10 + 0.10 * vel
       i = 0
       while i < len
         env = i < attack ? i / attack.to_f : decay_coef**(i - attack)
@@ -1520,18 +1524,18 @@ module Dilla
         modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math::PI)
         s = Dilla.sine(modulated_phase.round)
         s = Math.tanh(s * 1.6) * 0.85
-        s += NOISE[(i * 7 + 11) % NOISE.length] * (i < click_len ? 0.22 * (1.0 - i / click_len.to_f) : 0.0)
+        s += NOISE[(i * 7 + 11) % NOISE.length] * (i < click_len ? click_gain * (1.0 - i / click_len.to_f) : 0.0)
         out[i] = s * env * vel * 0.95
         i += 1
       end
-      tone_shape!(out, tone, 5200)
+      tone_shape!(out, tone * (0.88 + 0.22 * vel), 5200)
       crush!(out, @kit["kick"]["crush"])
       out
     end
 
     def snare(vel)
-      tune = @kit["snare"]["tune"].to_f
-      decay = @kit["snare"]["decay"].to_f
+      tune = @kit["snare"]["tune"].to_f + (@rng.rand * 2.0 - 1.0) * 0.04
+      decay = @kit["snare"]["decay"].to_f * (0.92 + @rng.rand * 0.16)
       tone = @kit["snare"]["tone"].to_f
       len = (decay * SAMPLE_RATE * 1.6).to_i + 1
       out = Array.new(len, 0.0)
@@ -1543,6 +1547,8 @@ module Dilla
       fm_ratio = @kit["snare"].fetch("fm_ratio", 2.82).to_f
       fm_index = @kit["snare"].fetch("fm_index", 2.4).to_f
       fm_decay = Math.exp(-1.0 / (@kit["snare"].fetch("fm_decay", 0.023).to_f.clamp(0.002, 0.2) * SAMPLE_RATE))
+      # The stick crack follows velocity: ghosts stay soft, accents spit.
+      crack_gain = 0.32 + 0.25 * vel
       off = @rng.rand(NOISE.length / 2)
       i = 0
       while i < len
@@ -1554,18 +1560,18 @@ module Dilla
         index = fm_index * (fm_decay**i) + 0.08
         modulated_phase = phase + Math.sin(mod_phase) * index * 65_536.0 / (2.0 * Math::PI)
         body = Dilla.sine(modulated_phase.round) * env_b
-        crack = i < 90 ? NOISE[(i * 3 + off) % NOISE.length] * (1.0 - i / 90.0) * 0.6 : 0.0
+        crack = i < 90 ? NOISE[(i * 3 + off) % NOISE.length] * (1.0 - i / 90.0) * crack_gain : 0.0
         out[i] = (noise * (0.42 + 0.3 * tone) + body * 0.55 + crack) * vel
         i += 1
       end
       highpass!(out, 320.0)
-      tone_shape!(out, tone, 4600)
+      tone_shape!(out, tone * (0.88 + 0.14 * vel), 4600)
       crush!(out, @kit["snare"]["crush"])
       out
     end
 
     def hat(vel, open: false)
-      decay = open ? @kit["openhat"]["decay"].to_f : @kit["hat"]["decay"].to_f * (0.7 + 0.6 * vel)
+      decay = open ? @kit["openhat"]["decay"].to_f * (0.94 + @rng.rand * 0.12) : @kit["hat"]["decay"].to_f * (0.7 + 0.6 * vel)
       len = (decay * SAMPLE_RATE).to_i + 1
       out = Array.new(len, 0.0)
       decay_coef = Math.exp(-1.0 / (decay * 0.32 * SAMPLE_RATE))
@@ -1573,7 +1579,13 @@ module Dilla
       fm_index = @kit["hat"].fetch("fm_index", 1.2).to_f
       fm_decay = Math.exp(-1.0 / (@kit["hat"].fetch("fm_decay", 0.0045).to_f.clamp(0.001, 0.1) * SAMPLE_RATE))
       operator_hz = [5_700.0, 7_150.0, 8_660.0, 10_430.0]
-      operator_weights = [0.34, 0.28, 0.22, 0.16]
+      # Every stroke tilts the metallic cluster and its noise bed differently;
+      # identical repeats are the sampler tell, not the drum machine.
+      operator_weights = [0.34, 0.28, 0.22, 0.16].rotate(@rng.rand(4))
+      noise_gain = 0.62 + @rng.rand * 0.10
+      metal_gain = 0.18 - @rng.rand * 0.06
+      tick_len = (0.0007 * SAMPLE_RATE).to_i
+      tick_gain = 0.04 + 0.08 * vel
       carrier_phases = Array.new(operator_hz.length, 0.0)
       modulator_phases = Array.new(operator_hz.length, 0.0)
       off = @rng.rand(NOISE.length / 2)
@@ -1590,15 +1602,17 @@ module Dilla
                   Math.sin(modulator_phases[operator]) * index * 65_536.0 / (2.0 * Math::PI)
           metallic += Dilla.sine(phase.round) * operator_weights[operator]
         end
-        out[i] = (noise * 0.68 + metallic * 0.18) * (decay_coef**i) * vel
+        tick = i < tick_len ? noise * (1.0 - i / tick_len.to_f) * tick_gain : 0.0
+        out[i] = (noise * noise_gain + metallic * metal_gain + tick) * (decay_coef**i) * vel
         i += 1
       end
       highpass!(out, 6200.0)
       highpass!(out, 4200.0)
       # Reference stems sit dark: hats carry almost nothing above ~4 kHz on
       # the records this engine imitates, so a gentle post-highpass shelf
-      # keeps the tick but loses the fizz.
-      tone_shape!(out, 0.18, 8600)
+      # keeps the tick but loses the fizz. Harder strokes stay a touch
+      # brighter than ghost strokes.
+      tone_shape!(out, 0.14 + 0.04 * vel, 8600)
       tone_shape!(out, 0.5, 8600)
       crush!(out, @kit["hat"]["crush"])
       scale = open ? @kit["openhat"]["level"].to_f : @kit["hat"]["level"].to_f
@@ -1628,8 +1642,12 @@ module Dilla
     def soulclap(vel)
       len = (0.18 * SAMPLE_RATE).to_i
       out = Array.new(len, 0.0)
-      [0, 11, 27, 43].each_with_index do |offset, burst|
-        duration = ([0.014, 0.021, 0.028, 0.036][burst] * SAMPLE_RATE).to_i
+      # Hands never land in exactly the same place twice: jitter each burst and
+      # let the trailing bursts vary in weight, so a repeated clap breathes.
+      offsets = [0, 11, 27, 43].map { |offset| offset + @rng.rand(4) }
+      [0.014, 0.021, 0.028, 0.036].each_with_index do |base_duration, burst|
+        offset = offsets[burst]
+        duration = (base_duration * (0.88 + @rng.rand * 0.24) * SAMPLE_RATE).to_i
         pole = Math.exp(-2.0 * Math::PI * (1800.0 + burst * 520.0) / SAMPLE_RATE)
         state = 0.0
         duration.times do |j|
@@ -1637,7 +1655,8 @@ module Dilla
           break if index >= len
           noise = NOISE[(index * 13 + burst * 997) % NOISE.length]
           state += (noise - state) * (1.0 - pole)
-          out[index] += state * Math.exp(-j.to_f / (duration * 0.32)) * (1.0 - burst * 0.13)
+          out[index] += state * Math.exp(-j.to_f / (duration * 0.32)) *
+                        (1.0 - burst * 0.13) * (0.85 + @rng.rand * 0.30)
         end
       end
       crush!(out, @kit.dig("snare", "crush") || 12)
@@ -1645,7 +1664,7 @@ module Dilla
     end
 
     def perc(vel)
-      decay = @kit["perc"]["decay"].to_f
+      decay = @kit["perc"]["decay"].to_f * (0.85 + @rng.rand * 0.30)
       len = (decay * SAMPLE_RATE * 2).to_i + 1
       out = Array.new(len, 0.0)
       decay_coef = Math.exp(-1.0 / (decay * 0.4 * SAMPLE_RATE))
@@ -1657,7 +1676,7 @@ module Dilla
         out[i] = NOISE[(i + off) % NOISE.length] * env * vel
         i += 1
       end
-      bandpass_ish!(out, 3200.0, 0.6)
+      bandpass_ish!(out, 3200.0 * (2.0**((@rng.rand * 2.0 - 1.0) * 2.0 / 12.0)), 0.6)
       out.each_with_index { |v, idx| out[idx] = v * @kit["perc"]["level"].to_f * 2.0 }
       out
     end
@@ -1864,7 +1883,10 @@ module Dilla
         chords: Stereo.new(@n), melody: Stereo.new(@n), foley: Stereo.new(@n),
         sample: Stereo.new(@n), vinyl: Stereo.new(@n)
       }
-      @gain = { drums: 1.4, sub: 0.8, bass: 1.25, chords: 0.38, melody: 0.36,
+      # Boom-bap puts the drums in front and lets the bass lock to the kick. A
+      # sustained bass louder than the kit is the tell of a synthetic mix: it
+      # fills the RMS floor and leaves nothing for the transients to sit on.
+      @gain = { drums: 1.55, sub: 0.85, bass: 0.62, chords: 0.45, melody: 0.36,
                 foley: 0.30, sample: 0.5, vinyl: 0.0 }
     end
 
@@ -2092,13 +2114,80 @@ module Dilla
       end
     end
 
-    def saturate!(mix, drive)
-      i = 0
+    # The rigs declare a transport wobble (rate_hz, depth_ms) that nothing used.
+    # Tape speed drift moves sample position, not level: a seeded mean-reverting
+    # walk at the rig's rate, scaled to stay inside a well-set machine's ±0.1 %
+    # rather than a chorus pedal's swing.
+    def wobble!(mix, cfg, rng)
+      rate = cfg.fetch("rate_hz", 0.0).to_f
+      depth_ms = cfg.fetch("depth_ms", 0.0).to_f
+      return if rate <= 0.0 || depth_ms <= 0.0 || mix.l.empty?
+
+      deviation_samples = depth_ms / 1000.0 * 0.12 * SAMPLE_RATE
+      [mix.l, mix.r].each_with_index do |channel, index|
+        source = channel.dup
+        walk = AnalogCore::StochasticWalk.new(
+          # the right channel runs a touch slower, the way a skewed tape path does
+          rate_hz: rate * (index.zero? ? 1.0 : 0.93),
+          depth: 1.0, rng: Random.new(rng.rand(2**31)), sample_rate: SAMPLE_RATE
+        )
+        origin = walk.next_value
+        n = channel.length
+        i = 0
+        while i < n
+          offset = i.zero? ? 0.0 : (walk.next_value - origin).clamp(-2.5, 2.5) * deviation_samples * 0.5
+          pos = (i - offset).clamp(0.0, (n - 1).to_f)
+          j = pos.floor
+          frac = pos - j
+          nxt = j + 1 < n ? source[j + 1] : source[j]
+          channel[i] = source[j] * (1.0 - frac) + nxt * frac
+          i += 1
+        end
+      end
+    end
+
+    # Knee soft clip: linear below the knee, so quiet passages and transients
+    # pass through untouched, then a tanh shoulder that rounds only what would
+    # clip. A bare tanh bends the whole waveform, which is why it costs crest
+    # factor the way a limiter does; tape stays linear until the level runs out
+    # of headroom and only then rounds.
+    def saturate!(mix, drive, knee: 0.55, ceiling: 1.0)
       n = mix.l.length
-      while i < n
-        mix.l[i] = Math.tanh(mix.l[i] * drive)
-        mix.r[i] = Math.tanh(mix.r[i] * drive)
-        i += 1
+      span = ceiling - knee
+      [mix.l, mix.r].each do |ch|
+        i = 0
+        while i < n
+          x = ch[i] * drive
+          ax = x.abs
+          if ax > knee
+            over = [(ax - knee) / span, 1.0].min
+            ch[i] = (x.negative? ? -1.0 : 1.0) * (knee + span * Math.tanh(over))
+          else
+            ch[i] = x
+          end
+          i += 1
+        end
+      end
+    end
+
+    # Asymmetric saturation as a parallel harmonic injector: the linear part of
+    # the curve is subtracted, so only the curvature — the second harmonic the
+    # asymmetry creates — is added back. Level and crest survive; the console
+    # colour does not come at the price of the transient.
+    def warmth!(mix, amount = 0.16, drive = 1.0, depth = 0.22)
+      bias = amount.to_f
+      return if bias <= 0.0
+
+      anchor = Math.tanh(bias)
+      slope = drive * (1.0 - anchor * anchor)
+      [mix.l, mix.r].each do |ch|
+        i = 0
+        n = ch.length
+        while i < n
+          x = ch[i]
+          ch[i] = x + depth * (Math.tanh(drive * x + bias) - anchor - slope * x)
+          i += 1
+        end
       end
     end
 
@@ -2547,7 +2636,9 @@ module Dilla
     groove_profiles = catalogue.fetch("groove_profiles")
     groove_candidate = opts.profile || style["groove_profile"] || "dilla_shadow"
     groove_profile = groove_profiles.key?(groove_candidate) ? groove_candidate : "dilla_shadow"
-    swing = feel.fetch("swing", 54.0).to_f
+    # The measured canon sits just off straight (median 49.6% of the eighth);
+    # the feel comes from hit scatter, not from pushing the off-16th late.
+    swing = feel.fetch("swing", 51.0).to_f
     performers = catalogue.fetch("performers")
     performer = opts.performer && performers.any? { |p| p["id"] == opts.performer } ? opts.performer : nil
     {
@@ -2683,7 +2774,9 @@ module Dilla
     mix = mixer.mixdown
     Master.dc_block!(mix)
     Master.tilt!(mix, 0.8)
-    Master.saturate!(mix, 1.08)
+    Master.wobble!(mix, rig.fetch("wobble", {}), rng)
+    Master.warmth!(mix, 0.16)
+    Master.saturate!(mix, 1.04, knee: 0.70)
     Sonitex.apply!(mix, plan[:sonitex], plan[:sonitex_instances], rng)
     # Saturate and Sonitex are nonlinear stages: on asymmetric material they
     # bend the waveform back toward DC, so block again after the last
@@ -3636,7 +3729,8 @@ module Dilla
     mix = mixer.mixdown
     Master.dc_block!(mix)
     Master.tilt!(mix, 0.6)
-    Master.saturate!(mix, 1.12)
+    Master.warmth!(mix, 0.12)
+    Master.saturate!(mix, 1.04, knee: 0.70)
     Sonitex.apply!(mix, "subtle", 1, rng)
     Master.normalize!(mix)
     Master.fades!(mix)

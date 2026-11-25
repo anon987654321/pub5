@@ -4,6 +4,7 @@ require_relative "test_helper"
 
 class TestToolProfile < Minitest::Test
   def teardown
+    Fiber[:master_web] = nil
     Fiber[:master_visitor] = nil
     Fiber[:master_paired] = nil
     Fiber[:master_elevated] = nil
@@ -28,6 +29,19 @@ class TestToolProfile < Minitest::Test
     assert Master::Ground::Tool::Profile.allow?("MemoryRecord")
     refute Master::Ground::Tool::Profile.allow?("Shell")
     refute Master::Ground::Tool::Profile.allow?("WriteFile")
+  end
+
+  def test_web_scope_overrides_authentication_pairing_and_explicit_profile
+    Fiber[:master_web] = true
+    Fiber[:master_visitor] = false
+    Fiber[:master_paired] = true
+    Fiber[:master_elevated] = true
+
+    assert_equal :web, Master::Ground::Tool::Profile.current
+    assert_equal %w[WebSearch], Master::Ground::Tool::Profile.allowlist(:elevated)
+    %w[ReadFile WriteFile Shell WebFetch MemoryRecord SubdomainOrchestrator AskLlm].each do |tool|
+      refute Master::Ground::Tool::Profile.allow?(tool, profile: :full)
+    end
   end
 
   def test_authenticated_is_full
