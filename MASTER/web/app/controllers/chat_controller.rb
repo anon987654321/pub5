@@ -32,6 +32,7 @@ class ChatController < ApplicationController
     @face_mask_characters = mask_archive["characters"].is_a?(Hash) ? mask_archive["characters"] : {}
     @face_mask_character_rotation = Array(mask_archive["character_rotation"])
     @face_mask_entry = face_mask_entry_for(conversation, mask_archive)
+    @face_character_id = @face_mask_character_rotation[Integer(cookies.signed[:master_face_mask_rotation]&.fetch("index", 0), exception: false) || 0]
     @face_mask_profile = @face_mask_entry ? @face_mask_entry.fetch("particle_profile", "").to_s : ""
     @model = c&.[](:agent)&.model.to_s.split("/").last.presence || "booting"
     @tier = request.env["master.tier"].to_s
@@ -270,13 +271,14 @@ class ChatController < ApplicationController
                      else
                        Integer(rotation, exception: false)
                      end
+    character_count = [Array(archive["character_rotation"]).length, 1].max
     index = if same_conversation && previous_index
-              previous_index % profiles.length
+              previous_index % character_count
             else
-              ((previous_index || -1) + 1) % profiles.length
+              ((previous_index || -1) + 1) % character_count
             end
     entry = entries.find do |row|
-      row.is_a?(Hash) && row["particle_profile"].to_s == profiles.fetch(index)
+      row.is_a?(Hash) && row["particle_profile"].to_s == profiles.fetch(index % profiles.length)
     end
     return unless entry
 
