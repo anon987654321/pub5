@@ -170,6 +170,13 @@ module Master
         end
 
         def dynamic_prompt
+          if Fiber[:master_web] == true
+            parts = [Fiber[:master_persona_note], Ground::Tool::Profile.session_note,
+              conversational_register_line, support_practice_for_turn]
+            parts << felt_sense_section if @felt_sense.is_a?(Hash)
+            return filter_prompt(parts.compact.join("\n\n"))
+          end
+
           parts = []
           # Set by the web tier when a request arrives on a host that wears a
           # different face, and cleared when the turn ends. It carries a

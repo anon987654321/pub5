@@ -20,6 +20,8 @@ class DashboardController < ApplicationController
     c = container
     return render(json: { error: "warming up" }, status: :service_unavailable) unless c
 
+    return render(json: { error: "operator dashboard requires the local service" }, status: :forbidden) unless c[:gateway]
+
     root = Master::ROOT
     render json: mission_payload(c, root)
   rescue StandardError => e

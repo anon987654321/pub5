@@ -18,7 +18,8 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "visitor_safe_event? passes the orb's public signals" do
-    assert safe?("council:start")
+    refute safe?("council:start")
+    assert safe?("council:start", conversation: MINE)
     assert safe?("link")
   end
 
@@ -39,7 +40,7 @@ class EventsControllerTest < ActionDispatch::IntegrationTest
   test "the visitor payload drops the tts job id and the conversation" do
     event = { type: "tts:started", data: { job_id: "j", conversation: MINE, text: "hei" } }
 
-    assert_equal({ text: "hei" }, controller.send(:visitor_safe_payload, event)[:data])
+    assert_equal({}, controller.send(:visitor_safe_payload, event)[:data])
   end
 
   test "offer filters before the queue and drops when full instead of blocking" do

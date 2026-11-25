@@ -549,6 +549,10 @@ module Master
           return react_tool_loop(selected_model, messages, sys:, stream:, image:, &blk)
         end
 
+        if Fiber[:master_web] == true && (agy_model?(selected_model) || web_chat_model?(selected_model) || cli_lane_model?(selected_model))
+          return Result.err("local provider lanes are unavailable to browser conversations", category: :policy)
+        end
+
         return send_agy_cli(selected_model.delete_prefix("agy:"), messages, sys:, stream:, &blk) if agy_model?(selected_model)
         return send_web_chat(selected_model.delete_prefix("web-chat:"), messages, sys:) if web_chat_model?(selected_model)
         return send_cli_lane(selected_model, messages, sys:) if cli_lane_model?(selected_model)

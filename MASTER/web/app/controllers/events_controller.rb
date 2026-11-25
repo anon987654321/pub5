@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require Rails.root.join("../../MASTER/lib/device/wake_signal").to_s
-
 # EventsController — bounded SSE stream of EventBus events to the orb visualizer, at
 # GET /events/stream. It subscribes only to the face's declared signal families and writes each event
 # as an anonymous `data:` line; the orb reads them with
@@ -62,7 +60,7 @@ class EventsController < ApplicationController
   VISITOR_SAFE_PREFIX = %r{\A(?:tts:|pipeline:stage|council:start|link)}i.freeze
 
   def stream
-    visitor_tier = request.env["master.tier"].to_s == "visitor"
+    visitor_tier = true # Authentication never expands browser event visibility.
 
     response.headers["Content-Type"]      = "text/event-stream"
     response.headers["Cache-Control"]     = "no-cache"
@@ -78,8 +76,6 @@ class EventsController < ApplicationController
  offer(received, ev, visitor_tier:, mine:) } }
     deadline       = Time.now + MAX_STREAM_S
     next_keepalive = Time.now + KEEPALIVE_EVERY_S
-    stream_started_at = Time.now.to_f
-    last_wake_id = nil
 
     while Time.now < deadline
       timeout = [ next_keepalive - Time.now, 0.25 ].min
@@ -94,9 +90,6 @@ class EventsController < ApplicationController
         next_keepalive = Time.now + KEEPALIVE_EVERY_S
       end
 
-      emit_wake(response, stream_started_at, last_wake_id) do |id|
-        last_wake_id = id
-      end unless visitor_tier
     end
   rescue IOError, ActionController::Live::ClientDisconnected
     # Client went away — normal. Stop streaming.
@@ -106,26 +99,6 @@ class EventsController < ApplicationController
   end
 
   private
-
-  def emit_wake(response, stream_started_at, last_wake_id)
-    event = Master::Device::WakeSignal.read(root: Master::ROOT)
-    return unless event
-    return unless event[:type].to_s == "device:wake"
-    return unless event[:at].to_f > stream_started_at
-    return if event[:id].to_s.empty? || event[:id].to_s == last_wake_id
-
-    payload = {
-      t: event[:at],
-      type: "device:wake",
-      data: event,
-    }
-    response.stream.write("data: #{payload.to_json}\n\n")
-    yield(event[:id].to_s)
-  rescue IOError, ActionController::Live::ClientDisconnected
-    raise
-  rescue StandardError
-    nil
-  end
 
   # Runs on the publisher's thread, so it never blocks: the visitor filter
   # applies before the queue, and a full queue drops the event. A slow client
@@ -144,7 +117,7 @@ class EventsController < ApplicationController
   def visitor_safe_event?(event, mine)
     type = event[:type].to_s
     return false unless type.match?(VISITOR_SAFE_PREFIX)
-    return true unless type.match?(/\A(?:tts:|pipeline:stage)/i)
+    return true if type.match?(/\Alink(?::|\z)/i)
 
     data = event[:data]
     conv = data.is_a?(Hash) ? (data[:conversation] || data["conversation"]) : nil
@@ -158,6 +131,6 @@ class EventsController < ApplicationController
     data = event[:data]
     return event unless data.is_a?(Hash)
 
-    event.merge(data: data.except(:job_id, "job_id", :conversation, "conversation"))
+    event.merge(data: data.slice(:event, :stage, :phase, :state, :ms, "event", "stage", "phase", "state", "ms"))
   end
 end
