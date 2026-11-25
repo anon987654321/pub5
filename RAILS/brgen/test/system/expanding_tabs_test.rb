@@ -13,12 +13,16 @@ require "application_system_test_case"
 # real breakage: the ambient rooms 500'd for weeks behind a strict_loading
 # violation that every request-level assertion passed straight through.
 class ExpandingTabsTest < ApplicationSystemTestCase
+  # Both controls sit under what a first visit layers over the page.
+  setup do
+    visit root_path
+    answer_first_visit
+  end
+
   # A closed <dialog> is in the DOM at rest so the browser owns focus trapping and
   # Escape. That is exactly why presence in the markup proves nothing about it
   # opening — visible: false at rest is the point of the design.
   test "the composer pill opens the dialog and closes again" do
-    visit root_path
-
     dialog = find("dialog.composer", visible: :all)
     assert_not dialog.visible?, "the composer dialog should rest closed"
 
@@ -32,8 +36,6 @@ class ExpandingTabsTest < ApplicationSystemTestCase
   end
 
   test "the composer pill is reachable and operable from the keyboard" do
-    visit root_path
-
     trigger = find(".compose-trigger")
     trigger.send_keys(:enter)
     assert_selector "dialog.composer", visible: true, wait: 5
@@ -46,19 +48,17 @@ class ExpandingTabsTest < ApplicationSystemTestCase
   end
 
   test "the chat tab expands into a room with a composer" do
-    visit root_path
-
     # The tab is the only visible link to ambient chat, so its click path is the
     # whole feature's front door.
-    tab = first("[data-controller~='nearby-chat'], .nearby-widget-trigger, a[href*='nearby']", visible: true)
-    skip "no visible chat tab on this surface" unless tab
-
+    # The tab button a person presses, not the widget container: clicking the
+    # container's centre landed on whatever covered it.
+    tab = find("button.nearby-chat-widget-tab[aria-controls='nearby-chat-widget-panel']")
     tab.click
+    assert_equal "true", tab["aria-expanded"]
     assert_selector "form#nearby_widget_message, form[action*='nearby']", wait: 8
   end
 
   test "home has no accessibility violations once the composer is open" do
-    visit root_path
     find(".compose-trigger").click
     assert_selector "dialog.composer", visible: true, wait: 5
 

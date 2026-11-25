@@ -47,27 +47,27 @@
             rel="noopener" is not optional with target="_blank": without it the
             opened page gets a window.opener handle back into this one. The
             verticals are separate hosts, so this is cross-origin.
-            aria-label carries the "new tab" fact, because a sighted user gets
-            it from the tab appearing and a screen-reader user gets nothing. %>
-        <%= link_to href,
-              class: "nav_link#{" active" if active}",
-              target: "_blank",
-              rel: "noopener",
-              "aria-label": t("nav.opens_new_tab", label: label, default: "%{label} (opens in a new tab)"),
-              "aria-current": ("page" if active) do %>
+            A visually hidden suffix carries the «new tab» fact, because a sighted
+            user gets it from the tab appearing and a screen-reader user gets
+            nothing. Not an aria-label: that replaces the content as the name, so
+            the visible badge stopped matching it and Messenger’s spoken unread
+            count was silenced. %>
+        <% link_options = { class: "nav_link#{" active" if active}", target: "_blank", rel: "noopener" } %>
+        <% link_options[:"aria-current"] = "page" if active %>
+        <%= link_to href, **link_options do %>
           <%= label %>
           <%# The badge is inside the link so it cannot be separated from what it
               qualifies, and it is a <sup> because that is what it is: a mark on
-              a word. Its text is real content, not a ::after — a reader who
-              cannot see the colour still hears the count, and the
-              aria-label above already names the destination, so this reads as
-              the qualifier it is rather than as part of the place name. %>
+              a word. A decorative one (AI’s «1», NAV_COUNTED_SLUGS) is
+              aria-hidden, so no one hears a count that does not exist; a real
+              one (Messenger) speaks through its own visually hidden sentence. %>
           <%# Messenger's count is replaced live from the reader's inbox stream. %>
           <% if slug == "messenger" && Current.user %>
             <%= render "conversations/unread_badge", count: messenger_unread_total %>
           <% elsif (badge = nav_item_badge(slug)) %>
-            <sup class="nav_link_badge"><%= badge %></sup>
+            <sup class="nav_link_badge" aria-hidden="true"><%= badge %></sup>
           <% end %>
+          <%= tag.span t("nav.new_tab_suffix"), class: "visually-hidden" %>
         <% end %>
       <% end %>
     </div>

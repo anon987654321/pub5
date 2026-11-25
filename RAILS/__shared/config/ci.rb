@@ -171,7 +171,11 @@ Operator::CiGuard.run! do
     # test/application_system_test_case.rb's assert_accessible).
     # PUB5_COVERAGE_PART: its own SimpleCov result, merged with rails_test's
     # rather than replacing it (__shared/test/coverage.rb).
-    step("system_test", "env PUB5_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system") unless vps_host
+    # One worker: a Chrome and an app server per parallel worker starved this
+    # 8 GB workstation, and audio-sync and Turbo-navigation tests failed at
+    # random (2-17 per run in parallel, 0-1 serially, 2026-11-25).
+    system_test = "env PARALLEL_WORKERS=1 PUB5_COVERAGE_PART=system FULL_COVERAGE=1 bin/rails test:system"
+    step("system_test", system_test) unless vps_host
     seed_env = vps_host ? "env RAILS_ENV=test SKIP_BERGEN_DEMO=1" : "env RAILS_ENV=test"
     # bin/rake, not bin/rails.
     #

@@ -24,8 +24,7 @@ class InfiniteScrollRecoveryTest < ApplicationSystemTestCase
 
   test "a page that never arrives clears the loading state and offers the button again" do
     visit community_path(@club)
-    decline_optional_cookies if has_css?("#cookie-consent-banner", wait: 3)
-    find("button.welcome-onboarding-close", wait: 5).click if has_css?("button.welcome-onboarding-close", wait: 3)
+    answer_first_visit
 
     # A reflex the server does not know: nothing comes back.
     sentinel = find("#community-posts-sentinel")
