@@ -19,9 +19,9 @@ body.auth-surface {
 
   main#main-content,
   main[role="main"] {
-    max-width: 28rem;
+    max-inline-size: 28rem;
     margin-inline: auto;
-    min-height: 100dvh;
+    min-block-size: 100dvh;
     /* The viewport's width at most: sized to its content the column was 435px
        on a 390px phone, and every field ran off the right edge. */
     inline-size: 100%;
@@ -30,7 +30,7 @@ body.auth-surface {
 }
 
 .auth-form {
-  max-width: 22rem;
+  max-inline-size: 22rem;
   margin-inline: auto;
   padding: clamp(4.5rem, 12vw, 6rem) var(--space-4) var(--space-8);
 }
@@ -66,7 +66,7 @@ body.auth-surface {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  margin-bottom: var(--space-3);
+  margin-block-end: var(--space-3);
 }
 
 .auth-form .field label {
@@ -107,7 +107,7 @@ body.auth-surface {
 
 .auth-form .password-field {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-2);
   align-items: center;
 }
@@ -116,7 +116,6 @@ body.auth-surface {
 .auth-form .password-field .button {
   min-height: var(--tap-min);
   min-width: var(--tap-min);
-  flex-shrink: 0;
   white-space: nowrap;
 }
 

@@ -14,8 +14,8 @@
   gap: var(--layout-gap);
 
   > * {
-    flex-grow: 1;
-    flex-basis: calc((var(--switch-at) - 100%) * 999);
+    flex: 1 1 calc((var(--switch-at) - 100%) * 999);
+    min-inline-size: 0;
   }
 }
 
@@ -30,13 +30,12 @@
   gap: var(--layout-gap);
 
   > :first-child {
-    flex-basis: var(--side-width);
-    flex-grow: 1;
+    flex: 1 1 var(--side-width);
+    min-inline-size: 0;
   }
 
   > :last-child {
-    flex-basis: 0;
-    flex-grow: 999;
+    flex: 999 1 0;
     min-inline-size: var(--main-min);
   }
 }
