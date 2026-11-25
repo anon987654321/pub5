@@ -60,7 +60,7 @@ class TestCouncilTribunal < Minitest::Test
   def test_tribunal_forwards_mandatory_veto_roles_to_deliberation
     requested = nil
     deliberation = Object.new
-    deliberation.define_singleton_method(:review) do |_payload, context:, image:, required_veto_roles:|
+    deliberation.define_singleton_method(:review_convergent) do |_payload, context:, image:, required_veto_roles:|
       requested = required_veto_roles
       Master::Result.ok([{ persona: "Security", role: "Security Review", veto_role: true }])
     end
@@ -83,6 +83,19 @@ class TestCouncilTribunal < Minitest::Test
 
     assert result.ok?
     assert_equal ["Security"], requested
+  end
+
+  def test_comparison_requires_matched_observed_evidence
+    attributes = { artifact: "mix", domain: :sound, observations: ["measured"],
+                   anchors: ["mix"], provenance: { probe: "peak", conditions: { sample_rate: 48000 } } }
+    before = Evidence.new(**attributes, measurements: { peak: 0.9 })
+    after = Evidence.new(**attributes, measurements: { peak: 0.8 })
+    result = before.compare(after)
+    assert_equal :observed, result[:status]
+    assert_in_delta(-0.1, result[:deltas][:peak])
+    refute result.key?(:winner)
+    assert_equal :inconclusive, before.compare(after.with(status: :failed))[:status]
+    assert_equal :inconclusive, before.compare(after.with(provenance: {}))[:status]
   end
 
   def test_hash_evidence_is_normalized
