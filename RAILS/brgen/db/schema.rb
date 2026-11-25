@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
+ActiveRecord::Schema[8.2].define(version: 2026_11_25_090000) do
   create_table "account_merges", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.integer "guest_user_id", null: false
@@ -1034,28 +1034,6 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
     t.index ["vertical", "active"], name: "index_marketplace_stores_on_vertical_and_active"
   end
 
-  create_table "marketplace_wholesale_enquiries", force: :cascade do |t|
-    t.integer "store_id", null: false
-    t.integer "buyer_id", null: false
-    t.string "buyer_company_name", null: false
-    t.string "organisation_number", limit: 9, null: false
-    t.string "contact_name", null: false
-    t.string "contact_email", null: false
-    t.string "contact_phone"
-    t.text "requested_items", null: false
-    t.string "delivery_location", null: false
-    t.date "wanted_at"
-    t.text "seller_response"
-    t.string "status", default: "submitted", null: false
-    t.datetime "responded_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["buyer_id"], name: "index_marketplace_wholesale_enquiries_on_buyer_id"
-    t.index ["store_id"], name: "index_marketplace_wholesale_enquiries_on_store_id"
-    t.index ["store_id", "status", "created_at"], name: "idx_marketplace_wholesale_enquiries_store_status_created"
-    t.index ["buyer_id", "created_at"], name: "idx_marketplace_wholesale_enquiries_buyer_created"
-  end
-
   create_table "marketplace_variant_options", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "name", null: false
@@ -1091,6 +1069,28 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
     t.datetime "updated_at", null: false
     t.index ["provider", "event_delivery"], name: "index_marketplace_webhook_deliveries_identity", unique: true
     t.index ["status"], name: "index_marketplace_webhook_deliveries_on_status"
+  end
+
+  create_table "marketplace_wholesale_enquiries", force: :cascade do |t|
+    t.integer "store_id", null: false
+    t.integer "buyer_id", null: false
+    t.string "buyer_company_name", null: false
+    t.string "organisation_number", limit: 9, null: false
+    t.string "contact_name", null: false
+    t.string "contact_email", null: false
+    t.string "contact_phone"
+    t.text "requested_items", null: false
+    t.string "delivery_location", null: false
+    t.date "wanted_at"
+    t.text "seller_response"
+    t.string "status", default: "submitted", null: false
+    t.datetime "responded_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["buyer_id", "created_at"], name: "idx_marketplace_wholesale_enquiries_buyer_created"
+    t.index ["buyer_id"], name: "index_marketplace_wholesale_enquiries_on_buyer_id"
+    t.index ["store_id", "status", "created_at"], name: "idx_marketplace_wholesale_enquiries_store_status_created"
+    t.index ["store_id"], name: "index_marketplace_wholesale_enquiries_on_store_id"
   end
 
   create_table "mentions", force: :cascade do |t|
@@ -1350,9 +1350,9 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
     t.string "verification_state", default: "unverified", null: false
     t.datetime "updated_at", null: false
     t.index ["city_id", "kind"], name: "index_places_on_city_id_and_kind"
+    t.index ["city_id", "slug"], name: "index_places_on_city_id_and_slug", unique: true
     t.index ["city_id", "source", "external_id"], name: "index_places_on_city_source_external_id", unique: true, where: "external_id IS NOT NULL"
     t.index ["city_id", "verification_state", "kind"], name: "index_places_on_city_verification_kind"
-    t.index ["city_id", "slug"], name: "index_places_on_city_id_and_slug", unique: true
     t.index ["city_id"], name: "index_places_on_city_id"
     t.index ["neighborhood_id"], name: "index_places_on_neighborhood_id"
   end
@@ -1887,8 +1887,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
     t.boolean "verified", default: false, null: false
     t.index ["city_id", "slug"], name: "index_takeaway_restaurants_on_city_and_slug", unique: true
     t.index ["city_id"], name: "index_takeaway_restaurants_on_city_id"
-    t.index ["marketplace_store_id"], name: "index_takeaway_restaurants_on_marketplace_store_id", unique: true
     t.index ["latitude", "longitude"], name: "index_takeaway_restaurants_on_latitude_and_longitude"
+    t.index ["marketplace_store_id"], name: "index_takeaway_restaurants_on_marketplace_store_id", unique: true
     t.index ["place_id"], name: "index_takeaway_restaurants_on_place_id"
     t.index ["user_id"], name: "index_takeaway_restaurants_on_user_id"
   end
@@ -2175,6 +2175,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
   add_foreign_key "business_verifications", "users", column: "requested_by_id"
   add_foreign_key "business_verifications", "users", column: "reviewed_by_id"
   add_foreign_key "comments", "users"
+  add_foreign_key "commerce_ledger_entries", "users"
+  add_foreign_key "commerce_ledger_entries", "users", column: "actor_id"
   add_foreign_key "communities", "cities"
   add_foreign_key "community_bans", "communities"
   add_foreign_key "community_bans", "users"
@@ -2257,10 +2259,10 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
   add_foreign_key "marketplace_stores", "cities"
   add_foreign_key "marketplace_stores", "places"
   add_foreign_key "marketplace_stores", "users", column: "owner_id"
-  add_foreign_key "marketplace_wholesale_enquiries", "marketplace_stores", column: "store_id"
-  add_foreign_key "marketplace_wholesale_enquiries", "users", column: "buyer_id"
   add_foreign_key "marketplace_variant_options", "marketplace_variants", column: "variant_id"
   add_foreign_key "marketplace_variants", "marketplace_listings", column: "listing_id"
+  add_foreign_key "marketplace_wholesale_enquiries", "marketplace_stores", column: "store_id"
+  add_foreign_key "marketplace_wholesale_enquiries", "users", column: "buyer_id"
   add_foreign_key "mentions", "users", column: "mentioned_user_id"
   add_foreign_key "message_receipts", "messages"
   add_foreign_key "message_receipts", "users"
@@ -2357,8 +2359,8 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
   add_foreign_key "takeaway_orders", "takeaway_delivery_drivers", column: "delivery_driver_id"
   add_foreign_key "takeaway_orders", "takeaway_restaurants", column: "restaurant_id"
   add_foreign_key "takeaway_orders", "users"
-  add_foreign_key "takeaway_restaurants", "marketplace_stores", column: "marketplace_store_id"
   add_foreign_key "takeaway_restaurants", "cities"
+  add_foreign_key "takeaway_restaurants", "marketplace_stores"
   add_foreign_key "takeaway_restaurants", "places"
   add_foreign_key "takeaway_restaurants", "users"
   add_foreign_key "takeaway_reviews", "takeaway_orders", column: "order_id"
@@ -2394,6 +2396,4 @@ ActiveRecord::Schema[8.2].define(version: 2026_11_22_190000) do
   add_foreign_key "typing_indicators", "users"
   add_foreign_key "users", "cities"
   add_foreign_key "votes", "users"
-  add_foreign_key "commerce_ledger_entries", "users", column: "actor_id"
-  add_foreign_key "commerce_ledger_entries", "users"
 end
