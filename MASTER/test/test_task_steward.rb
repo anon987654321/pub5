@@ -294,6 +294,27 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_after_run_does_not_receive_a_replacement_mission
+    initial = { "id" => "first", "origin" => "backlog", "auto_continue" => true,
+                "state" => "waiting", "goal" => "finish the task" }
+    replacement = initial.merge("id" => "second", "state" => "running")
+
+    [
+      ->(**) { Master::Result.ok(:continued) },
+      ->(**) { Master::Result.err("provider overload", category: :infrastructure) },
+      ->(**) { raise "provider overload" },
+    ].each do |runner|
+      reads = 0
+      current = ->(**) { reads += 1; reads == 1 ? initial : replacement }
+      steward = Master::Fix::TaskSteward.new(
+        root: Dir.tmpdir, bus: nil, runner:,
+        after_run: ->(**) { flunk "a replacement mission received a stale result" },
+      )
+      Master::Fix::Mission.stub(:current, current) { steward.tick! }
+      assert_operator reads, :>=, 2
+    end
+  end
+
   def test_waiting_mission_does_not_spin_on_due_or_invalid_wake_time
     record = { "id" => "first", "origin" => "fold", "auto_continue" => true, "state" => "waiting" }
     steward = Master::Fix::TaskSteward.new(root: Dir.tmpdir, bus: nil, runner: ->(**) {})

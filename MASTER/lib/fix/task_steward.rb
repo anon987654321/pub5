@@ -86,7 +86,7 @@ module Master
           # mission as permission to enqueue unattended repository work.
           if record && record["origin"].to_s == "backlog" &&
              record["auto_continue"] == true && record["state"].to_s == "waiting"
-            notify_after_run(:idle)
+            notify_after_run(:idle, mission_id: record["id"])
           end
           return :idle
         end
@@ -98,7 +98,7 @@ module Master
 
           @bus&.publish("task_steward:blocked", mission: record["id"], reason:)
           result = Master::Result.err(reason, category: :validation)
-          notify_after_run(result)
+          notify_after_run(result, mission_id: record["id"])
           return result
         end
 
@@ -110,13 +110,13 @@ module Master
         recover_failed_result(result, mission_id: record["id"])
         ok = result_ok?(result)
         @bus&.publish("task_steward:result", mission: record["id"], ok:)
-        notify_after_run(result)
+        notify_after_run(result, mission_id: record["id"])
         result
       rescue StandardError => e
         defer_failed_mission(e, mission_id: record && record["id"])
         @bus&.publish("task_steward:error", error: "#{e.class}: #{e.message}")
         result = Master::Result.err("task steward: #{e.message}", category: :infrastructure)
-        notify_after_run(result)
+        notify_after_run(result, mission_id: record && record["id"])
         result
       end
 
@@ -248,8 +248,13 @@ module Master
         @bus&.publish("task_steward:failure_classified", mission: record["id"], category:)
       end
 
-      def notify_after_run(result)
-        @after_run&.call(mission: Mission.current(root: @root), result:)
+      def notify_after_run(result, mission_id:)
+        return unless @after_run && !mission_id.to_s.empty?
+
+        current = Mission.current(root: @root)
+        return unless current && current["id"] == mission_id
+
+        @after_run.call(mission: current, result:)
       rescue StandardError => e
         @bus&.publish("task_steward:after_run_error", error: "#{e.class}: #{e.message}")
       end
