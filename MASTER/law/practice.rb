@@ -686,6 +686,20 @@ Law.define(:VOICE_TERSE_UNIX) do
   good "silence on success"
 end
 
+Law.define(:DMESG_TRANSCRIPT) do
+  source "laws.yml DMESG_TRANSCRIPT - operational transcript contract"
+  practice <<~TEXT
+    Operational terminal output is an append-only, plain-text transcript. Name
+    each fact with a stable subsystem unit, state the observed outcome, and
+    keep one factual event per line. Cursor motion, colour and animation never
+    carry meaning absent from the text. Report cause before a reliable recovery
+    action; omit heartbeat noise, dashboards and decorative hierarchy.
+  TEXT
+  fix "Write one factual unit line; preserve the explicit state and cause."
+  bad "A spinner implies progress while plain output omits the blocked provider."
+  good "model0: provider unavailable: quota exhausted"
+end
+
 Law.define(:AESTHETIC_DISCIPLINE) do
   source "MASTER constitution: universal visual and typographic principles"
   practice <<~TEXT

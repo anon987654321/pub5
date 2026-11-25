@@ -1718,6 +1718,8 @@ laws:
     status: docs
   VOICE_TERSE_UNIX:
     status: docs
+  DMESG_TRANSCRIPT:
+    status: docs
   AESTHETIC_DISCIPLINE:
     status: docs
   VISUAL_LAYOUT_REFINEMENT_EVIDENCE:

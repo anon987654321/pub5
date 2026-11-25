@@ -185,6 +185,18 @@ TRUTHFUL_STATUS_test_precedes_report:
   resolution: never
   evidence: { result: output, revision: sha256 }
 
+DMESG_TRANSCRIPT:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    Operational terminal output is an append-only, plain-text transcript: one
+    factual event per line, named by a stable subsystem unit, with explicit
+    PASS, FAIL, BLOCKED, SKIPPED or INCONCLUSIVE state where applicable.
+    Animation, colour and cursor motion may enhance an interactive terminal but
+    never carry meaning absent from the text. Report cause before a reliable
+    recovery action; omit heartbeat noise and decorative hierarchy.
+  severity: warning
+  resolution: review
+
 EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
   parent: TRUTHFUL_STATUS
   statement: "Third-party research is evidence bounded by its source, method, population and date; it does not override constitutional Law, operator intent or operator-owned product identity."
@@ -3069,6 +3081,7 @@ law_catalogue:
     DOMAIN_LANGUAGE: {definition_sources: [MASTER/law/universal.rb], severity: warning}
     DONT_OUTRUN_HEADLIGHTS: {definition_sources: [MASTER/law/universal.rb], severity: info}
     DO_THE_WORK_NOW: {definition_sources: [MASTER/law/practice.rb], severity: error}
+    DMESG_TRANSCRIPT: {definition_sources: [MASTER/law/practice.rb], severity: warning}
     DOUBLE_BRACKET: {definition_sources: [MASTER/law/javascript.rb], severity: warning, autofix: automatic, languages: [zsh]}
     DOUBLE_QUOTES_RUBY: {definition_sources: [MASTER/law/cosmetic.rb], severity: info, autofix: automatic, languages: [ruby]}
     DRY: {definition_sources: [MASTER/law/universal.rb], severity: warning}
