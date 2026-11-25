@@ -1362,7 +1362,10 @@ KISS:
     trajectory has been proven by causal traces and evidence, prefer
     compiling it to ordinary deterministic code so the model is no longer
     required on the hot path; a living agent for a settled workflow is
-    surplus.
+    surplus. Judge total complexity across owners and callers, not local
+    line counts. A shallow wrapper, decorative container or configuration
+    section must earn its boundary; flatten it when no capability or
+    contract is lost.
   severity: warning
   resolution: review
   mechanical: composite (BOUNDED_LOAD, DENSITY, YAGNI)
@@ -1390,7 +1393,8 @@ SPARE_COMMENTS:
     line stating a reason the reader cannot derive. Any comment narrating
     what the code used to be, or where it came from, goes in the git commit
     message instead, and a rationale that must outlive the code goes in
-    README.md prose.
+    README.md prose. Remove punctuation-only comment dividers; preserve
+    directives, meaningful explanations and literal content.
   severity: warning
   resolution: review
   mechanical: composite (NO_CHANGELOG_COMMENT, WHY_NOT_WHAT, DENSITY_comments_as_deodorant)

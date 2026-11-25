@@ -20,7 +20,7 @@ module Master
                 law: RULE_ID,
                 laws: %w[SINGULARITY ABSTRACTION DENSITY PROXIMITY KISS],
                 source: "cohesion",
-                file: relative_path(plan.fetch(:files).first, dir),
+                file: File.join(dir, plan.fetch(:files).first),
                 line: 1,
                 message: structural_message(dir, plan),
                 evidence: plan.fetch(:evidence, {}),
@@ -32,10 +32,6 @@ module Master
         end
 
         private
-
-        def relative_path(file, dir)
-          File.join(dir, file)
-        end
 
         def structural_message(dir, plan)
           files = plan.fetch(:files).join(", ")

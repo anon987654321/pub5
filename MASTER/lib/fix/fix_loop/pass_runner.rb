@@ -393,7 +393,7 @@ module Master
           end
           return clean_pass_result(files, pass_mtimes, pass, consecutive_clean) if found.empty?
           return blockers_cleared(files, pass) if CheckFocus.cleared?(found)
-          return plateau_result if stagnant?(history, seen_snapshots, recurring_violations, found, pass, progressed: @pass_progress)
+          return plateau_result(found) if stagnant?(history, seen_snapshots, recurring_violations, found, pass, progressed: @pass_progress)
 
           dispatch_llm_stages(unstreamed(found, streamed), files, pass, deadline, visual, run_id:) unless CodeWatch.requested?
           delivered = deliver_pass(found, files, pass)
@@ -457,9 +457,10 @@ module Master
                                                          message: "blockers cleared"))
         end
 
-        def plateau_result
+        def plateau_result(found)
           abort_transaction
-          PassResult.new(status: :plateau, consecutive_clean: 0)
+          PassResult.new(status: :plateau, consecutive_clean: 0,
+                         message: "incomplete: #{found.size} unresolved findings at plateau")
         end
 
         def supplement_with_improvements(found, pass:, files:, deadline:, consecutive_clean:)

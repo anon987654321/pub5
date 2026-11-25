@@ -354,10 +354,10 @@ end
 Law.define(:SPARE_COMMENTS) do
   source "Operator ruling 2026-11-08 - a comment is an exception, not a habit"
   reads_comments true
-  ask "Can this comment disappear when the code says it?"
+  ask "Can this comment disappear when the code says it? Is it a decorative separator rather than a reason?"
   fix "Rename and reshape the code until it explains itself, then keep at most one "\
       "present-tense line for a reason a reader cannot derive. History goes in the "\
-      "commit message; a rationale that must outlive the code goes in README.md."
+      "commit message; a rationale that must outlive the code goes in README.md. Remove punctuation-only separator comments."
   bad "# The cap was 10 before the concurrency fix; 25 now"
   good "# 25 is the largest n that keeps one scan under the /fix budget"
 end
@@ -738,8 +738,8 @@ end
 
 Law.define(:KISS) do
   source "KISS - Keep It Simple"
-  ask "Does this introduce complexity the problem does not require?"
-  fix "Flatten the design to the simplest structure that solves the actual problem."
+  ask "Does every layer, file, wrapper and configuration level reduce total complexity? Are local size metrics creating shallow modules or needless delegation?"
+  fix "Remove pass-through layers and needless nesting; consolidate cohesive owners and callers without losing behavior, boundaries or useful contracts. Judge total complexity, not local line counts."
   bad <<~'X'
     result = strategies.fetch(mode).call(input).then { |x| wrap(x) }.then { |x| audit(x) }
   X

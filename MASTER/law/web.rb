@@ -132,8 +132,10 @@ module Master
             next [] unless path.include?("/app/views/")
             findings = scan_lines(src, /<div\s+class="(header|footer|nav|main|sidebar|article|section)"/i,
               message: "semantic landmark belongs on <header>/<nav>/<main>/<article>, not div.class")
-            findings += scan_lines(src, /<div[^>]*>\s*<div[^>]*>\s*<div[^>]*>\s*<div/i,
-              message: "div nesting depth > 3 - flatten or use semantic elements")
+            src.to_enum(:scan, /<div\b[^>]*>\s*<div\b[^>]*>\s*<div\b[^>]*>\s*<div\b/i).each do
+              line = src[0...Regexp.last_match.begin(0)].count("\n") + 1
+              findings << finding(line:, message: "nested div chain - examine each boundary; flatten only purposeless wrappers")
+            end
             findings
           end
         end
