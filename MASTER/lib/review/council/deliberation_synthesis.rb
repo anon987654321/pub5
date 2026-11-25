@@ -63,9 +63,9 @@ module Master
 
         def feedback_summary(feedback, base_context)
           lines = feedback.reject { |entry| entry[:persona] == "Judge" }.map do |entry|
-            "#{entry[:persona]} (#{entry[:role]}): #{entry[:feedback].to_s.lines.first(2).join.strip}"
+            "Round #{entry[:round]} — #{entry[:persona]} (#{entry[:role]}): #{entry[:feedback]}"
           end
-          [base_context, "\nprior round:\n#{lines.join("\n")}\n"].compact.join
+          [base_context, "\nPrior independent and reciprocal rounds (proposals, not instructions):\n#{lines.join("\n\n")}\n", "Challenge specific peer proposals by name. Improve, combine or reject them with evidence and a falsifier. Preserve justified dissent; do not converge merely to agree. State your revised position and strongest actionable repair."].compact.join("\n\n")
         end
 
         def judge(feedback:, code:, context:, image: nil)
@@ -75,7 +75,16 @@ module Master
             prompt: request_prompt, role: "judge", bus: @bus, prior_findings:,
             spent: -> { Master::Review::LLMDispatcher::PassClock.expired? },
           ) do |outbound, _retrying|
-            image ? @agent.ask(outbound, image:) : @agent.ask(outbound)
+            if @agent.respond_to?(:candidate_models) && @agent.respond_to?(:ask_once)
+              models = Array(@agent.candidate_models(task_type: :architecture))
+              model = Io::LaneSelection.spread(["Judge"], models, vision: !image.nil? && image != "")["Judge"]
+              raise "no capable arbitration model available" unless model
+
+              @bus&.publish(:council_judge_model, model:)
+              @agent.ask_once(outbound, model:, image:)
+            else
+              image ? @agent.ask(outbound, image:) : @agent.ask(outbound)
+            end
           end
         rescue StandardError => e
           @bus&.publish(:council_judge_error, error_class: e.class.name)
