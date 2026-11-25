@@ -25,14 +25,14 @@ class TestWorkLane < Minitest::Test
 
   # The bare default on a rendered target (Johann 2026-11-07): a plain /fix over a RAILS
   # path reads the rendered surface — layout, browser checks, screenshots, visual review —
-  # alongside the code passes, but asks for no research/architecture and no grouped repair.
+  # alongside grouped visual repair and elevation, without unrelated research/architecture.
   def test_standard_is_the_rendered_target_default_and_sees_the_pages
     assert Lane.runs?(:code_passes, :standard)
     assert Lane.runs?(:improve_code, :standard), "the rendered-target default must also run polish discovery"
-    %i[layout_sweep browser_checks screenshot_sweep visual_pass].each do |stage|
+    %i[layout_sweep browser_checks screenshot_sweep visual_pass visual_groups improve_visual].each do |stage|
       assert Lane.runs?(stage, :standard), "standard lane must run #{stage}"
     end
-    %i[research architecture visual_groups].each do |stage|
+    %i[research architecture].each do |stage|
       refute Lane.runs?(stage, :standard), "standard lane must skip #{stage}"
     end
   end
