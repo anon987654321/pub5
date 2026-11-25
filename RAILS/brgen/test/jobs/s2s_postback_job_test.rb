@@ -144,7 +144,7 @@ class S2sPostbackJobTest < ActiveJob::TestCase
     end
 
     uri, options = calls.fetch(0)
-    assert_equal "https://sync.revcontent.com/api/postback", uri.to_s.split("?").first
+    assert_equal Shared::S2sPostbackJob::REVCONTENT_URL, uri.to_s.split("?").first
     assert_equal 16_384, options.fetch(:max_body)
     assert_equal 3, options.fetch(:open_timeout)
     assert_equal 5, options.fetch(:read_timeout)
