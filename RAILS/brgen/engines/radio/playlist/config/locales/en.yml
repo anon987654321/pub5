@@ -11,6 +11,9 @@
 en:
   playlist:
     pause: "Pause"
+    recording_unavailable: "This recording is not available for playback."
+    audio_history: "Previous mixes"
+    restore_version: "Restore this mix"
     track_held_for_review: "This track is hidden while a moderator looks at a report about it."
     dock_label: "Now playing, across pages"
     status_buffering: "Buffering…"

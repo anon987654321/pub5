@@ -89,6 +89,33 @@ class PlaylistRefinementsTest < ActionDispatch::IntegrationTest
     assert_select ".radio-track-card-share", count: 1
   end
 
+  test "deleted creators' public recordings cannot be opened or counted" do
+    track = track_for(@owner)
+    @owner.update_columns(deletion_scheduled_at: 7.days.from_now)
+    sign_in_as(@friend)
+
+    get playlist.hosted_track_path(track)
+    assert_response :not_found
+    assert_no_difference -> { Playlist::Listen.count } do
+      post playlist.listens_path, params: { track_id: track.id }
+    end
+    assert_response :not_found
+  end
+
+  test "an owner can restore an old mix without losing the newer one" do
+    track = Playlist::Track.create!(title: "Mix", user: @owner, privacy: "private")
+    track.audio_file.attach(upload_audio("first.mp3"))
+    track.replace_audio!(upload_audio("second.mp3"), actor: @owner)
+    version = track.audio_versions.first
+    sign_in_as(@owner)
+
+    assert_difference -> { Playlist::AudioVersion.count }, 1 do
+      patch playlist.hosted_track_path(track), params: { track: { restore_version_id: version.id } }
+    end
+    assert_redirected_to playlist.hosted_track_path(track)
+    assert_equal "first.mp3", Playlist::Track.with_attached_audio_file.find(track.id).audio_file.filename.to_s
+  end
+
   test "a replay inside the window is not a second play" do
     track = track_for(@owner)
     sign_in_as(@friend)

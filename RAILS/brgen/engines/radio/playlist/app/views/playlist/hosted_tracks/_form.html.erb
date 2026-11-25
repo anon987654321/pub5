@@ -17,6 +17,11 @@
   </div>
 
   <div class="field">
+    <%= form.label :genre, t("playlist.genre_filter") %>
+    <%= form.text_field :genre, maxlength: 80 %>
+  </div>
+
+  <div class="field">
     <%= form.label :source_type %>
     <%= form.select :source_type,
           Playlist::Track::SOURCE_TYPES.map { |type| [t("playlist.source_types.#{type}"), type] },

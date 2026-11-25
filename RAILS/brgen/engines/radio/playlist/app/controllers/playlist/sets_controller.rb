@@ -39,7 +39,7 @@ class Playlist::SetsController < ApplicationController
   def show
     # Tracks come off the preloaded rows rather than @set.tracks: the set is
     # strict-loaded, so reading the through association raises.
-    @set_tracks = @set.set_tracks.includes(:user, track: [ { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
+    @set_tracks = @set.set_tracks.includes(:user, track: [ :user, { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
     @set_tracks = @set_tracks.select { |entry| entry.track.playable_by?(Current.user) }
     @tracks = @set_tracks.map(&:track)
     @dilla_sketches = @set.dilla_sketches.recent.includes(:user)

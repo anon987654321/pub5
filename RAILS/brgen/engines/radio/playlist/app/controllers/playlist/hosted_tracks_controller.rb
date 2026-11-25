@@ -28,6 +28,7 @@ class Playlist::HostedTracksController < Playlist::BaseController
 
   def show
     @comments = @track.timestamped_comments.chronological.limit(200)
+    @versions = @track.audio_versions.with_attached_audio_file.recent.limit(30) if Current.user&.id == @track.user_id
   end
 
   def new
@@ -64,8 +65,15 @@ class Playlist::HostedTracksController < Playlist::BaseController
     # Validated first and written together: a rejected title used to have
     # already swapped the audio and left an audio_version row behind.
     replacement = params.dig(:track, :audio_file).presence
+    if (version_id = params.dig(:track, :restore_version_id).presence)
+      version = @track.audio_versions.with_attached_audio_file.find(version_id)
+      return head :unprocessable_entity unless version.audio_file.attached? && replacement.blank?
+
+      replacement = version.audio_file.blob
+    end
     Playlist::Track.transaction do
       @track.replace_audio!(replacement, actor: Current.user) if replacement
+      @track.artwork.attach(params[:track][:artwork]) if params.dig(:track, :artwork).present?
       @track.save!
     end
 
@@ -74,13 +82,13 @@ class Playlist::HostedTracksController < Playlist::BaseController
 
   def destroy
     @track.destroy
-    redirect_to hosted_tracks_path, notice: t("playlist.track_deleted")
+    redirect_to hosted_tracks_path(mine: "1"), notice: t("playlist.track_deleted")
   end
 
   private
 
   def set_track
-    @track = Playlist::Track.find(params[:id])
+    @track = Playlist::Track.includes(:user, audio_file_attachment: :blob, artwork_attachment: :blob).find(params[:id])
     return if track_visible_to_viewer?
 
     raise ActiveRecord::RecordNotFound

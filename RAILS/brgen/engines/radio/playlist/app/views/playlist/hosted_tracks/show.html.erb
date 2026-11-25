@@ -4,6 +4,7 @@
   <p class="radio-back-link"><%= link_to t("playlist.more_from_creator"), hosted_tracks_path(creator: @track.user_id) %></p>
 <% end %>
 
+<% if @track.playable_by?(Current.user, direct_link: true) %>
 <%= render "playlist/playlists/player",
       playlist: @track,
       playlist_name: @track.title,
@@ -13,6 +14,10 @@
       active_track: @track,
       comments: @comments.map { |c| { time: (c.timestamp_seconds || 0).to_f, text: c.body } },
       track_comments: { @track.id => @comments.map { |c| { time: (c.timestamp_seconds || 0).to_f, text: c.body } } } %>
+<% else %>
+  <h1><%= @track.title %></h1>
+  <%= tag.p t("playlist.recording_unavailable"), role: "status" %>
+<% end %>
 
 <%# A copyright, abuse or illegal-content report hides the track from everyone
     but its owner until a moderator decides (ModerationWorkflow::HOLD_REASONS). %>
@@ -28,6 +33,20 @@
       <%= link_to t("actions.edit"), edit_hosted_track_path(@track), class: "button button-ghost" %>
       <%= button_to t("actions.delete"), hosted_track_path(@track), method: :delete, data: { turbo_confirm: t("actions.confirm_delete") }, class: "button button-danger" %>
     </div>
+    <% if @versions.any? %>
+      <h2><%= t("playlist.audio_history") %></h2>
+      <ol>
+        <% @versions.each do |version| %>
+          <li>
+            <%= version.original_filename %> · <%= l(version.created_at.to_date) %>
+            <% if version.audio_file.attached? && @track.playable_by?(Current.user) %>
+              <%= audio_tag main_app.url_for(version.audio_file), controls: true, preload: "none" %>
+              <%= button_to t("playlist.restore_version"), hosted_track_path(@track), method: :patch, params: { track: { restore_version_id: version.id } }, class: "button button-ghost" %>
+            <% end %>
+          </li>
+        <% end %>
+      </ol>
+    <% end %>
   </section>
 <% end %>
 

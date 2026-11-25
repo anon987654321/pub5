@@ -49,15 +49,21 @@ class Playlist::Track < ApplicationRecord
 
   def visible_to?(viewer)
     return true if viewer.present? && user_id == viewer.id
-    return false if expired? || review_held_at.present?
+    return false if expired? || review_held_at.present? || !active_owner?
 
-    privacy.to_s.in?(["", "public"])
+    privacy == "public"
   end
 
   def playable_by?(viewer, direct_link: false)
-    return false if expired? || review_held_at.present?
+    return false if expired? || review_held_at.present? || !active_owner?
 
     visible_to?(viewer) || (direct_link && privacy == "unlisted")
+  end
+
+  def active_owner?
+    return false unless user_id
+    owner = association(:user).loaded? ? user : User.find_by(id: user_id)
+    owner.present? && owner.deleted_at.nil? && owner.deletion_scheduled_at.nil?
   end
 
   def duration_formatted

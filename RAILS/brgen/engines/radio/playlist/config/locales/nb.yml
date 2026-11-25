@@ -11,6 +11,9 @@
 nb:
   playlist:
     pause: "Pause"
+    recording_unavailable: "Dette opptaket er ikke tilgjengelig for avspilling."
+    audio_history: "Tidligere mikser"
+    restore_version: "Gjenopprett denne miksen"
     track_held_for_review: "Sporet er skjult mens en moderator ser på en rapport om det."
     dock_label: "Spilles nå, på tvers av sider"
     status_buffering: "Laster inn …"

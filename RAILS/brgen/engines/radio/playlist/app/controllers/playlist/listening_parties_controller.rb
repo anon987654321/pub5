@@ -45,18 +45,18 @@ class Playlist::ListeningPartiesController < Playlist::BaseController
     private
 
     def shareable_tracks
-      @set.tracks.order(:position).select { |track| track.playable_by?(nil) }
+      @set.tracks.includes(:user, audio_file_attachment: :blob).order(:position).select { |track| track.playable_by?(nil) }
     end
 
     def set_set
       party = { listening_party: { current_track: :audio_file_attachment } }
-      @set = Playlist::Set.includes(party, :tracks).find(params[:set_id])
+      @set = Playlist::Set.includes(party, :tracks, :user).find(params[:set_id])
       raise ActiveRecord::RecordNotFound unless set_visible_to_viewer?
     end
 
     def set_visible_to_viewer?
       case @set.privacy.to_s
-      when "", "public", "unlisted" then true
+      when "", "public", "unlisted" then @set.user.present? && @set.user.deleted_at.nil? && @set.user.deletion_scheduled_at.nil?
       # Anything not named public is private: a privacy value outside the list
       # reached the database some way other than the form, and a typo must not
       # publish a set its owner hid.

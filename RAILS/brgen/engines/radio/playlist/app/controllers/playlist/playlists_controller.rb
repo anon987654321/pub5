@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class Playlist::PlaylistsController < Playlist::BaseController
-    include Playlist::OwnerVisibility
+  include Playlist::OwnerVisibility
   include Playlist::WaveformComments
   allow_unauthenticated_access only: %i[index show embed]
   before_action :require_user_session, only: %i[new create analytics]
@@ -47,7 +47,7 @@ class Playlist::PlaylistsController < Playlist::BaseController
   end
 
   def embed
-    @tracks = playlist_tracks
+    @tracks = playlist_tracks(viewer: nil)
     @embed_options = {
       color: embed_color,
       show_artwork: params[:show_artwork] != "0",
@@ -112,10 +112,10 @@ class Playlist::PlaylistsController < Playlist::BaseController
     params.require(:playlist).permit(:name, :description, :public_access, :collaborative)
   end
 
-  def playlist_tracks
+  def playlist_tracks(viewer: Current.user)
     @playlist.playlist_tracks.joins(:track).merge(Playlist::Track.unexpired)
-             .includes(track: [ { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
-             .select { |entry| entry.track.playable_by?(Current.user) }
+             .includes(track: [ :user, { audio_file_attachment: :blob }, { artwork_attachment: :blob } ])
+             .select { |entry| entry.track.playable_by?(viewer) }
   end
 
   # The canvas fillStyle wants a CSS colour; the embed links pass bare hex
