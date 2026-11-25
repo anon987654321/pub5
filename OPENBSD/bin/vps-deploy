@@ -434,6 +434,28 @@ log() {
 
 # The fleet receipt is ordinary root-owned data. The focused Records library
 # validates its schema and publishes it atomically; it has no command-dispatch API.
+# Defined before set_stage start: a child deploy inherits VPS_DEPLOY_RUN_ID,
+# so its first receipt write runs before the rest of this file is read, and
+# records_call further down was "command not found" (vm23, 2026-11-25).
+records_call() {
+  "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
+    repo, action, *args = ARGV
+    records = Deploy::Records.new(repo_root: repo)
+    case action
+    when "write"
+      records.write(args.fetch(0), args.fetch(1))
+    when "read"
+      puts JSON.generate(records.read(args.fetch(0)))
+    when "list"
+      puts JSON.generate(records.all)
+    when "stamp"
+      records.write_stamp(*args)
+    else
+      abort "unknown deployment-record operation"
+    end
+  ' "$repo" "$@"
+}
+
 write_deploy_run_receipt() {
   [[ -n ${VPS_DEPLOY_RUN_ID:-} ]] || return 0
   local payload
@@ -565,25 +587,6 @@ admin_service() {
   }
   (( $# == 1 )) || { print -u2 "vps-deploy: one service argument required"; return 64; }
   "/usr/sbin/rcctl" "$action" "$service"
-}
-
-records_call() {
-  "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
-    repo, action, *args = ARGV
-    records = Deploy::Records.new(repo_root: repo)
-    case action
-    when "write"
-      records.write(args.fetch(0), args.fetch(1))
-    when "read"
-      puts JSON.generate(records.read(args.fetch(0)))
-    when "list"
-      puts JSON.generate(records.all)
-    when "stamp"
-      records.write_stamp(*args)
-    else
-      abort "unknown deployment-record operation"
-    end
-  ' "$repo" "$@"
 }
 
 admin_request() {

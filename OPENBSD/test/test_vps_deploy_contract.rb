@@ -1210,6 +1210,12 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes stage, "failed to persist recovery receipt"
   end
 
+  # A child deploy inherits the run id, so its first receipt write happens at
+  # `set_stage start`; records_call must already be defined by then.
+  def test_records_call_is_defined_before_the_first_receipt_write
+    assert_operator SOURCE.index("\nrecords_call() {"), :<, SOURCE.index("\nset_stage start")
+  end
+
   def test_recovery_plan_is_explicit_and_never_deploys_or_checks_out_code
     recovery = SOURCE[/# Operator-driven recovery is intentionally separate from deploy\..*?(?=^# Pin the commit, prove it boots, record what is running\.)/m]
     refute_nil recovery
