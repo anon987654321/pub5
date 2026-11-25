@@ -7,22 +7,7 @@
   "use strict";
 
   const PROFILES = Object.freeze([
-    { id: "abelam-shield", name: "Abelam Shield", family: "Abelam / East Sepik", note: "Stepped shield silhouette and nested planes", outer: "box", w: .40, h: .54, jaw: .25, crown: .42, asym: .00, brow: .34, nose: .40 },
-    { id: "abelam-prow", name: "Abelam Prow", family: "Abelam / East Sepik", note: "Tall prow with a tapered lower face", outer: "box", crownAxis: "y", w: .29, h: .62, jaw: .12, crown: .28, asym: .02, brow: .27, nose: .52 },
-    { id: "iatmul-river", name: "Iatmul Mai — Long Face", family: "Iatmul / Middle Sepik", note: "Elongated human-face proportions; original particle study only", outer: "ring", w: .32, h: .62, jaw: .18, crown: .22, asym: .00, brow: .33, nose: .48, mouth: .19 },
-    { id: "iatmul-concentric", name: "Iatmul Human Face", family: "Iatmul / East Sepik", note: "Broad oval, readable human-face proportions; original particle study only", outer: "ring", w: .42, h: .58, jaw: .25, crown: .38, asym: .00, brow: .40, nose: .38, mouth: .26 },
-    { id: "sepik-split", name: "Iatmul Mwai", family: "Iatmul / Middle Sepik", note: "Long oval human face with a strong bridge; original particle study only", outer: "ring", w: .36, h: .61, jaw: .20, crown: .34, asym: .02, brow: .36, nose: .50, mouth: .20 },
-    { id: "elema-tower", name: "Elema Spirit Tower", family: "Elema / Gulf", note: "High forehead and low-set features", outer: "cylinder", crownAxis: "y", w: .33, h: .64, jaw: .17, crown: .25, asym: .01, brow: .30, nose: .47 },
-    { id: "elema-hollow", name: "Elema Eharo Human Face", family: "Elema / Gulf Province", note: "Broad human-face planes; original particle study only", outer: "ring", w: .43, h: .55, jaw: .28, crown: .34, asym: .00, brow: .42, nose: .42, mouth: .28 },
-    { id: "tatanua-crest", name: "Tatanua Human Face", family: "New Ireland", note: "Balanced oval human-face proportions; no crest or ornament is copied", outer: "ring", w: .40, h: .55, jaw: .24, crown: .40, asym: .01, brow: .38, nose: .39, mouth: .25 },
-    { id: "malangan-double", name: "Malangan Double Visage", family: "New Ireland", note: "Nested inner and outer face contours", outer: "ring", inner: true, w: .44, h: .54, jaw: .27, crown: .39, asym: .02, brow: .38, nose: .39 },
-    { id: "woven-void", name: "Woven Void", family: "Original synthesis", note: "Open lattice rhythm; voids carry the expression", outer: "ring", lattice: true, w: .41, h: .51, jaw: .24, crown: .38, asym: .00, brow: .33, nose: .34 },
-    { id: "mak-yong-court", name: "Mak Yong Court", family: "Malay theatre / Kelantan", note: "Composed brows, narrow eyes and restrained mouth", outer: "sphere", w: .37, h: .48, jaw: .22, crown: .34, asym: .00, brow: .40, nose: .31 },
-    { id: "mak-yong-character", name: "Mak Yong Character", family: "Malay theatre / Kelantan", note: "Sharper brow and expressive cheek planes", outer: "box", w: .40, h: .50, jaw: .23, crown: .35, asym: .04, brow: .45, nose: .36 },
-    { id: "mek-mulung-hero", name: "Mek Mulung Hero", family: "Malay theatre / Kedah", note: "Strong brow and broad cheek structure", outer: "sphere", w: .44, h: .49, jaw: .28, crown: .37, asym: .02, brow: .46, nose: .35 },
-    { id: "jikey-comic", name: "Jikey Comic", family: "Malay theatre / Kedah–Perlis", note: "Playful compressed proportions and broad expression", outer: "sphere", w: .48, h: .42, jaw: .34, crown: .36, asym: .06, brow: .48, nose: .27 },
-    { id: "mah-meri-organic", name: "Mah Meri Carved Form", family: "Orang Asli / Mah Meri", note: "Organic silhouette with softened planes", outer: "sphere", w: .40, h: .50, jaw: .26, crown: .36, asym: .03, brow: .35, nose: .34 },
-    { id: "jah-hut-angular", name: "Jah Hut Angular Form", family: "Orang Asli / Jah Hut", note: "Faceted profile with angular cheek transitions", outer: "box", w: .38, h: .52, jaw: .18, crown: .37, asym: .02, brow: .42, nose: .43 }
+    { id: "iatmul-river", name: "MASTER — Sepik study", family: "Original Iatmul-inspired study", note: "Operator-approved sparse elongated sculpture; not a museum scan", outer: "ring", w: .36, h: .62, jaw: .18, crown: .22, asym: .025, brow: .33, nose: .48, mouth: .23 }
   ]);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
@@ -68,22 +53,7 @@
   // Profiles vary independently in silhouette, eye voids, cheek fullness,
   // bridge depth and mouth proportions. All coordinates remain bounded.
   const RELIEF = Object.freeze({
-    "abelam-shield":    [.14, 2.8, .25, .14, .12, .075, .20, .12],
-    "abelam-prow":      [.42, 2.2, .34, .19, .10, .050, .28, .06],
-    "iatmul-river":     [.47, 1.7, .43, .17, .10, .055, .32, .08],
-    "iatmul-concentric":[.06, 2.0, .18, .22, .15, .095, .17, .22],
-    "sepik-split":      [.30, 2.6, .38, .19, .13, .048, .30, .13],
-    "elema-tower":      [.32, 3.2, .49, .17, .13, .055, .24, .05],
-    "elema-hollow":     [-.12,2.5, .10, .23, .19, .105, .14, .30],
-    "tatanua-crest":    [.22, 2.1, .28, .19, .12, .075, .20, .16],
-    "malangan-double":  [.10, 2.4, .24, .21, .13, .075, .18, .26],
-    "woven-void":       [.20, 1.8, .20, .21, .16, .090, .16, .10],
-    "mak-yong-court":   [.27, 2.0, .26, .18, .11, .040, .12, .12],
-    "mak-yong-character":[.21,2.8,.20, .20, .13, .065, .20, .16],
-    "mek-mulung-hero":  [.00, 2.4, .22, .23, .13, .060, .19, .24],
-    "jikey-comic":      [-.16,2.2, .12, .23, .16, .100, .10, .25],
-    "mah-meri-organic": [.13, 1.6, .25, .20, .14, .080, .17, .20],
-    "jah-hut-angular":  [.35, 3.0, .31, .18, .12, .045, .24, .12]
+    "iatmul-river": [.37, 2.0, .33, .17, .105, .065, .30, .075]
   });
   const randomUnit = (index, salt) => {
     let n = Math.imul((index + 1) ^ Math.imul(salt + 1, 0x9e3779b1), 0x85ebca6b);
@@ -120,7 +90,7 @@
       const bridge = gaussian(a, .035 + noseDepth * .12) * gaussian(b + .025, p.nose * .64);
       const cheek = gaussian(absX - p.w * .60, .095) * gaussian(b + .12, .18);
       const rim = gaussian(eye - 1.22, .65) + gaussian(lip - 1.24, .78);
-      return .035 + .11 * Math.sqrt(Math.max(0, 1 - edge * edge)) + noseDepth * bridge +
+      return .035 + .18 * Math.sqrt(Math.max(0, 1 - edge * edge)) + noseDepth * bridge +
         .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
     };
     const h = .006;
@@ -128,7 +98,7 @@
     const dy = (height(x, y + h) - height(x, y - h)) / (2 * h);
     const length = Math.hypot(dx, dy, 1);
     if (z < 0) {
-      const nx = x / (p.w * p.w), ny = y / (p.h * p.h), nz = z / (.24 * .24);
+      const nx = x / (p.w * p.w), ny = y / (p.h * p.h), nz = z / (.36 * .36);
       const magnitude = Math.hypot(nx, ny, nz) || 1;
       return [nx / magnitude, ny / magnitude, nz / magnitude];
     }
@@ -165,14 +135,14 @@
       const bridge = gaussian(x, .035 + noseDepth * .12) * gaussian(y + .025, p.nose * .64);
       const cheek = gaussian(absoluteX - w * .60, .095) * gaussian(y + .12, .18);
       const rim = gaussian(eye - 1.22, .65) + gaussian(mouth - 1.24, .78);
-      const relief = .035 + .11 * Math.sqrt(Math.max(0, 1 - edge * edge)) +
+      const relief = .035 + .18 * Math.sqrt(Math.max(0, 1 - edge * edge)) +
         noseDepth * bridge + .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
       const light = Math.min(1, .19 + .29 * edge + .35 * bridge + .22 * brow + .18 * rim + .30 * cheek);
       // A minority of stable carriers describes the curved rear shell.
       // Keep the same projected apertures through both sides of the mask.
-      const rear = index % 4 === 0;
+      const rear = index % 3 === 0;
       if (!rear && randomUnit(index, salt + 2) > light) continue;
-      const z = rear ? -.24 * Math.sqrt(Math.max(0, 1 - edge * edge)) * width
+      const z = rear ? -.36 * Math.sqrt(Math.max(0, 1 - edge * edge)) * width
         : relief + (randomUnit(index, salt + 3) - .5) * .028;
       return [x, y, z];
     }
@@ -187,13 +157,7 @@
     for (const char of String(value)) h = Math.imul(h ^ char.charCodeAt(0), 16777619);
     return h >>> 0;
   }
-  const ROTATION_PROFILE_IDS = Object.freeze([
-    "iatmul-concentric",
-    "iatmul-river",
-    "sepik-split",
-    "tatanua-crest",
-    "elema-hollow"
-  ]);
+  const ROTATION_PROFILE_IDS = Object.freeze(["iatmul-river"]);
 
   function profileIndex(id) {
     return PROFILES.findIndex((profile) => profile.id === String(id));
@@ -233,7 +197,7 @@
       ? window.MASTER_FACE_MASK_CHARACTERS : {};
     const characterRotation = Array.isArray(window.MASTER_FACE_MASK_CHARACTER_ROTATION)
       ? window.MASTER_FACE_MASK_CHARACTER_ROTATION : [];
-    const characterId = characterRotation[ROTATION_PROFILE_IDS.indexOf(profile.id)];
+    const characterId = characterRotation.length ? characterRotation[hash(activeKey) % characterRotation.length] : null;
     const character = characterId && characters[String(characterId)] &&
       typeof characters[String(characterId)] === "object"
       ? characters[String(characterId)] : null;
