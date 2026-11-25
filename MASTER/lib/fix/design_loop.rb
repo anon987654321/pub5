@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "tmpdir"
 require "json"
 require "securerandom"
 require_relative "../io/exec"
@@ -29,9 +30,8 @@ module Master
       TIE = 0.05
       OTHERS_TOLERANCE = 1.0
       STALL_LIMIT = 4
-      TRIES_PER_SURFACE = 2
+      TRIES_PER_SURFACE = DesignPrompts::VARIANTS.size
       MIN_PAGE_TOKENS = 8
-      GUARDS = 4
       SHARED = "/RAILS/__shared/"
       MARKUP_FILES = 2
       Round = Data.define(:number, :surface, :why, :outcome, :before, :after)
@@ -116,10 +116,13 @@ module Master
       def attempt(number)
         return give_up(number) unless refresh
 
-        best = candidates.filter_map { |edit| trial(edit) }.max_by { |tried| tried[:gain] }
-        return give_up(number) unless best
+        Dir.mktmpdir("master-design-") do |directory|
+          accepted = candidates.each_with_index.filter_map { |edit, index| trial(edit, capture: File.join(directory, "#{index}.png")) }
+          best = accepted.reduce { |left, right| prefer_candidate(left, right) }
+          return give_up(number) unless best
 
-        keep(number, best)
+          keep(number, best)
+        end
       end
 
       # A fresh baseline for the target and its guards at the start of every round. A
@@ -252,7 +255,7 @@ module Master
       # Every temporary source mutation is a durable transaction. A process
       # exit during measurement leaves an open manifest that the next design
       # run or /fix can recover, rather than an unowned candidate in the tree.
-      def trial(edit)
+      def trial(edit, capture: nil)
         transaction = nil
         candidate = nil
         verdict = nil
@@ -265,7 +268,10 @@ module Master
             verdict = judge(@fresh, after)
             @say.call("#{@target[:surface].id}: #{edit.why} -> #{verdict[:text]}")
             if verdict[:ok]
+              target = after.find { |row| row[:surface].id == @target[:surface].id }
+              FileUtils.cp(target.fetch(:shot), capture) if capture
               candidate = {
+                capture:,
                 edit:, gain: verdict[:gain], after:,
                 source_hash: transaction.snapshot_content_hash(edit.file),
                 candidate_hash: transaction.observed_content_hash(edit.file),
@@ -426,11 +432,23 @@ module Master
       # The target plus a few others spread across the set: a stylesheet edit is
       # re-measured on a sample, not on every surface, or one round would take hours.
       def guards
-        others = @state.reject { |row| row[:surface].id == @target[:surface].id }
-        step = [others.size / GUARDS, 1].max
-        chosen = [@target, *others.each_slice(step).map(&:first).first(GUARDS)]
-        covered = chosen.map { |row| row[:surface].app }
-        chosen + others.reject { |row| covered.include?(row[:surface].app) }.uniq { |row| row[:surface].app }
+        @state
+      end
+
+      # Compare eligible alternatives directly; geometry breaks only a visual tie.
+      def prefer_candidate(left, right)
+        verdict = JSON.parse(@world.ask.call(alternative_prompt, [left.fetch(:capture), right.fetch(:capture)])[/\{.*\}/m].to_s)
+        return left if verdict["why"].to_s.strip.empty?
+
+        case verdict["better"].to_s.upcase
+        when "A" then left
+        when "B" then right
+        when "SAME" then left[:gain] >= right[:gain] ? left : right
+        else left
+        end
+      rescue StandardError => e
+        @say.call("alternative comparison inconclusive: #{e.class}")
+        left
       end
 
       def judge(before, after)
@@ -503,8 +521,11 @@ module Master
         @judged += 1
         order = @judged.odd? ? [@before_shot, now[:shot]] : [now[:shot], @before_shot]
         verdict = JSON.parse(@world.ask.call(vision_prompt, order)[/\{.*\}/m].to_s)
-        @vision = "vision: #{verdict['better']}, #{verdict['why']}".strip
-        !verdict["why"].to_s.strip.empty? && verdict["better"].to_s.upcase == (order.first == now[:shot] ? "A" : "B")
+        preferred = verdict["better"].to_s.upcase
+        candidate = order.first == now[:shot] ? "A" : "B"
+        relation = preferred == candidate ? "candidate preferred" : preferred == "SAME" ? "no improvement" : "baseline preferred"
+        @vision = "vision: #{relation}, #{verdict['why']}".strip
+        !verdict["why"].to_s.strip.empty? && preferred == candidate
       rescue JSON::ParserError, StandardError
         @vision = "vision: no verdict"
         false

@@ -290,6 +290,19 @@ class TestDesignLoop < Minitest::Test
       requests = prompts.select { |prompt| prompt.include?("Make ONE edit") }
       assert requests.any? { |prompt| prompt.include?("Macro: strengthen") }
       assert requests.any? { |prompt| prompt.include?("Meso: refine") }
+      assert requests.any? { |prompt| prompt.include?("Micro: refine") }
+    end
+  end
+
+  def test_visual_preference_outranks_numerical_gain_between_candidates
+    with_sheet do |path|
+      world = world_for(path, committed: []).with(ask: ->(_prompt, _images) { '{"better":"B","why":"better proportion"}' })
+      runner = LOOP.new(plan: LOOP::Plan.new(surfaces: [], root: File.dirname(path), rounds: 1, candidates: 2), world:)
+      runner.define_singleton_method(:alternative_prompt) { "compare" }
+      left = { gain: 20.0, capture: "a.png" }
+      right = { gain: 1.0, capture: "b.png" }
+
+      assert_equal right, runner.send(:prefer_candidate, left, right)
     end
   end
 
@@ -689,7 +702,7 @@ class TestDesignLoop < Minitest::Test
       stub_scoring do
         loop_for(path, committed:, surfaces:, seen:).run
 
-        assert_includes seen[1], "amber/home"
+        assert_equal surfaces.map(&:id).sort, seen[1].sort
       end
     end
   end

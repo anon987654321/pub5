@@ -48,6 +48,10 @@ module Master
         TEXT
       end
 
+      def alternative_prompt
+        "#{vision_prompt}\nBoth are eligible alternatives to the same baseline. Prefer the stronger composition, not the larger numerical gain."
+      end
+
       def prompt(sources, variant)
         <<~TEXT
           The image is the current render of #{@target[:surface].id}.
