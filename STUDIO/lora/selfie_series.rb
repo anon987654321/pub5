@@ -74,6 +74,14 @@ module Studio
         record("series_start", series_id:, count: total, inference_profile: @series.inference_profile,
                engine: @series.engine, reference_photographs: @reference_files.length, direction: @direction)
         total.times do |index|
+          sitting = index + 1
+          kept = replace ? nil : developed_sitting(sitting)
+          if kept
+            record("sitting_kept", series_id:, index:, sitting:, path: kept)
+            rendered << kept
+            next
+          end
+
           recipe = if @scenes
                      { "scene" => @scenes[index % @scenes.size], "preset" => "house", "sitting" => index + 1 }
                    else
@@ -107,6 +115,16 @@ module Studio
         end
 
         rendered
+      end
+
+      # A sitting already developed is that sitting. Rerunning a series must not
+      # buy the same frame twice, so a run fills in the sittings the subject
+      # does not have yet and leaves the rest alone.
+      def developed_sitting(sitting)
+        marker = "_#{@subject}_selfie_#{format("%02d", sitting)}_"
+        Dir.glob(File.join(@directory, "postpro_*_selfie_#{format("%02d", sitting)}_*.{png,jpg,jpeg,webp}"))
+           .select { |path| File.basename(path).include?(marker) }
+           .max
       end
 
       # Motion for the promo. One image-to-video call per clip, each starting on

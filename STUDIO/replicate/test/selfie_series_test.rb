@@ -635,4 +635,27 @@ class TestSelfieSeries < Minitest::Test
     box = Studio::Visual::SelfieSeries.new(subject: "probe", directory:)
     assert_equal raw, box.latest_still
   end
+
+  # A rerun fills in the sittings the subject does not have. Sitting one is
+  # already developed, so it must not be bought again.
+  def test_a_rerun_keeps_the_sitting_it_already_has
+    box = series
+    first = run_series(box, count: 1)
+    assert_equal 1, first.length
+
+    second = run_series(box, count: 1)
+    assert_equal first, second, "the rerun must return the sitting it already has"
+    assert_equal 1, ledger_rows("render").length, "no second render may be recorded"
+    assert_equal 1, ledger_rows("sitting_kept").length
+  end
+
+  def test_a_rerun_still_renders_the_sitting_the_subject_lacks
+    box = series
+    run_series(box, count: 1)
+    rendered = run_series(box, count: 2)
+
+    assert_equal 2, rendered.length
+    refute_equal rendered[0], rendered[1]
+    assert_equal 2, ledger_rows("render").length
+  end
 end
