@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 module Shared
+  # The public pages every app serves without an account. Plain data here, not on
+  # PagesController: routes/legal.rb read PagesController::PAGES, so drawing routes
+  # loaded the controller, whose allow_unauthenticated_access asks the database
+  # for User.column_names, and no production boot could draw routes without a
+  # migrated database. The workstation asset build failed on it (2026-11-25).
+  LEGAL_PAGES = %w[privacy terms cookies safety rules].freeze
+
   class Engine < ::Rails::Engine
     isolate_namespace Shared
     # Use << not += — Rails 8.2 freezes path arrays during engine boot; += breaks later engines.

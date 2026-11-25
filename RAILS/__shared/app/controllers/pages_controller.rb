@@ -3,9 +3,9 @@
 # Privacy / terms / cookies for every host app. Public by design — a privacy
 # policy behind a login helps no one. Content lives in the views.
 class PagesController < ApplicationController
-  # The public pages every app serves without an account; config/routes/legal.rb
-  # draws a route for each.
-  PAGES = %w[privacy terms cookies safety rules].freeze
+  # config/routes/legal.rb draws a route for each (Shared::LEGAL_PAGES, in
+  # shared/engine.rb, says why the list lives outside this class).
+  PAGES = Shared::LEGAL_PAGES
 
   # The day the privacy, terms and cookies pages last changed, once for every
   # locale: each locale used to hand-type its own copy of the date.
