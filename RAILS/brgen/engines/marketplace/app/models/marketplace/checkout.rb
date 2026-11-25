@@ -50,7 +50,20 @@ class Marketplace::Checkout < ApplicationRecord
   def payable? = status.in?(%w[open pending_payment]) && order_lines.any?
 
   # A basket already sent to the PSP is payable (webhook) but not startable.
-  def startable? = status == "open" && order_lines.any?
+  def startable?
+    status == "open" && self.class.inventory_available_for?(order_lines.includes(:listing, :variant))
+  end
+
+  # Individual cart lines can each fit stock while their combined quantities
+  # do not. Check the exact inventory unit before any PSP is contacted.
+  def self.inventory_available_for?(orders)
+    rows = orders.to_a
+    return false if rows.empty? || !rows.all?(&:startable?)
+
+    rows.group_by { |order| [order.listing_id, order.variant_id] }.values.all? do |lines|
+      lines.first.quantity_available?(lines.sum(&:quantity))
+    end
+  end
 
   def total_display = Shared::MoneyDisplay.format(total_cents, currency)
 

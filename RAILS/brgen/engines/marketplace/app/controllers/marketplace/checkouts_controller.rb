@@ -56,6 +56,11 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
       return
     end
 
+    if payable.is_a?(Array) && !Marketplace::Checkout.inventory_available_for?(payable)
+      redirect_to cart_path, alert: t("marketplace.checkout_errors.stock_changed")
+      return
+    end
+
     if payable.is_a?(Array) && payable.map(&:payment_currency).uniq.size > 1
       redirect_to cart_path, alert: t("marketplace.checkout_errors.mixed_currency")
       return
@@ -173,7 +178,7 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
   # landing.vipps.no in production and a -mt variant in test.
   def provider_url?(provider, url)
     uri = URI.parse(url.to_s)
-    return false unless uri.is_a?(URI::HTTPS) && uri.host.present?
+    return false unless uri.is_a?(URI::HTTPS) && uri.host.present? && uri.userinfo.nil? && uri.port == 443
 
     PROVIDER_HOSTS.fetch(provider, []).any? { |host| uri.host == host || uri.host.end_with?(".#{host}") }
   rescue URI::InvalidURIError
@@ -225,7 +230,7 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
   # The basket is what the cart shows. An accepted offer is paid from its own
   # order page (single-order lane), not swept into a basket the buyer never saw.
   def payable_orders
-    Current.user.marketplace_orders.includes(listing: :store).select { _1.startable? && _1.status != "accepted" }
+    Current.user.marketplace_orders.cart_lines.includes(:variant, listing: :store).to_a
   end
 
   # Everything payable gathered under one Checkout. The address is required: a
@@ -238,26 +243,28 @@ class Marketplace::CheckoutsController < Marketplace::BaseController
       return nil
     end
 
-    checkout = Current.user.marketplace_checkouts.create!(
-      marketplace_address: address,
-      currency: orders.first.payment_currency,
-    )
-    orders.each do |order|
-      added_to_checkout = order.marketplace_checkout_id.blank?
-      order.update!(marketplace_checkout_id: checkout.id)
-      next unless added_to_checkout
-
-      listing = Marketplace::Listing.strict_loading(false).find_by(id: order.listing_id)
-      listing&.record_activity!(
-        "MarketplaceCartAdded",
-        actor: Current.user,
-        source_vertical: "marketplace",
-        visibility: "private",
-        metadata: { checkout_id: checkout.id },
+    Marketplace::Checkout.transaction do
+      checkout = Current.user.marketplace_checkouts.create!(
+        marketplace_address: address,
+        currency: orders.first.payment_currency,
       )
+      orders.each do |order|
+        added_to_checkout = order.marketplace_checkout_id.blank?
+        order.update!(marketplace_checkout_id: checkout.id)
+        next unless added_to_checkout
+
+        listing = Marketplace::Listing.strict_loading(false).find_by(id: order.listing_id)
+        listing&.record_activity!(
+          "MarketplaceCartAdded",
+          actor: Current.user,
+          source_vertical: "marketplace",
+          visibility: "private",
+          metadata: { checkout_id: checkout.id },
+        )
+      end
+      checkout.recalculate!
+      checkout
     end
-    checkout.recalculate!
-    checkout
   end
 
   def find_payable_order

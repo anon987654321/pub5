@@ -48,11 +48,12 @@ class Marketplace::CartsController < Marketplace::BaseController
 
   def load_cart
     @cart_items = Current.user.marketplace_orders
-                         .where(status: "pending")
+                         .cart_lines
                          .includes(:variant, listing: [ :user, { photos_attachments: :blob } ])
                          .order(created_at: :desc)
 
     @cart_totals = @cart_items.group_by(&:payment_currency).transform_values { |orders| orders.sum(&:total_cents) }
+    @stock_available = Marketplace::Checkout.inventory_available_for?(@cart_items)
     # Shown before the pay buttons, not discovered after the money has moved.
     @delivery_address = Current.user.marketplace_addresses.default_first.first
   end

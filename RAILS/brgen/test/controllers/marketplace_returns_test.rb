@@ -143,6 +143,18 @@ class MarketplaceReturnsTest < ActionDispatch::IntegrationTest
     assert_not order.returnable_by?(@buyer)
   end
 
+  test "a sold out shop item returns to the shelf once" do
+    @shop_listing.update!(stock: 1)
+    order = @shop_listing.orders.create!(buyer: @buyer, price_cents: @shop_listing.price_cents, quantity: 1)
+    order.mark_paid!
+    assert_equal "sold", @shop_listing.reload.status
+
+    order.restock_returned!
+    order.restock_returned!
+    assert_equal "active", @shop_listing.reload.status
+    assert_equal 1, @shop_listing.stock
+  end
+
   test "a received return cannot be reopened and a refused return cannot restock" do
     order = delivered_order(@shop_listing)
     returned = order.returns.create!(reason: "Feil farge")

@@ -77,7 +77,9 @@
         the provider's own host, and a fetch cannot follow a cross-origin redirect.
         form-submit#lock disables a button once pressed, as the takeaway order
         form does: a second click started a second payment session. %>
-    <% if @cart_totals.size > 1 %>
+    <% if !@stock_available %>
+      <%= tag.p t("marketplace.checkout_errors.stock_changed"), role: "status" %>
+    <% elsif @cart_totals.size > 1 %>
       <%= tag.p t("marketplace.checkout_errors.mixed_currency"), role: "status" %>
     <% elsif dintero_ready || vipps_ready || stripe_ready %>
       <div class="cart-pay-actions" role="group" aria-label="<%= t("marketplace.payment_methods") %>">

@@ -11,7 +11,7 @@ class Marketplace::CartItemsController < Marketplace::BaseController
     quantity = params[:quantity].to_i
     available = @item.available_quantity
 
-    if @item.open_offer? && @item.quantity_available?(quantity)
+    if @item.cart_line? && @item.quantity_available?(quantity)
       @item.update!(quantity: quantity)
       redirect_to cart_path, notice: t("marketplace.cart_quantity_updated")
     else
@@ -22,7 +22,7 @@ class Marketplace::CartItemsController < Marketplace::BaseController
   # Withdrawn, not deleted: the seller was told about the offer, and their list
   # of offers keeps the row with its answer.
   def destroy
-    @item.update!(status: "declined") if @item.open_offer?
+    @item.update!(status: "declined") if @item.cart_line?
     redirect_to cart_path, notice: t("marketplace.cart_item_removed")
   end
 

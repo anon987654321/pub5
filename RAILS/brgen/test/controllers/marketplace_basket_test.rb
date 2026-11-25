@@ -96,6 +96,37 @@ class MarketplaceBasketTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("marketplace.checkout_errors.mixed_currency"), flash[:alert]
   end
 
+  test "combined quantities are checked without silently dropping a cart line" do
+    stocked = listing.tap { |row| row.update!(stock: 3) }
+    2.times do
+      Marketplace::Order.create!(buyer: @buyer, listing: stocked, quantity: 2, price_cents: stocked.price_cents)
+    end
+    sign_in_as(@buyer)
+    in_market
+
+    get marketplace.cart_path
+    assert_response :success
+    assert_select ".cart-item", count: 2
+    assert_select ".cart-pay-actions", count: 0
+    assert_no_difference -> { Marketplace::Checkout.count } do
+      post marketplace.checkout_path, params: { provider: "stripe" }
+    end
+    assert_redirected_to marketplace.cart_path
+    assert_equal I18n.t("marketplace.checkout_errors.stock_changed"), flash[:alert]
+  end
+
+  test "failed payment lines remain visible and removable" do
+    order = Marketplace::Order.create!(buyer: @buyer, listing: listing, quantity: 1, price_cents: 20_000)
+    order.update!(status: "pending_payment", payment_status: "failed")
+    sign_in_as(@buyer)
+    in_market
+
+    get marketplace.cart_path
+    assert_select ".cart-item", count: 1
+    delete marketplace.cart_item_path(order)
+    assert_equal "declined", order.reload.status
+  end
+
   test "an unknown provider is refused without assembling a basket" do
     Marketplace::Order.create!(buyer: @buyer, listing: listing, quantity: 1, price_cents: 20_000)
     sign_in_as(@buyer)

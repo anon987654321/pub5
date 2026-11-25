@@ -80,6 +80,10 @@ class Marketplace::Order < ApplicationRecord
     listed&.available_quantity || 0
   end
 
+  scope :cart_lines, -> { where(status: %w[pending pending_payment], payment_status: %w[unpaid failed]) }
+
+  def cart_line? = status.in?(%w[pending pending_payment]) && payment_status.in?(%w[unpaid failed])
+
   def quantity_available?(amount = quantity)
     available = available_quantity
     amount.to_i.positive? && (available.nil? || amount.to_i <= available)
@@ -232,12 +236,21 @@ class Marketplace::Order < ApplicationRecord
   end
 
   def restock_returned!
-    transaction do
-      update!(fulfilment_status: "returned")
-      back = variant_id ? Marketplace::Variant.find_by(id: variant_id) : Marketplace::Listing.find_by(id: listing_id)
-      next if back.nil? || (back.respond_to?(:unlimited_stock?) ? back.unlimited_stock? : back.one_of_a_kind?)
+    with_lock do
+      return if fulfilment_status == "returned"
 
-      back.update_columns(stock: back.stock.to_i + (quantity.presence || 1).to_i, updated_at: Time.current)
+      update!(fulfilment_status: "returned")
+      back = variant_id ? Marketplace::Variant.lock.find_by(id: variant_id) : Marketplace::Listing.lock.find_by(id: listing_id)
+      return unless back
+
+      if variant_id
+        back.update_columns(stock: back.stock.to_i + quantity, updated_at: Time.current) unless back.unlimited_stock?
+      else
+        attributes = { updated_at: Time.current }
+        attributes[:stock] = back.stock.to_i + quantity unless back.one_of_a_kind?
+        attributes[:status] = "active" if back.sold? && !back.expired? && back.store_id.present?
+        back.update_columns(attributes)
+      end
     end
   end
 
