@@ -40,6 +40,8 @@ class Playlist::PlaylistsController < Playlist::BaseController
     listens = Playlist::Listen.where(playlist_track_id: track_ids)
     @listen_total = listens.count
     @listen_recent = listens.where(created_at: 7.days.ago..).count
+    @unique_listeners = listens.distinct.count(:user_id)
+    @unique_recent = listens.where(created_at: 7.days.ago..).distinct.count(:user_id)
     @listen_counts = listens.group(:playlist_track_id).count
     @analytics_entries.sort_by! { |entry| -@listen_counts.fetch(entry.playlist_track_id, 0) }
   end

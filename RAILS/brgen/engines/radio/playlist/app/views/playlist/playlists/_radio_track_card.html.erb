@@ -14,6 +14,7 @@
       <small><%= track.duration_formatted %></small>
     </div>
   <% end %>
+  <% if track.playable_by?(nil, direct_link: true) %>
   <button
     type="button"
     class="radio-track-card-share"
@@ -25,4 +26,5 @@
     aria-label="<%= t("playlist.share_track", title: track.title) %>">
     <%= t("playlist.share") %>
   </button>
+  <% end %>
 </article>

@@ -11,9 +11,19 @@ class Playlist::HostedTracksController < Playlist::BaseController
   before_action :authorize_owner!, only: %i[edit update destroy]
 
   def index
-    @tracks = Playlist::Track.publicly_visible.unexpired.recent
-                                     .includes(artwork_attachment: { blob: :variant_records })
-                                     .limit(100)
+    @mine = authenticated? && params[:mine] == "1"
+    scope = @mine ? Playlist::Track.where(user_id: Current.user.id) : Playlist::Track.publicly_visible.unexpired
+    scope = scope.where(users: { city_id: Current.city_record.id }) if !@mine && Current.city_record
+    @query = params[:q].to_s.strip.first(100)
+    @genre = params[:genre].to_s.strip.first(80)
+    @creator = params[:creator].to_s.match?(/\A\d+\z/) ? params[:creator] : nil
+    if @query.present?
+      pattern = "%#{ActiveRecord::Base.sanitize_sql_like(@query)}%"
+      scope = scope.where("playlist_tracks.title LIKE :q OR playlist_tracks.artist LIKE :q OR playlist_tracks.album LIKE :q", q: pattern)
+    end
+    scope = scope.where("LOWER(playlist_tracks.genre) = ?", @genre.downcase) if @genre.present?
+    scope = scope.where(user_id: @creator) if @creator
+    @pagy, @tracks = pagy(scope.recent.includes(artwork_attachment: { blob: :variant_records }))
   end
 
   def show
