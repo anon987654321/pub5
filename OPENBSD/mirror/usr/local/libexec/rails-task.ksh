@@ -146,7 +146,7 @@ if [[ "$task" == bundle-sibling-hydrate ]]; then
     }
   else
     mkdir -p "$app_root"
-    chown "$app_uid:$app_gid" "$app_home/.bundle" "$app_home/.bundle/gems" \
+    /sbin/chown "$app_uid:$app_gid" "$app_home/.bundle" "$app_home/.bundle/gems" \
       "$app_home/.bundle/gems/ruby" "$app_root" 2>/dev/null || true
   fi
   needed=$("$ruby_path" -e '
@@ -156,7 +156,7 @@ if [[ "$task" == bundle-sibling-hydrate ]]; then
   ' "$app_dir/Gemfile.lock")
   # Sibling roots resolve once; the per-gem loop only stats files.
   sib_roots=
-  for sibling in brgen amber bsdports mrdamascy master; do
+  for sibling in brgen amber bsdports mrdamascy; do
     [[ "$sibling" == "$app" ]] && continue
     sib_home="/home/$sibling"
     [[ -d "$sib_home" ]] || continue
@@ -191,19 +191,19 @@ if [[ "$task" == bundle-sibling-hydrate ]]; then
     mkdir -p "$app_root/specifications" "$app_root/gems"
     cp "$source_root/specifications/$needed_gem.gemspec" \
        "$app_root/specifications/$needed_gem.gemspec"
-    chown "$app_uid:$app_gid" \
+    /sbin/chown "$app_uid:$app_gid" \
       "$app_root/specifications/$needed_gem.gemspec"
     if [[ -d "$source_root/gems/$needed_gem" &&
       ! -L "$source_root/gems/$needed_gem" ]]; then
       cp -R "$source_root/gems/$needed_gem" "$app_root/gems/$needed_gem"
-      chown -R "$app_uid:$app_gid" "$app_root/gems/$needed_gem"
+      /sbin/chown -R "$app_uid:$app_gid" "$app_root/gems/$needed_gem"
     fi
     for ext_dir in "$source_root"/extensions/*/*/"$needed_gem"; do
       [[ -d "$ext_dir" && ! -L "$ext_dir" ]] || continue
       rel=${ext_dir#"$source_root"/}
       mkdir -p "$app_root/${rel%/*}"
       cp -R "$ext_dir" "$app_root/$rel"
-      chown -R "$app_uid:$app_gid" "$app_root/$rel"
+      /sbin/chown -R "$app_uid:$app_gid" "$app_root/$rel"
     done
     hydrated=$((hydrated + 1))
   done

@@ -1061,6 +1061,14 @@ class VpsDeployContractTest < Minitest::Test
     assert_equal 64, status.call("bsdports", "bundle-check", "extra")
   end
 
+  # The helper's PATH has no /sbin, and a bare chown there failed sibling
+  # hydration after copying one gemspec, leaving it root-owned (vm23, 2026-11-25).
+  def test_rails_task_names_sbin_tools_absolutely
+    helper = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"))
+    assert_includes helper, "PATH=/usr/local/bin:/usr/bin:/bin"
+    assert_empty helper.lines.grep(/(?<![\w\/])chown\s/), "chown lives in /sbin, outside the helper's PATH"
+  end
+
   def test_vps_deploy_and_master_deployer_are_build_free
     master = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")
