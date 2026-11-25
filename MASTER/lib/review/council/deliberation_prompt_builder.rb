@@ -15,12 +15,12 @@ module Master
         private
 
         def build_judge_prompt(feedback:, code: nil, context: nil)
-          rounds = feedback.map { |entry| format_round(entry) }.join("\n\n")
+          rounds = feedback.map { |entry| "Round #{entry[:round] || 1}: #{format_round(entry)}" }.join("\n\n")
           prompt = format(Deliberation.prompts.fetch("judge"),
                           quality_brief: Deliberation.quality_brief(:general), rounds:)
           findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
           InterModelContract.wrap_prompt(
-            prompt, role: "judge", task: "Synthesize the supplied council findings and state evidence-backed concurrence or dissent.",
+            "#{prompt}\nSelect only the strongest actionable repairs after comparing all rounds. Combine complementary proposals where warranted. Preserve minority objections, reject unsupported consensus, and explain why each selected repair beats its alternatives. Put the exact repository-relative file and stable line or selector in each finding location; put the selected change in proposed_repair. Return no findings when no repair is justified.", role: "judge", task: "Arbitrate the supplied council proposals and state evidence-backed concurrence or dissent.",
             success_criteria: "Return a schema-valid JSON response with an explicit position and zero or more evidence-backed findings.",
             constraints: %w[INTER_MODEL_CONTRACT ROBUSTNESS SINGULARITY],
             artifact: rounds, prior_findings: findings,
