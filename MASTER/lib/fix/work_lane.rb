@@ -6,7 +6,7 @@ module Master
     # rendered, researched and mapped for fifty minutes before a one-line RuboCop repair.
     module WorkLane
       # Lanes choose work depth; the Law and quality assessment remain universal. Standard
-      # observes rendered RAILS surfaces, visual performs grouped RAILS repair, all combines
+      # repairs rendered RAILS surfaces, visual performs grouped RAILS repair, all combines
       # research/architecture/rendered review/grouped repair with every elevation stage, and
       # elevate concentrates on improvement, ideation and restructuring.
       NAMES = %i[code standard visual master all elevate].freeze
@@ -29,7 +29,7 @@ module Master
         # conversation suite costs no model and no boot, and a /fix MASTER that never
         # asks how the replies read would claim the product while measuring only laws.
         code: %i[conversation code_passes improve_code],
-        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass code_passes improve_code],
+        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_visual],
         visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
         master: %i[conversation visual_pass code_passes improve_code],
         all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_prose improve_visual improve_music ideate restructure_drive],
