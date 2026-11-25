@@ -297,7 +297,7 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
 });
 
-test("one canonical mask persists across conversations on the shared renderer", () => {
+test("five masks rotate across conversations on the shared renderer", () => {
   const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
   const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
@@ -329,9 +329,9 @@ test("one canonical mask persists across conversations on the shared renderer", 
   };
   runInNewContext(masks, sandbox, { filename: "face_mask_profiles.js" });
   const api = window.MASTER_FACE_MASKS;
-  assert.equal(api.profiles.length, 1);
-  assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 1);
-  assert.deepEqual(Array.from(api.rotationProfiles), ["iatmul-river"]);
+  assert.equal(api.profiles.length, 5);
+  assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 5);
+  assert.deepEqual(Array.from(api.rotationProfiles), ["iatmul-river","iatmul-concentric","sepik-split","tatanua-crest","elema-hollow"]);
   assert.match(manifest, /- face_mask_profiles/);
   assert.match(events, /"conversation:created": \{ targets: \["face"\], fields: \["id", "conversationId"\] \}/);
   assert.match(tokens, /max_features: 8/);
@@ -350,14 +350,15 @@ test("one canonical mask persists across conversations on the shared renderer", 
       assert.ok(part.size.every((value) => Number.isFinite(value) && value >= 0.06 && value <= 0.62));
     }
   }
+  assert.ok(api.select("iatmul-river"));
   assert.equal(api.current().id, "iatmul-river");
   const sessionId = sessionStorage.getItem("master.mask.session");
   assert.equal(sessionStorage.getItem("master.mask." + sessionId), "0");
   assert.equal(api.newConversation("conversation-next"), true);
-  assert.equal(api.current().id, "iatmul-river");
-  assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "0");
+  assert.equal(api.current().id, "iatmul-concentric");
+  assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "1");
   assert.equal(api.newConversation("conversation-next"), false);
-  assert.equal(api.current().id, "iatmul-river", "same conversation does not rotate twice");
+  assert.equal(api.current().id, "iatmul-concentric", "same conversation does not rotate twice");
   assert.ok(listeners["master:conversation-created"]?.length);
   assert.ok(listeners["master:bus"]?.length);
 });
@@ -433,11 +434,11 @@ test("server-selected human mask profile drives the particle face and its source
   assert.equal(attributes["aria-label"], "MASTER monochrome particle mask");
   assert.equal(api.source().id, "iatmul_mai");
 
-  assert.equal(api.newConversation("next-chat"), true);
-  assert.equal(api.current().id, "iatmul-river");
-  assert.equal(api.source().id, "iatmul_mai");
+  assert.equal(api.newConversation("next-chat", "sepik-split"), true);
+  assert.equal(api.current().id, "sepik-split");
+  assert.equal(api.source().id, "iatmul_mwai");
   assert.equal(document.documentElement.dataset.maskCharacter, "the-scout");
-  assert.equal(document.documentElement.dataset.maskSourceCollection, "The Metropolitan Museum of Art");
+  assert.equal(document.documentElement.dataset.maskSourceCollection, nextSource.collection);
 });
 
 test("new chat is a server action and does not accept a client-selected character", () => {

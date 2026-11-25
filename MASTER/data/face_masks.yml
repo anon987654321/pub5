@@ -3,6 +3,10 @@ name: "Papua New Guinea humanoid mask reference collection"
 selection: "round_robin_per_new_chat"
 rotation_profiles:
   - "iatmul-river"
+  - "iatmul-concentric"
+  - "sepik-split"
+  - "tatanua-crest"
+  - "elema-hollow"
 # Original MASTER character archetypes. Their names and temperaments are independent
 # of the cultural and museum provenance recorded under each entry.
 character_contract:
@@ -29,7 +33,7 @@ character_contract:
 rendering:
   base: "MASTER original monochrome fixed-bitmap particle sculpture with open eye and mouth voids"
   profile_notice: >
-    The canonical particle profile is an original, face-readable geometric study informed
+    The particle profiles are original, face-readable geometric studies informed
     only by broad human facial proportions in the cited objects. They are not
     replicas, ceremonial reconstructions, sacred characters, or depictions of
     the source masks. The existing particle field, carrier count, fixed-size bitmap

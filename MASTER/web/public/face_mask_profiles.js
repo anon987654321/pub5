@@ -7,7 +7,11 @@
   "use strict";
 
   const PROFILES = Object.freeze([
-    { id: "iatmul-river", name: "MASTER — Sepik study", family: "Original Iatmul-inspired study", note: "Operator-approved rounded future-human particle study; not a museum scan", outer: "ring", w: .405, h: .56, jaw: .24, crown: .29, asym: .012, brow: .34, nose: .38, mouth: .20 }
+    { id: "iatmul-river", name: "MASTER — River", family: "Original Sepik study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.405, h: 0.56, jaw: 0.24, crown: 0.29, asym: 0.018, brow: 0.34, nose: 0.32, mouth: 0.2 },
+    { id: "iatmul-concentric", name: "MASTER — Orbit", family: "Original Iatmul study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.445, h: 0.5, jaw: 0.26, crown: 0.31, asym: 0.024, brow: 0.37, nose: 0.28, mouth: 0.21 },
+    { id: "sepik-split", name: "MASTER — Rift", family: "Original Sepik study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.335, h: 0.61, jaw: 0.18, crown: 0.27, asym: 0.044, brow: 0.3, nose: 0.36, mouth: 0.18 },
+    { id: "tatanua-crest", name: "MASTER — Crest", family: "Original New Ireland study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.4, h: 0.59, jaw: 0.21, crown: 0.34, asym: 0.03, brow: 0.36, nose: 0.29, mouth: 0.19 },
+    { id: "elema-hollow", name: "MASTER — Hollow", family: "Original Gulf study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.385, h: 0.54, jaw: 0.28, crown: 0.28, asym: 0.036, brow: 0.33, nose: 0.26, mouth: 0.22 }
   ]);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
@@ -18,7 +22,7 @@
     const jaw = clamp(profile.jaw, .10, .36);
     const asym = clamp(profile.asym, 0, .15);
     const mouth = clamp(profile.mouth ?? Math.min(.36, Math.max(.18, profile.crown * .62)), .14, .36);
-    const eyeY = profile.id === "elema-tower" ? -.02 : .12;
+    const eyeY = .15 - RELIEF[profile.id][2] * .25;
     const cheekPart = profile.inner
       ? { key: "inner-face", primitive: "ring", center: [asym * .2, -.02, .12], size: [w * .62, h * .66, .06] }
       : profile.lattice
@@ -53,7 +57,11 @@
   // Profiles vary independently in silhouette, eye voids, cheek fullness,
   // bridge depth and mouth proportions. All coordinates remain bounded.
   const RELIEF = Object.freeze({
-    "iatmul-river": [.22, 2.15, .38, .185, .125, .082, .21, .10]
+    "iatmul-river": [0.25, 2.15, 0.4, 0.185, 0.124, 0.09, 0.13, 0.055],
+    "iatmul-concentric": [0.14, 2.55, 0.34, 0.195, 0.132, 0.093, 0.1, 0.065],
+    "sepik-split": [0.35, 1.85, 0.43, 0.145, 0.106, 0.091, 0.16, 0.045],
+    "tatanua-crest": [0.3, 2.75, 0.56, 0.18, 0.126, 0.088, 0.11, 0.05],
+    "elema-hollow": [0.1, 1.95, 0.28, 0.17, 0.13, 0.105, 0.09, 0.045]
   });
   const randomUnit = (index, salt) => {
     let n = Math.imul((index + 1) ^ Math.imul(salt + 1, 0x9e3779b1), 0x85ebca6b);
@@ -70,88 +78,80 @@
       height: .035 + cheeks * .11 };
   }
 
-  // Local relief derivatives, not normals from the unrelated base portrait.
-  function normalAt(id, x, y, z = 0) {
-    const p = PROFILES[profileIndex(id)];
-    const shape = RELIEF[id];
-    if (!p || !shape) return [0, 0, 1];
-    const [taper, exponent, forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
+  // An implicit volume defines both the sampling field and relief normals.
+  // Eye and mouth apertures subtract matter through the entire thickness.
+  function section(p, shape, y) {
+    const [taper, exponent, forehead] = shape;
+    const v = Math.max(-.999, Math.min(.999, y / p.h));
+    const outline = Math.pow(Math.max(.0001, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent);
+    const erosion = 1 + .024 * Math.sin(v * 37) + .013 * Math.cos(v * 71);
+    return { width: p.w * (1 + forehead * .24 * Math.max(0, v)) * outline *
+      (1 - taper * Math.max(0, -v)) * erosion, center: p.asym * v * .45, outline };
+  }
+
+  function volumeAt(p, shape, mouth, x, y) {
+    const [, , forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
+    const slice = section(p, shape, y);
+    const edge = Math.abs((x - slice.center) / slice.width);
     const eyeY = .15 - forehead * .25;
-    const mouth = mouthGeometry(id);
-    const height = (a, b) => {
-      const v = Math.max(-.999, Math.min(.999, b / p.h));
-      const width = p.w * (1 + .10 * Math.max(0, v)) * Math.pow(Math.max(.0001, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent) *
-        (1 - taper * Math.max(0, -v));
-      const edge = Math.min(1, Math.abs((a - p.asym * v * .45) / width));
-      const absX = Math.abs(a);
-      const eye = ((absX - eyeX) / eyeW) ** 2 + ((b - eyeY) / eyeH) ** 2;
-      const smile = .018 * Math.min(1, (a / mouth.width) ** 2);
-      const lip = (a / mouth.width) ** 2 + ((b - mouth.y - smile) / mouth.height) ** 2;
-      const brow = gaussian(b - eyeY - eyeH * 1.35, .045) * gaussian(absX - eyeX, .15);
-      const bridge = gaussian(a, .035 + noseDepth * .12) * gaussian(b + .025, p.nose * .64);
-      const cheek = gaussian(absX - p.w * .60, .095) * gaussian(b + .12, .18);
-      const rim = gaussian(eye - 1.22, .65) + gaussian(lip - 1.24, .78);
-      return .035 + .18 * Math.sqrt(Math.max(0, 1 - edge * edge)) + noseDepth * bridge +
-        .045 * brow + cheeks * cheek + .022 * Math.min(1, rim);
-    };
+    const ax = Math.abs(x);
+    const eye = ((ax - eyeX) / eyeW) ** 2 + ((y - eyeY) / eyeH) ** 2;
+    const smile = .018 * Math.min(1, (x / mouth.width) ** 2);
+    const lip = (x / mouth.width) ** 2 + ((y - mouth.y - smile) / mouth.height) ** 2;
+    const curvature = Math.sqrt(Math.max(0, 1 - edge * edge));
+    const brow = gaussian(y - eyeY - eyeH * 1.35, .045) * gaussian(ax - eyeX, .15);
+    const bridge = gaussian(x, .045 + noseDepth * .12) * gaussian(y + .025, p.nose * .64);
+    const cheek = gaussian(ax - p.w * .60, .11) * gaussian(y + .12, .19);
+    const rim = gaussian(eye - 1.22, .65) + gaussian(lip - 1.24, .78);
+    const front = .025 + .21 * curvature + noseDepth * bridge + .026 * brow + cheeks * cheek +
+      .014 * Math.min(1, rim);
+    const rear = -.43 * curvature * slice.outline;
+    const grain = .5 + .5 * Math.sin(x * 67 + Math.cos(y * 33) * 2) * Math.cos(y * 53 - x * 11);
+    const density = Math.min(1, .27 + .20 * edge + .18 * bridge + .13 * rim + .16 * grain);
+    return { front, rear, density, inside: edge <= 1 && eye >= 1 && lip >= 1 };
+  }
+
+  function normalAt(id, x, y, z = 0) {
+    const p = PROFILES[profileIndex(id)], shape = RELIEF[id];
+    if (!p || !shape) return [0, 0, 1];
+    const mouth = mouthGeometry(id), surface = z < 0 ? "rear" : "front";
     const h = .006;
+    const height = (a, b) => volumeAt(p, shape, mouth, a, b)[surface];
     const dx = (height(x + h, y) - height(x - h, y)) / (2 * h);
     const dy = (height(x, y + h) - height(x, y - h)) / (2 * h);
+    const sign = z < 0 ? -1 : 1;
     const length = Math.hypot(dx, dy, 1);
-    if (z < 0) {
-      const nx = x / (p.w * p.w), ny = y / (p.h * p.h), nz = z / (.43 * .43);
-      const magnitude = Math.hypot(nx, ny, nz) || 1;
-      return [nx / magnitude, ny / magnitude, nz / magnitude];
-    }
-    return [-dx / length, -dy / length, 1 / length];
+    return [-sign * dx / length, -sign * dy / length, sign / length];
   }
 
   function sample(id, index) {
-    const p = PROFILES[profileIndex(id)];
-    const shape = RELIEF[id];
+    const p = PROFILES[profileIndex(id)], shape = RELIEF[id];
     if (!p || !shape) return null;
-    const [taper, exponent, forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
-    const eyeY = .15 - forehead * .25;
-    const { y: mouthY, width: mouthW, height: mouthH } = mouthGeometry(id);
-    const w = p.w, h = p.h;
-    // Bounded rejection sampling leaves real holes rather than drawing dark
-    // sprites over a solid face. Same index and profile always yield same point.
-    for (let attempt = 0; attempt < 48; attempt += 1) {
-      const salt = attempt * 4;
-      // Additive low-discrepancy sequence distributes first candidates
-      // across the surface; later attempts preserve the same bounded density.
-      const frac = (n) => n - Math.floor(n);
-      const v = frac((index + .5) * .7548776662466927 + attempt * .5698402909980532 + .012 * randomUnit(index, salt)) * 2 - 1;
-      const u = frac((index + .5) * .5698402909980532 + attempt * .7548776662466927 + .012 * randomUnit(index, salt + 1)) * 2 - 1;
-      const y = v * h;
-      const width = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent);
-      const jaw = 1 - taper * Math.max(0, -v);
-      const x = u * w * (1 + .10 * Math.max(0, v)) * width * jaw + p.asym * v * .45;
-      const absoluteX = Math.abs(x);
-      const eye = Math.pow((absoluteX - eyeX) / eyeW, 2) + Math.pow((y - eyeY) / eyeH, 2);
-      const smile = .018 * Math.min(1, (x / mouthW) ** 2);
-      const mouth = Math.pow(x / mouthW, 2) + Math.pow((y - mouthY - smile) / mouthH, 2);
-      if (eye < 1 || mouth < 1) continue;
-      const edge = Math.abs(u);
-      const brow = gaussian(y - eyeY - eyeH * 1.35, .045) * gaussian(absoluteX - eyeX, .15);
-      const bridge = gaussian(x, .035 + noseDepth * .12) * gaussian(y + .025, p.nose * .64);
-      const cheek = gaussian(absoluteX - w * .60, .095) * gaussian(y + .12, .18);
-      const rim = gaussian(eye - 1.22, .65) + gaussian(mouth - 1.24, .78);
-      const relief = .035 + .18 * Math.sqrt(Math.max(0, 1 - edge * edge)) +
-        noseDepth * bridge + .045 * brow + cheeks * cheek + .022 * Math.min(1, rim);
-      const light = Math.min(1, .19 + .29 * edge + .35 * bridge + .22 * brow + .18 * rim + .30 * cheek);
-      // A minority of stable carriers describes the curved rear shell.
-      // Keep the same projected apertures through both sides of the mask.
-      const rear = index % 3 === 0;
-      if (!rear && randomUnit(index, salt + 2) > light) continue;
-      const z = rear ? -.43 * Math.sqrt(Math.max(0, 1 - edge * edge)) * width
-        : relief + (randomUnit(index, salt + 3) - .5) * .028;
-      return [x, y, z];
+    const mouth = mouthGeometry(id);
+    const contract = window.MASTER_FACE_CONTRACT?.sculpture || {};
+    const coreFraction = clamp(contract.interior_fraction ?? .40, .20, .65);
+    const rearFraction = clamp(contract.rear_fraction ?? .24, .15, .30);
+    const cohort = randomUnit(index, 195);
+    const frac = (n) => n - Math.floor(n);
+    for (let attempt = 0; attempt < 64; attempt += 1) {
+      const salt = attempt * 5;
+      const v = frac((index + .5) * .7548776662466927 + attempt * .5698402909980532 +
+        .026 * randomUnit(index, salt)) * 2 - 1;
+      const u = frac((index + .5) * .5698402909980532 + attempt * .7548776662466927 +
+        .026 * randomUnit(index, salt + 1)) * 2 - 1;
+      const y = v * p.h;
+      const slice = section(p, shape, y);
+      const x = slice.center + u * slice.width;
+      const field = volumeAt(p, shape, mouth, x, y);
+      if (!field.inside || randomUnit(index, salt + 2) > field.density) continue;
+      const t = cohort < rearFraction ? .025 + .045 * randomUnit(index, salt + 3)
+        : cohort < rearFraction + coreFraction ? .15 + .70 * randomUnit(index, salt + 3)
+        : .94 + .06 * randomUnit(index, salt + 3);
+      return [x, y, field.rear + (field.front - field.rear) * t];
     }
-    // Bounded fallback on the silhouette, never in an eye or mouth void.
-    const angle = randomUnit(index, 193) * Math.PI * 2;
-    const v = Math.sin(angle);
-    return [Math.cos(angle) * w * (1 - taper * Math.max(0, -v)), v * h, .025];
+    const y = p.h * (.86 + .08 * randomUnit(index, 193));
+    const slice = section(p, shape, y);
+    return [slice.center + slice.width * (randomUnit(index, 194) - .5), y, .025];
   }
 
   function hash(value) {
@@ -159,7 +159,7 @@
     for (const char of String(value)) h = Math.imul(h ^ char.charCodeAt(0), 16777619);
     return h >>> 0;
   }
-  const ROTATION_PROFILE_IDS = Object.freeze(["iatmul-river"]);
+  const ROTATION_PROFILE_IDS = Object.freeze(PROFILES.map(({ id }) => id));
 
   function profileIndex(id) {
     return PROFILES.findIndex((profile) => profile.id === String(id));
@@ -317,10 +317,10 @@
       current = profileIndex(ROTATION_PROFILE_IDS[rotationIndex]);
       return apply(current, "manual-cycle");
     },
-    newConversation: (id) => {
+    newConversation: (id, faceProfile) => {
       const conversationId = String(id || "").trim();
       if (!conversationId) return false;
-      return rotate({ detail: { conversationId } });
+      return rotate({ detail: { conversationId, faceProfile } });
     }
   });
 })();

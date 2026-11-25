@@ -1131,8 +1131,8 @@ test("canonical mask relief is deterministic and bounded", async () => {
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
   });
   const masks = window.MASTER_FACE_MASKS;
-  assert.equal(masks.profiles.length, 1);
-  assert.equal(masks.rotationProfiles.length, 1);
+  assert.equal(masks.profiles.length, 5);
+  assert.equal(masks.rotationProfiles.length, 5);
   const fingerprints = new Set();
   for (const profile of masks.profiles) {
     const points = Array.from({ length: 512 }, (_, index) => masks.sample(profile.id, index));
@@ -1140,13 +1140,13 @@ test("canonical mask relief is deterministic and bounded", async () => {
     assert.ok(points.every(point => point.every(value => Number.isFinite(value) && Math.abs(value) < 0.8)));
     fingerprints.add(JSON.stringify(points));
   }
-  assert.equal(fingerprints.size, 1);
+  assert.equal(fingerprints.size, 5);
   assert.equal(masks.sample("unknown", 0), null);
   listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "iatmul-river" } });
   assert.equal(masks.current().id, "iatmul-river");
   assert.equal(masks.descriptor().maskProfile, "iatmul-river");
   masks.next();
-  assert.equal(masks.current().id, "iatmul-river");
+  assert.equal(masks.current().id, "iatmul-concentric");
 });
 
 test("direct subject mouth deformation is anatomical and mask-only", () => {
@@ -1171,12 +1171,14 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
     const cells = new Set();
     let rearCount = 0;
     let frontCount = 0;
+    let interiorCount = 0;
     const mouth = window.MASTER_FACE_MASKS.mouthGeometry(mask.id);
     for (let index = 0; index < 4096; index++) {
       const [x, y, z] = window.MASTER_FACE_MASKS.sample(mask.id, index);
       const normal = window.MASTER_FACE_MASKS.normalAt(mask.id, x, y, z);
       if (z < -.05) rearCount += 1;
       if (z > .05) frontCount += 1;
+      if (Math.abs(z) <= .05) interiorCount += 1;
       assert.ok([x, y, z, ...normal].every(Number.isFinite), mask.id + " invalid relief");
       assert.ok((z < 0 ? normal[2] < 0 : normal[2] > 0) && Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
       cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
@@ -1185,7 +1187,7 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
       assert.ok(hole >= .98, mask.id + " mouth is occluded");
     }
     assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
-    assert.ok(rearCount > 400 && frontCount > 1000, mask.id + " lacks front or rear volume");
+    assert.ok(rearCount > 400 && frontCount > 1000 && interiorCount > 200, mask.id + " lacks front, rear or interior volume");
   }
 });
 

@@ -539,6 +539,10 @@ tokens:
       focus: 0.86
       activity: 0.14
       risk: 0.0
+    sculpture:
+      interior_fraction: 0.40
+      rear_fraction: 0.24
+      rest_yaw: 0.18
     # How the stipple layer looks in each state in `modes` above; the web face
     # reads this through MASTER_FACE_CONTRACT and Ruby through Face::Contract.
     stipple:
