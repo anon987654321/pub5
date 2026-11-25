@@ -7,7 +7,8 @@ class ModerationReport < ApplicationRecord
   REASONS = %w[spam scam abuse unsafe illegal copyright duplicate other].freeze
   # These are the public report controls' real targets. A signed GlobalID proves
   # integrity, not that a model is safe to expose to the moderation workflow.
-  REPORTABLE_TYPES = %w[Post Comment Message User Tv::Video Playlist::Track].freeze
+  # Marketplace::Listing: duplicate-listing detection files reports on listings.
+  REPORTABLE_TYPES = %w[Post Comment Message User Tv::Video Playlist::Track Marketplace::Listing].freeze
   STATUSES = %w[open reviewing resolved dismissed].freeze
 # What the report picker offers; a caller's own default joins them.
 PICKER_REASONS = %w[spam abuse illegal other].freeze
