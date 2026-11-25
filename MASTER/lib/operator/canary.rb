@@ -96,7 +96,9 @@ module Operator
         @http = http || method(:fetch)
         @shell = shell || ->(*argv) { Master::Io::Exec.capture2e(*argv) }
         @connect = connect || method(:open_port)
+        @fleet = load_apps(nil).keys
         @apps = load_apps(apps)
+        @scoped = !apps.nil?
       end
 
       def run
@@ -216,9 +218,35 @@ module Operator
         end
 
         out, status = @shell.call("sh", script, @mode == :local ? "--local" : "--public")
-        [Result.new(name: "deploy-smoke #{@mode}", ok: status.success?, detail: status.success? ? nil : out.to_s.lines.grep(/FAIL/).first(4).join(" ").strip)]
+        [status.success? ? Result.new(name: "deploy-smoke #{@mode}", ok: true) : smoke_failure(out.to_s)]
       rescue SystemCallError => e
         [Result.new(name: "deploy-smoke #{@mode}", ok: false, detail: "#{e.class}: #{e.message}")]
+      end
+
+      # deploy-smoke checks the whole fleet. Under --app, a line naming only apps
+      # outside the scope is reported, not failed: a deploy sheds amber and
+      # bsdports itself, and another app's outage is not this app's regression.
+      # Check lines only; the closing "deploy-smoke: FAILED" summary names no app.
+      def smoke_failure(out)
+        name = "deploy-smoke #{@mode}"
+        fails = out.lines.grep(/^\s*FAIL /).map(&:strip)
+        own = fails.reject { |line| outside_scope?(line) }
+        return Result.new(name:, ok: false, detail: own.first(4).join(" ")) if own.any?
+        return Result.new(name:, ok: false, detail: out.lines.last(2).join(" ").strip) if fails.empty?
+
+        Result.new(name:, ok: true, state: "WARN", detail: out_of_scope_detail(fails))
+      end
+
+      def out_of_scope_detail(fails)
+        "outside --app #{@apps.keys.join(',')}: #{fails.first(4).join(' ')}"
+      end
+
+      # A line naming no app (relayd, the summary) stays in scope: fail safe.
+      def outside_scope?(line)
+        return false unless @scoped
+
+        named = line.downcase.split(/[^a-z0-9]+/) & @fleet
+        named.any? && (named & @apps.keys).empty?
       end
 
       def open_port(host, port)

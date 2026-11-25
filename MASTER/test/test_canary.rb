@@ -271,6 +271,32 @@ FLOW_OUTPUT = <<~OUT
     assert_match(/FAIL amber_local/, r.detail)
   end
 
+  # The vm23 master deploy of 97320bf3e failed its canary on amber and bsdports,
+  # which the deploy itself had shed. Under --app, only the app's own lines fail.
+  def test_app_scoped_smoke_warns_on_other_apps_and_fails_on_its_own_or_shared_lines
+    write("RAILS/apps.yml", "apps:\n  demo:\n    domain: demo.test\n    port: #{@server.port}\n    public: true\n" \
+                            "  amber:\n    domain: amber.test\n    port: 1\n    public: true\n")
+    write("OPENBSD/bin/deploy-smoke.sh", "#!/bin/sh\n")
+
+    other = demo_smoke("FAIL rcctl amber\nFAIL amber_local http://127.0.0.1:61352/up (000000)\n\n" \
+                       "deploy-smoke: FAILED (2 hard, 0 warn)\n")
+    assert other.ok
+    assert_equal "WARN", other.state
+    assert_match(/outside --app demo: FAIL rcctl amber/, other.detail)
+
+    refute demo_smoke("FAIL rcctl amber\nFAIL demo_local http://127.0.0.1:1/up (000)\n").ok
+    refute demo_smoke("FAIL rcctl relayd\n").ok
+    refute demo_smoke("deploy-smoke: FAILED (1 hard, 0 warn)\n").ok
+  end
+
+  # The smoke result of a demo-scoped canary whose deploy-smoke printed lines and failed.
+  def demo_smoke(lines)
+    shell = ->(*argv) { argv.first == "sh" ? [lines, Ok.new(false)] : ["", Ok.new(true)] }
+    http = ->(*) { Canary::Reply.new(status: 200, headers: {}, body: "", elapsed_ms: 1) }
+    Canary::Runner.new(root: @root, apps: %w[demo], smoke: true, flows: false, shell:, connect: ->(*) { true }, http:)
+                  .run.last
+  end
+
   def test_failure_output_names_what_failed_and_prints_the_manual_rollback_without_running_it
     out = StringIO.new
     code = Canary.main(%w[--local --app demo --no-smoke --budget-ms 100], root: @root, out:, shell: ->(*_) { ["", Ok.new(true)] })
