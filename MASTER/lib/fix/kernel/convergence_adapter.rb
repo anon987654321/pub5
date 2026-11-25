@@ -46,6 +46,7 @@ require_relative "../protocol"
 require_relative "../architecture_exploration"
 require_relative "../transformation_plan"
 require_relative "../../review/reference_graph"
+require_relative "../../review/council/critique"
 require_relative "../../trace/causal_trace"
 require_relative "../research_pass"
 require_relative "../conversation_probe"
@@ -686,11 +687,48 @@ module Master
         terminal(:plateau, "visual lane: #{detail}")
       end
 
-      # One fresh call, outside the repair loop's conversation, so the proposer never approves.
+      # A separate council, rather than the repairer, reviews the paired whole
+      # viewport and the changed-region crops. VisualReviewer still enforces the
+      # strict APPROVE/R<n> receipt; a panel that cannot make that receipt cannot
+      # clear a visible change.
       def visual_review(brief, crops)
-        @agent.ask_once("#{brief}\nCrops (PNG, 400%): #{crops.join(", ")}", law: false).to_s
+        primary, *extra = Array(crops).select { |path| File.file?(path) }
+        return "REJECT: no before/after screenshot evidence" unless primary
+
+        visual_panel_verdict(visual_approval_panel(primary:, extra:, brief:).run)
       rescue StandardError => e
-        "REJECT: reviewer unavailable - #{e.message.to_s[0, 120]}"
+        "REJECT: critique panel unavailable - #{e.message.to_s[0, 120]}"
+      end
+
+      def visual_panel_verdict(panel)
+        return "REJECT: critique panel unavailable - #{panel.message.to_s[0, 120]}" if panel.err?
+
+        judge = Array(panel.value![:feedback]).find { |entry| entry[:persona].to_s == "Judge" }
+        judge ? judge[:feedback].to_s : "REJECT: critique panel returned no final judge"
+      end
+
+      def visual_approval_panel(primary:, extra:, brief:)
+        Master::Review::Council::Critique.new(
+          mode: :ui,
+          agent: @agent,
+          event_bus: @bus,
+          files: [Master::COUNCIL_PATH],
+          visual_image: { path: primary, name: "visual-review-before-after.png", mime: "image/png" },
+          visual_images: extra.map { |path| { path:, name: File.basename(path), mime: "image/png" } },
+          briefing: visual_approval_brief(brief),
+        )
+      end
+
+      def visual_approval_brief(brief)
+        <<~TEXT
+          #{brief}
+
+          This is an approval review of one already-applied visual repair. The first image pair is
+          the whole before/after viewport; remaining images are changed-region crops. The final
+          Judge must answer APPROVE or REJECT on its first line. An APPROVE must include one
+          `R<n>: Law — observed improvement` line for every changed region. Reject when the
+          evidence is incomplete, the change harms product identity, or any region cannot be explained.
+        TEXT
       end
 
       def visual_repair_loop(brief)

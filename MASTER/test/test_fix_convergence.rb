@@ -2866,6 +2866,40 @@ end
     assert_equal cycle[:paths], first.first.dig("evidence", "paths")
   end
 
+  def visual_panel_adapter
+    Master::Fix::Kernel::ConvergenceAdapter.allocate.tap do |adapter|
+      adapter.instance_variable_set(:@agent, OpenCircuitAgent.new)
+      adapter.instance_variable_set(:@bus, nil)
+    end
+  end
+
+  def panel_review(adapter:, before:, after:)
+    result = Master::Result.ok(feedback: [{ persona: "Judge", feedback: "APPROVE\nR1: EIGHT_PX_RHYTHM — aligned" }])
+    panel = Object.new.tap { _1.define_singleton_method(:run) { result } }
+    seen = nil
+    Master::Review::Council::Critique.stub(:new, ->(**kwargs) { seen = kwargs; panel }) do
+      verdict = adapter.send(:visual_review, "Laws: EIGHT_PX_RHYTHM\nChanged regions:\nR1 0,0 8x8", [before, after])
+      [verdict, seen]
+    end
+  end
+
+  def test_visual_reviewer_routes_paired_crops_through_the_critique_panel
+    Dir.mktmpdir do |dir|
+      before, after = %w[before after].map do |name|
+        path = File.join(dir, "#{name}.png")
+        File.binwrite(path, name)
+        path
+      end
+      verdict, seen = panel_review(adapter: visual_panel_adapter, before:, after:)
+
+      assert_equal "APPROVE\nR1: EIGHT_PX_RHYTHM — aligned", verdict
+      assert_equal :ui, seen.fetch(:mode)
+      assert_equal before, seen.dig(:visual_image, :path)
+      assert_equal [after], seen.fetch(:visual_images).map { _1.fetch(:path) }
+      assert_includes seen.fetch(:briefing), "Judge must answer APPROVE or REJECT"
+    end
+  end
+
   def test_fix_does_not_start_repair_when_verification_scope_is_invalid
     fix_loop = Object.new
     fix_loop.define_singleton_method(:run) do |*|
