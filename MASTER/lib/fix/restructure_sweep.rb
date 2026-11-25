@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "digest"
+require "set"
 require_relative "restructure"
 require_relative "restructure_sweep/context"
 require_relative "restructure_sweep/contracts"
@@ -205,11 +206,12 @@ module Master
 
       def run_tree(target, run_id, attempts:, rounds:, keeps:)
         kept = []
+        attempted = Set.new
         terminal = :limit_reached
         rounds.times do |round|
           break if kept.size >= keeps
 
-          round_kept, terminal = run_round(target, "#{run_id}-#{round}", kept, attempts:, keeps:)
+          round_kept, terminal = run_round(target, "#{run_id}-#{round}", kept, attempts:, keeps:, attempted:)
           kept.concat(round_kept)
           break if terminal
 
@@ -226,12 +228,15 @@ module Master
 
       # One sweep round: rank the round's candidates, try the top problems, and
       # return [round_kept, terminal]; terminal is nil while the sweep continues.
-      def run_round(target, run_id, kept, attempts:, keeps:)
+      def run_round(target, run_id, kept, attempts:, keeps:, attempted:)
         ranked = ranked_candidate_map(candidates(target, run_id))
         return [[], :done] if ranked.empty?
 
-        problems = ranked.map { |row| row.fetch(:problem) }
-        round_kept, vetoes = try_candidates(problems.first(attempts), kept, candidate_map: render_candidate_map(ranked), keeps:)
+        problems = ranked.map { |row| row.fetch(:problem) }.reject { |problem| attempted.include?(problem.id) }
+        return [[], :plateau] if problems.empty?
+
+        round_kept, vetoes = try_candidates(problems.first(attempts), kept, candidate_map: render_candidate_map(ranked), keeps:, attempted:)
+        return [round_kept, nil] if round_kept.empty? && problems.size > attempts
         return [round_kept, round_terminal(problems, vetoes, attempts)] if round_kept.empty?
 
         [round_kept, nil]
@@ -239,12 +244,13 @@ module Master
 
       # Try the ranked problems in order until one keeps or the keeps budget is
       # reached; count policy vetoes for the round's terminal decision.
-      def try_candidates(problems, kept, candidate_map:, keeps:)
+      def try_candidates(problems, kept, candidate_map:, keeps:, attempted:)
         round_kept = []
         vetoes = 0
         problems.each do |problem|
           break if kept.size + round_kept.size >= keeps
 
+          attempted.add(problem.id)
           result = attempt(problem, candidate_map:)
           round_kept << result.value! if result&.ok?
           break if result&.ok?
@@ -253,9 +259,7 @@ module Master
         [round_kept, vetoes]
       end
 
-      # A round that keeps nothing ends the sweep: more candidates than the
-      # attempt budget allows is a budget stop, unanimous vetoes are a veto,
-      # and anything else is a plateau.
+      # Once the remaining candidates are exhausted, distinguish veto from plateau.
       def round_terminal(problems, vetoes, attempts)
         if problems.size > attempts
           :limit_reached

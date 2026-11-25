@@ -499,6 +499,21 @@ class TestRestructure < Minitest::Test
     assert_equal "LIMIT_REACHED", exit_event.last.fetch(:state)
   end
 
+  def test_restructure_continues_to_untried_problems_after_a_failed_batch
+    path = File.join(@repo, "MASTER/lib/big.rb")
+    graph = Master::Fix::ProblemGraph.new(plan: Master::Fix::TransformationPlan.new(root: Master::ROOT))
+    problems = graph.call(3.times.map { |index| [path + index.to_s, "FILE_SPRAWL", "scattered owner", []] })
+    attempted = []
+    sweep = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo)
+    sweep.define_singleton_method(:candidates) { |_target, _run_id| problems }
+    sweep.define_singleton_method(:attempt) { |problem, candidate_map:| attempted << problem.id; nil }
+
+    sweep.run_tree(File.join(@repo, "MASTER"), "alternatives", attempts: 1, rounds: 3, keeps: 1)
+
+    assert_equal problems.map(&:id).sort, attempted.sort
+    assert_equal attempted.uniq, attempted
+  end
+
   def test_a_restructure_plan_requires_every_decommission_audit_field
     sweep = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo)
     incomplete = "AUDIT: purpose=obsolete helper; owner=MASTER; inbound=none"

@@ -17,8 +17,8 @@ module Master
           risk = (problem.candidate_operations.map { |operation| OPERATION_RISK.fetch(operation, score_max) }.max || score_max)
             .clamp(score_min, score_max)
           { problem:, payoff:, risk:, ratio: payoff.to_f / risk }
-        end.sort_by do |row|
-          [-row.fetch(:ratio), -row.fetch(:payoff), row.fetch(:risk), row.fetch(:problem).id]
+        end.sort_by.with_index do |row, index|
+          [-row.fetch(:ratio), -row.fetch(:payoff), row.fetch(:risk), index]
         end
       end
 

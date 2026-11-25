@@ -29,22 +29,23 @@ module Master
           tiny = evidence.fetch(:tiny_files, []).select { |path| path.end_with?(".rb") }
           singles = evidence.fetch(:single_file_dirs, [])
           list = []
-          tiny.first(MAX_PROPOSALS).each do |path|
+          tiny.each do |path|
+            break if list.size >= MAX_PROPOSALS
             target = merge_target_for(path)
             next unless target
 
             list << Proposal.new(
               kind: :merge, from: path, to: target,
-              reason: "#{path.sub("#{@root}/", "")} carries fewer than #{TINY_LINES} lines; its content belongs inside #{target.sub("#{@root}/", "")}"
+              reason: "#{path.sub("#{@root}/", "")} is a small neighboring component of #{target.sub("#{@root}/", "")}; verify shared ownership and caller contracts before merging"
             )
           end
           singles.first(2).each do |dir|
-            member = files.find { |path| path.start_with?(dir) }
+            member = files.find { |path| File.dirname(path) == dir }
             next unless member
 
             list << Proposal.new(
               kind: :flatten, from: member, to: File.join(File.dirname(dir), File.basename(member)),
-              reason: "#{dir.sub("#{@root}/", "")} holds one file; a folder is structure a single file cannot justify"
+              reason: "#{dir.sub("#{@root}/", "")} holds one file; flatten only if its namespace and path convey no useful contract"
             )
           end
           list
