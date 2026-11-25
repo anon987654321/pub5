@@ -2,11 +2,7 @@ schema: 1
 name: "Papua New Guinea humanoid mask reference collection"
 selection: "round_robin_per_new_chat"
 rotation_profiles:
-  - "iatmul-concentric"
   - "iatmul-river"
-  - "sepik-split"
-  - "tatanua-crest"
-  - "elema-hollow"
 # Original MASTER character archetypes. Their names and temperaments are independent
 # of the cultural and museum provenance recorded under each entry.
 character_contract:
