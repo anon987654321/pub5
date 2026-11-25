@@ -46,6 +46,7 @@ module Studio
           ["Render a selfie series", :selfie],
           ["Create a photograph or animate a still", :photograph],
           ["Produce a finished selfie film", :film],
+          ["Produce the promo piece: clips, cut and soundtrack", :promo],
           ["Validate a subject's training plan", :validate],
           ["Audit photographic quality and subject readiness", :quality],
           ["Review an existing portrait series against holdout photographs", :review],
@@ -63,6 +64,9 @@ module Studio
         when :film
           subject = wizard.ask("Subject", default: "ragnhild")
           film_command(["--subject", subject])
+        when :promo
+          subject = wizard.ask("Subject", default: "ragnhild")
+          promo_command([subject])
         end
       end
 
@@ -179,6 +183,11 @@ module Studio
         success ? 0 : ($?.exitstatus || 1)
       end
 
+      def promo_command(argv)
+        success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("promo_piece.rb", __dir__), *argv)
+        success ? 0 : ($?.exitstatus || 1)
+      end
+
       def film_command(argv)
         success = system(Studio::Subprocess.environment, RbConfig.ruby, File.expand_path("selfie_film.rb", __dir__), *argv)
         success ? 0 : ($?.exitstatus || 1)
@@ -207,6 +216,7 @@ module Studio
         when "selfie" then photograph_command(["--selfie-series", *argv.drop(1)])
         when "photograph", "photo" then photograph_command(argv.drop(1))
         when "film" then film_command(argv.drop(1))
+        when "promo" then promo_command(argv.drop(1))
         when "train" then train_command(argv.drop(1))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
@@ -259,6 +269,7 @@ module Studio
             ruby STUDIO/lora/lora.rb selfie --subject NAME
                                                        render a selfie series after likeness approval
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
+            ruby STUDIO/lora/lora.rb promo SUBJECT   clips, cut and soundtrack for the promo
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
         TEXT

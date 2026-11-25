@@ -85,7 +85,7 @@ module Studio
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             result = @series.write(scene, film: false, output_stem: stem, grade_seed:,
-                                   preset: recipe.fetch("preset"), compiled: recipe.key?("shot"),
+                                   preset: recipe.fetch("preset"), compiled: compiled_recipe?(recipe),
                                    chain_presets: @chain_presets, chain: @chain)
             path = result.fetch("still")
             likeness = Studio::Lora::Judge.likeness(reference: reference, candidate: path)
@@ -148,6 +148,14 @@ module Studio
 
       def latest_still
         Dir.glob(File.join(@directory, "#{@subject}_selfie_*.jpg")).sort.last
+      end
+
+      # A restored sitting and a compiled shot both arrive with the full prompt
+      # already written. Sending them through the craft compiler appends a
+      # second set of rules and hands the result to a prompt optimizer, which is
+      # what flattened the restored sittings into generic portraits.
+      def compiled_recipe?(recipe)
+        recipe.key?("historical_source") || recipe.key?("shot")
       end
 
       def review_candidate(series_id:, index:, sha256:, decision:)

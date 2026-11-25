@@ -47,7 +47,7 @@ argument.
 
 One command runs the whole piece for a subject, with house defaults:
 `ruby STUDIO/lora/promo_piece.rb johann`. It reuses the developed still if
-there is one, films three ten-second clips, and cuts them with `dilla.wav`.
+there is one, films four ten-second clips, and cuts them with `dilla.wav`.
 
 Clips cut together because each one starts where the last ended:
 `Motion.last_frame` pulls the final frame of a clip and the next prediction

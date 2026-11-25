@@ -10,7 +10,9 @@ module Studio
     # the dilla bed. House defaults throughout, so the operator names the
     # subject and nothing else.
     class PromoPiece
-      CLIPS = 3
+      # Four ten-second clips is the longest piece the film renderer allows and
+      # the shortest that clears thirty seconds after the crossfades.
+      CLIPS = 4
       SECONDS = 10
       LOOK = "dilla_heavy"
       AUDIO = File.expand_path("../../dilla/dilla.wav", __dir__)

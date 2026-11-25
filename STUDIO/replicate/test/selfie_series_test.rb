@@ -555,4 +555,60 @@ class TestSelfieSeries < Minitest::Test
       assert_match(/no developed still/, error.message)
     end
   end
+
+  # The restored sittings carry a fully written prompt. Compiling them again
+  # appends a second rule set and hands the prompt to an optimizer, which is
+  # what turned the restored sittings back into generic portraits.
+  def test_a_restored_sitting_is_written_as_a_compiled_prompt
+    written = []
+    recorder = Object.new
+    recorder.define_singleton_method(:inference_profile) { nil }
+    recorder.define_singleton_method(:engine) { "probe/engine" }
+    recorder.define_singleton_method(:validate_model!) { {} }
+    recorder.define_singleton_method(:write) do |words, **kwargs|
+      written << kwargs.merge(words:)
+      path = File.join(@dir, "still_#{written.length}.png")
+      File.write(path, "render")
+      { "still" => path, "intermediates" => [], "capture" => { "original" => "#{path}.raw" } }
+    end
+    recorder.define_singleton_method(:discard_raw_renders) { |_result| }
+
+    box = Studio::Visual::SelfieSeries.new(
+      subject: "probe", directory: File.join(@dir, "stills"), ledger_path: File.join(@dir, "ledger.jsonl"),
+      direction: "shoots", chain_presets: [], chain: nil
+    )
+    box.instance_variable_set(:@series, recorder)
+    box.run(count: 1)
+
+    expected = Studio::Lora::Selfie.recipe(1, subject: "probe", direction: "shoots").fetch("scene")
+    assert_equal true, written.first.fetch(:compiled)
+    assert_equal expected, written.first.fetch(:words)
+  end
+
+  # The default varied series alternates archive sittings with the modern
+  # catalogue, so half of every run is a restored sitting.
+  def test_the_varied_series_compiles_its_archive_sittings
+    written = []
+    recorder = Object.new
+    recorder.define_singleton_method(:inference_profile) { nil }
+    recorder.define_singleton_method(:engine) { "probe/engine" }
+    recorder.define_singleton_method(:validate_model!) { {} }
+    recorder.define_singleton_method(:write) do |words, **kwargs|
+      written << kwargs.merge(words:)
+      path = File.join(@dir, "varied_#{written.length}.png")
+      File.write(path, "render")
+      { "still" => path, "intermediates" => [], "capture" => { "original" => "#{path}.raw" } }
+    end
+    recorder.define_singleton_method(:discard_raw_renders) { |_result| }
+
+    box = Studio::Visual::SelfieSeries.new(
+      subject: "probe", directory: File.join(@dir, "stills"), ledger_path: File.join(@dir, "ledger.jsonl"),
+      chain_presets: [], chain: nil
+    )
+    box.instance_variable_set(:@series, recorder)
+    box.run(count: 2)
+
+    assert_equal false, written[0].fetch(:compiled), "the modern catalogue still gets the craft compiler"
+    assert_equal true, written[1].fetch(:compiled), "the archive sitting must arrive verbatim"
+  end
 end
