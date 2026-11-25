@@ -81,7 +81,10 @@ fi
 
 top_processes="not captured"
 if (( pressure == 1 )); then
-  ps_out=$(ps -axr -o pid,ppid,pgid,user,state,pcpu,time 2>/dev/null) || ps_out=""
+  # pid= etc. print no header, and comm names the process: the header ("  PID"
+  # with leading spaces) slipped past the PID* skip below and was logged as
+  # the top process, beside PID 1 and slaacd, with no command to name.
+  ps_out=$(ps -axr -o pid=,user=,pcpu=,etime=,comm= 2>/dev/null) || ps_out=""
   p1=""
   p2=""
   p3=""

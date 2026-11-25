@@ -997,6 +997,8 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes block, "free_swap >= 400"
     assert_includes block, "cpu-pressure"
     assert_includes block, "420 && pressure_busy >= 80"
+    # The run's own pin/snapshot burst must not refuse it (vm23, 2026-11-25).
+    assert_includes block, "pressure_stamp < started"
     assert_source SOURCE, "admit_host_load"
     assert_source SOURCE, "VPS_DEPLOY_ADMITTED_SHA=$pin"
   end
