@@ -797,10 +797,6 @@ body.vertical-marketplace .store-buybox .button-primary:hover {
   background: var(--bol-blue-dark);
 }
 
-body.vertical-marketplace .search-form input[type="search"] {
-  border-radius: var(--radius-medium);
-}
-
 body.vertical-marketplace .deal-fav svg {
   padding: 8px;
   background: var(--bol-white);
@@ -1181,15 +1177,15 @@ body.vertical-marketplace .storefront-bol-brand-cell {
 
 body.vertical-marketplace .storefront-bol-brand-cell #logoWrapper {
   flex: none;
-  width: 56px;
-  height: 56px; // scan: intentional — the logo stage's drawn size, not flowing content
+  width: 76px;
+  height: 76px; // scan: intentional — the logo stage's drawn size, not flowing content
   overflow: hidden;
 }
 
 body.vertical-marketplace .storefront-bol-brand-cell #logoWrapper .banner_wrapper {
   width: 100px;
   height: 100px; // scan: intentional — the drawn stage the logo's geometry is set in
-  transform: scale(0.56);
+  transform: scale(0.76);
   transform-origin: 0 0;
 }
 
@@ -1222,13 +1218,16 @@ body.vertical-marketplace .storefront-bol-search {
   grid-column: 1 / -1;
   grid-row: 2;
   min-width: 0;
-  padding-top: var(--bol-search-row-gap);
+  width: 100%;
+  margin-block: var(--bol-search-row-gap);
+  padding: 0;
+  color: var(--text);
 }
 
 body.vertical-marketplace .storefront-bol-search form {
   display: flex;
-  align-items: stretch;
-  height: var(--bol-search-control-block);
+  align-items: center;
+  min-height: var(--bol-search-control-block);
 }
 
 body.vertical-marketplace .storefront-bol-search .nav-search-input {
@@ -1236,20 +1235,20 @@ body.vertical-marketplace .storefront-bol-search .nav-search-input {
   min-width: 0;
   height: var(--bol-search-control-block);
   border: 0;
-  border-radius: var(--radius-medium) 0 0 var(--radius-medium);
-  background: var(--bol-white);
-  color: var(--bol-ink);
-  padding-inline: 16px;
-  font-size: 16px;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  padding-inline: 24px;
+  font-size: inherit;
 }
 
 body.vertical-marketplace .storefront-bol-search .nav-search-submit {
   flex: 0 0 52px;
   width: 52px;
   border: 0;
-  border-radius: 0 var(--radius-medium) var(--radius-medium) 0;
-  background: var(--bol-blue-dark);
-  color: var(--bol-white);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
 }
 
 body.vertical-marketplace .storefront-bol-account {

@@ -22,8 +22,9 @@ class HomeInfiniteScrollReflex < Shared::InfiniteScrollReflex
 
   # The in-feed unit, on appended pages too. Commercial slots remain every two
   # posts; every third slot is a first-party vertical promotion instead.
-  def after_row(_record, slot)
+  def after_row(record, slot)
     return unless element.dataset["q"].to_s.blank?
+    return if record == @records.last && !@pagy&.next
     return unless (slot % Brgen::HomeFeed::AFFILIATE_EVERY).zero?
 
     if Brgen::HomeFeed.promotion_slot?(slot)

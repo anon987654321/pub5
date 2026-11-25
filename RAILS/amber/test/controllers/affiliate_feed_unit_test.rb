@@ -60,6 +60,18 @@ class AffiliateFeedUnitTest < ActionDispatch::IntegrationTest
   # The unit reads the shared locale file. Until the engine loaded every locale
   # rather than social.<locale>.yml literally, affiliate.en.yml sat on disk
   # unread and this rendered translation-missing spans in the app it moved for.
+  def test_frontpage_shows_a_fashion_ad_between_its_four_posts
+    seed_products(4)
+    seed_posts(4)
+
+    get root_path
+
+    assert_response :success
+    assert_select "#amber-home-posts-list > li", count: 5
+    assert_select "#amber-home-posts-list > li:nth-child(3) aside.affiliate_feed_unit--post", count: 1
+    assert_select "#amber-home-posts-list .affiliate_feed_post_ad", text: I18n.t("affiliate.ad_label")
+  end
+
   def test_the_bands_strings_resolve_rather_than_reporting_missing
     seed_products(4)
     seed_posts(FEED_EVERY + 1)

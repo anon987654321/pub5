@@ -305,7 +305,7 @@ body.vertical-marketplace .search {
   stroke: var(--nav-badge-ink); // scan: intentional — the animated mark's drawn stroke, not a theme surface
   fill: none;
   stroke-linecap: round;
-  stroke-width: 2;
+  stroke-width: 3.2;
   stroke-linejoin: round;
 }
 
@@ -318,7 +318,7 @@ body.vertical-marketplace .search {
 }
 
 #logoWrapper .smileyface {
-  transform: scale(1.35);
+  transform: scale(1.42);
 }
 
 .shopping_cart,
@@ -344,7 +344,7 @@ body.vertical-marketplace .search {
 }
 
 #logoWrapper .shopping_cart {
-  transform: scale(1.2);
+  transform: scale(1.28);
   margin-inline-start: -8px;
 }
 

@@ -66,11 +66,11 @@ export default class extends Controller {
   }
 
   #staticEndState() {
-    if (this.hasSmileyTarget) this.smileyTarget.style.opacity = "0"
-    if (this.hasCartTarget) this.cartTarget.style.opacity = "1"
+    if (this.hasSmileyTarget) this.smileyTarget.style.opacity = "1"
+    if (this.hasCartTarget) this.cartTarget.style.opacity = "0"
     if (this.hasNumberTarget) {
-      this.numberTarget.style.opacity = "1"
-      this.numberTarget.textContent = "9+"
+      this.numberTarget.style.opacity = "0"
+      this.numberTarget.textContent = "0"
     }
   }
 
@@ -124,21 +124,7 @@ export default class extends Controller {
         opacity: 0,
       })
 
-    // Source pen switches banner bg #fe9900 → #000; header placement keeps transparent.
-    const switchStroke = anime
-      .timeline({
-        targets: smileyPaths,
-      })
-      .add({
-        stroke: "#000",
-        strokeWidth: 3,
-        delay: 2200,
-      })
-      .add({
-        stroke: "#fff",
-        strokeWidth: 2,
-      })
-
+    // Keep the thicker, theme-controlled stroke throughout the timeline.
     const shoppingCart = anime
       .timeline()
       .add({
@@ -166,7 +152,7 @@ export default class extends Controller {
         textContent: 9
       })
 
-    this.animations = [smileyface, switchStroke, shoppingCart]
+    this.animations = [smileyface, shoppingCart]
   }
 
   #burst(anime) {

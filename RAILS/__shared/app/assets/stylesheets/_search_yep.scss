@@ -13,7 +13,7 @@
   border: 1px solid var(--search-bg, var(--color-midtone));
   border-radius: var(--radius-pill);
   font-size: 18px;
-  transition: all var(--transition-fast) var(--ease-in-out);
+  transition: background-color var(--transition-fast) var(--ease-in-out), border-radius var(--transition-fast) var(--ease-in-out);
 }
 
 /* Only the query field gets the transparent inner treatment; submit controls
@@ -33,7 +33,7 @@
 
 /* Keep a keyboard-visible indicator on the shared surface while the input
    itself remains borderless, as in the original Yep field. */
-.search:has(input:focus-visible) {
+.search:has(:focus-visible) {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
@@ -49,9 +49,10 @@
    (__shared/README.md, design_contract_test), so grey turning white is the cue,
    which is the larger half of the pen's own. */
 .search.focus,
+.search:focus-within,
 .search.active {
-  background-color: white;
-  border-color: white;
+  background-color: var(--surface);
+  border-color: var(--border);
   box-shadow: none;
 }
 
@@ -106,9 +107,25 @@
   background: transparent;
 }
 
-.search .search-form input[type="submit"],
-.search .search-form .button {
-  display: none;
+.search .search-form:has(> input[type="submit"]) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search .search-form:has(> input[type="submit"]) > input[type="search"] {
+  flex: 1 1 8rem;
+  width: auto;
+}
+
+.search .search-form > input[type="submit"] {
+  flex: 0 0 auto;
+  min-height: var(--tap-min);
+  margin-inline: var(--space-2);
+  padding-inline: var(--space-3);
+  border: 0;
+  background: transparent;
+  color: inherit;
 }
 
 /* A filter select a live index passes in (maps' place kind, amber's outfit
@@ -135,6 +152,6 @@
   color: inherit;
 }
 
-.search .search-form input[type="number"] {
-  display: none;
+@media (prefers-reduced-motion: reduce) {
+  .search { transition: none; }
 }

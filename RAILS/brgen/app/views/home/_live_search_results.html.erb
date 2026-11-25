@@ -16,9 +16,9 @@
      <% position = index + 1 %>
      <li>
        <%= render "posts/post", post: post, priority: index.zero? %>
-       <% if live_search_query.blank? && Brgen::HomeFeed.promotion_slot?(position) && position < @posts.size %>
+       <% if live_search_query.blank? && Brgen::HomeFeed.promotion_slot?(position) && (position < @posts.size || @pagy&.next) %>
          <%= render "home/vertical_promo_unit", promotion: Brgen::HomeFeed.promotion_for(position), position: %>
-       <% elsif ((position % Brgen::HomeFeed::AFFILIATE_EVERY).zero? && position < @posts.size) %>
+       <% elsif live_search_query.blank? && (position % Brgen::HomeFeed::AFFILIATE_EVERY).zero? && (position < @posts.size || @pagy&.next) %>
          <%= render "shared/affiliate_feed_unit", surface: "brgen", post_feed: true,
                                                     position: %>
        <% elsif live_search_query.blank? && position < @posts.size &&
