@@ -88,7 +88,7 @@ module Spectral
       m_inv = inv3(m)
       (0..2).map do |j|
         WAVELENGTHS.each_index.map do |λi|
-          (0..2).sum { |k| m_inv[j][k] * raw[k][λi] }
+          (0..2).sum { |k| m_inv[k][j] * raw[k][λi] }
         end
       end
     end
