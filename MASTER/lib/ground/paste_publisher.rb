@@ -119,10 +119,13 @@ module Master
         "unknown"
       end
 
-      def initialize(root: Master::REPO_ROOT, transport: nil, enabled: ENV.fetch("MASTER_LOG_PUBLISH", "1"))
+      # Publishing to a public paste service is opt-in: set MASTER_LOG_PUBLISH=1
+      # (or pass enabled: "1"). Unset, every report and deploy transcript stays
+      # on this machine and callers print its local path instead of a URL.
+      def initialize(root: Master::REPO_ROOT, transport: nil, enabled: ENV.fetch("MASTER_LOG_PUBLISH", "0"))
         @root = File.expand_path(root.to_s)
         @transport = transport
-        @enabled = enabled.to_s != "0"
+        @enabled = %w[1 true yes on].include?(enabled.to_s.downcase)
       end
 
       def self.operation_request?(input)

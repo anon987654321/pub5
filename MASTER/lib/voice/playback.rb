@@ -556,7 +556,9 @@ end
 
       # Recover only when no bytes reached the player; partial audio must never replay.
       def stream_fallback(values)
-        warn_once("voice stream failed before audio, resynthesising")
+        # A recovery step, not an outcome: the synthesis below says if it fails.
+        verbose = defined?(Master::Trace::Dmesg) && Master::Trace::Dmesg.verbose?
+        warn_once("stream failed before audio, resynthesising") if verbose
         path = synthesize(
           values[:part],
           voice: values[:voice],

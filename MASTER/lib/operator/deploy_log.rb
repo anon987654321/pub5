@@ -92,14 +92,7 @@ module Operator
       verify_log!
       content = File.binread(@path)
       outcome = @publisher.publish(operation: "deploy #{@app}", status:, output: content)
-      publication =
-        if outcome.success?
-          "paste: #{outcome.url} (#{outcome.expires_in}, redacted)"
-        else
-          reason = outcome.error || outcome.respond_to?(:skipped) && outcome.skipped || "not published"
-          "paste: unavailable (#{reason})"
-        end
-      append("\n#{publication}\n")
+      append("\n#{publication_line(outcome)}\n")
       write_status(exit_code)
       outcome
     rescue StandardError => error
@@ -119,7 +112,99 @@ module Operator
       nil
     end
 
+    # A failed run's cause sits inside the stage that failed, not on the last
+    # line of the pane. These read the transcript text, from the file or from
+    # the copy the operator streamed, and name the stage, its likely causes
+    # and the local file that holds the rest.
+    FAILED_STAGE = /\Avps-deploy: (\S+) FAILED at stage "([^"]+)" \(exit (\d+)\)/
+    STAGE_LINE = /\A\S+Z host=\S+ pid=\d+ app=(\S+) stage=(\S+) (.*)\z/
+    CAUSE = Regexp.union(
+      /\bFAIL(?:ED)?\b|\b(?:failed|refused|denied|unable|could not)\b|BLOCKED|PROTECTED/,
+      /not found|\w+Error\b|: nil\z|\A[\w.\/-]+:\d+: /
+    )
+    CAUSE_LIMIT = 4
+
+    def self.failure_digest(text)
+      lines = text.to_s.lines.map { |line| line.chomp.gsub(/<[^>]*>/, "").rstrip }
+      failed = failed_stage(lines)
+      return unless failed
+
+      failed.merge(causes: failure_causes(lines, failed), transcript: transcript_path(lines))
+    end
+
+    def self.failed_stage(lines)
+      index = lines.index { |line| line.match?(FAILED_STAGE) }
+      if index
+        app, stage, code = lines[index].match(FAILED_STAGE).captures
+        return { app:, stage:, exit: Integer(code, 10), stop: index }
+      end
+
+      index = lines.index { |line| line[STAGE_LINE, 3].to_s.match?(/\Afinished exit=[1-9]/) }
+      return unless index
+
+      app, stage, rest = lines[index].match(STAGE_LINE).captures
+      { app:, stage:, exit: Integer(rest[/\d+\z/], 10), stop: index }
+    end
+
+    # Lines between the failing stage's enter and its failure that read as a
+    # cause; repeats collapse to one line with a count, newest causes win.
+    # With no such line, the stage's last own line is the best witness.
+    def self.failure_causes(lines, failed)
+      window = stage_window(lines, failed)
+      counts = cause_lines(window).tally
+      return last_own_line(window) if counts.empty?
+
+      counts.keys.last(CAUSE_LIMIT).map { |line| counts[line] > 1 ? "#{line} (x#{counts[line]})" : line }
+    end
+
+    def self.stage_window(lines, failed)
+      stop = failed[:stop]
+      enter = "stage=#{failed[:stage]} enter"
+      start = lines[0...stop].rindex { |line| line.end_with?(enter) } || [stop - 40, 0].max
+      lines[start...stop]
+    end
+
+    def self.last_own_line(window)
+      window.reject { |line| line.strip.empty? || line.match?(STAGE_LINE) || line.start_with?("stamp0:") }
+            .last(1).map { |line| line.strip[0, 160] }
+    end
+
+    def self.cause_lines(window)
+      window.each_with_index.filter_map do |line, index|
+        next if line.match?(STAGE_LINE)
+
+        continued = line.match?(/\A\s+- /) && index.positive? && window[index - 1].match?(CAUSE)
+        line.strip[0, 160] if continued || line.match?(CAUSE)
+      end
+    end
+
+    def self.transcript_path(lines)
+      lines.filter_map { |line| line[%r{\A(?:log|vps-deploy: capturing to):? (/\S+\.log)\z}, 1] }.last
+    end
+
+    # Ticker lines for a running deploy: each stage entry and each app the
+    # fleet run moves to, as one short label per transcript line.
+    def self.stage_label(line)
+      app = line[/\Avps-deploy: all -> (\S+)\z/, 1]
+      return app if app
+
+      match = line.match(STAGE_LINE)
+      return unless match && match[3] == "enter"
+
+      stage = match[2].sub(/\Aall:/, "")
+      match[1] == "all" || match[1] == stage ? stage : "#{match[1]} #{stage}"
+    end
+
     private
+
+    # Publishing is opt-in (MASTER_LOG_PUBLISH=1); a disabled publisher keeps
+    # the transcript on this workstation and the line names where it is.
+    def publication_line(outcome)
+      return "paste: #{outcome.url} (#{outcome.expires_in}, redacted)" if outcome.success?
+      return "paste: unavailable (#{outcome.error || "not published"})" unless outcome.error == :disabled
+
+      "paste: not published; transcript kept at #{@path} (MASTER_LOG_PUBLISH=1 publishes)"
+    end
 
     def ensure_directory!
       FileUtils.mkdir_p(@directory, mode: 0o700)

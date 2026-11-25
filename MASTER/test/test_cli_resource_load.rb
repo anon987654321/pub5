@@ -96,6 +96,19 @@ class TestCliResourceLoad < Minitest::Test
     refute_match(/intake|waiting|\b\d+s\b/, session.send(:spin_line, "intake", "*"))
   end
 
+  def test_static_spinner_drops_the_cycling_glyph
+    session = Master::CLI::Session.allocate
+    session.instance_variable_set(:@spin_frame, 2)
+    saved = ENV["MASTER_SPINNER"]
+
+    ENV["MASTER_SPINNER"] = "static"
+    assert_equal "", session.send(:spin_frame_glyph)
+    ENV.delete("MASTER_SPINNER")
+    assert_equal "x", session.send(:spin_frame_glyph)
+  ensure
+    saved.nil? ? ENV.delete("MASTER_SPINNER") : ENV["MASTER_SPINNER"] = saved
+  end
+
   def test_spinner_glyph_stays_fixed_white_across_cpu_load
     session = Master::CLI::Session.allocate
     no_color = ENV["NO_COLOR"]

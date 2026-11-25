@@ -342,7 +342,7 @@ module Master
             d("mode0 at mainbus0: #{mode.first(3).join(', ')}"),
             d("mode0: #{mode.drop(3).join(', ')}"),
             d("aesthetic0 at mode0: #{Aesthetic.mode}"),
-            d("module0 at mainbus0: #{module_names.join(' ')}"),
+            d("module0 at mainbus0: #{module_names.size} subsystems under lib/"),
             d("web0 at mainbus0: #{context[:web]}"),
             *splash_pledge_lines,
           ]

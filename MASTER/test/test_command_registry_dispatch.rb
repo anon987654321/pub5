@@ -1011,6 +1011,59 @@ class TestCommandRegistryDispatch < Minitest::Test
     refute Registry.send(:deploy_success_receipt?, output + "post-deploy public canary (PASS):\n", status, "all")
   end
 
+  def test_deploy_ticker_prints_each_stage_once_across_transcript_rewrites
+    Dir.mktmpdir("deploy-ticker") do |dir|
+      path = File.join(dir, "deploy-20261125T000000Z-all-aaaaaaaaaaaa-1-abcdef.log")
+      first = "2026-11-25T00:00:01Z host=b pid=1 app=all stage=openbsd-mirror enter\nvps-deploy: all -> master\n"
+      File.write(path, first)
+      started = File.mtime(path) - 5
+      seen = { lines: {}, last: nil }
+      io = StringIO.new
+      ENV["PUB5_DEPLOY_LOG_DIR"] = dir
+
+      Registry.send(:deploy_tick, started, seen, io:)
+      File.write(path, "#{first}2026-11-25T00:00:02Z host=b pid=2 app=master stage=master enter\n" \
+                       "2026-11-25T00:00:03Z host=b pid=3 app=brgen stage=start enter\n")
+      Registry.send(:deploy_tick, started, seen, io:)
+
+      assert_equal ["deploy0: openbsd-mirror", "deploy0: master", "deploy0: brgen start"], io.string.lines.map(&:strip)
+    ensure
+      ENV.delete("PUB5_DEPLOY_LOG_DIR")
+    end
+  end
+
+  def test_deploy_state_payload_ignores_status_lines_around_the_json
+    output = "deps0: checking pinned Ruby, Bundler and gem dependencies\n" \
+             "{\n  \"host\": \"vm23\",\n  \"apps\": []\n}\n"
+
+    assert_equal "vm23", Registry.send(:deploy_state_payload, output).fetch("host")
+    assert_raises(JSON::ParserError) { Registry.send(:deploy_state_payload, "deps0: failed\n") }
+  end
+
+  FailedStatus = Struct.new(:exitstatus) do
+    def success? = false
+  end
+
+  def test_deploy_summary_names_the_failing_stage_causes_and_transcript
+    status = FailedStatus.new(1)
+    output = <<~LOG
+      vps-deploy: capturing to /home/op/.pub5/deployments/deploy-x.log
+      2026-11-25T10:21:34Z host=brgen pid=1 app=all stage=all:master enter
+      write_deploy_run_receipt:35: command not found: records_call
+
+      vps-deploy: all FAILED at stage "all:master" (exit 1)
+      PUB5_DEPLOY_EXIT=1
+      paste: not published; transcript kept at /home/op/.pub5/deployments/deploy-x.log
+    LOG
+
+    result = Registry.send(:deploy_summary, output, status, "all")
+
+    assert_includes result, "remote exit 1: all failed at stage \"all:master\""
+    assert_includes result, "cause: write_deploy_run_receipt:35: command not found: records_call"
+    assert_includes result, "transcript: /home/op/.pub5/deployments/deploy-x.log"
+    refute_includes result, "PUB5_DEPLOY_EXIT"
+  end
+
   def test_deploy_summary_keeps_the_decisive_remote_failure
     status = Struct.new(:exitstatus) do
       def success? = false

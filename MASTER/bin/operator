@@ -1406,7 +1406,7 @@ when "vps"
       log.append("local collector pid: #{pid}\n")
       if detach
         puts "vps-deploy: detached; local transcript: #{log.path}"
-        puts "vps-deploy: paste link will be added when capture and canaries finish"
+        puts "vps-deploy: the exit status is added when capture and canaries finish"
         exit 0
       end
       puts "vps-deploy: capturing to #{log.path}"

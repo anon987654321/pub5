@@ -830,11 +830,7 @@ module Master
         inventory = Deploy::Inventory.new(root: MasterPaths.repo)
         return "deploy: unknown target #{target.inspect}; no registered app or deployment group matched" if inventory.target_kind(target) == :unknown
 
-        operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
-        output, status = Master::Io::Exec.capture2e(
-          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
-          chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
-        )
+        output, status = deploy_capture(target)
         summary = deploy_summary(output, status, target)
         return Result.err("deploy: #{summary}", category: :infrastructure) if deploy_preflight_blocked?(output)
         if status.respond_to?(:cancelled?) && status.cancelled?
@@ -849,28 +845,78 @@ module Master
         state = deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:)
         return Result.ok([summary, state[:summary]].join("\n")) if deploy_success_receipt?(output, status, target) && state[:ok]
 
-        Result.err(
-          ["deploy: #{summary}", state[:summary],
-           "No automatic retry or rollback was attempted. Reconcile the run receipt before another mutation."].join("\n"),
-          category: :infrastructure,
-        )
+        deploy_failure_result(summary, state)
       rescue Master::Io::Exec::TimeoutError => error
-        output = Array(error.result).first.to_s
-        summary = deploy_interrupted_summary(output, "deployment wait exceeded #{DEPLOY_CAPTURE_TIMEOUT}s")
-        state = target && inventory ? deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:) :
-          { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
-        Result.err(
-          ["deploy: #{summary}", state[:summary], "The tmux run may still be active; do not launch another deployment."].join("\n"),
-          category: :infrastructure,
-        )
+        summary = deploy_interrupted_summary(Array(error.result).first.to_s,
+                                             "deployment wait exceeded #{DEPLOY_CAPTURE_TIMEOUT}s")
+        deploy_unverified_result(summary, target && inventory && { target:, inventory: },
+                                 advice: "The tmux run may still be active; do not launch another deployment.")
       rescue StandardError => error
         summary = "execution failed (#{error.class}: #{error.message}); deployment completion is unverified"
-        state = target && inventory ? deploy_remote_reconciliation(MasterPaths.repo, target:, inventory:) :
-          { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
-        Result.err(
-          ["deploy: #{summary}", state[:summary], "Do not retry until the remote run and its receipt are reconciled."].join("\n"),
-          category: :infrastructure,
+        deploy_unverified_result(summary, target && inventory && { target:, inventory: },
+                                 advice: "Do not retry until the remote run and its receipt are reconciled.")
+      end
+
+      # The waiter itself failed; read the box once, never retry the mutation.
+      def deploy_unverified_result(summary, scope, advice:)
+        state = if scope
+                  deploy_remote_reconciliation(MasterPaths.repo, **scope)
+                else
+                  { ok: false, summary: "remote state: not queried; deployment target was not resolved" }
+                end
+        Result.err(["deploy: #{summary}", state[:summary], advice].join("\n"), category: :infrastructure)
+      end
+
+      # The operator's output is captured whole, so a 20-minute run printed
+      # nothing. On a terminal, a ticker reads the local transcript as it
+      # grows and prints each stage the run enters as one deploy0 line.
+      def deploy_capture(target)
+        ticker = deploy_ticker(Time.now) if $stdout.tty?
+        operator = File.join(MasterPaths.repo, "MASTER", "bin", "operator")
+        Master::Io::Exec.capture2e(
+          RbConfig.ruby, operator, "vps", "deploy", target, "--remote",
+          chdir: MasterPaths.repo, timeout: DEPLOY_CAPTURE_TIMEOUT, raise_on_timeout: true
         )
+      ensure
+        ticker&.kill
+      end
+
+      DEPLOY_TICK_SECONDS = 5
+
+      def deploy_ticker(started, io: $stdout)
+        seen = { lines: {}, last: nil }
+        Thread.new do
+          loop do
+            sleep DEPLOY_TICK_SECONDS
+            deploy_tick(started, seen, io:)
+          end
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.deploy_ticker")
+        end
+      end
+
+      # The collector may rewrite the transcript, so lines are remembered by
+      # content, not offset; a label repeated back to back prints once.
+      def deploy_tick(started, seen, io:)
+        path = deploy_transcript_since(started)
+        return unless path
+
+        File.foreach(path, chomp: true) do |line|
+          next if seen[:lines].key?(line)
+
+          seen[:lines][line] = true
+          label = ::Operator::DeployLog.stage_label(line)
+          next if label.nil? || label == seen[:last]
+
+          seen[:last] = label
+          Master::Trace::Dmesg.status("deploy0", label, io:)
+        end
+      end
+
+      def deploy_transcript_since(started)
+        directory = File.expand_path(ENV.fetch("PUB5_DEPLOY_LOG_DIR", ::Operator::DeployLog::DEFAULT_DIRECTORY))
+        newest = Dir.glob(File.join(directory, "deploy-*.log")).max_by { |path| File.basename(path) }
+        newest if newest && File.mtime(newest) >= started - 1
       end
 
       # A zero exit is not enough. The canonical waiter must report the exact
@@ -879,6 +925,18 @@ module Master
       # fields; the local collector writes the canary verdict (DeployLog).
       DEPLOY_FINISHED = /(?:\A|\s)finished exit=(\d+)\z/
       DEPLOY_CANARY_PASS = "#{::Operator::DeployLog::PUBLIC_CANARY} (PASS):".freeze
+      # Both reads are read-only; recover --plan lists interrupted-run receipts
+      # and the action each needs, and vps state shows what is serving.
+      DEPLOY_RECONCILE_HINT = [
+        "No automatic retry or rollback was attempted. Reconcile the run receipt before another deploy:",
+        "  on vm23: cd /home/dev/pub5 && doas zsh OPENBSD/bin/vps-deploy recover --plan",
+        "  from here: MASTER/bin/operator vps state --json --remote",
+      ].freeze
+
+      def deploy_failure_result(summary, state)
+        message = ["deploy: #{summary}", state[:summary], *DEPLOY_RECONCILE_HINT].join("\n")
+        Result.err(message, category: :infrastructure)
+      end
 
       def deploy_success_receipt?(output, status, target = "all")
         return false unless status.success?
@@ -902,53 +960,84 @@ module Master
       end
 
       def deploy_summary(output, status, target = "all")
+        return deploy_interrupted_summary(output, "local deployment wait was cancelled") if deploy_cancelled?(status)
+
         lines = output.to_s.lines.map(&:strip).reject(&:empty?)
-        return deploy_interrupted_summary(output, "local deployment wait was cancelled") if status.respond_to?(:cancelled?) && status.cancelled?
+        early = deploy_running_summary(lines) || deploy_success_summary(output, status:, target:)
+        early ||= deploy_preflight_summary(lines) || deploy_refusal_summary(lines)
+        return early if early
 
-        running = lines.find { |line| line.match?(/\Avps-deploy: session [\w.-]+ already running\z/i) }
-        if running
-          session = running[/session ([\w.-]+) already running/i, 1]
-          return [
-            "deployment not started: tmux session #{session} is already running",
-            "attach: tmux attach -t #{session}",
-            "log: ~/vps-deploy.log",
-            "do not start another deployment while this session exists",
-          ].join("\n")
-        end
-
-        success_line = deploy_target_line(lines, target)
-        exit_code = deploy_exit(lines)
-        if deploy_success_receipt?(output, status, target)
-          return "remote: #{success_line}; exit 0; public canary passed"
-        end
-
-        # A local refusal happens before SSH. Keep the failed check and its
-        # diagnostic together; compressing it to the final summary hid the cause.
-        preflight_end = lines.rindex { |line| line.match?(/\Apreflight:\s+\S+\s+FAILED\b/i) }
-        if preflight_end
-          failure_start = lines.rindex { |line| line.match?(/\AFAIL preflight\b/i) }
-          start = failure_start || [preflight_end - 10, 0].max
-          detail = lines[start..preflight_end]
-          return (["deployment blocked before SSH; nothing was sent to vm23:", *detail]).join("\n")
-        end
-
-        # The refusal names its own remedy; never cut it mid-word.
-        refusal = lines.reverse.find { |line| line.match?(/deploy refused,|RTFM_FIRST/i) }
-        if refusal
-          return "deployment blocked before SSH; nothing was sent to vm23:\n#{refusal.sub(/\A\w+0: failed, /, "")}"
-        end
-
-        started = lines.find { |line| line.match?(/\Avps-deploy: started in tmux session [\w.-]+/i) }
-        if started && !exit_code
+        if lines.any? { |line| line.match?(DEPLOY_STARTED) } && !deploy_exit(lines)
           return deploy_interrupted_summary(output, "remote wait ended without a terminal deployment receipt")
         end
 
-        decisive = lines.reverse.find { |line| line.match?(/\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not|FAIL)\b/i) }
+        deploy_failure_digest(output, status) || deploy_decisive_summary(lines, status)
+      end
+
+      DEPLOY_STARTED = /\Avps-deploy: started in tmux session [\w.-]+/i
+      DEPLOY_DECISIVE = /\b(?:fatal|failed|refused|error|aborted|conflict|not ready|did not|could not|FAIL)\b/i
+      DEPLOY_BLOCKED = "deployment blocked before SSH; nothing was sent to vm23:"
+
+      def deploy_cancelled?(status) = status.class.method_defined?(:cancelled?) && status.cancelled?
+
+      def deploy_running_summary(lines)
+        running = lines.find { |line| line.match?(/\Avps-deploy: session [\w.-]+ already running\z/i) }
+        return unless running
+
+        session = running[/session ([\w.-]+) already running/i, 1]
+        ["deployment not started: tmux session #{session} is already running",
+         "attach: tmux attach -t #{session}", "log: ~/vps-deploy.log",
+         "do not start another deployment while this session exists"].join("\n")
+      end
+
+      def deploy_success_summary(output, status:, target:)
+        return unless deploy_success_receipt?(output, status, target)
+
+        lines = output.to_s.lines.map(&:strip).reject(&:empty?)
+        "remote: #{deploy_target_line(lines, target)}; exit 0; public canary passed"
+      end
+
+      # A local refusal happens before SSH. Keep the failed check and its
+      # diagnostic together; compressing it to the final summary hid the cause.
+      def deploy_preflight_summary(lines)
+        preflight_end = lines.rindex { |line| line.match?(/\Apreflight:\s+\S+\s+FAILED\b/i) }
+        return unless preflight_end
+
+        failure_start = lines.rindex { |line| line.match?(/\AFAIL preflight\b/i) }
+        start = failure_start || [preflight_end - 10, 0].max
+        [DEPLOY_BLOCKED, *lines[start..preflight_end]].join("\n")
+      end
+
+      # The refusal names its own remedy; never cut it mid-word.
+      def deploy_refusal_summary(lines)
+        refusal = lines.reverse.find { |line| line.match?(/deploy refused,|RTFM_FIRST/i) }
+        refusal && "#{DEPLOY_BLOCKED}\n#{refusal.sub(/\A\w+0: failed, /, "")}"
+      end
+
+      def deploy_decisive_summary(lines, status)
+        decisive = lines.reverse.find { |line| line.match?(DEPLOY_DECISIVE) }
         detail = decisive || lines.last || "no remote output or terminal deploy receipt"
         detail = lines.last(2).join(" | ") if decisive && lines.last != decisive && lines.last.length < 120
         detail = detail[0, 240]
-        status.success? ? "remote exit 0 without complete success evidence: #{detail}" :
-          "remote exit #{exit_code || status.exitstatus || "signal"}: #{detail}"
+        return "remote exit 0 without complete success evidence: #{detail}" if status.success?
+
+        "remote exit #{deploy_exit(lines) || status.exitstatus || "signal"}: #{detail}"
+      end
+
+      # The pane's last lines are the exit marker and the paste line; the
+      # cause sits inside the failing stage. Name the stage, the lines that
+      # read as its cause and the local transcript that holds the rest.
+      def deploy_failure_digest(output, status)
+        return if status.success?
+
+        digest = ::Operator::DeployLog.failure_digest(output)
+        return unless digest
+
+        code = digest[:exit]
+        lines = ["remote exit #{code}: #{digest[:app]} failed at stage #{digest[:stage].inspect}"]
+        lines.concat(digest[:causes].map { |cause| "  cause: #{cause}" })
+        lines << "  transcript: #{digest[:transcript]}" if digest[:transcript]
+        lines.join("\n")
       end
 
       def deploy_interrupted_summary(output, reason)
@@ -978,9 +1067,21 @@ module Master
           return { ok: false, summary: "remote state: unavailable (exit #{status.exitstatus || "signal"})#{detail.empty? ? "" : ": #{detail[0, 240]}"}" }
         end
 
-        deploy_reconciliation_summary(JSON.parse(output), target:, inventory:)
+        deploy_reconciliation_summary(deploy_state_payload(output), target:, inventory:)
       rescue StandardError => error
         { ok: false, summary: "remote state: unavailable (#{error.class}: #{error.message})" }
+      end
+
+      # The capture merges stderr, and a booting Ruby on the box may say
+      # deps0: before vps-state prints. The payload is the JSON object
+      # between the first line that opens one and the last line that closes it.
+      def deploy_state_payload(output)
+        lines = output.to_s.lines
+        first = lines.index { |line| line.start_with?("{") }
+        last = lines.rindex { |line| line.rstrip.end_with?("}") }
+        raise JSON::ParserError, "no JSON object in vps-state output" unless first && last && last >= first
+
+        JSON.parse(lines[first..last].join)
       end
 
       def deploy_reconciliation_summary(payload, target:, inventory:)

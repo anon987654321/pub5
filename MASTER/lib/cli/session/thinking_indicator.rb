@@ -104,12 +104,25 @@ module Master
 
           @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
           reserve_activity_row_after_quiet(target)
-          activity = tool_activity_line
-          line = one_row(spin_line(stage, SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length), activity:))
+          line = one_row(spin_line(stage, spin_frame_glyph, activity: tool_activity_line))
           @spin_frame += 1
+          return if static_spinner? && line == @spin_last_line
 
+          @spin_last_line = line
           draw_spin_row(target, spin_tinted(line, @spin_intensity))
           target.flush
+        end
+
+        # MASTER_SPINNER=static drops the cycling glyph and repaints only when
+        # the stage or activity text changes. A terminal that keeps every
+        # carriage-return repaint (a PTY recorder, script(1), a CI log) then
+        # records one status line per stage instead of a frame per tick.
+        def static_spinner?
+          %w[0 off static].include?(ENV["MASTER_SPINNER"].to_s.downcase)
+        end
+
+        def spin_frame_glyph
+          static_spinner? ? "" : SPINNER_FRAMES.fetch(@spin_frame % SPINNER_FRAMES.length)
         end
 
         # The spinner is the live activity surface: a concise stage while the
@@ -504,6 +517,7 @@ module Master
             terminal_print("\r\e[K")
           end
           @spinner_row_visible = false
+          @spin_last_line = nil
         end
 
         # Routine unit traffic is diagnostic, not the interactive default.
