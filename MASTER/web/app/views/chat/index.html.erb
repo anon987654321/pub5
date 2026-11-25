@@ -60,6 +60,7 @@
     window.MASTER_FACE_MASK_CHARACTERS = <%= raw json_escape((@face_mask_characters || {}).to_json) %>;
     window.MASTER_FACE_MASK_CHARACTER_ROTATION = <%= raw json_escape(Array(@face_mask_character_rotation).to_json) %>;
     window.MASTER_FACE_LAW_FIELD = <%= raw json_escape(@face_law_field.to_json) %>;
+    window.MASTER_TERMINAL_GRAMMAR = <%= raw json_escape(Master::Voice::Renderer::TextFormatting.browser_grammar.to_json) %>;
     window.MASTER_COMMANDS = []; // Browser controls are local; operator commands are CLI-only.
     window.MASTER_I18N = <%= raw json_escape(t("face.js").to_json) %>;
     window.MASTER_CACHE_VERSION = <%= raw json_escape(Rails.application.config.x.cache_version.to_json) %>;

@@ -736,4 +736,13 @@ class TestRenderer < Minitest::Test
     assert_includes rendered, "puts \"ready\""
   end
 
+  def test_shared_terminal_grammar_is_language_specific
+    grammar = Master::Voice::Renderer::TextFormatting.browser_grammar
+    assert_equal "javascript", grammar.fetch(:aliases).fetch("ts")
+    assert_equal "ruby", grammar.fetch(:aliases).fetch("rb")
+    assert_equal ["sql"], grammar.fetch(:insensitive)
+    rules = grammar.fetch(:grammars)
+    assert rules.fetch("css").any? { |role, pattern| role == "number" && Regexp.new(pattern).match?("#fff") }
+    assert rules.fetch("html").any? { |role, pattern| role == "comment" && Regexp.new(pattern).match?("<!-- note -->") }
+  end
 end

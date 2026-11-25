@@ -266,25 +266,16 @@ window._chatOnUser = (text) => {
 // Small dependency-free tokenizer for fenced source blocks. It emits only
 // escaped source text and fixed class names; model output never becomes markup.
 function highlightCode(source, language = "") {
-  const lang = language.toLowerCase();
-  const ruby = /^(ruby|rb|sh|bash|zsh|shell|yaml|yml|python|py)$/.test(lang);
-  const js = /^(js|javascript|ts|typescript|jsx|tsx|css|scss|sass|json|c|cpp|go|rust|java)$/.test(lang);
-  const html = /^(html|xml|svg|erb)$/.test(lang);
-  const sql = lang === "sql";
-  if (!ruby && !js && !html && !sql) return escapeHtml(source);
-  const comment = html ? /<!--[\s\S]*?-->/ : sql ? /--[^\n]*|\/\*[\s\S]*?\*\// :
-    ruby ? /#[^\n]*/ : /\/\/[^\n]*|\/\*[\s\S]*?\*\//;
-  const strings = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\x60(?:\\.|[^\x60\\])*\x60/;
-  const words = html ? /<\/?[A-Za-z][\w:-]*|\b[\w:-]+(?=\s*=)/ :
-    /\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in|select|where|join|insert|update|delete|create|table|as|and|or|not)\b/i;
-  const numbers = /\b\d+(?:\.\d+)?\b/;
-  const cssValue = /#[0-9a-fA-F]{3,8}\b|--[\w-]+|[\w-]+(?=\s*:)/;
-  const roles = [[comment, "comment"], [strings, "string"], [words, "keyword"], [numbers, "number"]];
-  if (/^(css|scss|sass)$/.test(lang)) roles.unshift([cssValue, "keyword"]);
-  const pattern = new RegExp(roles.map(([re]) => "(" + re.source + ")").join("|"), sql ? "gi" : "g");
+  const grammar = window.MASTER_TERMINAL_GRAMMAR;
+  const name = language.toLowerCase();
+  const lang = grammar?.aliases?.[name] || name;
+  const roles = grammar?.grammars?.[lang];
+  if (!Array.isArray(roles) || !roles.length) return escapeHtml(source);
+  const pattern = new RegExp(roles.map(([, rule]) => "(" + rule + ")").join("|"),
+    grammar.insensitive.includes(lang) ? "gi" : "g");
   let output = "", cursor = 0;
   for (const match of source.matchAll(pattern)) {
-    const role = roles[match.slice(1).findIndex((part) => part !== undefined)][1];
+    const role = roles[match.slice(1).findIndex((part) => part !== undefined)][0];
     output += escapeHtml(source.slice(cursor, match.index));
     output += '<span class="syntax-' + role + '">' + escapeHtml(match[0]) + '</span>';
     cursor = match.index + match[0].length;

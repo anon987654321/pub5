@@ -70,40 +70,100 @@ module Master
         end
 
 
-        TERMINAL_CODE_TOKENS = %r{
-          (\#[^\n]*|//[^\n]*)
-          |("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')
-          |(--?[A-Za-z][\w-]*)
-          |(\b(?:def|class|module|end|if|elsif|else|unless|case|when|return|yield|begin|rescue|ensure|const|let|var|function|async|await|import|export|from|new|true|false|null|nil|undefined|require|do|then|while|for|in)\b)
-          |(\b\d+(?:\.\d+)?\b)
-          |((?<![\w/.-])(?:bin/master|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|export|print|puts|warn|printf|echo|curl|pkg_add|service|rcctl)(?![\w/.-]))
-          |([A-Za-z0-9_.-]+/[A-Za-z0-9_./-]+)
-          |([=<>!|&+*-]+)
-        }x.freeze
+        # One portable lexical grammar, projected into the browser at boot.
+        # Patterns share the Ruby/ECMAScript subset; no inner capture groups.
+        TERMINAL_GRAMMARS = {
+          'ruby' => [
+            ['comment', '#[^\\r\\n]*'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '\\b(?:alias|and|begin|break|case|class|def|defined|do|else|elsif|end|ensure|false|for|if|in|module|next|nil|not|or|redo|rescue|retry|return|self|super|then|true|undef|unless|until|when|while|yield)\\b'],
+            ['command', '\\b(?:puts|print|warn|printf|echo|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|curl|pkg_add|service|rcctl)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b'],
+            ['type', '\\b[A-Z][A-Za-z0-9_]*\\b']
+          ],
+          'shell' => [
+            ['comment', '#[^\\r\\n]*'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\'|\\x60(?:\\\\.|[^\\x60\\\\])*\\x60'],
+            ['keyword', '\\b(?:if|then|else|elif|fi|for|while|until|do|done|case|esac|in|function|export|local|readonly|return|exit)\\b'],
+            ['option', '--?[A-Za-z][\\w-]*'],
+            ['variable', '\\$(?:\\{[^}\\r\\n]+\\}|[A-Za-z_]\\w*|[0-9?@#*])'],
+            ['command', '\\b(?:puts|print|warn|printf|echo|ruby|bundle|rake|git|cd|pwd|ls|cat|grep|rg|sed|awk|find|doas|sudo|chmod|chown|install|make|node|npm|ssh|scp|tar|env|curl|pkg_add|service|rcctl)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'javascript' => [
+            ['comment', '//[^\\r\\n]*|/\\*[\\s\\S]*?(?:\\*/|$)'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\'|\\x60(?:\\\\.|[^\\x60\\\\])*\\x60'],
+            ['keyword', '\\b(?:as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|from|function|get|if|import|in|instanceof|let|new|null|of|return|set|static|super|switch|this|throw|true|try|typeof|undefined|var|void|while|with|yield|interface|type|enum|implements|private|public|protected|readonly|satisfies)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'css' => [
+            ['comment', '/\\*[\\s\\S]*?(?:\\*/|$)'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '@[\\w-]+|--[\\w-]+|[\\w-]+(?=\\s*:)'],
+            ['number', '#[0-9a-fA-F]{3,8}\\b|\\b\\d+(?:\\.\\d+)?(?:px|em|rem|vh|vw|ms|s|deg|%)?']
+          ],
+          'html' => [
+            ['comment', '<!--[\\s\\S]*?(?:-->|$)'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '</?[A-Za-z][\\w:-]*|[\\w:-]+(?=\\s*=)'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'json' => [
+            ['keyword', '"(?:\\\\.|[^"\\\\])*"(?=\\s*:)'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"'],
+            ['keyword', '\\b(?:true|false|null)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'yaml' => [
+            ['comment', '#[^\\r\\n]*'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '[\\w.-]+(?=\\s*:)|\\b(?:true|false|null)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'python' => [
+            ['comment', '#[^\\r\\n]*'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '\\b(?:and|as|assert|async|await|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'sql' => [
+            ['comment', '--[^\\r\\n]*|/\\*[\\s\\S]*?(?:\\*/|$)'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '\\b(?:select|from|where|join|inner|outer|left|right|on|insert|into|update|set|delete|create|table|alter|drop|as|and|or|not|null|true|false|group|by|order|having|limit|offset|values|union|distinct|case|when|then|else|end|begin|commit|rollback|primary|key)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ],
+          'compiled' => [
+            ['comment', '//[^\\r\\n]*|/\\*[\\s\\S]*?(?:\\*/|$)'],
+            ['string', '"(?:\\\\.|[^"\\\\])*"|\'(?:\\\\.|[^\'\\\\])*\''],
+            ['keyword', '\\b(?:auto|bool|break|case|char|class|const|continue|default|do|double|else|enum|extern|false|float|fn|for|func|if|impl|import|int|let|long|match|mod|namespace|new|nil|null|package|private|public|return|short|static|struct|super|switch|this|trait|true|type|typedef|union|unsigned|use|var|void|while)\\b'],
+            ['number', '\\b(?:0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\b']
+          ]
+        }.transform_values { |rows| rows.map(&:freeze).freeze }.freeze
+        TERMINAL_ALIASES = { 'rb' => 'ruby', 'sh' => 'shell', 'bash' => 'shell', 'zsh' => 'shell', 'js' => 'javascript', 'ts' => 'javascript', 'typescript' => 'javascript', 'jsx' => 'javascript', 'tsx' => 'javascript', 'scss' => 'css', 'sass' => 'css', 'xml' => 'html', 'svg' => 'html', 'erb' => 'html', 'yml' => 'yaml', 'py' => 'python', 'c' => 'compiled', 'cpp' => 'compiled', 'go' => 'compiled', 'rust' => 'compiled', 'java' => 'compiled' }.freeze
 
-        # Highlight fenced source only when MASTER's output policy permits ANSI.
-        # TTY detection, NO_COLOR and TERM=dumb have one owner in Renderer.
+        def self.browser_grammar
+          { grammars: TERMINAL_GRAMMARS, aliases: TERMINAL_ALIASES, insensitive: ["sql"] }
+        end
+
         def highlight_terminal_code(line, language: "")
           return line unless terminal_color_enabled?
-          return line unless language.match?(/\A(?:ruby|rb|sh|bash|zsh|shell|yaml|yml|python|py|js|javascript|ts|typescript|jsx|tsx|css|scss|sass|json|html|xml|svg|erb|sql|c|cpp|go|rust|java)\z/)
 
-          pattern = case language
-                    when /\A(?:ruby|rb|sh|bash|zsh|shell|yaml|yml|python|py)\z/
-                      TERMINAL_CODE_TOKENS
-                    else
-                      Regexp.new(TERMINAL_CODE_TOKENS.source.sub('\\#[^\\n]*|', ''), Regexp::EXTENDED)
-                    end
+          language = TERMINAL_ALIASES.fetch(language, language)
+          rules = TERMINAL_GRAMMARS[language]
+          return line unless rules
+
+          pattern = Regexp.new(rules.map { |_, source| "(#{source})" }.join("|"),
+            language == "sql" ? Regexp::IGNORECASE : 0)
           line.gsub(pattern) do |token|
-            captures = Regexp.last_match.captures
-            case captures.index { |capture| !capture.nil? }
-            when 0 then @p.dim(token)
-            when 1 then @p.green(token)
-            when 2 then @p.yellow(token)
-            when 3 then @p.cyan(token)
-            when 4 then @p.magenta(token)
-            when 5 then @p.bold(@p.cyan(token))
-            when 6 then @p.blue(token)
-            when 7 then @p.dim(token)
+            role = rules[Regexp.last_match.captures.index { |capture| !capture.nil? }].first
+            case role
+            when "comment" then @p.dim(token)
+            when "string" then @p.green(token)
+            when "option", "variable" then @p.yellow(token)
+            when "keyword" then @p.cyan(token)
+            when "number" then @p.magenta(token)
+            when "command" then @p.bold(@p.cyan(token))
+            when "type" then @p.blue(token)
             else token
             end
           end

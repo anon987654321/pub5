@@ -391,3 +391,9 @@ test("browser chrome is measured, not simulated, and operator commands are absen
   assert.match(chat, /const commandHistory = \[\]/);
   assert.match(chat, /historyIndex === commandHistory\.length \? historyDraft/);
 });
+
+test("CLI owns the browser source grammar", () => {
+  assert.match(chatIndex, /TextFormatting\.browser_grammar\.to_json/);
+  assert.match(chat, /window\.MASTER_TERMINAL_GRAMMAR/);
+  assert.match(chat, /grammar\?\.grammars\?\.\[lang\]/);
+});
