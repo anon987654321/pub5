@@ -197,13 +197,10 @@
     const source = sourceFor(profile);
     const characters = window.MASTER_FACE_MASK_CHARACTERS && typeof window.MASTER_FACE_MASK_CHARACTERS === "object"
       ? window.MASTER_FACE_MASK_CHARACTERS : {};
-    const characterRotation = Array.isArray(window.MASTER_FACE_MASK_CHARACTER_ROTATION)
-      ? window.MASTER_FACE_MASK_CHARACTER_ROTATION : [];
-    const characterId = characterRotation.length ? characterRotation[hash(activeKey) % characterRotation.length] : null;
+    const characterId = window.MASTER_FACE_CHARACTER_ID || null;
     const character = characterId && characters[String(characterId)] &&
       typeof characters[String(characterId)] === "object"
       ? characters[String(characterId)] : null;
-    const characterName = String(character?.name || "");
     world.setSubjectForm("object", descriptor(profile));
 
     const root = document.documentElement;
