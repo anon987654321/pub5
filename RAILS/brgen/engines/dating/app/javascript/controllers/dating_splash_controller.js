@@ -1,13 +1,7 @@
 import { Controller } from "@hotwired/stimulus"
 
-// css-doodle 0.60.0, the vendored official build (importmap pin "css-doodle"),
-// is the library brgen sponsors and the source of the reference the operator
-// could not find: a css-doodle heart over a red bloom, dating's first screen.
-// The build is an IIFE that defines the <css-doodle> custom element, so a
-// dynamic import is what upgrades the element and draws the mark; it runs on
-// this one screen. The heart is a shape, not a timeline, so it is static by
-// itself and reduced motion needs no separate path — the mark holds still,
-// scoped in _dating_splash.scss.
+// Upgrade the light-trail heart only on the splash. Its single 4.6-second
+// pass respects reduced motion, with a static CSS mask before upgrade.
 let doodlePromise = null
 
 function loadDoodle() {
@@ -23,21 +17,24 @@ export default class extends Controller {
   static targets = ["heart"]
 
   connect() {
-    // Draw the static heart shape. The library defines the element; no
-    // animation or pulse runs without an explicit pause control.
     loadDoodle()
   }
 
   pointerDown(event) {
-    this.origin = { x: event.clientX, y: event.clientY }
+    if (event.isPrimary === false || (event.pointerType === "mouse" && event.button !== 0)) return
+    this.origin = { x: event.clientX, y: event.clientY, id: event.pointerId }
   }
 
   pointerUp(event) {
-    if (!this.origin) return
+    if (!this.origin || this.origin.id !== event.pointerId) return
 
     const travel = Math.hypot(event.clientX - this.origin.x, event.clientY - this.origin.y)
     this.origin = null
     if (travel >= 48) this.start()
+  }
+
+  pointerCancel() {
+    this.origin = null
   }
 
   start() {

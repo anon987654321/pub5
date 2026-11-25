@@ -28,59 +28,74 @@ body.vertical-dating {
   font-family: var(--font);
 }
 
-/* Dating's first screen keeps the dark Hjerterom-inspired stage and the
-   historic red heart mark. The SVG is an inline, self-contained source asset. */
+/* Original first-screen composition: dark stage, open neon light trails,
+   red bloom and the provider line. Colours belong to this drawn artwork. */
 .dating-splash {
-  --dating-splash-bg: #1f2124;
-  --dating-splash-ink: #ffffff;
-  --dating-splash-quiet: #9a9a9a;
-  --dating-splash-bloom: rgb(170 40 14 / 45%);
+  --dating-splash-bg: #202224;
+  --dating-splash-ink: #fff;
+  --dating-splash-quiet: #a2a2a2;
+  --dating-splash-bloom: rgb(157 42 18 / 48%);
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   justify-items: center;
+  align-items: center;
   min-height: 100dvh;
   padding:
-    max(var(--space-8), env(safe-area-inset-top)) var(--space-4)
-    max(var(--space-6), env(safe-area-inset-bottom));
-  background:
-    radial-gradient(closest-side at 50% 48%, var(--dating-splash-bloom), transparent 75%),
-    var(--dating-splash-bg);
+    max(clamp(2rem, 8vh, 7rem), env(safe-area-inset-top)) var(--space-4)
+    max(clamp(1.5rem, 4vh, 4rem), env(safe-area-inset-bottom));
+  background: var(--dating-splash-bg);
   color: var(--dating-splash-ink);
-  touch-action: pan-x pan-y;
+  touch-action: none;
   user-select: none;
 }
 
 .dating-splash-start {
   color: inherit;
-  font-size: var(--text-extra-extra-large);
+  font-size: clamp(1.35rem, 5vw, 2.75rem);
+  font-weight: var(--weight-medium);
+  text-align: center;
   text-decoration: none;
 }
 
 .dating-splash-heart {
+  --heart-trail-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20400%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M200%20363%20C187%20316%20120%20248%2062%20188%20C-7%20114%2039%2035%20112%2035%20C156%2035%20189%2061%20200%20111%20C211%2061%20244%2035%20288%2035%20C361%2035%20407%20114%20338%20188%20C280%20248%20213%20316%20200%20363Z%22%20stroke-width%3D%225%22%20stroke-dasharray%3D%22162%2038%20212%2018%20130%2066%22%20stroke-dashoffset%3D%2278%22%2F%3E%3Cpath%20d%3D%22M200%20363%20C187%20316%20120%20248%2062%20188%20C-7%20114%2039%2035%20112%2035%20C156%2035%20189%2061%20200%20111%20C211%2061%20244%2035%20288%2035%20C361%2035%20407%20114%20338%20188%20C280%20248%20213%20316%20200%20363Z%22%20transform%3D%22translate%28200%20200%29%20scale%28.935%29%20translate%28-200%20-200%29%22%20stroke-width%3D%223.5%22%20stroke-dasharray%3D%22126%2056%20196%2040%2096%2088%22%20stroke-dashoffset%3D%22-23%22%20opacity%3D%22.72%22%2F%3E%3Cpath%20d%3D%22M200%20363%20C187%20316%20120%20248%2062%20188%20C-7%20114%2039%2035%20112%2035%20C156%2035%20189%2061%20200%20111%20C211%2061%20244%2035%20288%2035%20C361%2035%20407%20114%20338%20188%20C280%20248%20213%20316%20200%20363Z%22%20transform%3D%22translate%28200%20200%29%20scale%28.86%29%20translate%28-200%20-200%29%22%20stroke-width%3D%223.7%22%20stroke-dasharray%3D%22146%20110%2076%2063%20112%20165%22%20stroke-dashoffset%3D%22111%22%20opacity%3D%22.9%22%2F%3E%3Cpath%20d%3D%22M200%20363%20C187%20316%20120%20248%2062%20188%20C-7%20114%2039%2035%20112%2035%20C156%2035%20189%2061%20200%20111%20C211%2061%20244%2035%20288%2035%20C361%2035%20407%20114%20338%20188%20C280%20248%20213%20316%20200%20363Z%22%20transform%3D%22translate%28200%20200%29%20scale%28.77%29%20translate%28-200%20-200%29%22%20stroke-width%3D%222.7%22%20stroke-dasharray%3D%2280%20148%2094%20126%20108%20135%22%20stroke-dashoffset%3D%2222%22%20opacity%3D%22.65%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
+  --heart-trail-color: linear-gradient(115deg, #792e19 0%, #ff4b18 18%, #e8d6a9 30%, #98ffd1 44%, #fff0c8 50%, #3dba98 58%, #9d351b 72%, #ff5719 86%, #e7e6bc 100%);
+  --heart-trail-duration: 4.6s;
   position: relative;
-  align-self: center;
   display: grid;
   place-items: center;
-  width: min(80vw, 420px);
-  aspect-ratio: 4 / 3;
+  width: min(86vw, 61svh, 720px);
+  aspect-ratio: 1;
+  isolation: isolate;
 }
 
-/* The first screen draws the historical heart as a css-doodle shape over the
-   stage's red bloom. The element fills the heart box and holds still:
-   AUTO_MOTION_PAUSABLE holds motion still by default, and a decorative,
-   aria-hidden mark that advances by itself forever would need a pause
-   control its first screen has no room for. The doodle and the bloom carry
-   the splash; git history holds the pulse if the operator wants it back. */
+.dating-splash-heart::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -8%;
+  background: radial-gradient(ellipse at 48% 49%, var(--dating-splash-bloom) 0%, rgb(109 34 15 / 24%) 48%, transparent 71%);
+  pointer-events: none;
+}
+
 .dating-splash-heart css-doodle {
   display: block;
-  width: min(64vw, 320px);
-  height: auto;
+  width: 100%;
   aspect-ratio: 1;
+  filter: drop-shadow(0 0 6px rgb(255 97 34 / 50%)) drop-shadow(0 0 24px rgb(207 48 12 / 42%));
+}
+
+/* The unupgraded element has the same final light-trail silhouette. */
+.dating-splash-heart css-doodle:not(:defined) {
+  background-image: var(--heart-trail-color);
+  background-size: 170% 150%;
+  background-position: 35% 50%;
+  mask: var(--heart-trail-mask) center / contain no-repeat;
 }
 
 .dating-splash-title {
-  margin: 0 0 var(--space-8);
-  font-size: var(--text-display);
+  margin: 0 0 clamp(3rem, 10vh, 9rem);
+  font-size: clamp(2.5rem, 8vw, 5rem);
   font-weight: var(--weight-bold);
   line-height: 1;
 }
@@ -88,9 +103,19 @@ body.vertical-dating {
 .dating-splash-trust {
   margin: 0;
   color: var(--dating-splash-quiet);
-  font-size: var(--text-large);
+  font-size: clamp(1rem, 3vw, 1.75rem);
+  text-align: center;
 }
 
 .dating-splash-trust strong {
   color: var(--dating-splash-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dating-splash-heart { --heart-trail-duration: 0s; }
+}
+
+@media (max-height: 480px) {
+  .dating-splash { touch-action: pan-y; }
+  .dating-splash-title { margin-block-end: var(--space-3); }
 }

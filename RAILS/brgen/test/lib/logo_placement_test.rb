@@ -114,12 +114,11 @@ class LogoPlacementTest < ActiveSupport::TestCase
     controller = Rails.root.join("engines", "dating", "app", "javascript", "controllers", "dating_splash_controller.js").read
     stylesheet = Rails.root.join("app/assets/stylesheets/_dating_splash.scss").read
 
-    # The reference the operator could not find: a css-doodle heart over a red
-    # bloom. css-doodle 0.60.0 is vendored and pinned (config/importmap.rb); the
-    # element is only upgraded, and the mark only drawn, once the controller
-    # imports that build on this one screen.
+    # The screenshot is the reference: broken heart contours and moving light.
+    # The vendored doodle is lazy-loaded; the CSS mask also paints without JS.
     assert_includes splash, "<css-doodle>"
-    assert_includes splash, "@shape: heart"
+    assert_includes splash, "@keyframes heart-light"
+    assert_includes splash, "mask: var(--heart-trail-mask)"
     assert_includes splash, 'data-dating-splash-target="heart"'
     refute_includes splash, "dating/home/hjerterom_logo"
 
@@ -127,11 +126,12 @@ class LogoPlacementTest < ActiveSupport::TestCase
     assert_includes importmap, 'pin "css-doodle"'
     assert_includes controller, 'import("css-doodle")'
 
-    # The heart is a shape, not a timeline. Keep it still until a real pause
-    # control exists; a forever-loop pulse on a decorative mark is not justified.
+    # A single animation under five seconds needs no persistent pause control.
     assert_includes stylesheet, ".dating-splash-heart css-doodle"
-    refute_includes stylesheet, "dating-heart-pulse"
-    refute_match(/animation\s*:/, stylesheet)
+    assert_includes stylesheet, "--heart-trail-duration: 4.6s"
+    assert_includes stylesheet, "--heart-trail-duration: 0s"
+    assert_includes stylesheet, "css-doodle:not(:defined)"
+    refute_match(/animation[^;]*infinite/, splash)
   end
 
   def test_playlist_tunnel_has_its_own_decorative_wave_mark
