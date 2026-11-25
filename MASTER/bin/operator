@@ -1367,6 +1367,7 @@ when "vps"
     die("vps", "use only one of --follow or --detach", 64) if follow && detach
     if remote
       require "operator/canary"
+      require "operator/asset_stage"
       ensure_openbsd_receipt(app)
       connection_check = lambda do |root:|
         expected, reason = Operator::DeployPreflight.openbsd_target_identity(root:)
@@ -1385,6 +1386,13 @@ when "vps"
       die("vps", "preflight did not return a pinned SHA", 1) unless sha
       log = Operator::DeployLog.new(app:, sha:)
       log.append("preflight: PASS on #{sha}\n")
+      staged, reason = Operator::AssetStage.new(root: ROOT, sha:, ssh: ssh_base_argv).run(app)
+      unless staged
+        log.append("assets: #{reason}\n")
+        log.finish(status: "failure", exit_code: 1)
+        die("vps", "deploy refused, #{reason}; nothing was launched on the box", 1)
+      end
+      log.append("assets: built here and staged on the box for #{sha}\n")
       session = "pub5-deploy"
       log_ref = "local://deploys/#{File.basename(log.path)}"
       launch_command = remote_deploy_launch_command(remote_command, log_ref:, session:)

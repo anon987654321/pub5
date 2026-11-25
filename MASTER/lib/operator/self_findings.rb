@@ -103,6 +103,9 @@ module Operator
     # and this census names the bundles as strings while the scanner names them
     # as paths, which is a difference no test could see. Lazy, because Master is
     # not loaded until `law` runs.
+    # Code nobody typed: vendored, precompiled, or the face build output.
+    def generated?(path) = path.match?(THIRD_PARTY) || path.match?(generated_bundles)
+
     def generated_bundles
       @generated_bundles ||= begin
         # path_filter.rb is an autoload ignore, so the constant exists only once
