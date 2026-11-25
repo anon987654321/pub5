@@ -30,8 +30,8 @@ module Operator
       explicit = ENV["PUB5_BUNDLE"].to_s
       return explicit if !explicit.empty? && File.executable?(explicit)
 
-      ruby = best_available_ruby(root:)&.fetch(:path, nil)
-      suffix = ruby ? File.basename(ruby).delete_prefix("ruby") : ""
+      ruby = ENV["PUB5_RUBY"].to_s.empty? ? best_available_ruby(root:)&.fetch(:path, nil) : ruby_cmd(root:)
+      suffix = ruby ? File.basename(ruby)[/\Aruby(\d+(?:\.\d+)*)\z/, 1].to_s : ""
       if !suffix.empty?
         paired = File.join(File.dirname(ruby), "bundle#{suffix}")
         return paired if File.executable?(paired)
@@ -109,30 +109,40 @@ module Operator
     # lives on the checkout itself, so it survives a restart and lets a fresh
     # container boot without rebuilding.
     def checkout_tools_rubies(root)
-      [File.join(root, ".tools", "ruby", "bin", "ruby")].select { |path| File.executable?(path) }
+      master = File.directory?(File.join(root, "MASTER")) ? File.join(root, "MASTER") : root
+      [File.join(master, ".tools", "ruby", "bin", "ruby")].select { |path| File.file?(path) && File.executable?(path) }
     end
 
-    RBENV_VERSION_DIR = %r{/versions/(\d+(?:\.\d+)+)/bin/ruby\z}
-
-    # Asked of an interpreter only when nothing cheaper knows: the running Ruby says RUBY_VERSION, an rbenv
-    # Ruby's directory names its version, and each other path is asked once. Spawning every candidate cost
-    # 0.9s of each MASTER boot, because loading check_chain.rb asks for the best Ruby.
+    # The running interpreter needs no subprocess. Other candidates must
+    # actually answer: a version-manager directory name does not prove its
+    # interpreter is usable. Cache successes only while the executable is unchanged.
     def version_for(path)
       running = RbConfig.ruby
       return Gem::Version.new(RUBY_VERSION) if File.file?(path) && File.file?(running) && File.identical?(path, running)
+      return unless File.file?(path) && File.executable?(path)
 
-      named = path.to_s[RBENV_VERSION_DIR, 1]
-      return Gem::Version.new(named) if named
+      stat = File.stat(path)
+      identity = [stat.dev, stat.ino, stat.size, stat.mtime, stat.ctime]
+      versions = (@versions ||= {})
+      cached = versions[path]
+      return cached.last if cached && cached.first == identity
 
-      (@versions ||= {}).fetch(path) { @versions[path] = spawned_version(path) }
+      version = spawned_version(path)
+      versions[path] = [identity, version] if version
+      version
+    rescue SystemCallError
+      nil
     end
 
     def spawned_version(path)
-      output, status = Master::Io::Exec.capture2e(path, "-e", "print RUBY_VERSION")
+      output, status = Master::Io::Exec.capture2e(path, "-e", "print RUBY_VERSION", timeout: 5, raise_on_timeout: true)
       return unless status.success?
 
-      Gem::Version.new(output.to_s.strip[/\d+(\.\d+)+\z/])
-    rescue ArgumentError, SystemCallError
+      version = output.to_s.strip
+      return unless version.match?(/\A\d+\.\d+\.\d+\z/)
+
+      Gem::Version.new(version)
+    rescue ArgumentError, SystemCallError, Master::Io::Exec::TimeoutError
       nil
     end
 

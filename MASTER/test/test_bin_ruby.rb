@@ -137,6 +137,43 @@ class TestBinRuby < Minitest::Test
     end
   end
 
+  def test_runner_finds_private_ruby_from_repository_root
+    Dir.mktmpdir do |dir|
+      master = staged_master_with_tools_ruby(dir, version: "3.3.6", marker: "PRIVATE")
+      assert_equal [File.join(master, ".tools", "ruby", "bin", "ruby")],
+                   Operator::RubyRunner.checkout_tools_rubies(dir)
+    end
+  end
+
+  def test_runner_does_not_trust_rbenv_directory_names_or_failed_probes
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "versions", "4.0.1", "bin", "ruby")
+      FileUtils.mkdir_p(File.dirname(path))
+      ["printf 4.0.1; exit 1", "printf garbage", "printf 3.3.8"].each do |probe|
+        File.write(path, "#!/bin/sh\n#{probe}\n")
+        File.chmod(0o755, path)
+        expected = probe == "printf 3.3.8" ? Gem::Version.new("3.3.8") : nil
+        actual = Operator::RubyRunner.version_for(path)
+        expected ? assert_equal(expected, actual) : assert_nil(actual)
+      end
+      File.write(path, "#!/bin/sh\nprintf 3.4.10\n")
+      assert_equal Gem::Version.new("3.4.10"), Operator::RubyRunner.version_for(path)
+    end
+  end
+
+  def test_runner_pairs_bundle_with_explicit_ruby
+    Dir.mktmpdir do |dir|
+      ruby = File.join(dir, "custom-ruby")
+      bundle = File.join(dir, "bundle")
+      File.write(ruby, "#!/bin/sh\nprintf 3.3.8\n")
+      File.write(bundle, "#!/bin/sh\nexit 0\n")
+      [ruby, bundle].each { |path| File.chmod(0o755, path) }
+      ENV.stub(:[], ->(key) { { "PUB5_RUBY" => ruby }[key] }) do
+        assert_equal bundle, Operator::RubyRunner.bundle_cmd
+      end
+    end
+  end
+
   def test_running_compatible_interpreter_is_preferred
     selected = Operator::RubyRunner.best_available_ruby
     assert_equal File.expand_path(RbConfig.ruby), File.expand_path(selected.fetch(:path))
