@@ -7,7 +7,7 @@
   "use strict";
 
   const PROFILES = Object.freeze([
-    { id: "iatmul-river", name: "MASTER — Sepik study", family: "Original Iatmul-inspired study", note: "Operator-approved sparse elongated sculpture; not a museum scan", outer: "ring", w: .36, h: .62, jaw: .18, crown: .22, asym: .025, brow: .33, nose: .48, mouth: .23 }
+    { id: "iatmul-river", name: "MASTER — Sepik study", family: "Original Iatmul-inspired study", note: "Operator-approved rounded future-human particle study; not a museum scan", outer: "ring", w: .405, h: .56, jaw: .24, crown: .29, asym: .012, brow: .34, nose: .38, mouth: .20 }
   ]);
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
@@ -53,7 +53,7 @@
   // Profiles vary independently in silhouette, eye voids, cheek fullness,
   // bridge depth and mouth proportions. All coordinates remain bounded.
   const RELIEF = Object.freeze({
-    "iatmul-river": [.37, 2.0, .33, .17, .105, .065, .30, .075]
+    "iatmul-river": [.22, 2.15, .38, .185, .125, .082, .21, .10]
   });
   const randomUnit = (index, salt) => {
     let n = Math.imul((index + 1) ^ Math.imul(salt + 1, 0x9e3779b1), 0x85ebca6b);
@@ -80,25 +80,26 @@
     const mouth = mouthGeometry(id);
     const height = (a, b) => {
       const v = Math.max(-.999, Math.min(.999, b / p.h));
-      const width = p.w * Math.pow(Math.max(.0001, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent) *
+      const width = p.w * (1 + .10 * Math.max(0, v)) * Math.pow(Math.max(.0001, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent) *
         (1 - taper * Math.max(0, -v));
       const edge = Math.min(1, Math.abs((a - p.asym * v * .45) / width));
       const absX = Math.abs(a);
       const eye = ((absX - eyeX) / eyeW) ** 2 + ((b - eyeY) / eyeH) ** 2;
-      const lip = (a / mouth.width) ** 2 + ((b - mouth.y) / mouth.height) ** 2;
+      const smile = .018 * Math.min(1, (a / mouth.width) ** 2);
+      const lip = (a / mouth.width) ** 2 + ((b - mouth.y - smile) / mouth.height) ** 2;
       const brow = gaussian(b - eyeY - eyeH * 1.35, .045) * gaussian(absX - eyeX, .15);
       const bridge = gaussian(a, .035 + noseDepth * .12) * gaussian(b + .025, p.nose * .64);
       const cheek = gaussian(absX - p.w * .60, .095) * gaussian(b + .12, .18);
       const rim = gaussian(eye - 1.22, .65) + gaussian(lip - 1.24, .78);
       return .035 + .18 * Math.sqrt(Math.max(0, 1 - edge * edge)) + noseDepth * bridge +
-        .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
+        .045 * brow + cheeks * cheek + .022 * Math.min(1, rim);
     };
     const h = .006;
     const dx = (height(x + h, y) - height(x - h, y)) / (2 * h);
     const dy = (height(x, y + h) - height(x, y - h)) / (2 * h);
     const length = Math.hypot(dx, dy, 1);
     if (z < 0) {
-      const nx = x / (p.w * p.w), ny = y / (p.h * p.h), nz = z / (.36 * .36);
+      const nx = x / (p.w * p.w), ny = y / (p.h * p.h), nz = z / (.43 * .43);
       const magnitude = Math.hypot(nx, ny, nz) || 1;
       return [nx / magnitude, ny / magnitude, nz / magnitude];
     }
@@ -120,15 +121,16 @@
       // Additive low-discrepancy sequence distributes first candidates
       // across the surface; later attempts preserve the same bounded density.
       const frac = (n) => n - Math.floor(n);
-      const v = frac((index + .5) * .7548776662466927 + attempt * .5698402909980532) * 2 - 1;
-      const u = frac((index + .5) * .5698402909980532 + attempt * .7548776662466927) * 2 - 1;
+      const v = frac((index + .5) * .7548776662466927 + attempt * .5698402909980532 + .012 * randomUnit(index, salt)) * 2 - 1;
+      const u = frac((index + .5) * .5698402909980532 + attempt * .7548776662466927 + .012 * randomUnit(index, salt + 1)) * 2 - 1;
       const y = v * h;
       const width = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent);
       const jaw = 1 - taper * Math.max(0, -v);
-      const x = u * w * width * jaw + p.asym * v * .45;
+      const x = u * w * (1 + .10 * Math.max(0, v)) * width * jaw + p.asym * v * .45;
       const absoluteX = Math.abs(x);
       const eye = Math.pow((absoluteX - eyeX) / eyeW, 2) + Math.pow((y - eyeY) / eyeH, 2);
-      const mouth = Math.pow(x / mouthW, 2) + Math.pow((y - mouthY) / mouthH, 2);
+      const smile = .018 * Math.min(1, (x / mouthW) ** 2);
+      const mouth = Math.pow(x / mouthW, 2) + Math.pow((y - mouthY - smile) / mouthH, 2);
       if (eye < 1 || mouth < 1) continue;
       const edge = Math.abs(u);
       const brow = gaussian(y - eyeY - eyeH * 1.35, .045) * gaussian(absoluteX - eyeX, .15);
@@ -136,13 +138,13 @@
       const cheek = gaussian(absoluteX - w * .60, .095) * gaussian(y + .12, .18);
       const rim = gaussian(eye - 1.22, .65) + gaussian(mouth - 1.24, .78);
       const relief = .035 + .18 * Math.sqrt(Math.max(0, 1 - edge * edge)) +
-        noseDepth * bridge + .085 * brow + cheeks * cheek + .036 * Math.min(1, rim);
+        noseDepth * bridge + .045 * brow + cheeks * cheek + .022 * Math.min(1, rim);
       const light = Math.min(1, .19 + .29 * edge + .35 * bridge + .22 * brow + .18 * rim + .30 * cheek);
       // A minority of stable carriers describes the curved rear shell.
       // Keep the same projected apertures through both sides of the mask.
       const rear = index % 3 === 0;
       if (!rear && randomUnit(index, salt + 2) > light) continue;
-      const z = rear ? -.36 * Math.sqrt(Math.max(0, 1 - edge * edge)) * width
+      const z = rear ? -.43 * Math.sqrt(Math.max(0, 1 - edge * edge)) * width
         : relief + (randomUnit(index, salt + 3) - .5) * .028;
       return [x, y, z];
     }
