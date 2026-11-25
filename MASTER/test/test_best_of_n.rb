@@ -91,9 +91,21 @@ class BestOfNTest < Minitest::Test
   end
 
   def test_one_candidate_keeps_todays_behaviour
-    ENV.delete("MASTER_FIX_BEST_OF")
+    ENV["MASTER_FIX_BEST_OF"] = "1"
     assert_equal 1, B.n
     refute B.active?({ law: B::LAW_ID, file: "x.scss" }, Object.new)
+  ensure
+    ENV.delete("MASTER_FIX_BEST_OF")
+  end
+
+  def test_visual_exploration_is_on_by_default
+    ENV.delete("MASTER_FIX_BEST_OF")
+    assert_equal 3, B.n
+  end
+
+  def test_missing_surface_rejects_candidate
+    other = Surface.new("brgen/home/desktop", "desktop")
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface, other], root: @root, measurer:, read:, write:)
   end
 
   def test_active_only_for_visual_style_findings_with_n_above_one

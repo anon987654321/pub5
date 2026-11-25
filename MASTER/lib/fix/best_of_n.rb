@@ -19,7 +19,7 @@ module Master
     # when layout quality, a quality-check metric or chrome drift regresses.
     # The best surviving score wins; the smallest diff breaks a tie.
     #
-    # MASTER_FIX_BEST_OF sets N (default 1). At 1 the pass is inactive and
+    # MASTER_FIX_BEST_OF sets N (default 3). At 1 the pass is inactive and
     # RepairLoop behaves exactly as it did without it.
     module BestOfN
       LAW_ID = "RENDERED_VISUAL_REFINEMENT"
@@ -31,13 +31,13 @@ module Master
         "Candidate approach: reach the same goal through a different selector or property than the obvious one.",
         "Candidate approach: prefer an existing design token or layout primitive over a new value.",
       ].freeze
-      Scored = Data.define(:source, :score, :problems, :diff)
+      Scored = Data.define(:source, :score, :problems, :diff, :floor)
 
       class SourceChanged < StandardError; end
 
       module_function
 
-      def n = Integer(ENV.fetch("MASTER_FIX_BEST_OF", "1")).clamp(1, MAX_N)
+      def n = Integer(ENV.fetch("MASTER_FIX_BEST_OF", "3")).clamp(1, MAX_N)
 
       # A tuple the ToolBreaker has fused gets no N-way fan-out either: N more model
       # calls on a prompt that failed three times against this unchanged file.
@@ -103,7 +103,8 @@ module Master
           write.call(source)
           raise SourceChanged, "candidate write did not match the proposed source" unless read.call == source
 
-          row = score(source, original, measurer.call(surfaces, root:), root:, anchors:)
+          measured = measurer.call(surfaces, root:)
+          row = score(source, original, measured, root:, anchors:, expected: surfaces)
           log(i + 1, pool.size, row)
           row
         ensure
@@ -115,15 +116,18 @@ module Master
           end
           raise SourceChanged, "original source restoration could not be verified" unless read.call == original
         end
-        scored.select { |row| row.problems.empty? }.max_by { |row| [(row.score / TIE).round, -row.diff] }&.source
+        scored.select { |row| row.problems.empty? }.max_by { |row| [(row.floor / TIE).round, (row.score / TIE).round, -row.diff] }&.source
       end
 
-      def score(source, original, measured, root:, anchors:)
-        return Scored.new(source:, score: 0.0, problems: ["not rendered"], diff: 0) if measured.empty?
+      def score(source, original, measured, root:, anchors:, expected: [])
+        return Scored.new(source:, score: 0.0, problems: ["not rendered"], diff: 0, floor: 0.0) if measured.empty?
 
         problems = measured.flat_map { |surface, payload| judge(surface, payload, root:, anchors:) }
-        mean = LayoutScoreRender.scores(measured, root:).values
-        Scored.new(source:, score: (mean.sum / mean.size).round(1), problems:, diff: diff_size(original, source))
+        scores = LayoutScoreRender.scores(measured, root:)
+        missing = expected.map(&:id) - scores.keys
+        problems << "missing surfaces: #{missing.join(", ")}" unless missing.empty?
+        values = scores.values
+        Scored.new(source:, score: values.sum / values.size, floor: values.min, problems:, diff: diff_size(original, source))
       end
 
       def judge(surface, payload, root:, anchors:)

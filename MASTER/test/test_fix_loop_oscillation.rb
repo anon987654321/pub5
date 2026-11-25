@@ -197,6 +197,20 @@ def publish_pending! = :nothing_to_publish
     assert_equal 1, @bus.events.count { |e| e[:event] == "fix_loop:oscillation" }
   end
 
+  def test_recurring_finding_does_not_abort_a_progressing_pass
+    loop, committer = build_loop([])
+    runner = loop.instance_variable_get(:@pass_runner)
+    persistent = { law: "TEST_RULE", file: "dummy.yml", line: 1 }
+    counts = Hash.new(0)
+    seen = Set.new
+    history = []
+    6.times do |index|
+      found = [persistent, persistent.merge(line: index + 2)]
+      refute runner.send(:stagnant?, history, seen, counts, found, index + 1, progressed: true)
+    end
+    assert_empty committer.calls
+  end
+
   def test_oscillation_does_not_fire_when_violations_clear
     # Empty violation set -> clean path, no oscillation.
     loop, = build_loop([])

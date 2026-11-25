@@ -15,7 +15,7 @@ module Master
             # A write cannot excuse an exact recurrence: streamed/model repairs
             # may change bytes while leaving the observed finding set unchanged.
             return true if oscillating?(seen_snapshots, found, pass)
-            return true if recurrence_cycle?(recurring_violations, found, pass)
+            return true if recurrence_cycle?(recurring_violations, found, pass, progressed:)
 
             # A changed file with a new finding set gets another observation;
             # count-only plateau detection is reserved for passes that made no
@@ -38,9 +38,10 @@ module Master
             false
           end
 
-          def recurrence_cycle?(recurring_violations, found, pass)
+          def recurrence_cycle?(recurring_violations, found, pass, progressed: false)
             recurring = recurring_violation(found, recurring_violations)
             return false unless recurring
+            return false if progressed
 
             @bus&.publish("fix_loop:cycle_detected", pass:, threshold: @plateau_window, violation: recurring)
             @homeostat&.observe(:llm_failure)
@@ -60,11 +61,8 @@ module Master
           def recurring_violation(found, recurring_violations)
             current = found.to_h { |v| [violation_key(v), v] }
             (recurring_violations.keys - current.keys).each { |key| recurring_violations.delete(key) }
-            current.each do |key, violation|
-              recurring_violations[key] += 1
-              return violation if recurring_violations[key] >= @plateau_window
-            end
-            nil
+            current.each_key { |key| recurring_violations[key] += 1 }
+            current.values.find { |violation| recurring_violations[violation_key(violation)] >= @plateau_window }
           end
 
           def violation_snapshot(found)

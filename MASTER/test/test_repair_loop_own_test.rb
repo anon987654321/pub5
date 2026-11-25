@@ -66,6 +66,10 @@ class TestRepairLoopOwnTest < Minitest::Test
       assert_includes out, "already failed before the change"
       assert_equal "a_test.rb: broken", refused
       assert_equal "new\n", File.read(path)
+
+      changed_failure = ->(file) { File.read(file) == "new\n" ? "a_test.rb: new error" : "a_test.rb: old failure" }
+      assert_equal "a_test.rb: new error", judge.call(changed_failure)
+      assert_equal "new\n", File.read(path)
     end
   end
 

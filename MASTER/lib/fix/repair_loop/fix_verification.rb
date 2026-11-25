@@ -140,7 +140,7 @@ module Master
         # test refused every repair to its file whatever the repair did.
         def failing_test_for(path, before: nil)
           failure = own_test_failure(path)
-          return failure unless failure && before && failing_before?(path, before)
+          return failure unless failure && before && failing_before?(path, before, failure)
 
           name = File.basename(path.to_s)
           Master::Trace::Dmesg.status("fix0", "#{name}: its test already failed before the change, " \
@@ -149,10 +149,10 @@ module Master
         end
 
         # The test run again on the original source, which then goes back to the change.
-        def failing_before?(path, before)
+        def failing_before?(path, before, failure)
           after = File.read(path, encoding: "UTF-8")
           write_atomic(path, before)
-          !own_test_failure(path).nil?
+          own_test_failure(path) == failure
         ensure
           write_atomic(path, after) if after
         end
@@ -170,7 +170,7 @@ module Master
 
         def run_own_test(command, suite:, test:)
           out, status = Master::Io::Exec.capture2e(*command, chdir: suite)
-          status.success? ? nil : "#{File.basename(test)}: #{out.lines.last(3).join.strip}"
+          status.success? ? nil : "#{File.basename(test)}: #{failure_output(out)}"
         end
 
         # Under the app's own Ruby and bundle (RailsApp.capture), not MASTER's: run from inside
@@ -185,7 +185,13 @@ module Master
           return if status.success?
 
           lines = out.lines.reject { |line| line.match?(SIMPLECOV_FOOTER) }
-          "#{File.basename(test)}: #{lines.last(3).join.strip}"
+          "#{File.basename(test)}: #{failure_output(lines.join)}"
+        end
+
+        # Compare the diagnostic, not merely the exit status. Strip only volatile
+        # Minitest timing and seed lines; retain assertions, errors and counts.
+        def failure_output(output)
+          output.lines.reject { |line| line.match?(/\ARun options:.*--seed|\AFinished in /) }.join.strip
         end
 
         # Run as the suite runs it: lib/ and test/ on the load path, so
