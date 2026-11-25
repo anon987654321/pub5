@@ -102,7 +102,7 @@ class ChannelPresence
 
     def valid_push_identity?(conversation_id, user_id, device_type, device_id)
       PUSH_DEVICE_TYPES.include?(device_type.to_s) &&
-        [conversation_id, user_id, device_id].all? { |id| id.to_s.match?(/\A[1-9]\d{0,18}\z/) }
+        [ conversation_id, user_id, device_id ].all? { |id| id.to_s.match?(/\A[1-9]\d{0,18}\z/) }
     end
 
     def push_device_key(conversation_id, user_id, device_type, device_id)

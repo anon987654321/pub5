@@ -203,7 +203,9 @@ class Marketplace::Listing < ApplicationRecord
   end
 
   def one_of_a_kind? = stock.nil?
-  def varied? = variants.exists?
+  # Uses preloaded variants when the index loaded them: exists? per card was an
+  # N+1 on every vertical index (QueryBudgetTest, 2026-11-25).
+  def varied? = association(:variants).loaded? ? variants.any? : variants.exists?
   def in_stock?
     if association(:variants).loaded?
       rows = variants.to_a

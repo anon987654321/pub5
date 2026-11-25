@@ -14,7 +14,7 @@ class Marketplace::ListingsController < Marketplace::BaseController
   before_action -> { require_two_factor!(Current.user) }, only: %i[new create], if: :authenticated?
 
   def index
-    scope = policy_scope(Marketplace::Listing).with_attached_photos.includes(:user, :category)
+    scope = policy_scope(Marketplace::Listing).with_attached_photos.includes(:user, :category).preload(:variants)
     scope = apply_live_search(scope, columns: %w[title description location], vertical: "marketplace", filters: { category_id: params[:category_id] }.compact) if live_search_query.present?
     @kind = Marketplace::Listing.kind_from(params[:kind])
     scope = scope.where(kind: @kind)

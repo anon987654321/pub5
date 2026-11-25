@@ -235,8 +235,8 @@ class MessagePushTest < ActionDispatch::IntegrationTest
     identity = { conversation_id: @group.id, user_id: @reader.id,
                  device_type: "web", device_id: 1 }
 
-    [:conversation_id, :user_id, :device_id].each do |field|
-      [nil, 0, -1, "01", "1:2"].each do |invalid|
+    [ :conversation_id, :user_id, :device_id ].each do |field|
+      [ nil, 0, -1, "01", "1:2" ].each do |invalid|
         params = identity.merge(field => invalid)
         assert_not ChannelPresence.touch_push_device!(**params)
         assert_not ChannelPresence.push_device_active?(**params)

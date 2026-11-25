@@ -27,7 +27,15 @@ class PlaylistRefinementsTest < ActionDispatch::IntegrationTest
     host! "radio.brgen.no"
   end
 
-  def upload_audio(name) = Rack::Test::UploadedFile.new(StringIO.new("ID3fake"), "audio/mpeg", original_filename: name)
+  # Backed by a real file: an UploadedFile over a StringIO forwards #path to the
+  # StringIO, which has none, and Active Storage asks for it when attaching.
+  def upload_audio(name)
+    file = Tempfile.new([File.basename(name, ".*"), File.extname(name)])
+    file.binmode
+    file.write("ID3fake")
+    file.rewind
+    Rack::Test::UploadedFile.new(file.path, "audio/mpeg", original_filename: name)
+  end
 
   def track_for(user, title: "Regnvær", privacy: "public")
     Playlist::Track.create!(title:, artist: "Bergen", user:, source_type: "direct",

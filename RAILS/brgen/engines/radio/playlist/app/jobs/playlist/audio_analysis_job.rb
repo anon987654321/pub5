@@ -34,7 +34,7 @@ class Playlist::AudioAnalysisJob < ApplicationJob
     tracks = Playlist::Track.where(id: attachments.select(:record_id))
     tracks.update_all(duration_seconds: result.fetch(:duration).round, updated_at: Time.current)
     result.fetch(:tags).each do |field, value|
-      tracks.where(field => [nil, ""]).update_all(field => value)
+      tracks.where(field => [ nil, "" ]).update_all(field => value)
     end
   rescue Shared::Subprocess::TimeoutError, JSON::ParserError, ActiveStorage::FileNotFoundError, ActiveStorage::IntegrityError => error
     Rails.logger.warn("playlist audio analysis unavailable for blob #{blob_id}: #{error.class}")
@@ -43,7 +43,7 @@ class Playlist::AudioAnalysisJob < ApplicationJob
   # Probe and decode local bytes only; playlists/remote input formats are not
   # accepted. astats emits one actual peak per bounded sample window.
   def self.analyze(path)
-    input = ["-protocol_whitelist", "file,pipe", "-format_whitelist", FORMATS]
+    input = [ "-protocol_whitelist", "file,pipe", "-format_whitelist", FORMATS ]
     probe, _, status = Shared::Subprocess.capture3(
       "ffprobe", "-v", "error", *input, "-show_entries", "format=duration:format_tags=title,artist,album,genre",
       "-of", "json", "-i", path, timeout: 15
@@ -54,7 +54,7 @@ class Playlist::AudioAnalysisJob < ApplicationJob
     duration = Float(format["duration"], exception: false)
     return unless duration&.finite? && duration.positive? && duration <= MAX_DURATION
 
-    samples = [(duration * SAMPLE_RATE / BINS).ceil, 1].max
+    samples = [ (duration * SAMPLE_RATE / BINS).ceil, 1 ].max
     filter = "aresample=#{SAMPLE_RATE},asetnsamples=n=#{samples}:p=0,astats=metadata=1:reset=1,ametadata=print:key=lavfi.astats.Overall.Peak_level:file=-"
     output, _, status = Shared::Subprocess.capture3(
       "ffmpeg", "-nostdin", "-v", "error", "-xerror", *input, "-threads", "1", "-t", MAX_DURATION.to_s,
@@ -77,7 +77,7 @@ class Playlist::AudioAnalysisJob < ApplicationJob
     source_tags = format.fetch("tags", {}).transform_keys(&:downcase)
     tags = %w[artist album genre].filter_map do |key|
       value = source_tags[key].to_s.strip.first(80)
-      [key, value] if value.present?
+      [ key, value ] if value.present?
     end.to_h
     { duration: duration, peaks: peaks, tags: tags }
   end

@@ -21,13 +21,15 @@ class Dating::Profile < ApplicationRecord
   }
 
   GENDERS = %w[man woman nonbinary other].freeze
-  LOOKING_FOR = (GENDERS + ["everyone"]).freeze
+  LOOKING_FOR = (GENDERS + [ "everyone" ]).freeze
   RELATIONSHIP_GOALS = %w[long_term short_term friendship exploring].freeze
 
   # The stored values are English identifiers; every surface shows the label.
   def self.gender_options = GENDERS.map { |value| [ I18n.t("dating.genders.#{value}"), value ] }
   def self.looking_for_options = LOOKING_FOR.map { |value| [ I18n.t("dating.looking_for_options.#{value}"), value ] }
-  def self.relationship_goal_options = RELATIONSHIP_GOALS.map { |goal| [I18n.t("dating.relationship_goals.#{goal}"), goal] }
+  def self.relationship_goal_options
+    RELATIONSHIP_GOALS.map { |goal| [ I18n.t("dating.relationship_goals.#{goal}"), goal ] }
+  end
 
   def relationship_goal_label
     I18n.t("dating.relationship_goals.#{relationship_goal}") if relationship_goal.present?

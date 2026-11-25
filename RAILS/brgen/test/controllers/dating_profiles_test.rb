@@ -132,7 +132,9 @@ class DatingProfilesTest < ActionDispatch::IntegrationTest
   end
 
   test "a like that fails validation redirects with the reason instead of erroring" do
-    them = user_with_profile("dp_them")
+    # A mutually compatible pair: the deck now applies both people's orientation,
+    # so two default profiles (women seeking men) never see each other.
+    them = user_with_profile("dp_them", gender: "man", looking_for: "woman")
     sign_in_as(user_with_profile("dp_wordy"))
 
     assert_no_difference -> { Dating::Like.count } do

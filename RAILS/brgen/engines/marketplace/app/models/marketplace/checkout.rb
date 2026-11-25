@@ -60,7 +60,7 @@ class Marketplace::Checkout < ApplicationRecord
     rows = orders.to_a
     return false if rows.empty? || !rows.all?(&:startable?)
 
-    rows.group_by { |order| [order.listing_id, order.variant_id] }.values.all? do |lines|
+    rows.group_by { |order| [ order.listing_id, order.variant_id ] }.values.all? do |lines|
       lines.first.quantity_available?(lines.sum(&:quantity))
     end
   end
