@@ -113,7 +113,9 @@ module Master
     def build_web(root:, state_root:)
       Master.configure_providers!
       FileUtils.mkdir_p(state_root, mode: 0o700)
-      config = Ground::Config.new(root)
+      raise SecurityError, "web runtime state is symlinked" if File.symlink?(state_root)
+      File.chmod(0o700, state_root)
+      config = Ground::Config.new(state_root)
       config["model"] = Master.default_model if config["model"].to_s.empty? || config["model"] == Ground::Config::DEFAULTS["model"]
       bus = Trace::EventBus.new(event_log: Trace::Log::Event.new(root: state_root))
       session = Trace::Session.new(root: state_root, budget_max: config.budget_max, req_max: config.req_max)

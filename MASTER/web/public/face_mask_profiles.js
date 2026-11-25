@@ -112,8 +112,11 @@
     // sprites over a solid face. Same index and profile always yield same point.
     for (let attempt = 0; attempt < 48; attempt += 1) {
       const salt = attempt * 4;
-      const v = randomUnit(index, salt) * 2 - 1;
-      const u = randomUnit(index, salt + 1) * 2 - 1;
+      // Additive low-discrepancy sequence distributes first candidates
+      // across the surface; later attempts preserve the same bounded density.
+      const frac = (n) => n - Math.floor(n);
+      const v = frac((index + .5) * .7548776662466927 + attempt * .5698402909980532) * 2 - 1;
+      const u = frac((index + .5) * .5698402909980532 + attempt * .7548776662466927) * 2 - 1;
       const y = v * h;
       const width = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent);
       const jaw = 1 - taper * Math.max(0, -v);

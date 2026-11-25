@@ -382,6 +382,47 @@
     return spherePoint(t, b, [0, 0, 0], [0.48, 0.48, 0.48]);
   }
 
+  const MASK_PRIMARY_SCALE = .92;
+
+  // Stable counting sort by Morton cell. Every mask shares the same spatial
+  // ordering, so neighbouring points travel together instead of crossing the
+  // whole face. O(n + 256), with no additional renderer or persistent cloud.
+  function orderMaskPoints(positions, stages, stageIndices, scale) {
+    const count = stages.length;
+    const keys = new Uint8Array(count);
+    const offsets = new Uint32Array(256);
+    const morton = (x, y) => {
+      let key = 0;
+      for (let bit = 0; bit < 4; bit++) {
+        key |= ((x >> bit) & 1) << (bit * 2);
+        key |= ((y >> bit) & 1) << (bit * 2 + 1);
+      }
+      return key;
+    };
+    const cell = (coordinate) => Math.max(0, Math.min(15, Math.floor((coordinate / scale + .65) / 1.3 * 16)));
+    for (let index = 0; index < count; index++) {
+      const key = morton(cell(positions[index * 3]), cell(positions[index * 3 + 1]));
+      keys[index] = key;
+      offsets[key]++;
+    }
+    let start = 0;
+    for (let key = 0; key < offsets.length; key++) {
+      const size = offsets[key];
+      offsets[key] = start;
+      start += size;
+    }
+    const ordered = new Float32Array(positions.length);
+    const orderedStages = new Float32Array(count);
+    const orderedIndices = new Uint8Array(count);
+    for (let index = 0; index < count; index++) {
+      const target = offsets[keys[index]]++;
+      ordered.set(positions.subarray(index * 3, index * 3 + 3), target * 3);
+      orderedStages[target] = stages[index];
+      orderedIndices[target] = stageIndices[index];
+    }
+    return { positions: ordered, stages: orderedStages, stageIndices: orderedIndices };
+  }
+
   function buildSemanticSubjectGeometry(descriptor, count, scale) {
     const custom = descriptor.kind === "custom";
     const parts = custom && Array.isArray(descriptor.parts) ? descriptor.parts : [];
@@ -417,7 +458,8 @@
       stages[i] = arrival / stageCount;
       stageIndices[i] = arrival;
     }
-    return { positions, stages, stageIndices, sequence: ordered };
+    const field = descriptor.maskProfile ? orderMaskPoints(positions, stages, stageIndices, scale) : { positions, stages, stageIndices };
+    return { ...field, sequence: ordered };
   }
 
   function buildSubjectPositions(form) {
@@ -492,7 +534,7 @@
   function buildFaceSubjectPositions(form) {
     const faceScatter = window.MASTER_FACE?.faceScatter;
     if (form === "object" && semanticDescriptor && faceScatter?.length) {
-      return buildSemanticSubjectGeometry(semanticDescriptor, faceScatter.length / 3, 0.52).positions;
+      return buildSemanticSubjectGeometry(semanticDescriptor, faceScatter.length / 3, semanticDescriptor.maskProfile ? MASK_PRIMARY_SCALE : .52).positions;
     }
     if (!faceScatter || faceScatter.length < 3 || faceScatter.length % 3 !== 0) return null;
 
@@ -572,7 +614,8 @@
       : "face";
     const nextDescriptor = form === "object" ? normalized : null;
     if (form === semanticForm && subjectSignature(nextDescriptor) === subjectSignature(semanticDescriptor) &&
-        (splatTargetPositions || form === "face")) return form;
+        (splatTargetPositions || form === "face") &&
+        (nativeSubjectField || !window.MASTER_FACE?.faceScatter?.length)) return form;
 
     semanticForm = form;
     semanticDescriptor = nextDescriptor;
@@ -589,7 +632,7 @@
     semanticMorphStartedAt = nowMs();
 
     const primaryGeometry = form === "object" && semanticDescriptor && window.MASTER_FACE?.faceScatter?.length
-      ? buildSemanticSubjectGeometry(semanticDescriptor, window.MASTER_FACE.faceScatter.length / 3, 0.52)
+      ? buildSemanticSubjectGeometry(semanticDescriptor, window.MASTER_FACE.faceScatter.length / 3, semanticDescriptor.maskProfile ? MASK_PRIMARY_SCALE : .52)
       : null;
     const facePositions = form === "face" ? null : primaryGeometry?.positions || buildFaceSubjectPositions(form);
     const faceStages = primaryGeometry?.stages || null;
@@ -600,9 +643,9 @@
       ? window.MASTER_FACE_MASKS?.mouthGeometry?.(semanticDescriptor.maskProfile) : null;
     const mouthUniform = window.MASTER_FACE?.faceMat?.uniforms?.uMaskMouth;
     if (mouthUniform) {
-      mouthUniform.value.x = mouth ? mouth.y * .52 : 0;
-      mouthUniform.value.y = mouth ? mouth.width * .52 : 0;
-      mouthUniform.value.z = mouth ? mouth.height * .52 : 0;
+      mouthUniform.value.x = mouth ? mouth.y * MASK_PRIMARY_SCALE : 0;
+      mouthUniform.value.y = mouth ? mouth.width * MASK_PRIMARY_SCALE : 0;
+      mouthUniform.value.z = mouth ? mouth.height * MASK_PRIMARY_SCALE : 0;
       mouthUniform.value.w = mouth && nativeSubjectField ? 1 : 0;
     }
     // The primary field uses the face renderer's existing spring. The bounded

@@ -1181,3 +1181,10 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
     assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
   }
 });
+
+test("mask correspondence uses bounded stable spatial ordering", () => {
+  assert.match(faceWorld, /const MASK_PRIMARY_SCALE = \.92/);
+  assert.match(faceWorld, /function orderMaskPoints/);
+  assert.match(faceWorld, /new Uint32Array\(256\)/);
+  assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
+});
