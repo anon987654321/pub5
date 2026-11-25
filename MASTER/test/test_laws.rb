@@ -11,6 +11,18 @@ class TestAxioms < Minitest::Test
     refute @laws.kernel.empty?, "kernel axioms must be present"
   end
 
+  def test_kernel_uses_canonical_statements_in_document_order
+    document = Master.laws_document(root: Master::ROOT)
+    golden_id = @laws.soul_data.fetch("references").fetch("golden_law")
+    expected = document.filter_map do |id, row|
+      next unless row.is_a?(Hash) && (id == "APPLICATION_IS_UNIFORM" || row["node"] || id == golden_id)
+
+      [id, row.fetch("statement").gsub(/\s+/, " ").strip]
+    end.to_h
+
+    assert_equal expected.to_a, @laws.kernel.to_a
+  end
+
   def test_kernel_has_preserve_first
     assert @laws.kernel.key?("PRESERVE_FIRST")
   end

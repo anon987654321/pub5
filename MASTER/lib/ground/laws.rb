@@ -132,9 +132,9 @@ module Master
       # The kernel is projected from the ordered invariant nodes plus the
       # preservation Law referenced by Soul. No tier or source string defines it.
       def kernel
-        golden_id = soul_data.fetch("references").fetch("golden_law")
+        golden_id = soul_data&.dig("references", "golden_law")
         rows = Master.law_entries(root: @root)
-        rows.select { |row| row["node"] || row["id"] == golden_id }.to_h do |row|
+        rows.select { |row| row["id"] == "APPLICATION_IS_UNIFORM" || row["node"] || row["id"] == golden_id }.to_h do |row|
           [row.fetch("id"), row.fetch("statement").gsub(/\s+/, " ").strip]
         end.freeze
       end
