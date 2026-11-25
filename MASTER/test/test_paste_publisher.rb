@@ -61,7 +61,7 @@ class PastePublisherTest < Minitest::Test
       calls << [uri, body, headers]
       response(201, JSON.generate("ok" => true, "data" => { "url" => "https://pste.us/abc123" }))
     end
-    publisher = Master::Ground::PastePublisher.new(transport:)
+    publisher = Master::Ground::PastePublisher.new(transport:, enabled: "1")
 
     outcome = publisher.publish(operation: "/check", status: "success", output: "checks passed")
 
@@ -84,7 +84,7 @@ class PastePublisherTest < Minitest::Test
         response(200, "https://dpaste.org/xyz789")
       end
     end
-    publisher = Master::Ground::PastePublisher.new(transport:)
+    publisher = Master::Ground::PastePublisher.new(transport:, enabled: "1")
 
     outcome = publisher.publish(operation: "/fix RAILS", status: "failure", output: "one test failed")
 
@@ -105,7 +105,7 @@ class PastePublisherTest < Minitest::Test
         response(200, "https://attacker.example/paste")
       end
     end
-    publisher = Master::Ground::PastePublisher.new(transport:)
+    publisher = Master::Ground::PastePublisher.new(transport:, enabled: "1")
 
     outcome = publisher.publish(operation: "/check", status: "success", output: "done")
 
@@ -117,7 +117,7 @@ class PastePublisherTest < Minitest::Test
     transport = lambda do |uri:, body:, headers:|
       response(201, JSON.generate("ok" => true, "data" => { "id" => "uHt9n0uQ" }))
     end
-    publisher = Master::Ground::PastePublisher.new(transport:)
+    publisher = Master::Ground::PastePublisher.new(transport:, enabled: "1")
 
     outcome = publisher.publish(operation: "/check", status: "success", output: "checks passed")
 
@@ -175,6 +175,25 @@ class PastePublisherTest < Minitest::Test
     refute outcome.success?
     assert_equal :disabled, outcome.error
     refute called
+  end
+
+  def test_publishing_is_opt_in_by_default
+    called = false
+    transport = ->(**) { called = true }
+    publisher = with_env("MASTER_LOG_PUBLISH" => nil) { Master::Ground::PastePublisher.new(transport:) }
+
+    assert_equal :disabled, publisher.publish(operation: "/deploy", status: "failure", output: "x").error
+    refute called
+    opted = with_env("MASTER_LOG_PUBLISH" => "1") { Master::Ground::PastePublisher.new(transport:) }
+    assert opted.instance_variable_get(:@enabled)
+  end
+
+  def with_env(values)
+    saved = values.keys.to_h { |key| [key, ENV[key]] }
+    values.each { |key, value| ENV[key] = value }
+    yield
+  ensure
+    saved.each { |key, value| ENV[key] = value }
   end
 
   def test_content_bearing_commands_publish_receipts_without_their_output
