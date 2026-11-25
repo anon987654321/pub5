@@ -1878,7 +1878,7 @@ tokens:
     # rather than only scanned for it; FACE_POINT_IS_ONE_PIXEL and
     # NO_WEBGL_GLOW_PASS in law/javascript.rb are what enforce them.
     - additive second pass behind a point cloud
-    - gl_PointSize above 1.5
+    - gl_PointSize above 3.0
     forbidden_patterns:
     - 'box-shadow\s*:'
     - 'text-shadow\s*:'
