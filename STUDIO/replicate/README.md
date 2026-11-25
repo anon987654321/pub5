@@ -45,6 +45,10 @@ has clips under `STUDIO/lora/<subject>/<subject>_film_*.mp4`, the cut uses
 them. Otherwise it uses the developed stills. `--subject merethe` needs no new
 argument.
 
+One command runs the whole piece for a subject, with house defaults:
+`ruby STUDIO/lora/promo_piece.rb johann`. It reuses the developed still if
+there is one, films three ten-second clips, and cuts them with `dilla.wav`.
+
 Clips cut together because each one starts where the last ended:
 `Motion.last_frame` pulls the final frame of a clip and the next prediction
 takes it as `first_frame_image`. `SelfieSeries#film_piece` does this in order,
