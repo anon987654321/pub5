@@ -57,7 +57,8 @@ run_rails_as_app() {
   esac
   [[ $app_dir == "/home/${app_name}/app" ]] || { log_err "run_rails_as_app: refused app path: $app_dir"; return 2; }
   case "$task" in
-    bundle-check|db-storage-migrate|db-prepare|db-seed|demo-seed|overlay-initializers|overlay-public) [[ -z $database ]] || return 2 ;;
+    bundle-check|bundle-sibling-hydrate|bundle-install|db-storage-migrate|db-prepare|db-seed|demo-seed|\
+overlay-initializers|overlay-public) [[ -z $database ]] || return 2 ;;
     schema-load|secondary-db-check) [[ $database == cache || $database == queue || $database == cable ]] || return 2 ;;
     bundle-cas-hydrate)
       [[ $database == ruby[0-9][0-9] || $database == ruby[0-9].[0-9] ]] || return 2 ;;

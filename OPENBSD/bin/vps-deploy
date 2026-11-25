@@ -438,7 +438,9 @@ log() {
 # so its first receipt write runs before the rest of this file is read, and
 # records_call further down was "command not found" (vm23, 2026-11-25).
 records_call() {
-  "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
+  # Bounded like every other stage: a locked or wedged records store must
+  # fail the deploy's receipt write after 60s, not hang the deploy forever.
+  timeout 60 "$RUBY" -I"$repo/OPENBSD/lib" -rdeploy_records -e '
     repo, action, *args = ARGV
     records = Deploy::Records.new(repo_root: repo)
     case action
@@ -1473,7 +1475,7 @@ set_stage health
 port=$("$RUBY" -ryaml -e 'puts YAML.safe_load(File.read("'"$repo"'/RAILS/apps.yml")).dig("apps","'"$app"'","port")')
 up_ok=0
 for i in {1..150}; do
-  curl -fsS "http://127.0.0.1:${port}/up" >/dev/null 2>&1 && { up_ok=1; break; }
+  curl -fsS --max-time 5 "http://127.0.0.1:${port}/up" >/dev/null 2>&1 && { up_ok=1; break; }
   sleep 2
 done
 [[ $up_ok -eq 1 ]] || { write_stamp "$app" failed; print -u2 "vps-deploy: $app /up not ready on :${port}"; exit 1; }

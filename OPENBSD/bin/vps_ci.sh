@@ -196,9 +196,27 @@ sync_from_repo
 . "${repo}/RAILS/_runtime_check.sh"
 deploy_status "$app" "bundle check"
 run_rails_as_app "$app" "$app_dir" "bundle-check" || {
-  deploy_status "$app" "bundle check" "failed"
-  print -u2 "vps_ci: $app production bundle is incomplete; build the matching OpenBSD bundle off-host"
-  exit 1
+  # A lockfile bump must not end the deploy when the box already holds the
+  # same-version built gems under another application. Borrow them, fill
+  # the rest with one bounded, niced install, and only then re-judge.
+  # Proven by hand for brgen and mrdamascy on 2026-11-25.
+  deploy_status "$app" "bundle hydrate"
+  if ! run_rails_as_app "$app" "$app_dir" "bundle-sibling-hydrate"; then
+    print -u2 "vps_ci: $app sibling-bundle hydration failed; build the matching OpenBSD bundle off-host"
+    exit 1
+  fi
+  deploy_status "$app" "bundle install"
+  if ! run_rails_as_app "$app" "$app_dir" "bundle-install"; then
+    print -u2 "vps_ci: $app bounded bundle install did not complete; see the still-missing list above"
+    exit 1
+  fi
+  deploy_status "$app" "bundle check"
+  run_rails_as_app "$app" "$app_dir" "bundle-check" || {
+    deploy_status "$app" "bundle check" "failed"
+    print -u2 "vps_ci: $app production bundle is still incomplete after hydration"
+    print -u2 "vps_ci: $app and a bounded install; build the matching OpenBSD bundle off-host"
+    exit 1
+  }
 }
 print "vps_ci: $app workstation CI attestation matches; production bundle is present"
 ci_stamp=ci_attested

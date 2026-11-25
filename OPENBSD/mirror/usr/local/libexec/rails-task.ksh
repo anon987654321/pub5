@@ -14,7 +14,8 @@ case "$app" in
   *) echo "rails-task: refused unknown app: $app" >&2; exit 64 ;;
 esac
 case "$task" in
-  bundle-check|db-prepare|db-seed|db-storage-migrate|npm-cache|overlay-initializers|overlay-public) [ "$#" -eq 2 ] || exit 64 ;;
+  bundle-check|bundle-sibling-hydrate|bundle-install|db-prepare|db-seed|db-storage-migrate|npm-cache|\
+overlay-initializers|overlay-public) [[ "$#" -ne 2 ]] || exit 64 ;;
   bundle-cas-hydrate)
     [ "$#" -eq 3 ] || exit 64
     printf "%s\n" "$database" | /usr/bin/grep -Eq "^ruby([0-9]{2}|[0-9]+[.][0-9]+)\$" || exit 64
@@ -106,11 +107,137 @@ candidate="/usr/local/bin/bundle$suffix"
 [ "$found_ruby" -eq 1 ] || { echo "rails-task: no supported system Ruby found" >&2; exit 127; }
 [ -x "$bundle" ] || { echo "rails-task: no supported system Bundler found" >&2; exit 127; }
 
+# Sibling-bundle hydration runs root-side, before the su: reading another
+# application's bundle needs another uid, and the copies must land app-owned.
+# A lockfile bump must not fail a deploy that could borrow same-version built
+# gems from a sibling on the same box - proven by hand for brgen and mrdamascy
+# on 2026-11-25 before this step existed. Nothing is compiled here; gems no
+# sibling carries are left to the bounded bundle-install task.
+if [[ "$task" == bundle-sibling-hydrate ]]; then
+  bundle_install_root() {
+    (
+      export HOME="$1"
+      export BUNDLE_USER_HOME="$1/.bundle"
+      export BUNDLE_WITHOUT=development:test
+      export RUBY_YJIT_ENABLE=0
+      unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH GEM_HOME GEM_PATH RUBYOPT RUBYLIB
+      cd "$2" && "$ruby_path" -e 'require "bundler"; print Bundler.bundle_path'
+    )
+  }
+  app_gid=$(/usr/bin/id -g "$app")
+  app_root=$(bundle_install_root "$app_home" "$app_dir") || {
+    echo "rails-task: cannot resolve the $app bundle install root" >&2
+    exit 1
+  }
+  case "$app_root" in
+    "$app_home"/*) ;;
+    *) echo "rails-task: refusing a bundle install root outside $app_home: $app_root" >&2
+       exit 1 ;;
+  esac
+  abi=${app_root##*/ruby/}
+  [[ "$abi" != "$app_root" ]] || {
+    echo "rails-task: bundle install root has no ruby version component: $app_root" >&2
+    exit 1
+  }
+  if [[ -e "$app_root" ]]; then
+    [[ -d "$app_root" && ! -L "$app_root" && "$(stat -f %u "$app_root")" = "$app_uid" ]] || {
+      echo "rails-task: refusing an unsafe app bundle root: $app_root" >&2
+      exit 1
+    }
+  else
+    mkdir -p "$app_root"
+    chown "$app_uid:$app_gid" "$app_home/.bundle" "$app_home/.bundle/gems" \
+      "$app_home/.bundle/gems/ruby" "$app_root" 2>/dev/null || true
+  fi
+  needed=$("$ruby_path" -e '
+    require "bundler"
+    lock = Bundler::LockfileParser.new(File.read(ARGV.fetch(0)))
+    lock.specs.each { |spec| puts "#{spec.name}-#{spec.version}" }
+  ' "$app_dir/Gemfile.lock")
+  # Sibling roots resolve once; the per-gem loop only stats files.
+  sib_roots=
+  for sibling in brgen amber bsdports mrdamascy master; do
+    [[ "$sibling" == "$app" ]] && continue
+    sib_home="/home/$sibling"
+    [[ -d "$sib_home" ]] || continue
+    sib_uid=$(/usr/bin/id -u "$sibling" 2>/dev/null) || continue
+    sib_root=$(bundle_install_root "$sib_home" "$sib_home/app") || continue
+    case "$sib_root" in "$sib_home"/*) ;; *) continue ;; esac
+    # Same ABI only: a 3.3 gem directory cannot serve a 3.4 bundle.
+    [[ "${sib_root##*/ruby/}" == "$abi" ]] || continue
+    [[ -d "$sib_root" && ! -L "$sib_root" && "$(stat -f %u "$sib_root")" = "$sib_uid" ]] || continue
+    sib_roots="$sib_roots $sib_root"
+  done
+  hydrated=0
+  unborrowed=
+  for needed_gem in $needed; do
+    printf "%s\n" "$needed_gem" | grep -Eq "^[A-Za-z0-9_.+-]+$" || {
+      echo "rails-task: refusing an odd lockfile spec name: $needed_gem" >&2
+      exit 1
+    }
+    [[ -e "$app_root/specifications/$needed_gem.gemspec" ]] && continue
+    source_root=
+    for sib_root in $sib_roots; do
+      if [[ -f "$sib_root/specifications/$needed_gem.gemspec" &&
+        ! -L "$sib_root/specifications/$needed_gem.gemspec" ]]; then
+        source_root=$sib_root
+        break
+      fi
+    done
+    if [[ -z "$source_root" ]]; then
+      unborrowed="$unborrowed $needed_gem"
+      continue
+    fi
+    mkdir -p "$app_root/specifications" "$app_root/gems"
+    cp "$source_root/specifications/$needed_gem.gemspec" \
+       "$app_root/specifications/$needed_gem.gemspec"
+    chown "$app_uid:$app_gid" \
+      "$app_root/specifications/$needed_gem.gemspec"
+    if [[ -d "$source_root/gems/$needed_gem" &&
+      ! -L "$source_root/gems/$needed_gem" ]]; then
+      cp -R "$source_root/gems/$needed_gem" "$app_root/gems/$needed_gem"
+      chown -R "$app_uid:$app_gid" "$app_root/gems/$needed_gem"
+    fi
+    for ext_dir in "$source_root"/extensions/*/*/"$needed_gem"; do
+      [[ -d "$ext_dir" && ! -L "$ext_dir" ]] || continue
+      rel=${ext_dir#"$source_root"/}
+      mkdir -p "$app_root/${rel%/*}"
+      cp -R "$ext_dir" "$app_root/$rel"
+      chown -R "$app_uid:$app_gid" "$app_root/$rel"
+    done
+    hydrated=$((hydrated + 1))
+  done
+  if (( hydrated > 0 )); then
+    echo "rails-task: borrowed $hydrated built gem(s) for $app from sibling bundles"
+  fi
+  [[ -z "$unborrowed" ]] ||
+    echo "rails-task: gems no sibling carries (bounded bundle-install fills these):$unborrowed" >&2
+  exit 0
+fi
+
 export SECRET_KEY_BASE
 
 case "$task" in
   bundle-check)
     command="BUNDLE_FROZEN=true $bundle check" ;;
+  bundle-install)
+    # Bounded: 15 wall-clock minutes under nice for everything hydration
+    # could not borrow, then a precise still-missing list instead of a
+    # vague bundler backtrace. --frozen: a deploy installs exactly its
+    # lockfile or refuses.
+    command='nice -n 15 timeout 900 "$PUB4_TASK_BUNDLE" install --frozen --jobs 1
+missing=$("$PUB4_TASK_RUBY" -e "
+  require \"bundler\"
+  need = Bundler.load.specs.map { |s| \"#{s.name}-#{s.version}\" }
+  dir = Bundler.bundle_path.join(\"specifications\")
+  have = Dir.glob(File.join(dir.to_s, \"*.gemspec\")).map { |f| File.basename(f, \".gemspec\") }
+  puts (need - have).sort
+")
+if [[ -n "\$missing" ]]; then
+  printf "rails-task: production bundle still missing:\\n%s\\n" "\$missing" >&2
+  exit 1
+fi
+exit 0' ;;
   npm-cache)
     command="mkdir -p /home/$app/.npm /home/$app/.cache" ;;
   bundle-cas-hydrate)
@@ -252,6 +379,7 @@ export PUB4_TASK_APP=$app
 export PUB4_TASK_UID=$app_uid
 export PUB4_TASK_CACHE_KEY=$database
 export PUB4_TASK_RUBY=$ruby_path
+export PUB4_TASK_BUNDLE=$bundle
 export PUB5_TASK_APP=$app
 export PUB5_TASK_UID=$app_uid
 export PUB5_TASK_CACHE_KEY=$database

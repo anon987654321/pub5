@@ -20,6 +20,13 @@ case "$app" in
 esac
 [ "$(id -un)" = "$app" ] || { echo "ci-sync: must run as the selected app user" >&2; exit 77; }
 
+# su -m carries the caller's environment: a root-invoked sync arrives with
+# HOME=/root, and git then probes /root/.config/git for its default excludes
+# file on every command (permission-denied warnings on every sync step,
+# 2026-11-25). GIT_CONFIG_GLOBAL=/dev/null below replaces the config file but
+# not the excludes-file default, so HOME itself must belong to the app.
+export HOME="$app_home"
+
 repo=/home/dev/pub5
 src=$repo/RAILS/$app
 app_home=/home/$app
