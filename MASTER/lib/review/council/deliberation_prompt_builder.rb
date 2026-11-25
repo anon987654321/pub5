@@ -20,7 +20,7 @@ module Master
                           quality_brief: Deliberation.quality_brief(:general), rounds:)
           findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
           InterModelContract.wrap_prompt(
-            "#{prompt}\nSelect only the strongest actionable repairs after comparing all rounds. Combine complementary proposals where warranted. Preserve minority objections, reject unsupported consensus, and explain why each selected repair beats its alternatives. Put the exact repository-relative file and stable line or selector in each finding location; put the selected change in proposed_repair. Return no findings when no repair is justified.", role: "judge", task: "Arbitrate the supplied council proposals and state evidence-backed concurrence or dissent.",
+            "#{prompt}\nSelect only the strongest actionable repairs after comparing all rounds. Prefer transformations that improve the whole without unintended loss; judge interactions between repairs rather than their isolated merits. Combine complementary proposals where warranted. Preserve minority objections, reject unsupported consensus, and explain why each selected repair beats its alternatives. Put the exact repository-relative file and stable line or selector in each finding location; put the selected change in proposed_repair. Return no findings when no repair is justified.", role: "judge", task: "Arbitrate the supplied council proposals and state evidence-backed concurrence or dissent.",
             success_criteria: "Return a schema-valid JSON response with an explicit position and zero or more evidence-backed findings.",
             constraints: %w[INTER_MODEL_CONTRACT ROBUSTNESS SINGULARITY],
             artifact: rounds, prior_findings: findings,
@@ -32,7 +32,7 @@ module Master
           values = prompt_values(persona, code, context)
           prompt = format(Deliberation.prompts.fetch("juror"), **values)
           InterModelContract.wrap_prompt(
-            prompt, role: "critic",
+            [@rules&.kernel_block, prompt, "Inspect purpose, whole, relationships, parts and details where relevant. Identify the evidence and trade-off for each proposed transformation; challenge improvements that harm the whole."].compact.join("\n\n"), role: "critic",
             task: "Review the supplied artifact against the assigned persona charge and named Laws.",
             success_criteria: "Return a schema-valid JSON response with explicit position evidence and structured findings.",
             constraints: (Array(persona.respond_to?(:emphasizes) ? persona.emphasizes : []) +

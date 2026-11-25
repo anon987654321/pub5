@@ -593,8 +593,8 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
-  # font-size is the one font property the loop may set, on a declared step and never smaller.
-  def test_a_font_size_takes_only_a_declared_step_and_never_shrinks
+  # Font size may move in either direction on the declared readable scale.
+  def test_a_font_size_takes_only_a_declared_readable_step
     steps = [16.0, 20.0, 24.0]
     with_sheet(".a {\n  gap: 8px;\n}\n") do |path|
       add = ->(size, **rules) { parse(path, find: "gap: 8px;", replace: "gap: 8px;\n  font-size: #{size};", **rules) }
@@ -608,7 +608,16 @@ class TestDesignLoop < Minitest::Test
     with_sheet(".a {\n  font-size: 24px;\n}\n") do |path|
       shrunk = parse(path, find: "font-size: 24px;", replace: "font-size: 16px;", type_scale: steps)
 
-      assert_match(/smaller than 24px/, refused(shrunk))
+      assert shrunk.check!
+    end
+  end
+
+  def test_alternatives_to_the_same_rule_have_distinct_keys
+    with_sheet do |path|
+      first = parse(path, find: "padding: 4px;", replace: "padding: 8px;")
+      second = parse(path, find: "padding: 4px;", replace: "padding: 16px;")
+
+      refute_equal first.key, second.key
     end
   end
 

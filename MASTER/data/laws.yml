@@ -46,6 +46,7 @@
 # ==========================================================================
 
 APPLICATION_IS_UNIFORM:
+  question: "Which laws apply at each scale, and what evidence is missing?"
   statement: >
     Every artifact is considered for applicability under every Law. The
     runtime evaluates each Law against its declared language, surface and
@@ -85,6 +86,7 @@ APPLICATION_IS_UNIFORM_constitution_self_governed:
 
 TRUTHFUL_STATUS:
   node: truthful_status
+  question: "What proves the claim?"
   statement: "Report observed state, not intent. Support claims with evidence of the right class."
   severity: error
   resolution: never
@@ -207,6 +209,7 @@ EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
 
 ROBUSTNESS:
   node: robustness
+  question: "What happens when this fails?"
   statement: "Anticipate failure. Fail safely, minimize authority and handle edge cases."
   severity: error
   resolution: review
@@ -412,6 +415,7 @@ ROBUSTNESS_sclerotium:
 
 SINGULARITY:
   node: singularity
+  question: "Where is this truth owned?"
   statement: "Give every fact one authoritative source."
   severity: error
   resolution: review
@@ -501,6 +505,7 @@ SINGULARITY_magic_color:
 
 LINEARITY:
   node: linearity
+  question: "Is there a clearer progression?"
   statement: "Make progression clear; avoid needless branches."
   severity: error
   resolution: review
@@ -529,6 +534,7 @@ CURRENT_LOCATION_MARKED:
 
 PROXIMITY:
   node: proximity
+  question: "Does this belong here?"
   statement: "Keep related things together."
   severity: error
   resolution: review
@@ -581,6 +587,7 @@ NEGATIVE_SPACE_GROUPING_particle_face:
 
 ABSTRACTION:
   node: abstraction
+  question: "What does the recipient need to know?"
   statement: "Expose what matters; hide implementation details behind coherent boundaries."
   severity: error
   resolution: review
@@ -603,6 +610,7 @@ ABSTRACTION_leaky_boundary:
 
 DENSITY:
   node: density
+  question: "What can disappear without loss?"
   statement: "Remove what serves no purpose; preserve meaningful space and complexity."
   severity: error
   resolution: review
@@ -823,6 +831,7 @@ PAGE_WEIGHT_RATCHET:
 
 OPERATOR_RENDERED:
   node: operator_rendered
+  question: "Which choices must remain unchanged?"
   statement: "Preserve and identify operator-owned choices; never substitute them without authority."
   severity: error
   resolution: never
@@ -878,6 +887,7 @@ OPERATOR_RENDERED_semantic_motion:
 
 INTER_MODEL_CONTRACT:
   node: inter_model_contract
+  question: "Can the recipient verify this finding?"
   statement: "Use validated structured requests and evidence-backed findings in every council turn."
   severity: error
   resolution: never
@@ -2086,7 +2096,8 @@ PROPORTION:
     observed improvement. Preserve meaningful differences in magnitude,
     grouping and visual weight. Measure geometry, but judge perceived balance
     and preserve deliberate asymmetry. A number without derivation cannot be
-    checked or changed as a set.
+    checked or changed as a set. Assess purpose, overall structure, groups,
+    individual elements and details; refine locally only when the whole benefits.
   severity: warning
   resolution: review
   mechanical: Master::Law::Surface#proportion
@@ -2322,7 +2333,11 @@ STEWARDSHIP_mono_no_aware:
 
 PRESERVE_FIRST:
   parent: STEWARDSHIP
-  statement: "Preserve working behavior, meaning and deliberate choices before improving."
+  question: "What must survive, and how does the whole improve?"
+  statement: >
+    Preserve working behavior, meaning and deliberate choices before improving.
+    Develop the whole through transformations that strengthen existing relationships.
+    Compare materially different alternatives and retain demonstrated lessons.
   resolution: review
 
 PRESERVE_FIRST_media_provenance:

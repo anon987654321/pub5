@@ -24,7 +24,7 @@ module Master
         DESIGN AUTHORING
         Decide before you write, then return only the file.
         - Plan: name the palette, the type roles, the layout and the one memorable element. Take them from the direction below and the app's own tokens, not from habit.
-        - Review: if the plan is what you would write for any similar page, change the part that is generic.
+        - Review: compare distinct compositions. Start with purpose and overall structure, then groups, individual elements and optical details. Preserve meaningful differences.
         - Complete: a surface is finished when its empty, loading, error and worst-case states exist, not when its happy path renders.
         - Critique: compare the relative size, alignment and visual weight of neighboring elements; remove only decoration that serves nothing.
       TEXT
@@ -36,7 +36,7 @@ module Master
         You are creating, editing or completing a frontend surface.
         - Read first: the app's tokens and shared stylesheet, and one finished sibling surface, before writing a new rule.
         - Plan in your first turn: palette, type roles, layout and the one memorable element, taken from the direction below.
-        - Review the plan: replace any part you would write for any similar page.
+        - Review the plan: compare distinct compositions from whole to detail. Preserve working behavior and identity; reject generic solutions that do not serve this particular purpose.
         - Build with the app's existing primitives and partials; add a token only when no existing one fits.
         - Complete: add the missing states and responsive behavior before you call it done.
         - Critique: render narrow, intermediate and wide compositions if available; inspect optical alignment, meaningful spacing, visual weight and focal hierarchy. Remove only decoration that serves nothing.

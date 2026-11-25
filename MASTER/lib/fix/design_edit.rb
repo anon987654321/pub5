@@ -71,7 +71,7 @@ module Master
 
       def why = proposal.why
 
-      def key = [file, proposal.find]
+      def key = [file, proposal.find, proposal.replace]
 
       # The classes and ids in the selector of the rule the edit sits in; empty when it
       # sits in a rule of plain element selectors or cannot be located.
@@ -163,11 +163,10 @@ module Master
       end
 
       # A font-size the edit introduces must be a token or sit on a declared text step, and
-      # may not be smaller than the size it replaces: a layout score that reads line length
-      # in characters is also raised by shrinking text, which is not a layout fix.
+      # may be reduced to another allowed step. The caller supplies readable steps;
+      # rendered comparison and regression checks decide whether the result improves.
       def refuse_off_type_scale!
         steps = Array(@rules.type_scale)
-        before = declarations(proposal.find).to_h[FONT_SIZE]
         changed.each do |name, value|
           next unless name == FONT_SIZE
           next if value.match?(/\Avar\(\s*--text-[\w-]+\s*\)\z/)
@@ -175,8 +174,6 @@ module Master
           px = text_px(value)
           raise Refused, "font-size: #{value} is not a declared text size" unless px && steps.any? { |step| (step - px).abs <= TYPE_STEP_PX }
 
-          was = before && text_px(before)
-          raise Refused, "font-size: #{value} makes the text smaller than #{before}" if was && px < was - TYPE_STEP_PX
         end
       end
 

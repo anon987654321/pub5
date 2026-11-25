@@ -71,9 +71,14 @@ module Master
       # concern separate from Laws' own lookup/parsing responsibility.
       module LawPromptBlocks
         def kernel_block
-          return if kernel.empty?
+          statements = kernel
+          return if statements.empty?
 
-          pairs = kernel.map { |id, stmt| "  #{id}: #{stmt}" }.join("\n")
+          questions = Master.laws_document(root: @root)
+          pairs = statements.map do |id, stmt|
+            question = questions.dig(id, "question")
+            "  #{id}: #{stmt}#{question ? " Ask: #{question}" : ""}"
+          end.join("\n")
           "## Kernel Laws (enforced)\n#{pairs}"
         end
 
@@ -146,7 +151,7 @@ module Master
 
       def lookup(id)
         id_str = id.to_s
-        kernel[id_str] || philosophy.find { |law| law["id"] == id_str }&.dig("statement")
+        philosophy.find { |law| law["id"] == id_str }&.dig("statement")
       end
 
       def empty? = laws_data.empty?

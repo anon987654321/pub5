@@ -9,9 +9,9 @@ module Master
       SOURCE_CHARS = 12_000
 
       VARIANTS = [
-        "Change as little as possible.",
-        "Reach it through a different selector or property than the obvious one.",
-        "Prefer an existing token or layout primitive over a new value.",
+        "Macro: strengthen overall composition, content priority and spatial balance.",
+        "Meso: refine relationships among groups, alignment and separation.",
+        "Micro: refine type size, optical alignment, rhythm or control geometry.",
       ].freeze
 
       DIRECTION = "Flat, brutalist, Swiss: one sans family, a strict 8px rhythm, tap targets of at least 44px, " \
@@ -91,12 +91,12 @@ module Master
         weakest.map { |name, value| "#{name} #{value&.round(2)}" }.join(", ")
       end
 
-      # A font-size may be set to a declared step and never made smaller; with no steps declared it may not be set.
+      # A font-size may be set to a declared step in either direction; with no steps declared it may not be set.
       def type_note
         steps = type_steps.map { |px| px.round(2).to_s.delete_suffix(".0") }
         return "Do not set a font-size." if steps.empty?
 
-        "A font-size may be set only to one of these px steps, or a var(--text-*) token, and never made smaller: #{steps.join(', ')}."
+        "A font-size may be set only to one of these px steps, or a var(--text-*) token, including a smaller step when the rendered hierarchy improves without loss of readability: #{steps.join(', ')}."
       end
 
       # A view is offered beside the stylesheets and may only gain classes those stylesheets define.
