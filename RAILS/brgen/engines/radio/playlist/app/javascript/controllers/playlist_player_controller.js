@@ -15,6 +15,9 @@ export default class extends Controller {
     artist: String,
     artwork: String,
     trackId: String,
+    peaks: { type: Array, default: [] },
+    waveformLabel: String,
+    noWaveformLabel: String,
     color: { type: String, default: "#00d4ff" },
     comments: { type: Array, default: [] },
     trackComments: { type: Object, default: {} },
@@ -42,8 +45,8 @@ export default class extends Controller {
     // submitComment calls this.stimulate, which exists only once registered.
     StimulusReflex.register(this)
     this.playing = false
-    this.peaks = this.#peaksForTrack(this.trackIdValue || "default")
-    this.#resizeWaveform = this.#drawWaveform.bind(this)
+    this.peaks = this.#validPeaks(this.peaksValue)
+    this.#resizeWaveform = () => this.#tick()
     window.addEventListener("resize", this.#resizeWaveform)
 
     if (this.hasAudioTarget) {
@@ -285,7 +288,7 @@ export default class extends Controller {
     if (commentsJson) {
       try { this.commentsValue = JSON.parse(commentsJson) } catch (e) { /* keep */ }
     }
-    this.peaks = this.#peaksForTrack(trackId || src)
+    try { this.peaks = this.#validPeaks(JSON.parse(item.dataset.playlistPlayerPeaksParam || "[]")) } catch { this.peaks = [] }
 
     if (src && this.hasAudioTarget) {
       this.audioTarget.src = src
@@ -452,18 +455,24 @@ export default class extends Controller {
     ctx.clearRect(0, 0, width, height)
 
     const bars = this.peaks.length
-    const gap = 2
-    const barWidth = Math.max(2, (width - gap * bars) / bars)
-    const playedIndex = Math.floor(progress * bars)
-
-    this.peaks.forEach((peak, index) => {
-      const barHeight = Math.max(4, peak * height * 0.88)
-      const x = index * (barWidth + gap)
-      const y = (height - barHeight) / 2
-      const played = index <= playedIndex
-      ctx.fillStyle = played ? this.colorValue : "rgba(255, 255, 255, 0.18)"
-      ctx.fillRect(x, y, barWidth, barHeight)
-    })
+    canvas.setAttribute("aria-label", bars ? this.waveformLabelValue : this.noWaveformLabelValue)
+    if (bars) {
+      const gap = Math.min(2, width / (bars * 3))
+      const barWidth = (width - gap * (bars - 1)) / bars
+      this.peaks.forEach((peak, index) => {
+        const barHeight = Math.max(1, peak * height * 0.88)
+        const x = index * (barWidth + gap)
+        const y = (height - barHeight) / 2
+        ctx.fillStyle = index < progress * bars ? this.colorValue : "rgba(255, 255, 255, 0.18)"
+        ctx.fillRect(x, y, barWidth, barHeight)
+      })
+    } else {
+      // No decoded waveform: show a progress rail, not fabricated amplitude.
+      ctx.fillStyle = "rgba(255, 255, 255, 0.18)"
+      ctx.fillRect(0, height / 2, width, 2)
+      ctx.fillStyle = this.colorValue
+      ctx.fillRect(0, height / 2, width * progress, 2)
+    }
 
     // Draw timestamped comment markers
     if (this.commentsValue?.length > 0 && this.audioTarget?.duration) {
@@ -471,31 +480,17 @@ export default class extends Controller {
       ctx.fillStyle = "#ffeb3b"
       this.commentsValue.forEach(comment => {
         const time = comment.time ?? 0
-        const idx = Math.floor((time / duration) * this.peaks.length)
-        if (idx >= 0 && idx < this.peaks.length) {
-          const x = idx * (barWidth + gap)
+        if (time >= 0 && time <= duration) {
+          const x = Math.min(width - 2, time / duration * width)
           ctx.fillRect(x, 0, 2, height)
         }
       })
     }
   }
 
-  #peaksForTrack(seed) {
-    let hash = 0
-    const text = String(seed)
-    for (let i = 0; i < text.length; i += 1) {
-      hash = ((hash << 5) - hash) + text.charCodeAt(i)
-      hash |= 0
-    }
-
-    const peaks = []
-    for (let i = 0; i < 96; i += 1) {
-      hash = (hash * 1664525 + 1013904223) | 0
-      const normalized = ((hash >>> 0) % 1000) / 1000
-      const envelope = 0.35 + Math.sin(i / 8) * 0.15 + Math.cos(i / 3.5) * 0.1
-      peaks.push(Math.min(1, Math.max(0.08, normalized * envelope)))
-    }
-    return peaks
+  #validPeaks(values) {
+    if (!Array.isArray(values) || values.length > 96) return []
+    return values.every(peak => Number.isFinite(peak) && peak >= 0 && peak <= 1) ? values : []
   }
 
   #formatTime(seconds) {

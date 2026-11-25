@@ -1,6 +1,20 @@
 # frozen_string_literal: true
 
 namespace :radio do
+  desc "Analyze a bounded batch of existing hosted recordings"
+  task analyze_audio: :environment do
+    limit = ENV.fetch("BATCH", "20").to_i.clamp(1, 20)
+    attempted = 0
+    ActiveStorage::Attachment.where(record_type: "Playlist::Track", name: "audio_file").includes(:blob).find_each do |attachment|
+      next if attachment.blob.metadata.key?("playlist_waveform_v1")
+
+      Playlist::AudioAnalysisJob.perform_now(attachment.blob_id)
+      attempted += 1
+      break if attempted >= limit
+    end
+    puts "radio: analyzed or attempted #{attempted} recordings"
+  end
+
   desc "Download a Whyp collection with yt-dlp, build a seed manifest, and seed Radio"
   task import_whyp: :environment do
     collection = ENV["COLLECTION"].to_s.strip

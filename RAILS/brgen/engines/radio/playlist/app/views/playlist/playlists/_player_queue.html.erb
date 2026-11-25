@@ -20,6 +20,7 @@
       data-playlist-player-artist-param="<%= track.artist %>"
       data-playlist-player-artwork-param="<%= track_art %>"
       data-playlist-player-track-id-param="<%= track.id %>"
+      data-playlist-player-peaks-param="<%= track.waveform_peaks.to_json %>"
       data-playlist-player-comments-param="<%= (local_assigns[:track_comments] && local_assigns[:track_comments][track.id] || local_assigns[:comments] || []).to_json %>"
       <%= "disabled" unless track_src || track_embed %>
       itemprop="track"

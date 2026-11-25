@@ -11,6 +11,7 @@
 en:
   playlist:
     pause: "Pause"
+    waveform_unavailable: "Playback progress (waveform unavailable)"
     recording_unavailable: "This recording is not available for playback."
     audio_history: "Previous mixes"
     restore_version: "Restore this mix"

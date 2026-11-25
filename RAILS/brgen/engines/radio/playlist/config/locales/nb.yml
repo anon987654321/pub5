@@ -11,6 +11,7 @@
 nb:
   playlist:
     pause: "Pause"
+    waveform_unavailable: "Avspillingsfremdrift (bølgeform utilgjengelig)"
     recording_unavailable: "Dette opptaket er ikke tilgjengelig for avspilling."
     audio_history: "Tidligere mikser"
     restore_version: "Gjenopprett denne miksen"

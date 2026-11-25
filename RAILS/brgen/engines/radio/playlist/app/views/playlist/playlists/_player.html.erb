@@ -19,6 +19,9 @@
   data-playlist-player-artist-value="<%= active&.artist %>"
   data-playlist-player-artwork-value="<%= active_art %>"
   data-playlist-player-track-id-value="<%= active&.id %>"
+  data-playlist-player-peaks-value="<%= (active&.waveform_peaks || []).to_json %>"
+  data-playlist-player-waveform-label-value="<%= t("playlist.waveform") %>"
+  data-playlist-player-no-waveform-label-value="<%= t("playlist.waveform_unavailable") %>"
   data-playlist-player-color-value="<%= local_assigns[:color] || "#00d4ff" %>" <%# scan: intentional — canvas visualizer default, read by JS not the cascade %>
   data-playlist-player-comments-value="<%= (local_assigns[:comments] || []).to_json %>"
   data-playlist-player-track-comments-value="<%= (local_assigns[:track_comments] || {}).to_json %>"
@@ -66,7 +69,7 @@
       data-playlist-player-target="waveform"
       data-action="click->playlist-player#waveformScrub"
       role="img"
-      aria-label="<%= t("playlist.waveform") %>"
+      aria-label="<%= t(active&.waveform_peaks&.any? ? "playlist.waveform" : "playlist.waveform_unavailable") %>"
     ></canvas>
 
     <%# Buffering, a track that will not load, or a browser that refused to

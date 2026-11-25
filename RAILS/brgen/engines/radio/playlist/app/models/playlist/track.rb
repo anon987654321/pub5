@@ -20,6 +20,7 @@ class Playlist::Track < ApplicationRecord
            foreign_key: :track_id, dependent: :destroy, inverse_of: :track
   has_one_attached :audio_file
   has_one_attached :artwork
+  after_commit :enqueue_audio_analysis, on: %i[create update]
   process_media_variants :artwork, variants: {
     thumb: { resize_to_limit: [ 320, 320 ], format: :webp },
     cover: { resize_to_limit: [ 1_024, 1_024 ], format: :webp },
@@ -66,6 +67,12 @@ class Playlist::Track < ApplicationRecord
     owner.present? && owner.deleted_at.nil? && owner.deletion_scheduled_at.nil?
   end
 
+  def waveform_peaks
+    return [] unless audio_file.attached?
+
+    Array(audio_file.blob.metadata["playlist_waveform_v1"])
+  end
+
   def duration_formatted
     return "—" unless duration_seconds
     min, sec = duration_seconds.divmod(60)
@@ -109,6 +116,15 @@ class Playlist::Track < ApplicationRecord
   def self.privacy_column? = column_names.include?("privacy")
 
   private
+
+  def enqueue_audio_analysis
+    return unless previously_new_record? || saved_change_to_audio_replaced_at? || attachment_changed_for_processing?("audio_file")
+
+    blob_id = ActiveStorage::Attachment.where(record_type: self.class.name, record_id: id, name: "audio_file").pick(:blob_id)
+    Playlist::AudioAnalysisJob.perform_later(blob_id) if blob_id
+  rescue ActiveJob::EnqueueError => error
+    Rails.logger.warn("playlist audio analysis enqueue failed: #{error.class}")
+  end
 
   def privacy_column? = self.class.privacy_column?
 
