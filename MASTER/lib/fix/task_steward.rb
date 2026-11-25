@@ -81,12 +81,11 @@ module Master
       def tick!
         record = Mission.current(root: @root)
         unless eligible?(record)
-          # A future-due backlog mission may be parked while independent work
-          # advances. Do not reinterpret an explicitly disabled or non-backlog
-          # mission as permission to enqueue unattended repository work.
-          if record && record["origin"].to_s == "backlog" &&
-             record["auto_continue"] == true && record["state"].to_s == "waiting"
-            notify_after_run(:idle)
+          # Retry terminal handoff if the previous callback was interrupted.
+          # Future-due backlog tasks may also be parked for independent work.
+          # A paused live task or a non-backlog task never grants intake.
+          if backlog_handoff?(record)
+            notify_after_run(:idle, mission_id: record["id"])
           end
           return :idle
         end
@@ -98,7 +97,7 @@ module Master
 
           @bus&.publish("task_steward:blocked", mission: record["id"], reason:)
           result = Master::Result.err(reason, category: :validation)
-          notify_after_run(result)
+          notify_after_run(result, mission_id: record["id"])
           return result
         end
 
@@ -107,16 +106,16 @@ module Master
         result = Master::Trace::WorkerReceipt.around(@bus, worker: "task_steward", job: "mission #{record["id"]}") do
           @runner.call(goal:, mission: record)
         end
-        recover_failed_result(result)
+        recover_failed_result(result, mission_id: record["id"])
         ok = result_ok?(result)
         @bus&.publish("task_steward:result", mission: record["id"], ok:)
-        notify_after_run(result)
+        notify_after_run(result, mission_id: record["id"])
         result
       rescue StandardError => e
-        defer_failed_mission(e)
+        defer_failed_mission(e, mission_id: record && record["id"])
         @bus&.publish("task_steward:error", error: "#{e.class}: #{e.message}")
         result = Master::Result.err("task steward: #{e.message}", category: :infrastructure)
-        notify_after_run(result)
+        notify_after_run(result, mission_id: record && record["id"])
         result
       end
 
@@ -143,6 +142,14 @@ module Master
         goal = goal[0...-1] while %w[! . ? ...].include?(goal[-1])
         intent = record.dig("operator", "intent").to_s
         intent == "continue_prior_plan" || CONTEXTLESS_GOALS.include?(goal.delete("'"))
+      end
+
+      def backlog_handoff?(record)
+        return false unless record && record["origin"].to_s == "backlog"
+
+        state = record["state"].to_s
+        %w[completed blocked failed].include?(state) ||
+          (state == "waiting" && record["auto_continue"] == true)
       end
 
       def eligible?(record)
@@ -188,13 +195,13 @@ module Master
       def wait_seconds
         record = Mission.current(root: @root)
         return POLL_SECONDS unless record && %w[fold backlog].include?(record["origin"].to_s) && record["auto_continue"] == true
-        return 0 if record["state"].to_s == "waiting" && due?(record)
-
         if record["state"].to_s == "waiting"
           wake = record["next_wake_at"].to_s
-          return POLL_SECONDS if wake.empty?
+          return 1 if wake.empty?
 
-          [Time.iso8601(wake) - Time.now.utc, POLL_SECONDS].min.clamp(0, POLL_SECONDS)
+          # Even an already-due mission gets a bounded pause if the runner
+          # did not advance it; wake! still admits newly queued work immediately.
+          [Time.iso8601(wake) - Time.now.utc, POLL_SECONDS].min.clamp(1, POLL_SECONDS)
         else
           POLL_SECONDS
         end
@@ -203,18 +210,23 @@ module Master
         POLL_SECONDS
       end
 
-      def defer_failed_mission(error)
+      def defer_failed_mission(error, mission_id:)
+        return if mission_id.to_s.empty?
+
         record = Mission.current(root: @root)
+        return unless record && record["id"] == mission_id
+
         settle_mission_failure(record, "#{error.class}: #{error.message}")
       rescue StandardError => e
         @bus&.publish("task_steward:defer_error", error: "#{e.class}: #{e.message}")
       end
 
-      def recover_failed_result(result)
+      def recover_failed_result(result, mission_id:)
         return unless result.respond_to?(:err?) && result.err?
+        return if mission_id.to_s.empty?
 
         record = Mission.current(root: @root)
-        return unless record && record["state"].to_s == "running"
+        return unless record && record["id"] == mission_id && record["state"].to_s == "running"
 
         settle_mission_failure(record, result.message.to_s)
       rescue StandardError => e
@@ -243,8 +255,13 @@ module Master
         @bus&.publish("task_steward:failure_classified", mission: record["id"], category:)
       end
 
-      def notify_after_run(result)
-        @after_run&.call(mission: Mission.current(root: @root), result:)
+      def notify_after_run(result, mission_id:)
+        return unless @after_run && !mission_id.to_s.empty?
+
+        current = Mission.current(root: @root)
+        return unless current && current["id"] == mission_id
+
+        @after_run.call(mission: current, result:)
       rescue StandardError => e
         @bus&.publish("task_steward:after_run_error", error: "#{e.class}: #{e.message}")
       end

@@ -20,7 +20,7 @@
 #   4. a Ruby this script built earlier (MASTER/.tools/ruby)
 #   5. build one only when no compatible interpreter exists
 #
-# MASTER_DEV_BOOTSTRAP_BUILD=0 refuses step 4 (use it where the network is
+# MASTER_DEV_BOOTSTRAP_BUILD=0 refuses step 5 (use it where the network is
 # unavailable and the honest answer is a named failure, not a hang).
 set -eu
 
@@ -70,7 +70,7 @@ best_on_path() {
   best_ruby=
 
   # Hermetic test seam; production always checks generic PATH Ruby first.
-  if [ -n "${MASTER_RUBY_CANDIDATES:+x}" ]; then
+  if [ -n "${MASTER_RUBY_CANDIDATES+x}" ]; then
     set -- $(printf '%s' "$MASTER_RUBY_CANDIDATES" | tr ':' ' ')
     for candidate in "$@"; do
       [ -n "$candidate" ] || continue
@@ -87,8 +87,8 @@ best_on_path() {
 
   generic=$(command -v ruby 2>/dev/null || true)
   if [ -n "$generic" ] && [ -x "$generic" ]; then
-    version=$("$generic" -e 'print RUBY_VERSION' 2>/dev/null || true)
-    if key=$(version_key "$version"); then
+    if version=$("$generic" -e 'print RUBY_VERSION' 2>/dev/null) &&
+      key=$(version_key "$version"); then
       printf '%s\n' "$generic"
       return
     fi
@@ -124,9 +124,9 @@ fetch() {
   url=$1
   out=$2
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSLo "$out" "$url"
+    curl --connect-timeout 15 --max-time 300 -fsSLo "$out" "$url"
   elif command -v wget >/dev/null 2>&1; then
-    wget -qO "$out" "$url"
+    wget --timeout=30 --tries=2 -qO "$out" "$url"
   else
     say "no curl or wget to fetch $url"
     exit 1
@@ -236,14 +236,13 @@ build() {
 }
 
 # 1 and 2: an explicit compatible override, or the generic/available host Ruby.
-# A build already in place keeps its own OpenSSL trust store current before any
-# exec path below (generic, prior build, or a fresh build) runs it.
-[ -x "$PREFIX/bin/ruby" ] && install_ca_bundle
-
 if [ -n "${PUB5_RUBY:-}" ]; then
   [ -x "$PUB5_RUBY" ] || { say "PUB5_RUBY is not executable: $PUB5_RUBY"; exit 1; }
-  version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null || true)
-  key=$(version_key "$version") || { say "PUB5_RUBY must be Ruby >= $MIN_MAJOR.$MIN_MINOR (found ${version:-unreadable})"; exit 1; }
+  version=
+  if ! version=$("$PUB5_RUBY" -e 'print RUBY_VERSION' 2>/dev/null) || ! version_key "$version" >/dev/null; then
+    say "PUB5_RUBY must be Ruby >= $MIN_MAJOR.$MIN_MINOR (found ${version:-unreadable})"
+    exit 1
+  fi
   exec "$PUB5_RUBY" "$@"
 fi
 
@@ -255,18 +254,15 @@ fi
 # left by an older RUBY_VER must not be trusted blind: a 3.1.x build answered
 # here and then failed Bundler's own `ruby ">= 3.2"` check.
 if [ -x "$PREFIX/bin/ruby" ]; then
-  built=$("$PREFIX/bin/ruby" -e 'print RUBY_VERSION' 2>/dev/null || true)
-  stale=
-  case "$built" in
-    [0-9]*.[0-9]*.[0-9]*) version_key "$built" >/dev/null || stale=1 ;;
-  esac
-  if [ -z "$stale" ]; then
+  built=
+  if built=$(LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    "$PREFIX/bin/ruby" -e 'print RUBY_VERSION' 2>/dev/null) && version_key "$built" >/dev/null; then
     install_ca_bundle
     LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     export LD_LIBRARY_PATH
     exec "$PREFIX/bin/ruby" "$@"
   fi
-  say "ignoring $PREFIX/bin/ruby: $built is below Ruby $MIN_MAJOR.$MIN_MINOR"
+  say "ignoring $PREFIX/bin/ruby: expected Ruby >= $MIN_MAJOR.$MIN_MINOR (found ${built:-unreadable})"
 fi
 
 # 4: build one, then answer through it.

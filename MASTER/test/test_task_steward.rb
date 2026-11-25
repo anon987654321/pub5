@@ -116,6 +116,35 @@ class TaskStewardTest < Minitest::Test
     end
   end
 
+  def test_terminal_backlog_handoff_retries_after_callback_failure
+    %w[completed blocked failed].each do |state|
+      record = { "id" => "first", "origin" => "backlog", "state" => state,
+                 "auto_continue" => false }
+      observed = []
+      steward = Master::Fix::TaskSteward.new(
+        root: Dir.tmpdir, bus: nil, runner: ->(**) { flunk "terminal task reran" },
+        after_run: ->(mission:, result:) {
+          observed << [mission.fetch("id"), result]
+          raise "intake interrupted" if observed.one?
+        },
+      )
+      Master::Fix::Mission.stub(:current, record) do
+        2.times { assert_equal :idle, steward.tick! }
+      end
+      assert_equal [["first", :idle], ["first", :idle]], observed
+    end
+  end
+
+  def test_terminal_foreground_mission_does_not_grant_backlog_intake
+    record = { "id" => "manual", "origin" => "fold", "state" => "completed",
+               "auto_continue" => false }
+    steward = Master::Fix::TaskSteward.new(
+      root: Dir.tmpdir, bus: nil, runner: ->(**) { flunk "terminal task reran" },
+      after_run: ->(**) { flunk "foreground task granted backlog intake" },
+    )
+    Master::Fix::Mission.stub(:current, record) { assert_equal :idle, steward.tick! }
+  end
+
   def test_disabled_backlog_mission_is_not_handed_off_to_unattended_intake
     Dir.mktmpdir do |root|
       write_mission(
@@ -272,6 +301,56 @@ class TaskStewardTest < Minitest::Test
       saved = Master::Fix::Mission.current(root:)
       assert_equal "running", saved["state"]
       assert_equal "other-host:42", saved["lease_owner"]
+    end
+  end
+
+  def test_failed_runner_cannot_settle_a_replacement_mission
+    initial = { "id" => "first", "origin" => "fold", "auto_continue" => true,
+                "state" => "waiting", "goal" => "finish the task" }
+    replacement = initial.merge("id" => "second", "state" => "running")
+    [
+      ->(**) { raise "provider overload" },
+      ->(**) { Master::Result.err("provider overload", category: :infrastructure) },
+    ].each do |runner|
+      reads = 0
+      current = ->(**) { reads += 1; reads == 1 ? initial : replacement }
+      steward = Master::Fix::TaskSteward.new(root: Dir.tmpdir, bus: nil, runner:)
+      Master::Fix::Mission.stub(:current, current) do
+        steward.stub(:settle_mission_failure, ->(*) { flunk "replacement mission was settled" }) do
+          assert steward.tick!.err?
+        end
+      end
+    end
+  end
+
+  def test_after_run_does_not_receive_a_replacement_mission
+    initial = { "id" => "first", "origin" => "backlog", "auto_continue" => true,
+                "state" => "waiting", "goal" => "finish the task" }
+    replacement = initial.merge("id" => "second", "state" => "running")
+
+    [
+      ->(**) { Master::Result.ok(:continued) },
+      ->(**) { Master::Result.err("provider overload", category: :infrastructure) },
+      ->(**) { raise "provider overload" },
+    ].each do |runner|
+      reads = 0
+      current = ->(**) { reads += 1; reads == 1 ? initial : replacement }
+      steward = Master::Fix::TaskSteward.new(
+        root: Dir.tmpdir, bus: nil, runner:,
+        after_run: ->(**) { flunk "a replacement mission received a stale result" },
+      )
+      Master::Fix::Mission.stub(:current, current) { steward.tick! }
+      assert_operator reads, :>=, 2
+    end
+  end
+
+  def test_waiting_mission_does_not_spin_on_due_or_invalid_wake_time
+    record = { "id" => "first", "origin" => "fold", "auto_continue" => true, "state" => "waiting" }
+    steward = Master::Fix::TaskSteward.new(root: Dir.tmpdir, bus: nil, runner: ->(**) {})
+    ["", Time.now.utc.iso8601, "invalid"].each do |wake|
+      Master::Fix::Mission.stub(:current, record.merge("next_wake_at" => wake)) do
+        assert_operator steward.send(:wait_seconds), :>=, 1
+      end
     end
   end
 

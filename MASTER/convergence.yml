@@ -203,6 +203,14 @@ workstreams:
     title: Keep event prediction streams separate across correlated tasks
     implementation: MASTER/lib/cognition/prediction.rb
     proof: MASTER/test/test_cognition.rb
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/lib/cognition/prediction.rb
+        - MASTER/test/test_cognition.rb
+      done_when: "ruby MASTER/test/test_cognition.rb"
   - id: prediction_evaluation
     state: partial
     title: Compare contextual event prediction with a shared-stream baseline using walk-forward scoring
@@ -233,6 +241,15 @@ workstreams:
     title: Prequential outcome benchmark with a no-learning ablation and a constant baseline
     implementation: MASTER/lib/cognition/benchmark.rb
     proof: MASTER/test/test_cognition_outcome_model.rb
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: s
+      scope_paths:
+        - MASTER/lib/cognition/benchmark.rb
+        - MASTER/lib/cognition/outcome_model.rb
+        - MASTER/test/test_cognition_outcome_model.rb
+      done_when: "ruby MASTER/test/test_cognition_outcome_model.rb"
   - id: model_laboratory
     state: landed
     title: Provider/model outcome history and routing evidence
@@ -263,6 +280,18 @@ workstreams:
     title: One-command host-aware installation and truthful doctor output
     implementation: MASTER/bin
     proof: MASTER/bin/doctor
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/bin/dev-bootstrap
+        - MASTER/bin/ruby
+        - MASTER/bin/doctor
+        - MASTER/lib/operator/ruby_runner.rb
+        - MASTER/test/test_bin_scripts.rb
+        - MASTER/test/test_bin_ruby.rb
+      done_when: "cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test"
   - id: snapshot_exchange
     state: landed
     title: Bounded share-safe provenance-carrying snapshots
@@ -288,11 +317,19 @@ workstreams:
     title: One semantic command surface across CLI web voice and device
     implementation: MASTER/lib/cli
     proof: MASTER/test
+  # Historical TODO.md (e21213da, line 1074): studio_perceptual_reference_suite.
+  # Folded into this existing owner, not closed or duplicated in gaps.yml.
   - id: media_effects
     state: partial
     title: Ruby-native analog audio and image processing
     implementation: STUDIO
-    proof: STUDIO/replicate/test
+    proof: >-
+      STUDIO/replicate/test; STUDIO/postpro/lib/quality_analyzer.rb and
+      postpro_quality_test.rb own the CIEDE2000 reference-pair and aligned-image
+      comparison primitives. Calibrated rights-cleared natural-image references,
+      explicit skin/highlight bounds and independently measured regional specular
+      uniformity remain open; private source photographs and masks stay outside
+      Git. Human full-size review and supported-runtime acceptance remain required.
   - id: outbound_http_transport
     state: partial
     title: >-
@@ -551,6 +588,16 @@ workstreams:
     title: Interruption, rollback, durable Mission resumption and orphan receipt recovery survive process restart
     implementation: MASTER/lib/fix; MASTER/lib/convergence; MASTER/test/test_fix_interruption_restart.rb
     proof: Restart suite, checkpoint hashes, orphan receipt recovery and budget boundary evidence on one revision
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/lib/fix/transaction.rb
+        - MASTER/lib/fix/run_journal.rb
+        - MASTER/lib/fix/fix_loop.rb
+        - MASTER/test/test_fix_interruption_restart.rb
+      done_when: "cd MASTER && ruby test/test_fix_interruption_restart.rb"
   - id: whole_repository_fix
     state: evidence
     title: One genuine four-report /fix over MASTER, RAILS, OPENBSD and STUDIO with BIZ document review
@@ -566,6 +613,18 @@ workstreams:
     title: Candidate-level consensus protects high-risk repairs without gating deterministic work
     implementation: MASTER/lib/fix/lane_preflight.rb; MASTER/lib/fix/fix_loop/pass_runner.rb; MASTER/lib/fix/kernel/repair_adapter.rb; MASTER/lib/review/consensus.rb
     proof: MASTER/test/test_fix_lane_preflight.rb (no run-wide jury/provider probe); MASTER/test/test_consensus.rb (independent quorum and author exclusion); full Ruby execution NOT_RUN
+    agent_task:
+      tree: MASTER
+      kind: mechanical
+      size: m
+      scope_paths:
+        - MASTER/lib/fix/lane_preflight.rb
+        - MASTER/lib/fix/fix_loop/pass_runner.rb
+        - MASTER/lib/fix/kernel/repair_adapter.rb
+        - MASTER/lib/review/consensus.rb
+        - MASTER/test/test_fix_lane_preflight.rb
+        - MASTER/test/test_consensus.rb
+      done_when: "cd MASTER && MASTER_TEST_JOBS=1 bundle exec rake test"
   - id: law_reload_diagnosis
     state: partial
     title: Law reload records its reason, resolved root and changed paths before reload semantics are altered

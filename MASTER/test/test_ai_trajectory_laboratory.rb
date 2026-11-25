@@ -5,6 +5,19 @@ require "json"
 require_relative "../lib/ai/trajectory/laboratory"
 
 class TestTrajectoryLaboratory < Minitest::Test
+  def test_valid_json_with_invalid_record_shapes_does_not_break_the_lab
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "trajectories.ndjson")
+      rows = [nil, 5, [], { "model" => "invalid", "events" => [nil] },
+              { "model" => "valid", "events" => [], "metrics" => "malformed", "verified" => false }]
+      File.write(path, rows.map { |row| JSON.generate(row) }.join("\n") + "\nnot-json\n")
+      report = Master::AI::Trajectory::Laboratory.summarize(input: path)
+      assert_equal ["valid"], report.keys
+      assert_equal 1, report["valid"][:calls]
+      assert_nil report["valid"][:latency_ms]
+    end
+  end
+
   def test_groups_models_and_scores_verified_work
     Dir.mktmpdir("trajectory-lab") do |dir|
       path = File.join(dir, "trajectories.ndjson")

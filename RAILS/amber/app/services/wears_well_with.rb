@@ -31,25 +31,27 @@ class WearsWellWith
   # the match and the shared tokens that caused it, so a reader can judge the
   # reason and not only the number.
   def neighbors(limit: 4, minimum: 0.2)
+    return [] unless item.user_id
+
+    mine = tokens
+    return [] if mine.empty?
+
     candidates = Item.where(user_id: item.user_id).where.not(id: item.id)
                      .where(lifecycle_state: "active")
     candidates.filter_map do |other|
-      similarity, shared = compare(other)
+      similarity, shared = compare_tokens(mine, self.class.tokens_for(other))
       next if shared.empty? || similarity < minimum
 
-      { item: other, similarity: similarity.round(3), shared: shared }
-    end.sort_by { |match| -match[:similarity] }.first(limit)
+      { item: other, similarity: similarity, shared: shared }
+    end.sort_by { |match| [-match[:similarity], match[:item].id] }.first(limit).each do |match|
+      match[:similarity] = match[:similarity].round(3)
+    end
   end
 
   # Cosine over binary vectors is |A ∩ B| / sqrt(|A| · |B|). Returns the score
   # and the shared tokens, so the caller never has to recompute the why.
   def compare(other)
-    mine = tokens
-    theirs = self.class.tokens_for(other)
-    shared = (mine & theirs).sort
-    return [ 0.0, [] ] if shared.empty? || mine.empty? || theirs.empty?
-
-    [ shared.size / Math.sqrt(mine.size * theirs.size), shared ]
+    compare_tokens(tokens, self.class.tokens_for(other))
   end
 
   def tokens = self.class.tokens_for(item)
@@ -70,5 +72,14 @@ class WearsWellWith
     tags = record.public_send(OCCASION_FIELD).to_s.strip.downcase.split
     tokens.concat(tags.map { |tag| "#{OCCASION_FIELD}:#{tag}" })
     tokens.uniq
+  end
+
+  private
+
+  def compare_tokens(mine, theirs)
+    shared = (mine & theirs).sort
+    return [ 0.0, [] ] if shared.empty?
+
+    [ shared.size / Math.sqrt(mine.size * theirs.size), shared ]
   end
 end

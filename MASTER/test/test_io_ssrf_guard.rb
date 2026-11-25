@@ -14,6 +14,16 @@ class SsrfGuardTest < Minitest::Test
     end
   end
 
+  def test_blocks_ipv4_multicast_without_optional_ipaddr_methods
+    %w[224.0.0.0 224.0.0.1 239.255.255.250 239.255.255.255 ::ffff:224.0.0.1].each do |address|
+      assert Guard.blocked_ip?(IPAddr.new(address)), "#{address} must be blocked"
+    end
+    Guard.stub(:resolve_addresses, ["93.184.216.34", "224.0.0.1"]) do
+      refute Guard.safe_uri?(URI("https://mixed.example.com/"))
+    end
+    assert_raises(SocketError) { Guard.http_for(URI("https://example.com/"), "224.0.0.1") }
+  end
+
   def test_blocks_ipv4_mapped_loopback_and_metadata
     assert Guard.blocked_ip?(IPAddr.new("::ffff:127.0.0.1")), "mapped loopback must be blocked"
     assert Guard.blocked_ip?(IPAddr.new("::ffff:169.254.169.254")), "mapped metadata must be blocked"

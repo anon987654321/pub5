@@ -14,6 +14,8 @@ class TestOwnerRegistryTasks < Minitest::Test
   EXPECTED_TASK_IDS = %w[
     inconclusive_aging constitution_self_budget brgen_feed_ranking_deterministic
     amber_similarity_right_sized master_fleet_panel free_compute_design_of_record
+    installation fix_interruption_restart council_readiness_admission
+    task_scoped_prediction cognition_learning_benchmark
   ].sort.freeze
 
   def test_only_explicit_owner_registry_tasks_enter_unattended_intake
@@ -341,6 +343,21 @@ class TestOwnerRegistryTasks < Minitest::Test
     end
   ensure
     File.define_singleton_method(:owned?, original_owned) if original_owned
+  end
+
+  def test_explicitly_paused_backlog_is_not_replaced_by_intake
+    mission_class = Class.new do
+      def self.current(root:)
+        { "id" => "paused", "origin" => "backlog", "state" => "waiting",
+          "auto_continue" => false, "next_wake_at" => (Time.now.utc + 600).iso8601 }
+      end
+    end
+    Dir.mktmpdir do |root|
+      executor = Backlog::Executor.new(root:, repo_root: root, mission_class:)
+      executor.stub(:park_current!, ->(**) { flunk "paused mission was parked" }) do
+        assert_equal :busy, executor.enqueue_next!
+      end
+    end
   end
 
   def test_parked_backlog_task_does_not_block_independent_ready_work

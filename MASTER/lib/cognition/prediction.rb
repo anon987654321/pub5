@@ -20,13 +20,10 @@ module Master
       def self.evaluate(training:, testing:, scoped: true)
         predictor = new
         predictions = { "transitions" => {}, "previous_event" => nil }
-        previous = {}
-
         Array(training).each do |item|
           row = evaluation_row(item)
           context = scoped ? row[:context] : nil
           predictor.observe!(predictions, event: row[:event], context:)
-          previous[context] = row[:event]
         end
 
         attempts = 0
@@ -34,14 +31,13 @@ module Master
         Array(testing).each do |item|
           row = evaluation_row(item)
           context = scoped ? row[:context] : nil
-          prior = previous[context]
+          prior = predictor.previous_event(predictions, context:)
           if prior
             attempts += 1
             expected = predictor.expected(predictions, event: prior, context:)
             correct += 1 if expected == row[:event]
           end
           predictor.observe!(predictions, event: row[:event], context:)
-          previous[context] = row[:event]
         end
 
         {
@@ -76,6 +72,10 @@ module Master
         stream["last_observed_at"] = Time.now.to_i if contextual?(context)
         predictions["last_error"] = error.round(4)
         error
+      end
+
+      def previous_event(predictions, context: nil)
+        stream_for(predictions, context:, create: false)&.fetch("previous_event", nil)
       end
 
       # What MASTER expects after this event, and how strongly. nil until the

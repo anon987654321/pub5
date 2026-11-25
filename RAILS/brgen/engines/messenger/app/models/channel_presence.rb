@@ -58,7 +58,7 @@ class ChannelPresence
     # phone (or a second browser). Only opaque row ids are cached; raw push
     # endpoints and APNs tokens never become cache keys or presence data.
     def touch_push_device!(conversation_id:, user_id:, device_type:, device_id:)
-      return false unless valid_push_device?(device_type, device_id)
+      return false unless valid_push_identity?(conversation_id, user_id, device_type, device_id)
 
       Rails.cache.write(
         push_device_key(conversation_id, user_id, device_type, device_id),
@@ -71,7 +71,7 @@ class ChannelPresence
     end
 
     def leave_push_device!(conversation_id:, user_id:, device_type:, device_id:)
-      return false unless valid_push_device?(device_type, device_id)
+      return false unless valid_push_identity?(conversation_id, user_id, device_type, device_id)
 
       Rails.cache.delete(push_device_key(conversation_id, user_id, device_type, device_id))
     rescue StandardError => e
@@ -80,7 +80,7 @@ class ChannelPresence
     end
 
     def push_device_active?(conversation_id:, user_id:, device_type:, device_id:)
-      return false unless valid_push_device?(device_type, device_id)
+      return false unless valid_push_identity?(conversation_id, user_id, device_type, device_id)
 
       expires_at = Rails.cache.read(push_device_key(conversation_id, user_id, device_type, device_id)).to_s.to_i
       expires_at > Time.current.to_i
@@ -100,8 +100,9 @@ class ChannelPresence
 
     def key(conversation) = "brgen:presence:conversation:#{conversation.id}"
 
-    def valid_push_device?(device_type, device_id)
-      PUSH_DEVICE_TYPES.include?(device_type.to_s) && device_id.to_s.match?(/\A[1-9]\d{0,18}\z/)
+    def valid_push_identity?(conversation_id, user_id, device_type, device_id)
+      PUSH_DEVICE_TYPES.include?(device_type.to_s) &&
+        [conversation_id, user_id, device_id].all? { |id| id.to_s.match?(/\A[1-9]\d{0,18}\z/) }
     end
 
     def push_device_key(conversation_id, user_id, device_type, device_id)

@@ -84,6 +84,16 @@ class WearsWellWithTest < ActiveSupport::TestCase
     assert_in_delta 0.7071, score_half, 1e-3
   end
 
+  test "equal scores have deterministic id order and ownerless items have no suggestions" do
+    owner = owner("www-order@example.com")
+    dress = garment(owner, "Dress", category: "Dresses", season: "summer")
+    first = garment(owner, "First", category: "Dresses", season: "summer")
+    second = garment(owner, "Second", category: "Dresses", season: "summer")
+
+    assert_equal [first.id, second.id].sort, WearsWellWith.new(dress).neighbors.map { |match| match[:item].id }
+    assert_empty WearsWellWith.new(Item.new(category: "Dresses")).neighbors
+  end
+
   test "items#wears_well_with is the one entry the surfaces call" do
     owner = owner("www-entry@example.com")
     dress = garment(owner, "Linen dress", category: "Dresses", material: "linen")

@@ -125,6 +125,21 @@ class TestCognitionOutcomeModel < Minitest::Test
     assert_raises(ArgumentError) { Master::Cognition::Benchmark.evaluate(rows) }
   end
 
+  def test_benchmark_scores_each_receipt_once_in_both_modes
+    row = { context: "task", action: "verify", outcome: "success",
+            evidence: evidence("fixture:1", "same verified output") }
+    [true, false].each do |learn|
+      report = Master::Cognition::Benchmark.evaluate([row, row.merge(context: " TASK ")], learn:)
+      assert_equal 2, report.fetch("observations")
+      assert_equal 1, report.fetch("duplicate_receipts")
+      assert_equal 1, report.fetch("scored_outcomes")
+      assert_equal 0, report.fetch("rows").first.fetch("prior_samples")
+      assert_raises(ArgumentError) do
+        Master::Cognition::Benchmark.evaluate([row, row.merge(outcome: "failure")], learn:)
+      end
+    end
+  end
+
   def test_no_learning_ablation_stays_at_the_prior
     rows = 8.times.map do |index|
       { context: "repeatable task", action: "run verifier",
