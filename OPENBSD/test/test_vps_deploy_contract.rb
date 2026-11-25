@@ -339,7 +339,9 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes deploy, "bundle-cache-prepare"
     refute_includes deploy, "bundle_install_as_app"
     refute_includes helper, "bundle-cache-prepare)"
-    refute_includes helper, "bundle-install)"
+    # Bounded provisioning only (operator, 2026-11-25): niced, time-limited,
+    # one job, frozen to the pinned lockfile.
+    assert_includes helper[/^\s+bundle-install\)\n.*?;;/m].to_s, "nice -n 15 timeout 900"
     assert_includes deploy, '"bundle-check"'
   end
 
@@ -1024,11 +1026,21 @@ class VpsDeployContractTest < Minitest::Test
     assert_source SOURCE, "resource shedding stays active"
   end
 
+  # Deploy-time gem installs are allowed only bounded (operator, 2026-11-25).
+  def test_deploy_time_gem_install_stays_bounded
+    path = File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh")
+    install = File.read(path, encoding: "UTF-8")[/^\s+bundle-install\)\n.*?;;/m].to_s
+
+    assert_includes install, "nice -n 15 timeout 900"
+    assert_includes install, "install --frozen --jobs 1"
+  end
+
   def test_vps_deploy_and_master_deployer_are_build_free
     master = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")
     tasks = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-task.ksh"), encoding: "UTF-8")
     runtime = File.read(File.join(ROOT, "RAILS", "_runtime_check.sh"), encoding: "UTF-8")
+
     refute_source SOURCE, "rails_assets_precompile_as_app"
     refute_source SOURCE, "ensure_smart_turn_assets"
     refute_includes master, "bundle install"
@@ -1041,7 +1053,6 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes rc, "assets:precompile"
     refute_includes rc, "assets:build_face"
     assert_includes rc, ".pub5-build-sha"
-    refute_includes tasks, "bundle-install)"
     refute_includes tasks, "ci-bundle-install)"
     refute_includes tasks, "assets-precompile)"
     refute_includes tasks, "ci)"
