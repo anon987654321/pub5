@@ -13,8 +13,9 @@ module Studio
       IMAGE_INPUTS = %w[image input_image start_image first_frame_image].freeze
       # Inputs worth keeping in a receipt: what the step decided, never an
       # uploaded URL, a token, or a provider's opaque payload.
-      RECORDABLE = %w[prompt prompt_strength upscale_factor aspect_ratio seed output_format
-                      output_quality guidance_scale num_inference_steps].freeze
+      RECORDABLE = %w[prompt prompt_strength scale_factor creativity aspect_ratio seed
+                      output_format output_quality guidance_scale num_inference_steps
+                      safety_tolerance].freeze
 
       module_function
 

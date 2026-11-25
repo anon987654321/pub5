@@ -14,14 +14,22 @@
 # motion is one image-to-video call followed by the local video grade.
 
 stills:
+  # restore-image takes no prompt: it repairs what it is given.
   - model: flux-kontext-apps/restore-image
     inputs:
-      prompt: "repair compression artefacts and keep the likeness, the skin and the expression exactly as they are"
+      safety_tolerance: 2
+      output_format: png
+  # creativity stays negative so the upscaler invents nothing: it is the one
+  # stage that could quietly redraw a face.
   - model: philz1337x/clarity-pro-upscaler
     inputs:
-      upscale_factor: 2
-      prompt: "natural skin detail, no smoothing, no retouching"
+      scale_factor: 2
+      creativity: -2
+      output_format: png
+  # analog-film defaults to a square frame, which would crop a portrait.
   - model: levelsio/analog-film
     inputs:
       prompt: "ANLG 35mm colour negative emulation, gentle halation, fine grain, honest skin"
       prompt_strength: 0.3
+      aspect_ratio: "3:4"
+      output_format: png

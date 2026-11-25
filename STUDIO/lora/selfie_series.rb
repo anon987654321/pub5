@@ -146,8 +146,13 @@ module Studio
         Studio::Promo.render(clips: piece, audio:, out:, look:, clip_seconds: seconds)
       end
 
+      # The delivered frame is the local grade's output; a raw render is only a
+      # fallback for a series that has not been developed yet.
       def latest_still
-        Dir.glob(File.join(@directory, "#{@subject}_selfie_*.jpg")).sort.last
+        developed = Dir.glob(File.join(@directory, "postpro_*#{@subject}_selfie_*_v1.png"))
+        return developed.max unless developed.empty?
+
+        Dir.glob(File.join(@directory, "#{@subject}_selfie_*.{jpg,jpeg,png}")).max
       end
 
       # A restored sitting and a compiled shot both arrive with the full prompt

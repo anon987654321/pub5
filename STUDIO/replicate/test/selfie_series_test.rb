@@ -611,4 +611,28 @@ class TestSelfieSeries < Minitest::Test
     assert_equal false, written[0].fetch(:compiled), "the modern catalogue still gets the craft compiler"
     assert_equal true, written[1].fetch(:compiled), "the archive sitting must arrive verbatim"
   end
+
+  # Developed stills are written by the local grade as postpro_*_v1.png, so a
+  # series that only looked for the raw render never found its own output and
+  # rendered a fresh still on every promo run.
+  def test_latest_still_prefers_the_developed_frame
+    directory = File.join(@dir, "developed")
+    FileUtils.mkdir_p(directory)
+    File.write(File.join(directory, "probe_selfie_01_20260101T000000000000_aaaaaa.png"), "raw")
+    developed = File.join(directory, "postpro_probe_selfie_01_20260102T000000000000_bbbbbb_1_restore_image_2_clarity_pro_upscaler_v1.png")
+    File.write(developed, "developed")
+
+    box = Studio::Visual::SelfieSeries.new(subject: "probe", directory:)
+    assert_equal developed, box.latest_still
+  end
+
+  def test_latest_still_falls_back_to_the_raw_render
+    directory = File.join(@dir, "raw_only")
+    FileUtils.mkdir_p(directory)
+    raw = File.join(directory, "probe_selfie_01_20260101T000000000000_aaaaaa.png")
+    File.write(raw, "raw")
+
+    box = Studio::Visual::SelfieSeries.new(subject: "probe", directory:)
+    assert_equal raw, box.latest_still
+  end
 end

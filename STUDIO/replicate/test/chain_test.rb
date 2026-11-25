@@ -93,7 +93,7 @@ class TestStudioReplicateChain < Minitest::Test
     ).fetch("steps")
 
     refute_includes steps.to_s, "files.example"
-    assert_equal 2, steps[1].fetch("inputs").fetch("upscale_factor")
+    assert_equal 2, steps[1].fetch("inputs").fetch("scale_factor")
     assert_includes steps[2].fetch("inputs").fetch("prompt"), "ANLG"
     refute steps[0].fetch("inputs").key?("image")
   end
@@ -179,6 +179,20 @@ class TestStudioReplicateChain < Minitest::Test
       next if name == "$subject_lora"
 
       assert Studio::ReplicateClient::Models.any_engine(name), "#{name} is not in the catalogue"
+    end
+  end
+
+  # A step that names an input its model does not take fails at the API, after
+  # the frame has already been rendered and uploaded. Catch it offline.
+  def test_every_declared_step_input_exists_on_its_model
+    Studio::ReplicateClient::Chain.definitions.each do |name, steps|
+      steps.each do |step|
+        model = step.fetch("model")
+        declared = Studio::ReplicateClient::Models.any_inputs_for(model)
+        (step["inputs"] || {}).each_key do |key|
+          assert_includes declared, key.to_s, "#{name}: #{model} has no #{key} input"
+        end
+      end
     end
   end
 end

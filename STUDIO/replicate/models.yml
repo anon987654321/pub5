@@ -170,7 +170,7 @@ image_to_image:
     inputs: [prompt, input_image, aspect_ratio, guidance, num_inference_steps, seed, output_format, output_quality, lora_strength]
     note: "Kontext edit to a PS1 game render without UI; a look, not a likeness route."
   levelsio/disposable-camera:
-    inputs: [prompt, image, mask, aspect_ratio, prompt_strength, num_outputs, guidance_scale, seed, output_format, output_quality, go_fast, lora_scale, extra_lora, extra_lora_scale]
+    inputs: [prompt, image, mask, aspect_ratio, prompt_strength, num_outputs, guidance_scale, seed, output_format, output_quality, go_fast, lora_scale, extra_lora, extra_lora_scale, model, megapixels, width, height, disable_safety_checker, replicate_weights]
     note: "Disposable-camera film look, trigger word STL in the prompt; extra_lora carries the subject's own adapter, so a styled selfie keeps the face."
   levelsio/analog-film:
     inputs: [prompt, image, mask, aspect_ratio, prompt_strength, num_outputs, guidance_scale, seed, output_format, output_quality, go_fast, lora_scale, extra_lora, extra_lora_scale]
@@ -185,7 +185,7 @@ identity:
 # Make a small render usable.
 upscale_and_restore:
   philz1337x/clarity-pro-upscaler:
-    inputs: [image, prompt, upscale_factor]
+    inputs: [image, scale_factor, creativity, output_format]
     note: "Face-aware upscaler; the usual last step before delivery."
   recraft-ai/recraft-crisp-upscale:
     inputs: [image]
@@ -195,7 +195,7 @@ upscale_and_restore:
     inputs: [image, upscale, face_upsample, background_enhance]
     note: "Restores faces in a soft or damaged frame."
   flux-kontext-apps/restore-image:
-    inputs: [input_image, prompt]
+    inputs: [input_image, output_format, safety_tolerance, seed]
   topazlabs/dust-and-scratch-v2:
     inputs: [image]
 

@@ -92,4 +92,38 @@ class TestPromoPiece < Minitest::Test
 
     assert_match(/no developed still/, error.message)
   end
+
+  # Motion is the expensive half. A second run on the same still reuses the
+  # clips instead of filming them again.
+  def test_a_second_run_reuses_the_filmed_clips
+    skip "ffmpeg is not on PATH" unless ffmpeg?
+
+    Dir.mktmpdir do |dir|
+      still = File.join(dir, "probe_selfie_01.jpg")
+      audio = File.join(dir, "tone.wav")
+      Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                      "-i", "color=c=navy:s=64x64", "-frames:v", "1", still)
+      Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                      "-i", "sine=frequency=220:duration=8", audio)
+
+      calls = []
+      series = FakeSeries.new(still:)
+      series.define_singleton_method(:film_piece) do |clips:, seconds:, still:|
+        calls << seconds
+        Array.new(clips) do |index|
+          path = File.join(File.dirname(still), "clip_#{calls.length}_#{index}.mp4")
+          Open3.capture2e("ffmpeg", "-v", "error", "-y", "-f", "lavfi",
+                          "-i", "testsrc=size=64x64:rate=30:duration=#{seconds}", "-pix_fmt", "yuv420p", path)
+          path
+        end
+      end
+
+      piece = Studio::Visual::PromoPiece.new(subject: "probe", audio:, series:)
+      piece.run(clips: 2, seconds: 2)
+      piece.run(clips: 2, seconds: 2)
+
+      assert_equal 1, calls.length, "the second run must not film again"
+      assert File.file?(File.join(dir, "probe_promo.mp4"))
+    end
+  end
 end
