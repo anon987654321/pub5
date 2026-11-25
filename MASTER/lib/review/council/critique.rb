@@ -246,7 +246,21 @@ module Master
                     chosen = all.select { |persona| names.include?(persona.name.downcase) }
                     chosen.empty? ? Personas::DEFAULTS : chosen
                   end
+          panel = contextual_panel(panel, all) if @mode[:preset_key] == "general_critique" && !pin_preset_key
           localize_panel(panel)
+        end
+
+        # Prefer relevant specialists without removing configured veto reviewers.
+        def contextual_panel(panel, all)
+          paths = Array(@files_override).map(&:to_s)
+          names = []
+          names.concat(%w[Typographer] + ["Graphic Designer", "Web Designer", "Accessibility"]) if paths.any? { |path| path.match?(%r{\.(?:css|scss|html|erb|svg)\z}i) }
+          names.concat(["Sound Engineer", "Hip-Hop Producer", "Sound Designer"]) if paths.any? { |path| path.match?(%r{(?:/|\A)dilla/|\.(?:wav|flac|mid|mp3)\z}i) }
+          names.concat(["Graphic Designer", "Design Lead"]) if paths.any? { |path| path.match?(%r{(?:/|\A)(?:photography|cinema|lora)(?:/|\z)|\.(?:png|jpe?g|webp|mov|mp4)\z}i) }
+          names << "Typographer" if paths.any? { |path| path.match?(%r{(?:/|\A)BIZ/|\.pdf\z}i) }
+          specialists = all.select { |persona| names.include?(persona.name) }
+          veto = panel.select(&:veto?)
+          (veto + specialists + panel).uniq
         end
 
         # Local-capacity sizing (see Deliberation.local_posture?): the full
