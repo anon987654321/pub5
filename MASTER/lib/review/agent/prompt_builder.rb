@@ -194,8 +194,8 @@ module Master
           parts << conversational_register_line if casual_task?
           parts << nsfw_lane_section if @config.respond_to?(:task_type) && @config.task_type.to_s == "nsfw"
           parts << runtime_surface_section
-          medium = Master::Design::VisualLanguage.creative_medium(last_user_message)
-          parts << Master::Design::VisualLanguage.creative_context(medium) if medium
+          media = Master::Design::VisualLanguage.creative_media(last_user_message)
+          parts << Master::Design::VisualLanguage.creative_context(media) unless media.empty?
           parts << support_practice_for_turn
           parts << felt_sense_section if @felt_sense.is_a?(Hash)
           parts << "Current task: #{@session.topic}" if @session.respond_to?(:topic) && @session.topic
