@@ -1150,3 +1150,10 @@ test("mask reliefs are deterministic, bounded and distinct for all sixteen desig
   masks.next();
   assert.equal(masks.current().id, "iatmul-concentric");
 });
+
+test("direct subject mouth deformation is anatomical and mask-only", () => {
+  assert.match(faceSource, /uniform vec4 uMaskMouth/);
+  assert.match(faceSource, /subjectPoint\.y \+= sign\(lip\.y\)/);
+  assert.match(faceSource, /uMaskMouth\.w \* \(1\.0 - localMorph\)/);
+  assert.match(faceWorld, /mouth && nativeSubjectField \? 1 : 0/);
+});

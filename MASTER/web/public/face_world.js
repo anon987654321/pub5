@@ -411,8 +411,11 @@
       positions[offset] = point[0] * scale;
       positions[offset + 1] = point[1] * scale;
       positions[offset + 2] = point[2] * scale;
-      stages[i] = stage / stageCount;
-      stageIndices[i] = stage;
+      // Mask particles have anatomical, rather than arbitrary index-based, arrival order.
+      const arrival = maskPoint ? Math.max(0, Math.min(stageCount - 1,
+        Math.floor((1 - (point[1] + .65) / 1.30) * stageCount))) : stage;
+      stages[i] = arrival / stageCount;
+      stageIndices[i] = arrival;
     }
     return { positions, stages, stageIndices, sequence: ordered };
   }
@@ -593,6 +596,15 @@
     nativeSubjectField = form === "face"
       ? window.MASTER_FACE?.resetSubjectScatter?.() === true
       : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions, faceStages) === true);
+    const mouth = semanticDescriptor?.maskProfile
+      ? window.MASTER_FACE_MASKS?.mouthGeometry?.(semanticDescriptor.maskProfile) : null;
+    const mouthUniform = window.MASTER_FACE?.faceMat?.uniforms?.uMaskMouth;
+    if (mouthUniform) {
+      mouthUniform.value.x = mouth ? mouth.y * .52 : 0;
+      mouthUniform.value.y = mouth ? mouth.width * .52 : 0;
+      mouthUniform.value.z = mouth ? mouth.height * .52 : 0;
+      mouthUniform.value.w = mouth && nativeSubjectField ? 1 : 0;
+    }
     // The primary field uses the face renderer's existing spring. The bounded
     // FaceWorld point field is the compatibility path, never a second renderer.
     semanticMorphInProgress = !nativeSubjectField && Boolean(splatTargetPositions && splatProxy);

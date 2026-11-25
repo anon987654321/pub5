@@ -91,15 +91,22 @@
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   };
   const gaussian = (v, width) => Math.exp(-Math.pow(v / width, 2));
+  function mouthGeometry(id) {
+    const p = PROFILES[profileIndex(id)];
+    const shape = RELIEF[id];
+    if (!p || !shape) return null;
+    const forehead = shape[2], cheeks = shape[7];
+    return { y: -.26 - forehead * .09, width: (p.mouth ?? p.crown * .62) * .56,
+      height: .035 + cheeks * .11 };
+  }
+
   function sample(id, index) {
     const p = PROFILES[profileIndex(id)];
     const shape = RELIEF[id];
     if (!p || !shape) return null;
     const [taper, exponent, forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
     const eyeY = .15 - forehead * .25;
-    const mouthY = -.26 - forehead * .09;
-    const mouthW = (p.mouth ?? p.crown * .62) * .56;
-    const mouthH = .035 + cheeks * .11;
+    const { y: mouthY, width: mouthW, height: mouthH } = mouthGeometry(id);
     const w = p.w, h = p.h;
     // Bounded rejection sampling leaves real holes rather than drawing dark
     // sprites over a solid face. Same index and profile always yield same point.
@@ -288,6 +295,7 @@
     source: () => sourceFor(PROFILES[current]),
     descriptor: () => descriptor(PROFILES[current]),
     sample,
+    mouthGeometry,
     hasProfile: (id) => profileIndex(id) >= 0,
     applyCurrent: (reason = "restore") => apply(current, reason),
     select: (id) => {

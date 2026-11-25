@@ -304,3 +304,9 @@ test("face and terminal occupy separate regions and the terminal uses local Geis
   assert.match(faceCss, /--font-mono: "Geist Mono", "JetBrainsMono Nerd Font"/);
   assert.match(faceCss, /url\("\/fonts\/GeistMono-Variable\.woff2"\)/);
 });
+
+test("terminal retains decoded source text without re-escaping it", () => {
+  assert.match(chat, /const text = previousText \+ String\(raw\)/);
+  assert.ok(chat.indexOf("const nearBottom = log.scrollHeight", chat.indexOf("const previousText = terminalSource")) <
+    chat.indexOf("if (text.includes", chat.indexOf("const previousText = terminalSource")));
+});

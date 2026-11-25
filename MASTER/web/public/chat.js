@@ -329,14 +329,14 @@ window._chatOnChunk = (raw) => {
     setTimeout(() => _streamEl.closest('.message')?.classList.remove('msg-error-flash'), 120);
   }
   const previousText = terminalSource.get(_streamEl) || "";
-  const text = previousText + raw.replace(/\n/g, '\\n').replace(/\\\\/g, '\\');
+  const text = previousText + String(raw);
   terminalSource.set(_streamEl, text);
+  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
   if (text.includes('```')) {
     _streamEl.innerHTML = renderTerminalText(text);
   } else {
     _streamEl.textContent = text;
   }
-  const nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 48;
   if (nearBottom) requestAnimationFrame(() => { log.scrollTop = log.scrollHeight; });
   if (streamLive) {
     const snippet = raw.replace(/[\n\r]/g, ' ').trim() || raw;

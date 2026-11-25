@@ -387,7 +387,7 @@ async function sendMessageTurn(text) {
           closeChatStream();
           return;
         }
-        const chunk = raw.replace(/\\n/g, "\n").replace(/\\\\/g, "\\");
+        const chunk = raw.replace(/\\([\\nr])/g, (_, escaped) => escaped === "n" ? "\n" : escaped === "r" ? "\r" : "\\");
         assistantBuffer += chunk;
         ttsBuffer += chunk;
         window._chatOnChunk?.(chunk);
