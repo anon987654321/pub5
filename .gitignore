@@ -418,3 +418,27 @@ STUDIO/lora/*_depth_warp.mp4
 STUDIO/lora/*_depth_warp.mp4.json
 STUDIO/lora/*_chronophoto.png
 STUDIO/lora/*_chronophoto.png.json
+
+# Published by the operator on 2026-11-25: the developed stills for johann,
+# merethe and ragnhild, their promo cuts, the apparatus pieces and the film
+# manifests are deliberately in version control, so a reviewer sees the work
+# without a Replicate key. The rules above stay in force: the next render is
+# ignored until the operator publishes it the same way, and the film takes
+# themselves stay out because each person re-films from their own still.
+!STUDIO/lora/postpro_postpro_*.png
+!STUDIO/lora/postpro_postpro_*.png.json
+!STUDIO/lora/*_promo.mp4
+!STUDIO/lora/*_promo.promo.json
+!STUDIO/lora/*_film_*.mp4.json
+!STUDIO/lora/*_slit_scan.mp4
+!STUDIO/lora/*_slit_scan.mp4.json
+!STUDIO/lora/*_motion_draw.mp4
+!STUDIO/lora/*_motion_draw.mp4.json
+!STUDIO/lora/*_envelope_cut.mp4
+!STUDIO/lora/*_envelope_cut.mp4.json
+!STUDIO/lora/*_dual_slit.mp4
+!STUDIO/lora/*_dual_slit.mp4.json
+!STUDIO/lora/*_depth_warp.mp4
+!STUDIO/lora/*_depth_warp.mp4.json
+!STUDIO/lora/*_chronophoto.png
+!STUDIO/lora/*_chronophoto.png.json

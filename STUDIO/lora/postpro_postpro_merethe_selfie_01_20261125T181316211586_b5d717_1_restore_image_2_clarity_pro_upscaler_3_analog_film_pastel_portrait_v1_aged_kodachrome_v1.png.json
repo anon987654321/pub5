@@ -1,0 +1,225 @@
+{
+  "schema": "postpro.grade.v2",
+  "generated_at": "2026-11-25T18:14:56Z",
+  "input": "/workspace/project/pub5/STUDIO/lora/postpro_merethe_selfie_01_20261125T181316211586_b5d717_1_restore_image_2_clarity_pro_upscaler_3_analog_film_pastel_portrait_v1.png",
+  "output": "/workspace/project/pub5/STUDIO/lora/postpro_postpro_merethe_selfie_01_20261125T181316211586_b5d717_1_restore_image_2_clarity_pro_upscaler_3_analog_film_pastel_portrait_v1_aged_kodachrome_v1.png",
+  "preset": "aged_kodachrome",
+  "recipe": [
+    {
+      "fx": [
+        "optical_blur",
+        "spectral_temp",
+        "film_curve",
+        "dye_fade",
+        "kodachrome_sim",
+        "dir_coupler",
+        "grain"
+      ],
+      "stock": "kodachrome",
+      "temp": 5600,
+      "intensity": 0.88,
+      "age": 0.5
+    }
+  ],
+  "grade_version": "b4521376e029",
+  "seed": 76323,
+  "input_sha256": "50c66dbbdeaeb4a554951d3a2f581196e55344010a985f63afe1684d5bf45463",
+  "output_sha256": "5d9f52a4ff63bc97f8b29c2696d8623666ca4a676101b90e49e49ce31ed7b288",
+  "quality": {
+    "dimensions": [
+      960,
+      1440
+    ],
+    "mean_rgb_before": [
+      145.111,
+      118.531,
+      100.717
+    ],
+    "mean_rgb_after": [
+      128.997,
+      90.502,
+      74.105
+    ],
+    "clipped_highlights_percent": 2.3797,
+    "crushed_blacks_percent": 1.3166,
+    "warnings": [
+      "highlight clipping exceeds 0.5%",
+      "black clipping exceeds 0.5%"
+    ]
+  },
+  "quality_analysis": {
+    "before": {
+      "sample_count": 10880,
+      "exposure": {
+        "mean_luminance": 0.31981895850244685,
+        "p01": 0.002139596759869426,
+        "p99": 0.9004967740998782,
+        "clipped_highlights_pct": 0.0,
+        "clipped_shadows_pct": 10.762867647058824,
+        "exposure_bias_stops": 0.6446726322205597
+      },
+      "tonal": {
+        "histogram_spread": 0.8774910260505667,
+        "black_point": 0.002139596759869426,
+        "median": 0.1510223008938424,
+        "white_point": 0.9004967740998782,
+        "shadow_detail_ratio": 0.28604995660134347,
+        "highlight_detail_ratio": 0.06994950649128331
+      },
+      "contrast": {
+        "rms_contrast": 0.33294621204487307
+      },
+      "colour": {
+        "available": true,
+        "sample_count": 10880,
+        "mean_rg": 0.10430255190311419,
+        "mean_rb": 0.17415477220299885
+      },
+      "not_assessed": [
+        "composition",
+        "focus_quality",
+        "subject_expression",
+        "simplicity"
+      ],
+      "dimensions": [
+        960,
+        1440
+      ],
+      "sample_dimensions": [
+        85,
+        128
+      ],
+      "sampling": "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance"
+    },
+    "after": {
+      "sample_count": 10880,
+      "exposure": {
+        "mean_luminance": 0.24339542400859057,
+        "p01": 0.0013209556863710272,
+        "p99": 0.8543981837432558,
+        "clipped_highlights_pct": 0.0,
+        "clipped_shadows_pct": 20.422794117647058,
+        "exposure_bias_stops": 1.0386260501807163
+      },
+      "tonal": {
+        "histogram_spread": 0.8169452375968497,
+        "black_point": 0.0013209556863710272,
+        "median": 0.06340809290959154,
+        "white_point": 0.8543981837432558,
+        "shadow_detail_ratio": 0.2098331996721299,
+        "highlight_detail_ratio": 0.027452020376939695
+      },
+      "contrast": {
+        "rms_contrast": 0.31017659662657454
+      },
+      "colour": {
+        "available": true,
+        "sample_count": 10880,
+        "mean_rg": 0.15100382064590542,
+        "mean_rb": 0.21539071510957325
+      },
+      "not_assessed": [
+        "composition",
+        "focus_quality",
+        "subject_expression",
+        "simplicity"
+      ],
+      "dimensions": [
+        960,
+        1440
+      ],
+      "sample_dimensions": [
+        85,
+        128
+      ],
+      "sampling": "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance"
+    },
+    "interpretation": "sampled pixel diagnostics only; does not score composition, focus or intent"
+  },
+  "uncanny": {
+    "before": {
+      "texture": 0.039809274326760846,
+      "specular_spread": 0.04750936473904415,
+      "clipping": 0.0,
+      "tonal_range": 0.31529420620503307
+    },
+    "after": {
+      "texture": 0.04619439602511159,
+      "specular_spread": 0.03544533496642092,
+      "clipping": 0.00028935185185185184,
+      "tonal_range": 0.32042375346270724
+    }
+  },
+  "capabilities": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70
+  ]
+}

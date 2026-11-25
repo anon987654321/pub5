@@ -1,0 +1,41 @@
+{
+  "schema": "studio.film_render.v1",
+  "created_at": "2026-11-25T22:12:53Z",
+  "subject": "johann",
+  "model": "minimax/h3-highspeed",
+  "requested_duration_seconds": 10,
+  "source_still_sha256": "a7cb4a48a46da79f4077f9bc6320dfcde32b3939407599889c3f9e9e1b452993",
+  "output_video_sha256": "d7f0f1c2259fd2a7727539b68db48272588169e53005f2094660d7c4d06badc6",
+  "output_bytes": 4776625,
+  "provider_prediction": {
+    "schema": "studio.replicate.prediction.v1",
+    "model": "minimax/h3-highspeed",
+    "version": "f40d8772481a33a3322e9cd08149784b500bb1bc652478dcba41cabf0a70b7e3",
+    "prediction_id": "zsqa23hck9rmt0d22k28ghd6ar",
+    "status": "succeeded",
+    "estimated_cost_usd": 0.3,
+    "estimate_basis": "catalogue rate and reserved request bounds before POST",
+    "actual_cost_usd": null,
+    "actual_cost_status": "NOT_REPORTED_BY_PREDICTION_API",
+    "metrics": {
+      "model_variant": "h3-highspeed",
+      "predict_time": 41.795310438,
+      "resolution_target": "768P",
+      "total_time": 41.808302868,
+      "video_output_count": 1,
+      "video_output_duration_seconds": 10
+    }
+  },
+  "human_review": {
+    "visual": "NOT_REVIEWED",
+    "likeness": "NOT_REVIEWED",
+    "temporal": {
+      "watched_in_full": "NOT_REVIEWED",
+      "identity_stability": "NOT_REVIEWED",
+      "no_melt_or_morph": "NOT_REVIEWED",
+      "motion_plausibility": "NOT_REVIEWED",
+      "camera_restraint": "NOT_REVIEWED",
+      "light_coherence": "NOT_REVIEWED"
+    }
+  }
+}

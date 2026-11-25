@@ -1,0 +1,15 @@
+{
+  "kind": "dual_slit",
+  "subject": "johann",
+  "output": "/workspace/project/pub5/STUDIO/lora/johann_dual_slit.mp4",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:27:34Z",
+  "first": "/workspace/project/pub5/STUDIO/lora/johann_film_20261125T221209021540_a54cec.mp4",
+  "second": "/workspace/project/pub5/STUDIO/lora/johann_film_20261125T221421093357_d213d5.mp4",
+  "shear": 60
+}

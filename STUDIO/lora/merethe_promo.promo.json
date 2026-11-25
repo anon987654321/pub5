@@ -1,0 +1,91 @@
+{
+  "engine": "promo",
+  "created_at": "2026-11-25T22:20:48Z",
+  "look": "dilla_print",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 30,
+  "still_seconds": 4.5,
+  "clip_seconds": 10,
+  "crossfade_seconds": 1.0,
+  "still_count": 0,
+  "clip_count": 4,
+  "duration_seconds": 37.0,
+  "segments": [
+    {
+      "kind": "clip",
+      "path": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+      "seconds": 10.0
+    },
+    {
+      "kind": "clip",
+      "path": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221738052261_0798c3.mp4",
+      "seconds": 10.0
+    },
+    {
+      "kind": "clip",
+      "path": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221811590921_d2cfff.mp4",
+      "seconds": 10.0
+    },
+    {
+      "kind": "clip",
+      "path": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221845180548_641b39.mp4",
+      "seconds": 10.0
+    }
+  ],
+  "stills": [
+
+  ],
+  "clips": [
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221738052261_0798c3.mp4",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221811590921_d2cfff.mp4",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221845180548_641b39.mp4"
+  ],
+  "audio": "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
+  "output": "/workspace/project/pub5/STUDIO/lora/merethe_promo.mp4",
+  "ffmpeg_argv": [
+    "ffmpeg",
+    "-nostdin",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+    "-i",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221738052261_0798c3.mp4",
+    "-i",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221811590921_d2cfff.mp4",
+    "-i",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221845180548_641b39.mp4",
+    "-i",
+    "/workspace/project/pub5/STUDIO/dilla/dilla.wav",
+    "-filter_complex",
+    "[0:v]trim=duration=10,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,eq=contrast=1.08:saturation=1.1:gamma=1.0,rgbashift=rh=1:rv=-1:gh=-1:gv=1:bh=1:bv=1,noise=alls=4:allf=t+u,unsharp=5:5:0.3:5:5:0,vignette=PI/5.5,lut3d=file=/workspace/project/pub5/STUDIO/lora/house.cube:interp=tetrahedral[v0];[1:v]trim=duration=10,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,eq=contrast=1.08:saturation=1.1:gamma=1.0,rgbashift=rh=1:rv=-1:gh=-1:gv=1:bh=1:bv=1,noise=alls=4:allf=t+u,unsharp=5:5:0.3:5:5:0,vignette=PI/5.5,lut3d=file=/workspace/project/pub5/STUDIO/lora/house.cube:interp=tetrahedral[v1];[2:v]trim=duration=10,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,eq=contrast=1.08:saturation=1.1:gamma=1.0,rgbashift=rh=1:rv=-1:gh=-1:gv=1:bh=1:bv=1,noise=alls=4:allf=t+u,unsharp=5:5:0.3:5:5:0,vignette=PI/5.5,lut3d=file=/workspace/project/pub5/STUDIO/lora/house.cube:interp=tetrahedral[v2];[3:v]trim=duration=10,setpts=PTS-STARTPTS,scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,setsar=1,eq=contrast=1.08:saturation=1.1:gamma=1.0,rgbashift=rh=1:rv=-1:gh=-1:gv=1:bh=1:bv=1,noise=alls=4:allf=t+u,unsharp=5:5:0.3:5:5:0,vignette=PI/5.5,lut3d=file=/workspace/project/pub5/STUDIO/lora/house.cube:interp=tetrahedral[v3];[v0][v1]xfade=transition=fade:duration=1:offset=9[x0];[x0][v2]xfade=transition=fade:duration=1:offset=18[x1];[x1][v3]xfade=transition=fade:duration=1:offset=27[x2];[4:a]loudnorm=I=-14:TP=-1.5:LRA=11[aout]",
+    "-map",
+    "[x2]",
+    "-map",
+    "[aout]",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "medium",
+    "-crf",
+    "18",
+    "-pix_fmt",
+    "yuv420p",
+    "-r",
+    "30",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-movflags",
+    "+faststart",
+    "-shortest",
+    "/workspace/project/pub5/STUDIO/lora/merethe_promo.mp4"
+  ]
+}

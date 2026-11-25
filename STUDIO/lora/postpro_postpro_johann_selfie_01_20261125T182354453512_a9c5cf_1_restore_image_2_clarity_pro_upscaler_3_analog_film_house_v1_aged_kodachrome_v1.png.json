@@ -1,0 +1,225 @@
+{
+  "schema": "postpro.grade.v2",
+  "generated_at": "2026-11-25T18:25:30Z",
+  "input": "/workspace/project/pub5/STUDIO/lora/postpro_johann_selfie_01_20261125T182354453512_a9c5cf_1_restore_image_2_clarity_pro_upscaler_3_analog_film_house_v1.png",
+  "output": "/workspace/project/pub5/STUDIO/lora/postpro_postpro_johann_selfie_01_20261125T182354453512_a9c5cf_1_restore_image_2_clarity_pro_upscaler_3_analog_film_house_v1_aged_kodachrome_v1.png",
+  "preset": "aged_kodachrome",
+  "recipe": [
+    {
+      "fx": [
+        "optical_blur",
+        "spectral_temp",
+        "film_curve",
+        "dye_fade",
+        "kodachrome_sim",
+        "dir_coupler",
+        "grain"
+      ],
+      "stock": "kodachrome",
+      "temp": 5600,
+      "intensity": 0.88,
+      "age": 0.5
+    }
+  ],
+  "grade_version": "b4521376e029",
+  "seed": 65415,
+  "input_sha256": "981a2fa3dd9eb2f3df14aa8bc23198aae72e3e9b36ec6746b7e7e4f0d5028285",
+  "output_sha256": "3cde371894a8d3d29ad357fe2fa56062a76d91dea24967c4497dbea8fdaa6ee6",
+  "quality": {
+    "dimensions": [
+      960,
+      1440
+    ],
+    "mean_rgb_before": [
+      77.075,
+      59.945,
+      51.919
+    ],
+    "mean_rgb_after": [
+      65.215,
+      43.333,
+      39.967
+    ],
+    "clipped_highlights_percent": 0.9544,
+    "crushed_blacks_percent": 2.5877,
+    "warnings": [
+      "highlight clipping exceeds 0.5%",
+      "black clipping exceeds 0.5%"
+    ]
+  },
+  "quality_analysis": {
+    "before": {
+      "sample_count": 10880,
+      "exposure": {
+        "mean_luminance": 0.12739677316835138,
+        "p01": 0.001723984832668829,
+        "p99": 0.8747003537888649,
+        "clipped_highlights_pct": 0.0,
+        "clipped_shadows_pct": 45.036764705882355,
+        "exposure_bias_stops": 1.9725993588392574
+      },
+      "tonal": {
+        "histogram_spread": 0.5421103278028262,
+        "black_point": 0.001723984832668829,
+        "median": 0.01356063023992754,
+        "white_point": 0.8747003537888649,
+        "shadow_detail_ratio": 0.1381918322131009,
+        "highlight_detail_ratio": 0.15136635116497982
+      },
+      "contrast": {
+        "rms_contrast": 0.22821869818643126
+      },
+      "colour": {
+        "available": true,
+        "sample_count": 10880,
+        "mean_rg": 0.06708117070357555,
+        "mean_rb": 0.09850562283737024
+      },
+      "not_assessed": [
+        "composition",
+        "focus_quality",
+        "subject_expression",
+        "simplicity"
+      ],
+      "dimensions": [
+        960,
+        1440
+      ],
+      "sample_dimensions": [
+        85,
+        128
+      ],
+      "sampling": "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance"
+    },
+    "after": {
+      "sample_count": 10880,
+      "exposure": {
+        "mean_luminance": 0.08676796263843413,
+        "p01": 0.0013428703345832532,
+        "p99": 0.8217341586132596,
+        "clipped_highlights_pct": 0.0,
+        "clipped_shadows_pct": 57.5,
+        "exposure_bias_stops": 2.0
+      },
+      "tonal": {
+        "histogram_spread": 0.343403455348717,
+        "black_point": 0.0013428703345832532,
+        "median": 0.006599714202460224,
+        "white_point": 0.8217341586132596,
+        "shadow_detail_ratio": 0.14131712516336978,
+        "highlight_detail_ratio": 0.06695129256151952
+      },
+      "contrast": {
+        "rms_contrast": 0.18259367938472826
+      },
+      "colour": {
+        "available": true,
+        "sample_count": 10880,
+        "mean_rg": 0.0854656862745098,
+        "mean_rb": 0.09867466839677047
+      },
+      "not_assessed": [
+        "composition",
+        "focus_quality",
+        "subject_expression",
+        "simplicity"
+      ],
+      "dimensions": [
+        960,
+        1440
+      ],
+      "sample_dimensions": [
+        85,
+        128
+      ],
+      "sampling": "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance"
+    },
+    "interpretation": "sampled pixel diagnostics only; does not score composition, focus or intent"
+  },
+  "uncanny": {
+    "before": {
+      "texture": 0.03132354868310661,
+      "specular_spread": 0.05283611853178711,
+      "clipping": 0.00014467592592592592,
+      "tonal_range": 0.27716887551582053
+    },
+    "after": {
+      "texture": 0.033059143388447274,
+      "specular_spread": 0.03875247520188897,
+      "clipping": 0.00014467592592592592,
+      "tonal_range": 0.24377992107426133
+    }
+  },
+  "capabilities": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "kind": "chronophoto",
+  "subject": "johann",
+  "output": "/workspace/project/pub5/STUDIO/lora/johann_chronophoto.png",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:27:48Z",
+  "clip": "/workspace/project/pub5/STUDIO/lora/johann_film_20261125T221209021540_a54cec.mp4",
+  "poses": 12
+}

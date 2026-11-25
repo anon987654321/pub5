@@ -1,0 +1,41 @@
+{
+  "schema": "studio.film_render.v1",
+  "created_at": "2026-11-25T18:39:31Z",
+  "subject": "merethe",
+  "model": "minimax/h3-highspeed",
+  "requested_duration_seconds": 10,
+  "source_still_sha256": "2c5796a6395aa5d39e5421b1936cecb8b9eb6d20a8db65cf0ac4782fd86bdca5",
+  "output_video_sha256": "92a21f57044cd60c040781d7562cb6ce694f908b3ecc68e9e4ca5b47b7a37e1a",
+  "output_bytes": 4259752,
+  "provider_prediction": {
+    "schema": "studio.replicate.prediction.v1",
+    "model": "minimax/h3-highspeed",
+    "version": "f40d8772481a33a3322e9cd08149784b500bb1bc652478dcba41cabf0a70b7e3",
+    "prediction_id": "e712336hshrmy0d22g08qkyfn0",
+    "status": "succeeded",
+    "estimated_cost_usd": 0.3,
+    "estimate_basis": "catalogue rate and reserved request bounds before POST",
+    "actual_cost_usd": null,
+    "actual_cost_status": "NOT_REPORTED_BY_PREDICTION_API",
+    "metrics": {
+      "model_variant": "h3-highspeed",
+      "predict_time": 42.253098414,
+      "resolution_target": "768P",
+      "total_time": 42.264809113,
+      "video_output_count": 1,
+      "video_output_duration_seconds": 10
+    }
+  },
+  "human_review": {
+    "visual": "NOT_REVIEWED",
+    "likeness": "NOT_REVIEWED",
+    "temporal": {
+      "watched_in_full": "NOT_REVIEWED",
+      "identity_stability": "NOT_REVIEWED",
+      "no_melt_or_morph": "NOT_REVIEWED",
+      "motion_plausibility": "NOT_REVIEWED",
+      "camera_restraint": "NOT_REVIEWED",
+      "light_coherence": "NOT_REVIEWED"
+    }
+  }
+}

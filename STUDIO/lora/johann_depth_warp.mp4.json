@@ -1,0 +1,14 @@
+{
+  "kind": "depth_warp",
+  "subject": "johann",
+  "output": "/workspace/project/pub5/STUDIO/lora/johann_depth_warp.mp4",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:44:46Z",
+  "still": "/workspace/project/pub5/STUDIO/lora/postpro_postpro_johann_selfie_03_20261125T220631311355_4552f4_1_restore_image_2_clarity_pro_upscaler_3_analog_film_reportage_v1_aged_kodachrome_v1.png",
+  "push": 0.3
+}

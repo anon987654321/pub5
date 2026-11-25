@@ -1,0 +1,36 @@
+{
+  "kind": "motion_draw",
+  "subject": "merethe",
+  "output": "/workspace/project/pub5/STUDIO/lora/merethe_motion_draw.mp4",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:31:04Z",
+  "exposure": "running average",
+  "clip": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+  "argv": [
+    "ffmpeg",
+    "-nostdin",
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+    "-t",
+    "10",
+    "-vf",
+    "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=24,tblend=all_mode=average,eq=contrast=1.08:saturation=0.8:gamma=1.02,vignette=PI/5",
+    "-an",
+    "-c:v",
+    "libx264",
+    "-crf",
+    "18",
+    "-pix_fmt",
+    "yuv420p",
+    "/workspace/project/pub5/STUDIO/lora/merethe_motion_draw.mp4"
+  ]
+}

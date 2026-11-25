@@ -1,0 +1,14 @@
+{
+  "kind": "chronophoto",
+  "subject": "merethe",
+  "output": "/workspace/project/pub5/STUDIO/lora/merethe_chronophoto.png",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:31:05Z",
+  "clip": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+  "poses": 12
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "slit_scan",
+  "subject": "johann",
+  "output": "/workspace/project/pub5/STUDIO/lora/johann_slit_scan.mp4",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:26:57Z",
+  "shear": 60,
+  "strip": 6,
+  "clip": "/workspace/project/pub5/STUDIO/lora/johann_film_20261125T221209021540_a54cec.mp4"
+}

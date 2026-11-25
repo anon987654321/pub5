@@ -1,0 +1,225 @@
+{
+  "schema": "postpro.grade.v2",
+  "generated_at": "2026-11-25T18:13:14Z",
+  "input": "/workspace/project/pub5/STUDIO/lora/postpro_johann_selfie_01_20261125T181132104791_62edf3_1_restore_image_2_clarity_pro_upscaler_3_analog_film_house_v1.png",
+  "output": "/workspace/project/pub5/STUDIO/lora/postpro_postpro_johann_selfie_01_20261125T181132104791_62edf3_1_restore_image_2_clarity_pro_upscaler_3_analog_film_house_v1_aged_kodachrome_v1.png",
+  "preset": "aged_kodachrome",
+  "recipe": [
+    {
+      "fx": [
+        "optical_blur",
+        "spectral_temp",
+        "film_curve",
+        "dye_fade",
+        "kodachrome_sim",
+        "dir_coupler",
+        "grain"
+      ],
+      "stock": "kodachrome",
+      "temp": 5600,
+      "intensity": 0.88,
+      "age": 0.5
+    }
+  ],
+  "grade_version": "b4521376e029",
+  "seed": 65415,
+  "input_sha256": "69dd88a5c38cefb3718fefa36b6dff9f599b11c8472758ec34226d22db9a1b41",
+  "output_sha256": "55a821275e293aae3141b783f5a5125bd7f196e4e3d4243fc166d5fda551c470",
+  "quality": {
+    "dimensions": [
+      960,
+      1440
+    ],
+    "mean_rgb_before": [
+      75.331,
+      58.921,
+      51.029
+    ],
+    "mean_rgb_after": [
+      64.591,
+      43.145,
+      39.952
+    ],
+    "clipped_highlights_percent": 1.0157,
+    "crushed_blacks_percent": 2.5808,
+    "warnings": [
+      "highlight clipping exceeds 0.5%",
+      "black clipping exceeds 0.5%"
+    ]
+  },
+  "quality_analysis": {
+    "before": {
+      "sample_count": 10880,
+      "exposure": {
+        "mean_luminance": 0.12309831656529947,
+        "p01": 0.0016887424541100985,
+        "p99": 0.8519344689322776,
+        "clipped_highlights_pct": 0.009191176470588236,
+        "clipped_shadows_pct": 45.064338235294116,
+        "exposure_bias_stops": 2.0
+      },
+      "tonal": {
+        "histogram_spread": 0.5172300349444361,
+        "black_point": 0.0016887424541100985,
+        "median": 0.013199604642100854,
+        "white_point": 0.8519344689322776,
+        "shadow_detail_ratio": 0.13739324676319922,
+        "highlight_detail_ratio": 0.11656430260868483
+      },
+      "contrast": {
+        "rms_contrast": 0.2228978662431025
+      },
+      "colour": {
+        "available": true,
+        "sample_count": 10880,
+        "mean_rg": 0.06434868800461362,
+        "mean_rb": 0.09524978373702421
+      },
+      "not_assessed": [
+        "composition",
+        "focus_quality",
+        "subject_expression",
+        "simplicity"
+      ],
+      "dimensions": [
+        960,
+        1440
+      ],
+      "sample_dimensions": [
+        85,
+        128
+      ],
+      "sampling": "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance"
+    },
+    "after": {
+      "sample_count": 10880,
+      "exposure": {
+        "mean_luminance": 0.08623013651518086,
+        "p01": 0.0012990410381588011,
+        "p99": 0.8151192596000821,
+        "clipped_highlights_pct": 0.0,
+        "clipped_shadows_pct": 57.99632352941177,
+        "exposure_bias_stops": 2.0
+      },
+      "tonal": {
+        "histogram_spread": 0.3352442445661189,
+        "black_point": 0.0012990410381588011,
+        "median": 0.006557924785556118,
+        "white_point": 0.8151192596000821,
+        "shadow_detail_ratio": 0.13598706321744458,
+        "highlight_detail_ratio": 0.08252597779067986
+      },
+      "contrast": {
+        "rms_contrast": 0.1828287199691826
+      },
+      "colour": {
+        "available": true,
+        "sample_count": 10880,
+        "mean_rg": 0.08370314302191466,
+        "mean_rb": 0.09625
+      },
+      "not_assessed": [
+        "composition",
+        "focus_quality",
+        "subject_expression",
+        "simplicity"
+      ],
+      "dimensions": [
+        960,
+        1440
+      ],
+      "sample_dimensions": [
+        85,
+        128
+      ],
+      "sampling": "uniform thumbnail; decoded-sRGB linear-light CIE 1931 luminance"
+    },
+    "interpretation": "sampled pixel diagnostics only; does not score composition, focus or intent"
+  },
+  "uncanny": {
+    "before": {
+      "texture": 0.02889617020434175,
+      "specular_spread": 0.04800048993391486,
+      "clipping": 0.0,
+      "tonal_range": 0.27327226985195535
+    },
+    "after": {
+      "texture": 0.03177439846337182,
+      "specular_spread": 0.03963748417506738,
+      "clipping": 0.0,
+      "tonal_range": 0.2434390485048693
+    }
+  },
+  "capabilities": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70
+  ]
+}

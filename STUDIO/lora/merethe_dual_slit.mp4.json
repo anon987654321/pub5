@@ -1,0 +1,15 @@
+{
+  "kind": "dual_slit",
+  "subject": "merethe",
+  "output": "/workspace/project/pub5/STUDIO/lora/merethe_dual_slit.mp4",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:30:52Z",
+  "first": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221714047257_c09606.mp4",
+  "second": "/workspace/project/pub5/STUDIO/lora/merethe_film_20261125T221845180548_641b39.mp4",
+  "shear": 60
+}

@@ -1,0 +1,15 @@
+{
+  "kind": "slit_scan",
+  "subject": "ragnhild",
+  "output": "/workspace/project/pub5/STUDIO/lora/ragnhild_slit_scan.mp4",
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "seconds": 10,
+  "created_at": "2026-11-25T22:34:01Z",
+  "shear": 60,
+  "strip": 6,
+  "clip": "/workspace/project/pub5/STUDIO/lora/ragnhild_film_20261125T222049198125_41093c.mp4"
+}
