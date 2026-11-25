@@ -600,7 +600,7 @@
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
           gl_Position = projectionMatrix * mv;
           // Flat bitmap ink: geometry determines position, never ink weight.
-          gl_PointSize = 1.5;
+          gl_PointSize = 3.0;
           vThreshold = aThreshold;
           vDepthRank = aDepthRank;
           vAlpha = 1.0;
@@ -622,9 +622,9 @@
         varying float vDepthRank;
         varying float vFaultline;
         void main() {
-          vec2 p = gl_PointCoord - vec2(0.5);
-          // Identical solid marks, including peripheral carriers.
-          if (length(p) > 0.5) discard;
+          vec2 cell = floor(gl_PointCoord * 3.0);
+            // The same seven-cell, solid asymmetric bitmap for every carrier.
+            if ((cell.x == 0.0 && cell.y == 0.0) || (cell.x == 2.0 && cell.y == 2.0)) discard;
           if (vSolo < 0.5 && vThreshold > uDensity) discard;
           float fault = clamp(vFaultline * uFaultlineStrength, 0.0, 1.0);
           if (vSolo < 0.5 && fault > 0.62) discard;
