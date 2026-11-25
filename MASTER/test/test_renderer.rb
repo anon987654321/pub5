@@ -552,8 +552,11 @@ class TestRenderer < Minitest::Test
 
   def test_splash_never_prints_the_web_token
     secret = "s3cr3t-token-value-that-must-not-print"
-    text = $stdout.stub(:tty?, false) do
-      strip_ansi(FakeRenderer.new(config: { "web_token" => secret }).splash("model"))
+    # web0 attaches only in the verbose banner.
+    text = Master::Trace::Dmesg.with_verbosity("verbose") do
+      $stdout.stub(:tty?, false) do
+        strip_ansi(FakeRenderer.new(config: { "web_token" => secret }).splash("model"))
+      end
     end
 
     refute_includes text, secret
