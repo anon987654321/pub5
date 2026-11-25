@@ -201,7 +201,6 @@ class TestDocPaths < Minitest::Test
   # legal notice, research source or deliverable. Project instructions belong
   # in the owning README; agent harness files remain separate entrypoints.
   MARKDOWN_REFERENCE_EXCEPTIONS = %w[
-    MASTER/FACE_WORLD.md
     BIZ/RESTORATION_REPORT.md
     BIZ/fetat/research.md
     BIZ/research/aerospace-additive-manufacturing.md
