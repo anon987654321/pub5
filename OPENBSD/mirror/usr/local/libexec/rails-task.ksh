@@ -263,6 +263,9 @@ unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH
 # brgen happened to carry this in an untracked .bundle/config; amber, bsdports
 # and mrdamascy demanded rubocop, selenium and brakeman at deploy (2026-11-25).
 export BUNDLE_WITHOUT=development:test
+# YJIT off, as rc.d runs the apps: a db:prepare with it on, beside a running
+# brgen, grew until vm23 ran out of swap and stalled for 46 minutes (2026-11-25).
+export RUBY_YJIT_ENABLE=0
 cd /home/$app/app
 $command"
 exec /usr/bin/su -m "$app" -c "$script"
