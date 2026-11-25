@@ -98,6 +98,11 @@ class TestCatalogCache < Minitest::Test
 
     offline = build.call
     assert_equal %w[cacheable:a cacheable:b], offline.hosted_models
+
+    # A changed admission rule must not use ids cached under the old rule.
+    spec["keyless"] = { "allow" => ["a"] }
+    narrowed = build.call
+    assert_empty narrowed.hosted_models
   ensure
     ENV["MASTER_NO_POOL_PROBES"] = "1"
     ENV.delete("CACHE_TEST_KEY")

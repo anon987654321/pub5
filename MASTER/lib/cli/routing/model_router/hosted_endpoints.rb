@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "digest"
 
 module Master
   module CLI
@@ -126,15 +127,22 @@ module Master
             # The listing is fetched live on every index build; CatalogCache
             # keeps the last non-empty answer per (endpoint, mode) so an
             # offline start degrades to the previous catalogue instead of an
-            # empty pool. Cached rows are already-filtered ids — the keyless
-            # rule ran on the live rows — so the cache can never widen what
-            # the rule admits.
-            CatalogCache.ids_for(spec["base"], key ? "keyed" : "keyless") do
+            # empty pool. Keyless cache entries also bind to the current
+            # admission rule; changing an allowlist or listing predicate must
+            # not resurrect ids admitted under the previous policy.
+            CatalogCache.ids_for(spec["base"], hosted_cache_mode(spec, key)) do
               live_hosted_ids(spec, key)
             end
           rescue StandardError => e
             record_pool_discovery_error("hosted_catalog", e)
             []
+          end
+
+          def hosted_cache_mode(spec, key)
+            return "keyed" if key
+
+            policy = spec["keyless"].is_a?(Hash) ? spec["keyless"] : {}
+            "keyless:#{Digest::SHA256.hexdigest(JSON.generate(policy.sort.to_h))}"
           end
 
           def live_hosted_ids(spec, key)
@@ -146,8 +154,10 @@ module Master
             # instead. Parse both shapes: indexing a bare array with ["data"]
             # raises TypeError, and the rescue below would then silently empty
             # the lane on a 200 response.
-            rows = (parsed.is_a?(Hash) ? Array(parsed["data"]) : Array(parsed))
-                   .select { |row| row.is_a?(Hash) && row.fetch("model_type", "chat") == "chat" }
+            rows = parsed.is_a?(Hash) ? parsed["data"] : parsed
+            raise ArgumentError, "hosted catalogue must contain a model array" unless rows.is_a?(Array)
+
+            rows = rows.select { |row| row.is_a?(Hash) && row.fetch("model_type", "chat") == "chat" }
             unless key
               keyless = spec["keyless"].is_a?(Hash) ? spec["keyless"] : {}
               # `allow` names the keyless model ids outright, for endpoints whose
