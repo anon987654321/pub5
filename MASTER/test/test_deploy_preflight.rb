@@ -120,35 +120,54 @@ class DeployPreflightTest < Minitest::Test
     end
   end
 
+  FIXTURE_APPS = {
+    "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53_187,
+                  "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
+                  "public" => true, "deploy_order" => 10 },
+
+    "brgen" => { "title" => "Brgen", "domain" => "brgen.example.test", "port" => 38_182,
+                 "deploy_script" => "RAILS/brgen/deploy.sh", "deploy_root" => "RAILS/brgen",
+                 "public" => true, "deploy_order" => 20 },
+
+    "amber" => { "title" => "Amber", "domain" => "amber.example.test", "port" => 61_352,
+                 "deploy_script" => "RAILS/amber/deploy.sh", "deploy_root" => "RAILS/amber",
+                 "public" => true, "deploy_order" => 30 },
+
+    "bsdports" => { "title" => "BSDPorts", "domain" => "bsdports.example.test", "port" => 47_312,
+                    "deploy_script" => "RAILS/bsdports/deploy.sh", "deploy_root" => "RAILS/bsdports",
+                    "public" => true, "deploy_order" => 40 },
+
+    "future_service" => { "title" => "Future Service", "domain" => "future.example.test", "port" => 47_313,
+                          "deploy_script" => "RAILS/future_service/deploy.sh",
+                          "deploy_root" => "RAILS/future_service", "public" => true, "deploy_order" => 50 },
+  }.freeze
+
   def remote(env: {}, runner: ->(*) { ["", true] }, app: "all",
              ci_runner: ->(**) { true }, admission_check: ->(**) { [true, nil] },
              connection_check: nil, git: nil, **git_state)
-    apps = {
-      "master" => { "title" => "MASTER", "domain" => "ai.example.test", "port" => 53_187,
-                    "deploy_script" => "OPENBSD/master.sh", "deploy_root" => "MASTER/web",
-                    "public" => true, "deploy_order" => 10 },
-      "brgen" => { "title" => "Brgen", "domain" => "brgen.example.test", "port" => 38_182,
-                   "deploy_script" => "RAILS/brgen/deploy.sh", "deploy_root" => "RAILS/brgen",
-                   "public" => true, "deploy_order" => 20 },
-      "amber" => { "title" => "Amber", "domain" => "amber.example.test", "port" => 61_352,
-                   "deploy_script" => "RAILS/amber/deploy.sh", "deploy_root" => "RAILS/amber",
-                   "public" => true, "deploy_order" => 30 },
-      "bsdports" => { "title" => "BSDPorts", "domain" => "bsdports.example.test", "port" => 47_312,
-                      "deploy_script" => "RAILS/bsdports/deploy.sh", "deploy_root" => "RAILS/bsdports",
-                      "public" => true, "deploy_order" => 40 },
-      "future_service" => { "title" => "Future Service", "domain" => "future.example.test", "port" => 47_313,
-                            "deploy_script" => "RAILS/future_service/deploy.sh",
-                            "deploy_root" => "RAILS/future_service", "public" => true, "deploy_order" => 50 },
-    }
     dir = Dir.mktmpdir
     FileUtils.mkdir_p(File.join(dir, "MASTER", "lib"))
     FileUtils.mkdir_p(File.join(dir, "RAILS"))
     File.write(File.join(dir, "MASTER", "lib", "ok.rb"), "x = 1\n")
-    File.write(File.join(dir, "RAILS", "apps.yml"), YAML.dump("apps" => apps))
-    Pre.remote_command(root: dir, app:, env:, git: git || fake_git(**git_state), runner:, out: StringIO.new,
-                       ci_runner:, admission_check:, connection_check:)
+    File.write(File.join(dir, "RAILS", "apps.yml"), YAML.dump("apps" => FIXTURE_APPS))
+    with_fixture_ci_receipts(dir) do
+      Pre.remote_command(root: dir, app:, env:, git: git || fake_git(**git_state), runner:, out: StringIO.new,
+                         ci_runner:, admission_check:, connection_check:)
+    end
   ensure
     FileUtils.rm_rf(dir)
+  end
+
+  # The fixture is no git checkout, and a recorded pass must not reach the
+  # operator's real ~/.pub5/ci: key the receipt by hand, keep it in the fixture.
+  def with_fixture_ci_receipts(dir, &block)
+    receipts = ENV.fetch("PUB5_CI_RECEIPT_DIR", nil)
+    ENV["PUB5_CI_RECEIPT_DIR"] = File.join(dir, "ci")
+    Operator::CiReceipt.stub(:key, ->(app:, **) { "fixture-#{app}" }) do
+      Pre.stub(:ruby_version, "test", &block)
+    end
+  ensure
+    ENV["PUB5_CI_RECEIPT_DIR"] = receipts
   end
 
   def test_git_out_rejects_a_nonzero_exit_instead_of_treating_empty_output_as_clean
@@ -257,8 +276,10 @@ class DeployPreflightTest < Minitest::Test
     timeout = Master::Io::Exec::TimeoutError.new("timed out", result: ["partial ci output\n", nil])
 
     Operator::RubyRunner.stub(:ruby_cmd, "/opt/ruby/bin/ruby") do
-      Master::Io::Exec.stub(:capture2e, lambda { |*args, **kwargs| raise timeout }) do
-        refute Pre.local_ci(root: dir, app: "brgen", out: output, err: errors)
+      Operator::RubyRunner.stub(:bundle_cmd, "/opt/ruby/bin/bundle") do
+        Master::Io::Exec.stub(:capture2e, lambda { |*args, **kwargs| raise timeout }) do
+          refute Pre.local_ci(root: dir, app: "brgen", out: output, err: errors)
+        end
       end
     end
 
@@ -515,6 +536,26 @@ class DeployPreflightTest < Minitest::Test
     refute_nil receipt
     assert_operator receipt, :<, admission
     assert_operator admission, :<, launch
+  end
+
+  # A finished, uncollected pane blocked new launches for the 24 h hold. It is
+  # saved locally and closed after admission; a pane with no exit marker is a
+  # running deploy and is never killed.
+  def test_a_finished_held_pane_is_saved_and_closed_before_the_next_launch
+    source = File.read(File.expand_path("../bin/operator", __dir__))
+    deploy = source[/when "deploy"\n.*?when "admin"/m]
+    recover = deploy.index("recover_finished_deploy_pane(session)")
+    refute_nil recover
+    assert_operator deploy.index("Operator::DeployPreflight.remote_command"), :<, recover
+    assert_operator recover, :<, deploy.index("remote_deploy_launch_command(")
+
+    helper = source[/def recover_finished_deploy_pane\(session\).*?^end/m]
+    marker = helper.index("PUB5_DEPLOY_EXIT=")
+    unless_running = helper.index("unless exit_code")
+    kill = helper.index("kill-session")
+    assert marker && unless_running && kill
+    assert_operator unless_running, :<, kill
+    assert_includes helper, "File::EXCL, 0o600"
   end
 
   def test_remote_deploy_refuses_to_run_inline_when_tmux_is_missing

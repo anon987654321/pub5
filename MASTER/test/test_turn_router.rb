@@ -205,7 +205,7 @@ class TurnRouterTest < Minitest::Test
     fake_intent.define_singleton_method(:call) { |_text| proposal }
     routed = nil
 
-    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+    Master::CLI::OperatorIntent.stub(:new, ->(**) { fake_intent }) do
       Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
         routed = command
         Master::Result.ok({ rendered: "captured" })
@@ -286,7 +286,7 @@ class TurnRouterTest < Minitest::Test
     routed = nil
     forwarded = nil
 
-    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+    Master::CLI::OperatorIntent.stub(:new, ->(**) { fake_intent }) do
       Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **options|
         routed = command
         forwarded = options[:cancellation]
@@ -314,10 +314,8 @@ class TurnRouterTest < Minitest::Test
     refute intent.direct_full_stack_confirmation?("Prepare a deployment plan to redeploy everything on vm23")
 
     proposal = Master::CLI::OperatorIntent::Result.new(status: :deploy, target: "all")
-    fake_intent = Object.new
-    fake_intent.define_singleton_method(:call) { |_text| proposal }
     routed = nil
-    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+    stub_intent(proposal) do
       Master::CLI::TurnRouter.stub(:dispatch_slash, lambda { |command, **|
         routed = command
         Master::Result.ok({ rendered: "captured" })
@@ -408,7 +406,7 @@ class TurnRouterTest < Minitest::Test
     fake_intent.define_singleton_method(:call) { |_text| proposal }
     reached = nil
 
-    Master::CLI::OperatorIntent.stub(:new, fake_intent) do
+    Master::CLI::OperatorIntent.stub(:new, ->(**) { fake_intent }) do
       Master::CLI::TurnRouter.stub(:casual_reply, ->(*, **) {
         reached = :chat
         Master::Result.ok({ rendered: "plan only" })
@@ -848,4 +846,11 @@ class TurnRouterTest < Minitest::Test
     end
   end
 
+  # Minitest invokes a callable stub value, so the fake intent is returned by a
+  # constructor lambda rather than passed as the value itself.
+  def stub_intent(proposal, &block)
+    fake = Object.new
+    fake.define_singleton_method(:call) { |_text| proposal }
+    Master::CLI::OperatorIntent.stub(:new, ->(**) { fake }, &block)
+  end
 end
