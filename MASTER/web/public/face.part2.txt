@@ -283,7 +283,7 @@ void main(){
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
   // One opaque bitmap mark; all depth is expressed by geometry.
-  gl_PointSize=1.0;
+  gl_PointSize=3.0;
   gl_Position=projectionMatrix*mv;
   vAlpha=1.0;
   vColor=vec3(0.9333333);
@@ -298,6 +298,9 @@ varying float vDepth;
 varying float vZoneVal;
 uniform float uFocusDim;
 void main(){
+  vec2 cell = floor(gl_PointCoord * 3.0);
+  // The same seven-cell, solid asymmetric bitmap for every carrier.
+  if ((cell.x == 0.0 && cell.y == 0.0) || (cell.x == 2.0 && cell.y == 2.0)) discard;
   gl_FragColor=vec4(vColor,1.0);
 }`;
 
