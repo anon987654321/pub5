@@ -555,6 +555,14 @@ function frame(t) {
       semanticMorphTarget = null;
       semanticMorphRestoreOnSettled = false;
     }
+    // Inspect depth during assembly; return to a still frontal view at rest.
+    if (faceMat.uniforms.uSubjectDirect?.value) {
+      const progress = 1-Math.max(0, Math.min(1, morphCurrent));
+      const turn = motionFrozen ? 0 : Math.sin(Math.PI*progress)*0.32;
+      head.rotation.set(0, turn, 0);
+      head.scale.setScalar(1);
+      head.position.set(0, 0, 0);
+    }
     faceMat.uniforms.uMorph.value = morphCurrent;
     faceMat.uniforms.uTime.value = motionFrozen ? 0 : sec;
     faceMat.uniforms.uColor.value.copy(colorCurrent);
