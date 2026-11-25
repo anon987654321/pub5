@@ -19,7 +19,8 @@ module Master
         the Swiss/International typographic style, Bringhurst on measure, scale and rhythm, and
         Mueller-Brockmann's grid systems; apply them as measurements, not as a style to imitate.
 
-        The attached images are the changed regions of the re-rendered page, cropped and enlarged 400%
+        First compare the whole before and after viewport when supplied: hierarchy, proportion, negative space, optical balance and product identity. Reject a locally cleaner detail that weakens the whole composition.
+        The remaining attached images are the changed regions of the re-rendered page, cropped and enlarged 400%
         so edges, alignment and baselines read at the pixel. Each is listed as R<n> x,y wxh below,
         followed by the findings and computed values the browser reported.
         Answer APPROVE or REJECT on the first line. After APPROVE give one line a region,
@@ -45,7 +46,8 @@ module Master
         return [] unless after && File.file?(after)
 
         dir = Dir.mktmpdir("visual-review")
-        regions.first(CROPS).each_with_index.map do |box, index|
+        whole = [group.before.first, after].compact.select { |path| File.file?(path) }
+        whole + regions.first(CROPS).each_with_index.map do |box, index|
           Deploy::PixelMatch.crop(after, box, out: File.join(dir, "R#{index + 1}.png"))
         end
       end
