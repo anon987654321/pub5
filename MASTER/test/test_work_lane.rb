@@ -198,4 +198,41 @@ class TestWorkLaneWiring < Minitest::Test
       assert_equal expected, sweeps, "lane #{lane}"
     end
   end
+
+  def test_explicit_visual_repair_uses_rendered_proof_only_for_a_writable_rails_target
+    registry = Master::CLI::CommandRegistry
+
+    Lane.set!(:visual)
+    assert registry.send(:visual_repair?, target: "RAILS", writes_requested: true)
+    refute registry.send(:visual_repair?, target: "MASTER/web", writes_requested: true)
+    refute registry.send(:visual_repair?, target: "RAILS", writes_requested: false)
+
+    Lane.set!(:standard)
+    refute registry.send(:visual_repair?, target: "RAILS", writes_requested: true)
+  end
+
+  def test_visual_repair_does_not_run_the_generic_check_ladder
+    registry = Master::CLI::CommandRegistry
+    result = Master::Result.ok("DONE: rendered pair accepted")
+    Lane.set!(:visual)
+
+    Operator::CheckChain.stub(:baseline_scope_key, "RAILS") do
+      Operator::CheckChain.stub(:baseline, ->(**) { flunk("visual repair must not take a generic baseline") }) do
+        Operator::CheckChain.stub(
+          :verify_fix, ->(**) { flunk("visual repair must not take a generic verification ladder") },
+        ) do
+          registry.stub(:run_fix_target_pass, ->(**) { result }) do
+            actual = registry.send(
+              :run_fix_target,
+              scanner: nil, fix_loop: Object.new, root: Master::ROOT, deliberation: nil, bus: nil, swarm: nil,
+              target: "RAILS", writes_requested: true, effective_critique: false, critique: false,
+              aesthetic: false, only: "fix",
+            )
+
+            assert_same result, actual
+          end
+        end
+      end
+    end
+  end
 end

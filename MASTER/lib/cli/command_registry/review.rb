@@ -810,7 +810,7 @@ module Master
 
         Master::Fix::CheckFocus.reset!
         resume_from_residual(target)
-        baseline, refusal = capture_fix_target_baseline(target:, check_label:, writes_requested:)
+        visual_repair, baseline, refusal = visual_repair_baseline(target:, check_label:, writes_requested:)
         return refusal if refusal
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
@@ -819,13 +819,33 @@ module Master
           effective_critique:, aesthetic:, only:, cancellation:, task_intent:
         )
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
-        return value unless writes_requested
+        return value if !writes_requested || visual_repair
         return incomplete_fix_pipeline(value) if incomplete_fix_pipeline?(value)
 
         verify_fix_target_delivery(
           value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, baseline:,
           check_label:, critique:, aesthetic:, only:, cancellation:, task_intent:
         )
+      end
+
+      # VisualLane captures and re-captures the same rendered surfaces around
+      # each retained repair. Running the generic source/release ladder first
+      # delays that evidence and cannot establish a layout baseline. Limit this
+      # shortcut to the explicitly selected Rails visual lane; standard and
+      # code repair retain their ordinary regression baseline and delivery gate.
+      def visual_repair?(target:, writes_requested:)
+        writes_requested && Master::Fix::WorkLane.visual? && Master::Fix::WorkLane.rendered_target?(target)
+      end
+
+      def visual_repair_baseline(target:, check_label:, writes_requested:)
+        unless visual_repair?(target:, writes_requested:)
+          baseline, refusal = capture_fix_target_baseline(target:, check_label:, writes_requested:)
+          return [false, baseline, refusal]
+        end
+
+        message = "scope #{check_label}: rendered lane owns before/after proof"
+        Master::Trace::Dmesg.status("visual0", "#{message}; generic ladder skipped")
+        [true, nil, nil]
       end
 
       def capture_fix_target_baseline(target:, check_label:, writes_requested:)
