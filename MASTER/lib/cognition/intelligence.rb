@@ -15,6 +15,7 @@ module Master
 
       ROUTES = {
         conversation: :talk,
+        opinion: :reason,
         repository: :inspect_source,
         web_current: :search_current,
         deep_research: :research,
@@ -60,7 +61,7 @@ module Master
 
           { from: left[:effect], to: right[:cause] }
         end
-        { steps: rows, complete: rows.any? && gaps.empty?, gaps: }.freeze
+        { steps: rows, complete: rows.any? && gaps.empty? && rows.all? { |row| row.values.none? { |value| value.strip.empty? } }, gaps: }.freeze
       rescue KeyError => e
         { steps: [], complete: false, gaps: [{ missing: e.key.to_s }] }.freeze
       end
@@ -403,7 +404,7 @@ module Master
         case value
         when Hash
           value.keys.map(&:to_s).sort.each_with_object({}) do |key, out|
-            out[key] = canonicalize(value[key] || value[key.to_sym])
+            out[key] = canonicalize(value.key?(key) ? value[key] : value[key.to_sym])
           end
         when Array
           value.map { |item| canonicalize(item) }.sort_by(&:to_s)
@@ -428,6 +429,12 @@ module Master
           creativity: preserve identity and invariants while changing one axis at a time
           teaching: explain the decision at its current scale before expanding outward
           action: prefer the smallest change that can test the hypothesis without losing the best measured state
+          imagination: consider removal, reversal, combination and a simpler alternative before consequential changes
+          learning: bind outcomes to the actual artifact and conditions; distinguish technical proof from human preference
+          economy: choose deterministic execution, existing evidence or the least costly sufficient reasoning; escalate when risk or uncertainty warrants it
+          independence: challenge an implementation that defeats the stated intent; never bypass authority or security gates
+          transfer: borrow structural relationships across disciplines as hypotheses, not as proof
+          self-repair: apply the same evidence and preservation requirements to MASTER; propose law changes for operator review, never grant yourself authority
         TEXT
       end
     end
