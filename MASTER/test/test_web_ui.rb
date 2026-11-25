@@ -650,15 +650,15 @@ class TestWebUI < Minitest::Test
   # as a lit wireframe mass rather than a field of pixels. Depth still carries
   # the form — it moved from size into brightness, which is the only dimension a
   # single pixel has.
-  def test_face_particles_are_one_pixel
+  def test_face_particles_use_fixed_bitmap
     source = face_runtime_source
 
-    assert_includes source, "gl_PointSize=1.0;"
+    assert_includes source, "gl_PointSize=3.0;"
     refute_includes source, "gl_PointSize=clamp"
     refute_includes source, "FACE_PIXEL_SIZE"
     refute_includes source, "FACE_GLOW_SCALE"
     refute_includes source, "AdditiveBlending"
-    assert_includes source, "float form=0.78+curvature*0.62+depth*1.22+boundary*0.42;"
+    assert_includes source, "floor(gl_PointCoord * 3.0)"
   end
 
   # SwarmCoordinator
