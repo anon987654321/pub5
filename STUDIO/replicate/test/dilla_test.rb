@@ -1163,7 +1163,8 @@ class TestRG69BrowserContract < Minitest::Test
     refute_match(/wobbLFO\.connect\s*\(\s*Tone\.Transport\.bpm\s*\)/, javascript)
     refute_match(/function applyWobble|applyWobble\(\)|Tone\.Transport\.bpm\.value=aud_\.bpm\*\(/, javascript)
     assert_match(/if\(driftLFO\)driftLFO\.frequency\.value=\.05\+aud_\.wobble\/100\*Math\.min\(rg69AudioProfile\.rig\.wobble\.rate_hz,rg69AudioProfile\.effects\.wobble_frequency_cap_hz\);/, javascript)
-    assert_match(/function applyFX\(\)\{[\s\S]*?const profile=rg69AudioProfile;\s*if\(st_\.started\)Tone\.Transport\.bpm\.value=aud_\.bpm;/, javascript)
+    assert_includes javascript, "const now=audioTime(),step=60/aud_.bpm/4;"
+    refute_includes javascript, "Tone.Transport.scheduleRepeat"
     refute_match(/Best-effort autostart|await Tone\.start\(\);\s*if\(Tone\.getContext\(\)\.rawContext\.state/, javascript)
     assert_match(/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{[\s\S]*?await startPlayback\(activationPromise\);/, javascript)
     assert_match(/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{[\s\S]*?await startPlayback\(activationPromise\);/, javascript)
@@ -1177,7 +1178,7 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/let stepUiByIndex=Array\.from\(\{length:16\}/, javascript)
     refute_match(/void posEl\.offsetWidth/, javascript)
     assert_match(/if\(vizCanvas\.width!==width\)vizCanvas\.width=width;/, javascript)
-    assert_match(/function scheduleLoop\(time\)\{[\s\S]*?const scheduledTime=Number\.isFinite\(time\)\?time:Tone\.now\(\);[\s\S]*?playStep\(st_\.idx,scheduledTime,/, javascript)
+    assert_match(/function scheduleLoop\(time\)\{[\s\S]*?const scheduledTime=Number\.isFinite\(time\)\?time:audioTime\(\);[\s\S]*?playStep\(st_\.idx,scheduledTime,/, javascript)
     assert_includes javascript, "document.createTextNode"
     assert_includes html, "prefers-reduced-motion"
     assert_includes html, ":focus-visible"
