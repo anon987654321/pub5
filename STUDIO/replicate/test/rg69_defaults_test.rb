@@ -307,7 +307,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_boot_installs_a_fixed_chain_and_never_randomizes
     assert_includes js, "const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);"
-    assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);"
+    assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed,{patches:pat_});"
     assert_match(/fxSeed\s*=\s*null/, js)
   end
 
@@ -343,10 +343,10 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "new Tone.PolySynth({voice:Tone.FMSynth"
     assert_includes js, "maxPolyphony:Math.max(16,t.keys.max_polyphony)"
     assert_includes js, "maxPolyphony:Math.max(24,t.pads.max_polyphony)"
-    assert_includes js, "const instruments=createToneInstruments();"
-    assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);"
-    assert_includes js, "const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn});"
-    assert_equal 2, js.scan(/createToneInstruments\(\)/).size
+    assert_includes js, "const instruments=createToneInstruments(patches);"
+    assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed,{patches:pat_});"
+    assert_includes js, "const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn,patches:take.pat});"
+    assert_equal 2, js.scan(/createToneInstruments\(patches(?:=\{\})?\)/).size
   end
 
   def test_rg69_kit_tuning_and_voice_fx_are_shared_by_live_and_wav_paths
@@ -390,7 +390,7 @@ class TestRg69Defaults < Minitest::Test
 
 
   def test_sub_bass_is_note_gated_not_a_permanent_oscillator
-    builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no Tone.js instrument builder"
+    builder = js[/function createToneInstruments\(patches=\{\}\)\{(.*?)\n\}/m, 1] or raise "no Tone.js instrument builder"
     trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     assert_includes builder, "const bassSub=new Tone.Synth("
     refute_includes builder, "new Tone.Oscillator(t.bass.sub_frequency,t.bass.sub_oscillator).start()"
@@ -460,7 +460,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_rg69_front_panel_is_flat_and_has_a_numbered_step_ruler
     assert_includes html, 'class="machine-header"'
-    assert_includes html, 'class="panel-strip panel-strip--inner"'
+    assert_includes html, 'class="sound-strip"'
     assert_includes css, '.machine-header'
     assert_includes css, '.track-ruler'
     assert_includes css, 'border-radius: 0;'
@@ -508,7 +508,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_transport_and_controls_have_real_hit_areas_and_explicit_states
     assert_includes html, 'class="machine-header"'
-    assert_includes html, 'class="panel-strip panel-strip--inner"'
+    assert_includes html, 'class="sound-strip"'
     assert_includes html, 'class="transport-primary"'
     assert_includes html, 'class="transport-actions"'
     assert_includes html, 'aria-pressed="false" title="Play or pause (Space)"'
