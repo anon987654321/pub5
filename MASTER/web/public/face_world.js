@@ -384,26 +384,18 @@
 
   const MASK_PRIMARY_SCALE = .92;
 
-  // Stable counting sort by Morton cell. Every mask shares the same spatial
-  // ordering, so neighbouring points travel together instead of crossing the
-  // whole face. O(n + 4096), with no additional renderer or persistent cloud.
-  function orderMaskPoints(positions, stages, stageIndices, scale) {
-    const count = stages.length;
-    const keys = new Uint16Array(count);
+  // Stable Morton cells share a spatial ordering without a quadratic match.
+  function spatialOrder(positions, scale, axes) {
+    const count = positions.length / 3, keys = new Uint16Array(count);
     const offsets = new Uint32Array(4096);
-    const morton = (x, y, z) => {
+    const cell = coordinate => Math.max(0, Math.min(15, Math.floor((coordinate / scale + .72) / 1.44 * 16)));
+    for (let i = 0; i < count; i++) {
+      const xyz = [cell(positions[i*3]), cell(positions[i*3+1]), cell(positions[i*3+2])];
       let key = 0;
-      for (let bit = 0; bit < 4; bit++) {
-        key |= ((x >> bit) & 1) << (bit * 3);
-        key |= ((y >> bit) & 1) << (bit * 3 + 1);
-        key |= ((z >> bit) & 1) << (bit * 3 + 2);
-      }
-      return key;
-    };
-    const cell = (coordinate) => Math.max(0, Math.min(15, Math.floor((coordinate / scale + .65) / 1.3 * 16)));
-    for (let index = 0; index < count; index++) {
-      const key = morton(cell(positions[index * 3]), cell(positions[index * 3 + 1]), cell(positions[index * 3 + 2]));
-      keys[index] = key;
+      for (let bit = 0; bit < 4; bit++)
+        for (let axis = 0; axis < axes.length; axis++)
+          key |= ((xyz[axes[axis]] >> bit) & 1) << (bit*axes.length+axis);
+      keys[i] = key;
       offsets[key]++;
     }
     let start = 0;
@@ -412,16 +404,47 @@
       offsets[key] = start;
       start += size;
     }
+    const order = new Uint32Array(count);
+    for (let i = 0; i < count; i++) order[offsets[keys[i]]++] = i;
+    return order;
+  }
+
+  function orderMaskPoints(positions, stages, stageIndices, scale) {
+    const order = spatialOrder(positions, scale, [0,1,2]);
     const ordered = new Float32Array(positions.length);
-    const orderedStages = new Float32Array(count);
-    const orderedIndices = new Uint8Array(count);
-    for (let index = 0; index < count; index++) {
-      const target = offsets[keys[index]]++;
-      ordered.set(positions.subarray(index * 3, index * 3 + 3), target * 3);
-      orderedStages[target] = stages[index];
-      orderedIndices[target] = stageIndices[index];
-    }
+    const orderedStages = new Float32Array(order.length);
+    const orderedIndices = new Uint8Array(order.length);
+    order.forEach((source,target) => {
+      ordered.set(positions.subarray(source*3,source*3+3), target*3);
+      orderedStages[target] = stages[source];
+      orderedIndices[target] = stageIndices[source];
+    });
     return { positions: ordered, stages: orderedStages, stageIndices: orderedIndices };
+  }
+
+  // Match from the interrupted, displayed coordinates. Keep the original
+  // assignment unless a bounded spatial alternative reduces travel.
+  function matchSubject(from, positions, stages) {
+    if (!from || from.length !== positions.length || positions.length % 3) return null;
+    const count = positions.length / 3;
+    const distance = (a,b) => Math.hypot(from[a*3]-positions[b*3],
+      from[a*3+1]-positions[b*3+1],from[a*3+2]-positions[b*3+2]);
+    let bestCost = 0, best = null;
+    for(let i=0;i<count;i++) bestCost += distance(i,i);
+    for (const axes of [[0,1,2],[1,2,0],[2,0,1],[0,1],[0,2],[1,2]]) {
+      const left = spatialOrder(from,1,axes), right = spatialOrder(positions,1,axes);
+      let cost = 0;
+      for(let i=0;i<count && cost<bestCost;i++) cost += distance(left[i],right[i]);
+      if(cost < bestCost) { bestCost = cost; best = [left,right]; }
+    }
+    if(!best) return null;
+    const matched = new Float32Array(positions.length), timing = stages ? new Float32Array(count) : null;
+    best[0].forEach((source,i) => {
+      const target = best[1][i];
+      matched.set(positions.subarray(target*3,target*3+3),source*3);
+      if(timing) timing[source]=stages[target];
+    });
+    return {positions:matched, stages:timing};
   }
 
   function buildSemanticSubjectGeometry(descriptor, count, scale) {
@@ -1466,7 +1489,7 @@
 
   window.MASTER_FACE_WORLD = Object.freeze({
     load, update, spawnPulse, setSubjectForm, setSubjectFromText, setSubjectFromVisual,
-    setConversationSubject, restoreFaceSubject, inferSubjectForm, inferVisualSubject, normalizeVisualSubject
+    setConversationSubject, restoreFaceSubject, inferSubjectForm, inferVisualSubject, normalizeVisualSubject, matchSubject
   });
   window.addEventListener("master:visual", (event) => {
     const detail = event.detail || {};
