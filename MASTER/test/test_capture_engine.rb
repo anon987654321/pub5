@@ -39,7 +39,10 @@ class TestCaptureEngine < Minitest::Test
 
   Surf = Deploy::GeometryProbe::Surface
 
-  def surface(host: nil) = Surf.new(app: "brgen", label: "home", host:, path: "/", viewport: "mobile", width: 390, height: 844, snapshot: false, port: 1, profile: nil)
+  def surface(host: nil, port: 1)
+    Surf.new(app: "brgen", label: "home", host:, path: "/", viewport: "mobile", width: 390, height: 844,
+             snapshot: false, port:, profile: nil)
+  end
 
   def row(key, x, y, w, h) = { "key" => key, "x" => x, "y" => y, "w" => w, "h" => h }
 
@@ -50,6 +53,10 @@ class TestCaptureEngine < Minitest::Test
     assert_equal ["chrome"], CE.requested({})
     assert_equal %w[chrome webkit firefox], CE.requested({ "MASTER_VISUAL_ENGINES" => "webkit, Firefox, netscape" })
     assert_equal %w[webkit], CE.others({ "MASTER_VISUAL_ENGINES" => "webkit" })
+  end
+
+  def test_host_qualified_surface_keeps_its_local_port
+    assert_equal "http://markedsplass.brgen.no:38182/", surface(host: "markedsplass.brgen.no", port: 38_182).url
   end
 
   def test_an_engine_that_cannot_open_is_recorded_and_not_retried

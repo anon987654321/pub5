@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "json"
+require "vips"
 require_relative "../../../checks/support/composition_probe"
 
 module Master
@@ -41,7 +42,9 @@ module Master
           return startup_placeholder(status) if startup_placeholder?
 
           links = JSON.parse(@cdp.evaluate(LINKS_JS).to_s)
-          widths = shoot_widths(page_dir)
+          widths, note = shoot_widths(page_dir)
+          return Shot.new(status:, html: true, links:, widths:, dialogs: [], note:) if note
+
           states = dialogs ? capture_dialogs(surface, page_dir) : []
           Shot.new(status:, html: true, links:, widths:, dialogs: states, note: nil)
         end
@@ -86,11 +89,20 @@ module Master
         end
 
         def shoot_widths(page_dir)
-          @widths.to_h do |width|
+          @widths.each_with_object({}) do |width, shots|
             @cdp.viewport(width, self.class.height(width), mobile: width < 500)
             sleep SETTLE
-            [width, relative(shoot(page_dir, width))]
+            file = shoot(page_dir, width)
+            return [shots, "blank frame"] if blank_frame?(file)
+
+            shots[width] = relative(file)
           end
+        end
+
+        # A successful CDP screenshot can still be a uniform error canvas. A
+        # low pixel deviation is evidence of that failure, never a capture.
+        def blank_frame?(file)
+          Vips::Image.new_from_file(file).deviate < 2.0
         end
 
         def shoot(page_dir, width)

@@ -70,7 +70,9 @@ module Master
         apps = Array(apps).empty? ? Deploy::Inventory.new(root: @root).app_names : Array(apps)
         page_limit = Integer(max_pages).clamp(1, MAX_PAGES)
         boot = @runtime.ensure_running!(apps)
-        return finish(apps:, rows: [], unresolved: {}, error: "apps not running: #{boot.message}") unless boot.ok?
+        unless boot.ok?
+          return finish(apps:, rows: [], unresolved: {}, outcome: { error: "apps not running: #{boot.message}" })
+        end
 
         rows = []
         unresolved = {}
@@ -78,7 +80,7 @@ module Master
           camera = Camera.new(cdp:, widths: @widths, dir: @dir)
           apps.each { |app| unresolved[app] = sweep_app(app, camera:, rows:, dialogs:, max_pages: page_limit) }
         end
-        finish(apps:, rows:, unresolved:)
+        finish(apps:, rows:, unresolved:, outcome: { max_pages: page_limit })
       ensure
         @runtime.stop_owned!
       end
@@ -120,18 +122,28 @@ module Master
         )
       end
 
-      def finish(apps:, rows:, unresolved:, error: nil)
-        FileUtils.mkdir_p(@dir)
-        summary = totals(rows).merge(
+      def finish(apps:, rows:, unresolved:, outcome: {})
+        error = outcome[:error]
+        max_pages = outcome.fetch(:max_pages, MAX_PAGES)
+        summary = sweep_summary(apps:, rows:, unresolved:, error:)
+        write_summary(summary)
+        refresh_review_set(rows) if complete_review?(summary, max_pages:)
+        @bus&.publish("fix_loop:screenshot_sweep", dir: @dir, **totals(rows).transform_keys(&:to_sym))
+        summary
+      end
+
+      def sweep_summary(apps:, rows:, unresolved:, error:)
+        totals(rows).merge(
           "generated_at" => Time.now.utc.iso8601, "revision" => checkout_revision,
           "directory" => @dir, "apps" => apps, "widths" => @widths, "error" => error,
           "unresolved" => unresolved, "rows" => rows.map(&:to_h)
         )
+      end
+
+      def write_summary(summary)
+        FileUtils.mkdir_p(@dir)
         File.write(File.join(@dir, "index.json"), JSON.pretty_generate(summary))
         File.write(File.join(@dir, "index.html"), Gallery.new(summary, dir: @dir).render)
-        refresh_review_set(rows) if @standing && error.nil?
-        @bus&.publish("fix_loop:screenshot_sweep", dir: @dir, **totals(rows).transform_keys(&:to_sym))
-        summary
       end
 
       def checkout_revision
@@ -149,6 +161,21 @@ module Master
         pages = Gallery.publish_review_page(root: @root)
         warn("shots0: review set RAILS/screenshot_*.png, #{copied} pages; #{pages} in RAILS/#{Gallery::REVIEW_PAGE}; " \
              "pruned #{review.prune!} old sweeps")
+      end
+
+      # The tracked set is comparative evidence, not a cache. A narrowed or
+      # failed run must not erase pages a later review still needs.
+      def complete_review?(summary, max_pages:)
+        return false unless @standing && summary["error"].nil? && max_pages == MAX_PAGES
+        return false unless summary["apps"].sort == Deploy::Inventory.new(root: @root).app_names.sort
+        return false unless @widths.sort == declared_widths.sort
+        return false unless summary["unresolved"].values.all? { |routes| Array(routes).empty? }
+
+        summary["failed"].zero?
+      end
+
+      def declared_widths
+        YAML.safe_load_file(File.join(@root, GEOMETRY)).fetch("sweep_widths").map(&:to_i)
       end
 
       def totals(rows)

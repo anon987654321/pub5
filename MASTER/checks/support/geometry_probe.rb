@@ -31,7 +31,7 @@ module Deploy
       # Rails' development host authorization rejects vanity domains the app
       # has not allowlisted, which renders a 403 page that measures perfectly
       # and means nothing.
-      def authority = host || "127.0.0.1:#{port}"
+      def authority = host ? "#{host}:#{port}" : "127.0.0.1:#{port}"
       def url = "http://#{authority}#{path}"
     end
 

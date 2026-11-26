@@ -97,6 +97,19 @@ class TestScreenshotSweep < Minitest::Test
     end
   end
 
+  def test_uniform_screenshot_is_failed_instead_of_published_as_a_render
+    camera = Master::Fix::ScreenshotSweep::Camera.allocate
+    Dir.mktmpdir do |dir|
+      blank = File.join(dir, "blank.png")
+      image = File.join(dir, "image.png")
+      Vips::Image.black(8, 8).write_to_file(blank)
+      Vips::Image.new_from_array([[0, 255], [255, 0]]).write_to_file(image)
+
+      assert camera.send(:blank_frame?, blank)
+      refute camera.send(:blank_frame?, image)
+    end
+  end
+
   def test_failed_rows_never_replace_the_tracked_review_set
     Dir.mktmpdir do |root|
       rails = File.join(root, "RAILS")
@@ -158,6 +171,23 @@ class TestScreenshotSweep < Minitest::Test
 
       assert_equal [390], summary["widths"]
       assert_equal 0, summary["screenshots"]
+    end
+  end
+
+  def test_partial_standing_sweep_never_replaces_the_tracked_review_set
+    Dir.mktmpdir("screenshot-root") do |root|
+      rails = File.join(root, "RAILS")
+      FileUtils.mkdir_p(File.dirname(File.join(root, Master::Fix::ScreenshotSweep::GEOMETRY)))
+      FileUtils.cp(File.join(ROOT, Master::Fix::ScreenshotSweep::GEOMETRY),
+                   File.join(root, Master::Fix::ScreenshotSweep::GEOMETRY))
+      File.write(File.join(root, Master::Fix::ScreenshotSweep::Plan::MANIFEST), { "apps" => {} }.to_yaml)
+      FileUtils.mkdir_p(rails)
+      old = File.join(rails, "screenshot_master_previous.png")
+      File.binwrite(old, "previous review")
+
+      Master::Fix::ScreenshotSweep.new(root:, runtime: FailedBoot.new("not started")).run(apps: ["bsdports"])
+
+      assert File.exist?(old), "a partial sweep must leave the curated review set intact"
     end
   end
 
