@@ -462,7 +462,7 @@ const voice={
 connect(destination){connect(panner,destination);return voice;},dispose(){out.disconnect();panner.disconnect();},
 triggerAttackRelease(...args){
 const [pitch,duration,time,velocity]=freq?args:[0,...args];
-const at=Math.max(ctx.currentTime,Number(time)||0),rate=freq?Math.max(.25,Math.min(4,Number(pitch)/freq)):1;
+const at=Math.max(ctx.currentTime,Number(time)||0),variation=1+Math.sin(at*37.13+(Number(velocity)||0)*11)*.006,rate=(freq?Math.max(.25,Math.min(4,Number(pitch)/freq)):1)*variation;
 const source=ctx.createBufferSource(),gain=ctx.createGain(),end=at+Math.min(length/rate,Math.max(.008,Number(duration)||.01)+Math.min(.09,tail*.35));
 source.buffer=buffer;source.playbackRate.value=rate;
 gain.gain.setValueAtTime(Math.max(0,Math.min(1,Number(velocity)||0)),at);
@@ -581,7 +581,7 @@ sustain=.32;release=.85;break;
 }
 case "wurlitzer":oscillator("triangle",1,.75);oscillator("square",1,.22);oscillator("sine",2,.14);sustain=.14;release=.18;break;
 case "prophet":oscillator("sawtooth",1,.44,-5);oscillator("sawtooth",1,.44,6);oscillator("triangle",.5,.18);filter.Q.value=1.3;sustain=.46;break;
-case "juno":oscillator("sawtooth",1,.48,-4);oscillator("square",1,.24,5);oscillator("sine",.5,.22);sustain=.76;release=1.6;break;
+case "juno":oscillator("sawtooth",1,.36,-7);oscillator("square",1,.18,5);oscillator("sine",.5,.19);if(lane==="p"){oscillator("triangle",1,.18,9);oscillator("sine",2,.055,-3);}sustain=.8;release=2.8;break;
 case "minimoog":oscillator("sawtooth",1,.45,-4);oscillator("triangle",.5,.32);oscillator("square",1,.17,4);filter.Q.value=2.1;sustain=.45;break;
 case "organ":for(const [ratio,level] of [[.5,.18],[1,.6],[2,.18],[3,.12],[4,.08]])oscillator("sine",ratio,level);sustain=.85;release=.14;break;
 case "musicbox":oscillator("sine",1,.76);oscillator("sine",2.76,.18);oscillator("sine",5.4,.08);sustain=.04;release=.16;break;
@@ -779,6 +779,24 @@ HARMONY_CATALOGUE.push({id:"afterglow",title:"Afterglow · original 16 bars",sta
 {symbol:"Abmaj9",bass:"Ab1",keys:["G3","Bb3","C4","Eb4"],pads:["Ab3","C4","G4","Bb4"],steps:32},
 {symbol:"C7b9b13",bass:"C2",keys:["Bb3","Db4","E4","Ab4"],pads:["C3","E3","Bb3","Db4","Ab4"],steps:32}
 ]});
+HARMONY_CATALOGUE.push({id:"astral_journey",title:"Astral Journey · original 32 bars",status:"engine_original",bpm:82,segments:[
+{"symbol":"Dm9","bass":"D2","keys":["F3","A3","C4","E4"],"pads":["D3","A3","C4","E4","F4"],"steps":32},
+{"symbol":"G13sus","bass":"G2","keys":["F3","A3","C4","E4"],"pads":["G3","C4","E4","F4","A4"],"steps":32},
+{"symbol":"Cmaj9","bass":"C2","keys":["E3","G3","B3","D4"],"pads":["C3","G3","B3","D4","E4"],"steps":32},
+{"symbol":"Fmaj9#11","bass":"F2","keys":["E3","G3","A3","B3"],"pads":["F3","A3","C4","E4","B4"],"steps":32},
+{"symbol":"Bm7b5","bass":"B1","keys":["F3","A3","B3","D4"],"pads":["B2","F3","A3","D4"],"steps":32},
+{"symbol":"E7b9","bass":"E2","keys":["G#3","B3","D4","F4"],"pads":["E3","G#3","D4","F4"],"steps":32},
+{"symbol":"Am9","bass":"A1","keys":["G3","B3","C4","E4"],"pads":["A3","C4","E4","G4","B4"],"steps":32},
+{"symbol":"Abmaj7#11","bass":"Ab1","keys":["G3","C4","D4","Eb4"],"pads":["Ab3","C4","Eb4","G4","D5"],"steps":32},
+{"symbol":"Gm9","bass":"G2","keys":["F3","A3","Bb3","D4"],"pads":["G3","Bb3","D4","F4","A4"],"steps":32},
+{"symbol":"C13","bass":"C2","keys":["E3","Bb3","D4","A4"],"pads":["C3","E3","Bb3","D4","A4"],"steps":32},
+{"symbol":"Fmaj9","bass":"F2","keys":["E3","G3","A3","C4"],"pads":["F3","A3","C4","E4","G4"],"steps":32},
+{"symbol":"Fm9","bass":"F2","keys":["Eb3","G3","Ab3","C4"],"pads":["F3","Ab3","C4","Eb4","G4"],"steps":32},
+{"symbol":"Em7","bass":"E2","keys":["G3","B3","D4","E4"],"pads":["E3","G3","B3","D4"],"steps":32},
+{"symbol":"A7b13","bass":"A1","keys":["G3","C#4","E4","F4"],"pads":["A3","C#4","G4","F5"],"steps":32},
+{"symbol":"Dm9/F","bass":"F2","keys":["F3","A3","C4","E4"],"pads":["D3","F3","A3","C4","E4"],"steps":32},
+{"symbol":"A7sus4","bass":"A1","keys":["G3","B3","D4","E4"],"pads":["A3","D4","E4","G4","B4"],"steps":32}
+]});
 const HARMONY_PREFIX="catalogue:";
 const HARMONIES=Object.fromEntries(HARMONY_CATALOGUE.map(row=>[HARMONY_PREFIX+row.id,row]));
 for(const [id,row] of Object.entries(HARMONIES)){
@@ -824,6 +842,7 @@ Object.assign(PATCH_CATALOGUE,{"rhodes_mark_ii":{"name":"Rhodes Mark II","type":
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
+{n:'Astral Journey',m:['Lush','Spiritual'],d:'dusty1',b:'catalogue:astral_journey',k:'catalogue:astral_journey',p:'catalogue:astral_journey',bpm:[80,84],sw:[29,37],dr:[16,24],tm:[32,42]},
 {n:'Afterglow',m:['Lush','Groovy','Spiritual'],d:'dusty1',b:'catalogue:afterglow',k:'catalogue:afterglow',p:'catalogue:afterglow',bpm:[82,86],sw:[30,38],dr:[18,25],tm:[35,45]},
 {n:'Dust & Space',m:['Groovy','Mysterious','Spacious'],d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash',bpm:[76,92],sw:[25,40],dr:[25,45],tm:[50,70]},
 {n:'Astral Soul',m:['Spiritual','Calm','Lush'],d:'ambient-click',b:'ambientbass',k:'neosoul',p:'choir',bpm:[68,84],sw:[12,28],dr:[8,24],tm:[30,55]},
@@ -881,7 +900,8 @@ const M={
 
 function setStylePocket(style){
 const industrial=style.d==='hate-pummel'||style.d==='hate-grind';
-aud_.pocket=industrial?12:68;
+aud_.pocket=industrial?12:style.k==="catalogue:afterglow"||style.k==="catalogue:astral_journey"?88:68;
+if(aud_.pocket===88){Object.assign(pat_,{keysVoice:"rhodes_mark1",padsVoice:"juno_106",drumMachine:"mpc60"});Object.assign(mix_,{drum:58,bass:58,keys:85,pads:96});}
 }
 function applyMood(m){
 if(!m)return;
@@ -1828,7 +1848,8 @@ const pitch=rg69AudioProfile.notes;
 if(!allowed(v))return;
 const fill=frame?.fill&&tick%16>=12;
 const extra=fill&&(v==='s'||v==='h')&&tick%2===1?.42:0;
-const vel=Math.max(drumHit(v,index(v),dp,seq),extra);
+const ghost=(pat.k==="catalogue:afterglow"||pat.k==="catalogue:astral_journey")&&v==="s"&&detail(v).hit==null&&tick%32===27?.19:0;
+const vel=Math.max(drumHit(v,index(v),dp,seq),extra,ghost);
 if(vel>0&&chance(v)){
 const drift=opts.applyTranspose?(randomAt(seed,tick,v,11)-0.5)*5:0;
 const t=noteTime(v);
@@ -1862,7 +1883,10 @@ synths.open.triggerAttackRelease(pitch.open*pitchShift,hitGate(eighth),rt,vl);
 }
 }
 });
-const nt=laneNote("b",index("b"),pat,seq,tick);
+const expressive=pat.k==="catalogue:afterglow"||pat.k==="catalogue:astral_journey";
+const bassChord=harmonyAt(HARMONIES[pat.b],tick),bassDetail=detail("b");
+let nt=laneNote("b",index("b"),pat,seq,tick);
+if(expressive&&bassChord&&!bassDetail.off&&!bassDetail.note){const pos=tick%16;if(pos===4||pos===12)nt=null;else if(pos===7||pos===14)nt=midiNote(noteMidi(bassChord.bass)+(pos===7?7:12));}
 if(nt&&allowed("b")&&chance("b")){
 const drift=opts.applyTranspose?(randomAt(seed,tick,"b",11)-0.5)*2:0;
 const freq=noteHz(transpose("b",nt))*2**(drift/1200);
@@ -1874,7 +1898,7 @@ const routing=Math.round(aud.noteRouting??0),bag=Math.round(aud.pitchRhythm??0);
 const keysAllowed=allowed("keys")&&chance("keys"),padsAllowed=allowed("p")&&chance("p");
 if(!routing&&!bag){
 if(ch&&keysAllowed)synths.keys.triggerAttackRelease([ch].flat().map(n=>transpose("keys",n)),harmonyDuration("keys"),noteTime("keys"),accent("keys"));
-else if(keysAllowed&&pat.k==="catalogue:afterglow"&&tick%32===11){const chord=harmonyAt(HARMONIES[pat.k],tick);if(chord)synths.keys.triggerAttackRelease(chord.keys.slice(1).map(n=>transpose("keys",n)),sixteenth*5,noteTime("keys"),accent("keys")*.45);}
+else if(keysAllowed&&expressive&&!detail("keys").off){const chord=harmonyAt(HARMONIES[pat.k],tick),pos=tick%32;if(chord&&(pos===11||pos===23||pos===28)){const motif=pos===11?chord.keys.slice(1):pos===23?[chord.keys.at(-1)]:[chord.keys.at(-2),chord.keys.at(-1)];synths.keys.triggerAttackRelease(motif.map(n=>transpose("keys",n)),sixteenth*(pos===28?3:5),noteTime("keys"),accent("keys")*(pos===23?.28:.45));}}
 if(Array.isArray(pad)&&padsAllowed)synths.pads.triggerAttackRelease(pad.map(n=>transpose("p",n)),harmonyDuration("p")+sixteenth*.3,noteTime("p"),accent("p")*.95);
 }else{
 const hit=bag?pitchBagHit(bag,tick):-1;
