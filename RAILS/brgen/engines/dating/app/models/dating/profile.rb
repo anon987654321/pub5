@@ -114,23 +114,20 @@ class Dating::Profile < ApplicationRecord
   # Multiplying by a different coprime genuinely permutes the deck.
   SHUFFLE_MODULUS = 997
 
+  # The deck order. Its two placeholders are the per-viewer multiplier and the modulus.
+  RANKED_ORDER_SQL = <<~SQL.squish
+    #{RECENCY_SQL} ASC,
+    dating_profiles.prompts_count DESC,
+    ((dating_profiles.id * ?) % ?) ASC,
+    dating_profiles.id ASC
+  SQL
+
   def self.ranked_for(viewer, seed: Date.current.to_s)
     multiplier = (Digest::MD5.hexdigest("#{seed}:#{viewer&.id}")[0, 6].to_i(16) % (SHUFFLE_MODULUS - 1)) + 1
-    # Integer() rather than the bare local: both values are integers by
-    # construction — to_i(16) % 996 + 1, and a literal constant — but Brakeman
-    # cannot follow that through the digest and reported the interpolation as
-    # possible SQL injection, which failed brgen's CI. Integer() is the
-    # narrowest way to make it provable: it raises rather than coerces, so it
-    # states the invariant instead of hiding a violation of it. ORDER BY cannot
-    # take a bind parameter, so interpolation is the only shape available here.
-    multiplier = Integer(multiplier)
-    modulus = Integer(SHUFFLE_MODULUS)
-    order(Arel.sql(<<~SQL.squish))
-      #{RECENCY_SQL} ASC,
-      dating_profiles.prompts_count DESC,
-      ((dating_profiles.id * #{multiplier}) % #{modulus}) ASC,
-      dating_profiles.id ASC
-    SQL
+    # ORDER BY takes no bind parameter, so the two integers are quoted by
+    # sanitize_sql_array instead. Interpolating them, even through Integer(),
+    # still read to Brakeman as possible SQL injection and failed brgen CI.
+    order(Arel.sql(sanitize_sql_array([RANKED_ORDER_SQL, multiplier, SHUFFLE_MODULUS])))
   end
 
   # Distinct from updated_at, which changes when a photo variant is processed in

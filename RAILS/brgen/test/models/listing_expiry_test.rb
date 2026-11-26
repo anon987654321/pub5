@@ -136,7 +136,9 @@ class ListingExpiryTest < ActiveSupport::TestCase
     assert_includes store.listings.live.map(&:id), fresh.id
     refute_includes store.listings.live.map(&:id), lapsed.id
 
-    search = Marketplace::SavedSearch.create!(user: @seller, query: "Ting")
+    # Alerts skip the searcher's own listings, so the search belongs to a buyer.
+    buyer = User.strict_loading(false).create!(email_address: "le_buyer@brgen.no", password: "password123", city: @city)
+    search = Marketplace::SavedSearch.create!(user: buyer, query: "Ting")
     search.update_columns(created_at: 1.day.ago, last_notified_at: 1.day.ago)
     ids = search.new_matches.map(&:id)
     assert_includes ids, fresh.id

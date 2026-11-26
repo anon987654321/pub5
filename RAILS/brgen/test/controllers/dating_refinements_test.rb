@@ -93,10 +93,10 @@ class DatingRefinementsTest < ActionDispatch::IntegrationTest
     paused = user_with_profile("dr_paused")
     visible = user_with_profile("dr_visible")
     incompatible = user_with_profile("dr_incompatible")
-    [blocked, paused, visible].each do |user|
+    [ blocked, paused, visible ].each do |user|
       profile_for(user).update!(gender: "man", looking_for: "woman")
     end
-    [blocked, paused, visible, incompatible].each { |user| Dating::Like.create!(liker: user, likee: @me) }
+    [ blocked, paused, visible, incompatible ].each { |user| Dating::Like.create!(liker: user, likee: @me) }
     Block.create!(blocker: blocked, blocked: @me)
     profile_for(paused).update!(visible: false)
     sign_in_as(@me)

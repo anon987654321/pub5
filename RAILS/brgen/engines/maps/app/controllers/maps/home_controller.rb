@@ -52,7 +52,7 @@ module Maps
     def bbox_key
       return "all" unless bbox
 
-      [bbox[:latitude].begin, bbox[:longitude].begin, bbox[:latitude].end, bbox[:longitude].end].join("/")
+      [ bbox[:latitude].begin, bbox[:longitude].begin, bbox[:latitude].end, bbox[:longitude].end ].join("/")
     end
 
     # The city's own coordinates, else the middle of what is on the map. A city

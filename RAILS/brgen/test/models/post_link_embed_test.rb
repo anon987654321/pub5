@@ -70,7 +70,7 @@ class PostLinkEmbedTest < ActiveSupport::TestCase
     end
 
     record = post.reload.link_embed_record
-    assert_equal [recorded("youtube").fetch("thumbnail_url")], cached
+    assert_equal [ recorded("youtube").fetch("thumbnail_url") ], cached
     assert record.ok?
     assert_equal "AURORA - Runaway", record.title
     assert_equal "https://www.youtube-nocookie.com/embed/d_HlPboLRL8?autoplay=1", record.player_url

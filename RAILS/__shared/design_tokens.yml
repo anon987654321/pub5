@@ -36,7 +36,7 @@ visual_identity:
     - Truth, provenance, accessibility and task clarity outrank stylistic effect.
     - The shared grammar never imposes one palette, typography, layout or material
       on every product.
-    material_boundary: 'Greyscale one-pixel particle stipple is the distinctive material
+    material_boundary: 'Greyscale crisp particle stipple is the distinctive material
       of the MASTER face. RAILS, OPENBSD and STUDIO inherit its principles, not a
       compulsory particle skin.
 
@@ -62,7 +62,7 @@ visual_identity:
 
         '
       face:
-      - Preserve deliberate gaps between neighbouring one-pixel carriers.
+      - Preserve deliberate gaps between neighbouring carriers.
       - Use larger quiet pockets around important facial features rather than uniformly
         thinning the whole face.
       - Keep the silhouette readable while allowing selected contours to break into
@@ -510,18 +510,20 @@ face_interface:
     focus: 0.86
     activity: 0.14
     risk: 0.0
+  sculpture:
+    rest_yaw: 0.18
   stipple:
     intro_duration_ms: 5200
     fingerprint:
-      enabled: true
+      enabled: false
       spacing: 22.0
       strength: 0.48
       center:
       - 0.08
       - 0.06
       intro_wave_strength: 0.28
-    density_scale: 0.9
-    particle_spacing_scale: 1.1
+    density_scale: 0.45
+    particle_spacing_scale: 1.15
     voids:
       eye_aperture_scale: 1.14
       mouth_width: 0.225
@@ -1475,7 +1477,7 @@ face_interface:
       memory_ghost_limit: 48
       evidence_trail_limit: 12
       law_resonance_limit: 56
-      density_scale: 1.0
+      density_scale: 0.5
       motion_vocabulary:
       - orbit
       - drift
@@ -2073,7 +2075,7 @@ pixel_perfection:
   - glassmorphism
   - soft glow
   - additive second pass behind a point cloud
-  - gl_PointSize above 1.0
+  - gl_PointSize above 3.0
   forbidden_patterns:
   - 'box-shadow\s*:'
   - 'text-shadow\s*:'

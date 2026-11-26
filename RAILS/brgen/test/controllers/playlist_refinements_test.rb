@@ -30,7 +30,7 @@ class PlaylistRefinementsTest < ActionDispatch::IntegrationTest
   # Backed by a real file: an UploadedFile over a StringIO forwards #path to the
   # StringIO, which has none, and Active Storage asks for it when attaching.
   def upload_audio(name)
-    file = Tempfile.new([File.basename(name, ".*"), File.extname(name)])
+    file = Tempfile.new([ File.basename(name, ".*"), File.extname(name) ])
     file.binmode
     file.write("ID3fake")
     file.rewind

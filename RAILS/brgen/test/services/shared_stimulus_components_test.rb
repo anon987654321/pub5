@@ -31,6 +31,15 @@ class SharedStimulusComponentsTest < Minitest::Test
     end
   end
 
+  # The wardrobe form mounts the counter through the shared helper, which owns the controller name.
+  def test_the_wardrobe_form_mounts_the_character_counter_through_the_shared_helper
+    wardrobe_form = read_source(File.join(ROOT, "amber/app/views/wardrobe_items/_form.html.erb"))
+    assert_includes wardrobe_form, "character_counter_field form, :notes"
+
+    counter_helper = read_source(File.join(ROOT, "__shared/app/helpers/shared/stimulus_form_helper.rb"))
+    assert_includes counter_helper, %(controller: "character-counter")
+  end
+
   def test_shared_components_are_wired_into_the_views_that_use_them
     assert_includes read_source(File.join(ROOT, "__shared/app/views/shared/_toast.html.erb")), 'data-controller="toast"'
     # shared/frontend/examples.html.erb is not asserted here. Its first line says
@@ -39,8 +48,6 @@ class SharedStimulusComponentsTest < Minitest::Test
     # thing it documents. The line above already asserts the partial that is the
     # real artifact. What it does owe the reader is below.
 
-    wardrobe_form = read_source(File.join(ROOT, "amber/app/views/wardrobe_items/_form.html.erb"))
-    assert_includes wardrobe_form, "character-counter"
     assert_includes read_source(File.join(ROOT, "__shared/app/views/comments/_form_fields.html.erb")), "tiptap-editor"
     assert_includes read_source(File.join(ROOT, "__shared/app/assets/stylesheets/_base.scss")), "field-sizing: content"
     # What matters here is that the post partial is fragment-cached at all. The
