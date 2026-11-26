@@ -210,12 +210,6 @@ node --test MASTER/web/test/face_boot.test.mjs MASTER/web/test/face_stipple.test
 
 From `MASTER/`, run `bundle exec rake test` and `bin/check --profile=operator`. Capture default, `?stipple=0` and `?playground=1` at narrow and wide viewports, with reduced motion on and off. Inspect front, three-quarter, side and rear geometry; shader compilation, console errors, context recovery, speech, subject morphs, cohort continuity and actual point budgets. The playground snapshot distinguishes JavaScript render-call cadence from GPU completion or validated FPS. The existing council should critique form, spacing, friendliness, state communication, accessibility and cost through convergent deliberation; missing reviewers or captures are inconclusive. A source commit is not deployment evidence.
 
-### Research references
-
-
-
-
-
 ## Terminal type and accessibility
 
 MASTER does not set the terminal emulator's font size. PuTTY and Termux own
