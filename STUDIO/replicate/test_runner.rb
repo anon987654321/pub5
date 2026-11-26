@@ -47,6 +47,13 @@ module Studio
         return Result.new(state: :fail, reason:, summary:)
       end
 
+      if summary.fetch(:skips) >= summary.fetch(:runs)
+        return Result.new(state: :blocked, reason: "Minitest reported no completed tests", summary:)
+      end
+      if summary.fetch(:assertions).zero?
+        return Result.new(state: :blocked, reason: "Minitest reported zero assertions", summary:)
+      end
+
       Result.new(state: :pass, summary:)
     end
 

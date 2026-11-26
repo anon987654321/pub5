@@ -35,6 +35,29 @@ class TestStudioTestRunner < Minitest::Test
     assert_equal "Minitest reported zero runs", result.reason
   end
 
+  def test_all_skipped_is_unmeasured
+    result = Studio::TestRunner.classify(
+      "3 runs, 0 assertions, 0 failures, 0 errors, 3 skips", Status.new(true, 0)
+    )
+    assert_equal :blocked, result.state
+    assert_equal "Minitest reported no completed tests", result.reason
+  end
+
+  def test_no_assertions_is_unmeasured
+    result = Studio::TestRunner.classify(
+      "2 runs, 0 assertions, 0 failures, 0 errors, 0 skips", Status.new(true, 0)
+    )
+    assert_equal :blocked, result.state
+    assert_equal "Minitest reported zero assertions", result.reason
+  end
+
+  def test_partially_skipped_with_assertions_passes
+    result = Studio::TestRunner.classify(
+      "3 runs, 7 assertions, 0 failures, 0 errors, 1 skips", Status.new(true, 0)
+    )
+    assert_equal :pass, result.state
+  end
+
   def test_blocks_missing_summaries
     result = Studio::TestRunner.classify("loaded successfully\n", Status.new(true, 0))
 

@@ -174,7 +174,7 @@ task :test do
     end
 
     summary = result.summary
-    detail = summary ? Studio::TestRunner.summary_line(summary) : result.reason
+    detail = [summary && Studio::TestRunner.summary_line(summary), result.reason].compact.join("; ")
     puts "studio-test0: #{result.state.to_s.upcase} #{name}#{detail ? " - #{detail}" : ""}"
     unless result.state == :pass
       failed << name
