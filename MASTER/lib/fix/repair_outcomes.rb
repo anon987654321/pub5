@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "fileutils"
 require "json"
 require "time"
 require_relative "../cognition/outcome_model"
+require_relative "../io/atomic_write"
 
 module Master
   module Fix
@@ -191,8 +191,7 @@ module Master
       end
 
       def save(data)
-        FileUtils.mkdir_p(File.dirname(@file))
-        File.write(@file, JSON.pretty_generate(data) + "\n")
+        Io::AtomicWrite.write_atomic(@file, JSON.pretty_generate(data) + "\n", mode: 0o600)
       end
     end
   end
