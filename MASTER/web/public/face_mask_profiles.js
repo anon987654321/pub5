@@ -126,13 +126,22 @@
     return cachedSurface;
   }
 
-  function candidate(mesh,index) {
+  function candidate(mesh,index,id,interior) {
     const target=randomUnit(index,1)*mesh.total;
     let lo=0,hi=mesh.cumulative.length-1;
     while(lo<hi) { const mid=(lo+hi)>>>1; if(mesh.cumulative[mid]<target) lo=mid+1; else hi=mid; }
     const [a,b,c]=mesh.triangles[lo], u=Math.sqrt(randomUnit(index,2)), v=randomUnit(index,3);
     const wa=1-u,wb=u*(1-v),wc=u*v;
-    return [a[0]*wa+b[0]*wb+c[0]*wc,a[1]*wa+b[1]*wb+c[1]*wc,a[2]*wa+b[2]*wb+c[2]*wc];
+    const point = [a[0]*wa+b[0]*wb+c[0]*wc,a[1]*wa+b[1]*wb+c[1]*wc,a[2]*wa+b[2]*wb+c[2]*wc];
+    if (!interior) return point;
+    // A sparse inner stratum adds parallax, but cannot occupy a carved void.
+    const normal = normalAt(id, ...point), field = fields.get(id);
+    const depth = .025 + .075 * randomUnit(index,4);
+    for (const fraction of [1,.5,.25]) {
+      const inner = point.map((v,i)=>v-normal[i]*depth*fraction);
+      if (field(...inner) < -.008) return inner;
+    }
+    return point;
   }
 
   // Progressive best-candidate sampling. A bounded spatial hash favours
@@ -176,7 +185,7 @@
       }
       let best=null, score=-1;
       for(let j=0;j<8;j++) {
-        const p=candidate(mesh,n*8+j), d=separation(p,score);
+        const p=candidate(mesh,n*8+j,id,n%8===7), d=separation(p,score);
         if(d>score) { best=p; score=d; }
         if(score>=cellSize*cellSize) break;
       }
@@ -333,6 +342,7 @@
     descriptor: () => descriptor(PROFILES[current]),
     sample,
     normalAt,
+    fieldAt: (id, ...point) => fields.get(id)?.(...point) ?? null,
     mouthGeometry,
     hasProfile: (id) => profileIndex(id) >= 0,
     applyCurrent: (reason = "restore") => apply(current, reason),
