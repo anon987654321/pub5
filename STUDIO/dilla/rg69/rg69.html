@@ -1413,7 +1413,7 @@ Tone.getContext().rawContext.addEventListener('statechange',()=>{
 });
 const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);
 ({masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt}=graph);
-({kick:kickN,kickSub,kickClk,kickBody,snare:snareN,snareRing:snareRng,clap:clapN,hat:hatN,open:openN,bass:bassN,bassSub,keys:keysN,pads:padsN}=graph.instruments);
+({kick:kickN,kickSub,kickClk,kickBody,snare:snareN,snareRng,clap:clapN,hat:hatN,open:openN,bass:bassN,bassSub,keys:keysN,pads:padsN}=graph.instruments);
 ({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=graph.effects);
 analyser=new Tone.Analyser({type:'waveform',size:256,channels:2});
 Tone.connect(graph.finalLimiter,analyser);
@@ -1478,7 +1478,7 @@ const crackleFlt=new Tone.Filter(380,'bandpass');crackleFlt.Q.value=5;crackleNoi
 // Live and offline use the same profile-driven instrument constructor.
 const instruments=createToneInstruments();
 const kickN=instruments.kick,kickSub=instruments.kickSub,kickClk=instruments.kickClk,kickBody=instruments.kickBody;
-const snareN=instruments.snare,snareRng=instruments.snareRing,clapN=instruments.clap,hatN=instruments.hat,openN=instruments.open;
+const snareN=instruments.snare,snareRng=instruments.snareRng,clapN=instruments.clap,hatN=instruments.hat,openN=instruments.open;
 const bassN=instruments.bass,bassSub=instruments.bassSub,keysN=instruments.keys,padsN=instruments.pads;
 const drift=new Tone.LFO(.05+aud.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();drift.connect(bassN.detune);
 const kickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
@@ -1501,7 +1501,7 @@ const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.
 const panners=createRG69Panners();
 // A permanent clean drum feed preserves the transients and fundamental under saturation.
 const drumClean=new Tone.Gain(.6);
-for(const voice of ['kick','kickSub','kickClk','kickBody','snare','snareRing','clap','hat','open'])instruments[voice].connect(drumClean);
+for(const voice of ['kick','kickSub','kickClk','kickBody','snare','snareRng','clap','hat','open'])instruments[voice].connect(drumClean);
 drumClean.connect(drumG);
 kickSat.wet.value=.3;drumSat.wet.value=.35;
 kickN.connect(kickSat);kickSub.connect(kickSat);kickClkBP.connect(kickSat);kickBody.connect(kickSat);
