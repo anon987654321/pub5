@@ -12,7 +12,7 @@ module Master
       module Masks
         CONFIG = Glyphs::CONFIG.fetch("masks").freeze
         ARCHIVE = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}
-        CATALOG = Array(ARCHIVE.fetch("entries")).map(&:freeze).freeze
+        CATALOG = Array(ARCHIVE.fetch("terminal_entries")).map(&:freeze).freeze
         ENTRY_BY_PROFILE = CATALOG.to_h { |entry| [entry.fetch("profile"), entry] }.freeze
         ORDER = CONFIG.fetch("order").freeze
         TRIGGERS = CONFIG.fetch("trigger_states").freeze
@@ -73,8 +73,8 @@ module Master
         end
 
         # The terminal session's mask: FNV-1a over its session id, stable for
-        # that run. It resolves through the same five-entry archive as the web
-        # face; the browser advances that archive by its signed-cookie rotation.
+        # that run. It resolves through the terminal-only reference archive; the
+        # browser owns its independent abstract sculpture catalogue.
         def pick(session = nil)
           h = 2_166_136_261
           id = session.to_s
