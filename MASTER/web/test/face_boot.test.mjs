@@ -650,13 +650,11 @@ test("face.modules.bundle.js is generated from face module entry", () => {
 test("the motion-led face profile is the default and has a readable composer", () => {
   const aesthetic = readFileSync(join(root, "..", "..", "MASTER", "lib", "voice", "aesthetic.rb"), "utf8");
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
-  const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
   const gravity = readFileSync(join(publicDir, "gravity_field.js"), "utf8");
 
   assert.match(aesthetic, /MODES\.include\?\(raw\) \? raw : "phosphor"/);
   assert.match(css, /body\[data-aesthetic="phosphor"\]/);
   assert.match(css, /width: min\(920px, calc\(100dvw - 32px/);
-  assert.match(fallback, /#050710/);
   assert.match(gravity, /PARTICLE_PALETTE/);
 });
 
@@ -909,7 +907,6 @@ test("chat index wires digested assets around lazy face boot", () => {
   assert.match(index, /asset_path\("face\.css"\)/);
   assert.match(index, /asset_path\("face\.js"\)/);
   assert.match(faceManifest, /faceRuntime/);
-  assert.match(index, /asset_path\("face_2d_fallback\.js"\).*defer/);
   assert.match(primerScript, /function promptFormEl/);
   assert.doesNotMatch(primerScript, /getElementById\('prompt-form'\),ui=document\.getElementById\('ui-status'\)/);
   assert.match(index, /asset_path\("particle_kernel\.js"\)/);
@@ -923,11 +920,9 @@ test("chat index wires digested assets around lazy face boot", () => {
   assert.doesNotMatch(index, /<link rel="prefetch"[^>]+asset_path\("three\.face\.module\.js"\)/);
   assert.doesNotMatch(index, /<link rel="prefetch"[^>]+asset_path\("face\.js"\)/);
   const particleIdx = index.indexOf('asset_path("particle_kernel.js")');
-  const fallbackIdx = index.indexOf('asset_path("face_2d_fallback.js")');
   const primerIdx = index.indexOf('id="primer"');
   const bootIdx = index.indexOf('asset_path("face_primer.js")');
   assert.ok(primerIdx > 0 && bootIdx > primerIdx, "the boot script should follow primer markup");
-  assert.ok(fallbackIdx > bootIdx, "face_2d_fallback must not block inline boot before tap wiring");
   assert.ok(particleIdx > 0 && bootIdx > 0, "particle_kernel and inline boot must be present");
 });
 
@@ -956,15 +951,10 @@ test("there is exactly one face renderer", () => {
   assert.doesNotMatch(bridge, /face3d/, "no dynamic import of the removed overlay");
 });
 
-// The reason the overlay was a footgun in the first place: #face is bound to
-// WebGL by the primary renderer, and a second getContext("2d") on it returns
-// null forever after. The 2D placeholder shown while THREE loads is careful to
-// use its own canvas — keep it that way.
-test("nothing takes a 2D context on the shared #face canvas", () => {
-  const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
-
-  assert.match(fallback, /getElementById\("face-2d-fallback"\)/);
-  assert.doesNotMatch(fallback, /getElementById\(["']face["']\)\s*\.getContext/);
+test("the primary face has no legacy renderer", () => {
+  const source = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  assert.match(source, /sculptParticleVolume/);
+  assert.doesNotMatch(source, /MASTER_FACE_ASCII|renderNoCanvasFallback/);
 });
 
 test("face runtime consumes the constitutional state contract", () => {
@@ -1044,7 +1034,7 @@ test("face stylesheet sources are split by concern", () => {
   const builder = readFileSync(join(root, "..", "..", "MASTER", "tools", "rails", "build_face_css.rb"), "utf8");
   const styles = join(root, "styles", "face");
   const order = ["40_accessibility_motion.css", "41_print.css", "42_wscons_skin.css",
-    "43_face_chrome.css", "44_stipple_playground.css", "50_ascii_face.css"];
+    "43_face_chrome.css", "44_stipple_playground.css"];
   const positions = order.map((name) => builder.indexOf(name));
   assert.ok(positions.every((at, index) => at > 0 && (index === 0 || at > positions[index - 1])), positions.join(","));
 
@@ -1534,31 +1524,14 @@ test("MASTER face markup hooks have owned styling", () => {
   assert.match(css, /body\[data-mode="speaking"\] #tts-dot::before/);
 });
 
-test("constitutional ASCII face is wired as an overlay and a fallback", () => {
+test("particle sculpture is the sole web face", () => {
   const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
-  const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
-  const renderer = readFileSync(join(publicDir, "face_ascii.js"), "utf8");
   const frame = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
-  const fallback = readFileSync(join(publicDir, "face_2d_fallback.js"), "utf8");
-  // The face_ascii runtime contract is runtime configuration, so it lives in
-  // laws.yml beside the scanner settings, not in the Law catalogue.
-  const laws = readFileSync(join(root, "..", "..", "MASTER", "data", "laws.yml"), "utf8");
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
-
-  assert.match(faceManifest, /shell_manifest:[\s\S]*?- face_ascii\s/);
-  assert.match(controller, /LawField.browser_payload/);
-  assert.match(view, /MASTER_FACE_LAW_FIELD/);
-  assert.match(renderer, /function paintLawField/);
-  assert.match(renderer, /MASTER_FACE_LAW_FIELD/);
-  assert.match(renderer, /function update\(now\)/);
-  assert.match(renderer, /function createView\(canvas, options\)/);
-  assert.doesNotMatch(renderer, /requestAnimationFrame/);
-  assert.match(frame, /MASTER_FACE_ASCII\?\.update/);
-  assert.match(fallback, /ascii\.createView\(canvas\)/);
-  assert.match(css, /\.master-face-ascii-layer/);
-  assert.match(css, /body\[data-face-ascii="1"\]/);
-  assert.match(laws, /face_ascii:[\s\S]*?source: ordered_constitutional_nodes/);
-  assert.match(laws, /web_file_access: forbidden/);
+  assert.doesNotMatch(view, /face_ascii\.js|face_2d_fallback\.js/);
+  assert.doesNotMatch(faceManifest, /face_ascii|face_2d_fallback/);
+  assert.doesNotMatch(frame, /MASTER_FACE_ASCII|asciiView/);
+  assert.doesNotMatch(css, /master-face-ascii-layer/);
 });
 
 test("session chrome reads brgen's family tokens and band without weakening mobile targets", () => {

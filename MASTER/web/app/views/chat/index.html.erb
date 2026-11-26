@@ -143,6 +143,7 @@
   <%# Small synchronous prerequisite: every deferred ecology/worker module and
       the post-primer face import may assume window.ParticleKernel exists. %>
   <script src="<%= asset_path("particle_kernel.js") %>"></script>
+  <script src="<%= asset_path("face_mask_profiles.js") %>"></script>
   <%# A real button: Enter and Space activate it natively, so the only key
       handler left is the page-level one for when focus is elsewhere. Its
       content is phrasing content, so the title and lines are spans. %>
@@ -162,7 +163,7 @@
   <%# The mic opens at load: face.part5 says why, and how a denied permission
       or a deliberate exit keeps it shut. %>
   <%# Boot + primer tap must run synchronously right after #primer — before ANY other
-      script (including face_2d_fallback). public/face_primer.js holds it: a classic,
+      script. public/face_primer.js holds it: a classic,
       synchronous script (no defer, no async), digested and cached, so its handlers are
       wired before parsing continues. A blocking <script src> above #primer delays
       handler wiring; early taps look dead. #prompt-form and #ui-status are below this block —
@@ -172,8 +173,6 @@
   <script src="<%= asset_path("boot_fsm.js") %>"></script>
   <script src="<%= asset_path("face_primer.js") %>" nonce="<%= content_security_policy_nonce %>"
           data-face-module="<%= FaceAssets.versioned(asset_path("face.js"), "face.js") %>"></script>
-  <script src="<%= asset_path("face_ascii.js") %>" defer></script>
-  <script src="<%= asset_path("face_2d_fallback.js") %>" defer></script>
   <div class="ui-status sr-only" id="ui-status" aria-live="polite" aria-atomic="true"></div>
   <div id="mood-live" aria-live="polite" aria-atomic="true" class="sr-only"></div>
   <%# The prompt lives in main with the log it writes to: LAYOUT.md names #prompt-input

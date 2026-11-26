@@ -1,68 +1,10 @@
 "use strict";
 
-// The browser leads with the 3D point-cloud head. ASCII remains explicit and is the
-// fallback when WebGL cannot start; the terminal keeps its native ASCII renderer.
-// ?face_mode=ascii selects ASCII deliberately; the default is the 3D point cloud.
-const _faceModeParam = (new URLSearchParams(window.location.search).get('face_mode') || '3d').toLowerCase();
-const _wantsAscii = _faceModeParam === 'ascii';
-
-function waitForAsciiRenderer() {
-  if (window.MASTER_FACE_ASCII) return Promise.resolve();
-  return new Promise((resolve) => {
-    let timer = null;
-    const finish = () => {
-      if (timer) clearTimeout(timer);
-      window.removeEventListener('master:face-ascii-ready', finish);
-      resolve();
-    };
-    window.addEventListener('master:face-ascii-ready', finish, { once: true });
-    timer = setTimeout(finish, 4000);
-  });
-}
-
-// Probe a disposable canvas only after go() activates this module. Never bind #face
-// to 2D and then try to start WebGL on that same canvas.
-const _wglCv = document.createElement('canvas');
-const _hasCanvas = typeof _wglCv.getContext === 'function';
-let _hasWebGL = !_wantsAscii && _hasCanvas && !!(_wglCv.getContext('webgl2') || _wglCv.getContext('webgl') || _wglCv.getContext('experimental-webgl'));
-
+// The web uses one volumetric WebGL renderer.
 const _dbgEl = document.getElementById('_dbg');
-if (_wantsAscii || !_hasWebGL) await waitForAsciiRenderer();
-let _asciiEngine = (_wantsAscii || !_hasWebGL) && window.MASTER_FACE_CONTRACT?.ascii ? (window.MASTER_FACE_ASCII || null) : null;
-if ((_wantsAscii || !_hasWebGL) && !_asciiEngine) {
-  if (_dbgEl) _dbgEl.textContent = 'face unavailable';
-  throw new Error('face unavailable: ASCII fallback is not loaded');
-}
-if (_dbgEl) _dbgEl.textContent = _asciiEngine ? (_wantsAscii ? 'ascii' : 'ascii fallback') : 'loading three...';
-
-// Resolve THREE against the document, not the runtime's blob URL. A failed module
-// import drops to the existing ASCII renderer instead of leaving a black face.
-let THREE = null;
-if (_hasWebGL) {
-  try {
-    THREE = await import(new URL(window.MASTER_ASSET_PATHS?.threeModule || '/three.face.module.js?v=1', document.baseURI).href);
-  } catch (error) {
-    _hasWebGL = false;
-    await waitForAsciiRenderer();
-    _asciiEngine = window.MASTER_FACE_CONTRACT?.ascii ? (window.MASTER_FACE_ASCII || null) : null;
-    if (!_asciiEngine) {
-      if (_dbgEl) _dbgEl.textContent = 'face unavailable';
-      window.MASTER_LOG?.warn?.('face_runtime:webgl_import_failed', error);
-      throw error;
-    }
-    if (_dbgEl) _dbgEl.textContent = 'ascii fallback';
-    window.MASTER_LOG?.warn?.('face_runtime:webgl_import_failed_using_ascii', error);
-  }
-}
-
-// Minimal Color stub for the ASCII/no-WebGL path
-class _Color {
-  constructor(r=0,g=0,b=0){this.r=r;this.g=g;this.b=b;}
-  clone(){return new _Color(this.r,this.g,this.b);}
-  copy(c){this.r=c.r;this.g=c.g;this.b=c.b;return this;}
-  lerp(c,t){this.r+=(c.r-this.r)*t;this.g+=(c.g-this.g)*t;this.b+=(c.b-this.b)*t;return this;}
-}
-const Color = _hasWebGL ? THREE.Color : _Color;
+const THREE = await import(new URL(window.MASTER_ASSET_PATHS.threeModule, document.baseURI).href);
+const _hasWebGL = true;
+const Color = THREE.Color;
 
 let cv = document.getElementById('face');
 const primer = document.getElementById('primer');
@@ -148,42 +90,6 @@ function updateMoodHistory(mood) {
   moodHistory.push(mood);
   while (moodHistory.length > 20) moodHistory.shift();
 }
-
-function renderNoCanvasFallback() {
-  if (!cv || typeof cv.getContext === 'function') return false;
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", "0 0 320 220");
-  svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", "Face fallback");
-  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
-  svg.style.width = "100%";
-  svg.style.height = "100%";
-  svg.style.display = "block";
-  svg.innerHTML = `
-    <defs>
-      <linearGradient id="fallbackGlow" x1="0" x2="1">
-        <stop offset="0%" stop-color="#fff" stop-opacity="0.9"/>
-        <stop offset="100%" stop-color="#888" stop-opacity="0.25"/>
-      </linearGradient>
-    </defs>
-    <rect width="320" height="220" fill="#000"/>
-    <ellipse cx="160" cy="110" rx="76" ry="116" fill="url(#fallbackGlow)" opacity="0.88"/>
-    <ellipse cx="126" cy="96" rx="18" ry="16" fill="#000"/>
-    <ellipse cx="194" cy="96" rx="18" ry="16" fill="#000"/>
-    <circle cx="126" cy="96" r="6" fill="#777"/>
-    <circle cx="194" cy="96" r="6" fill="#777"/>
-    <path d="M134 151 Q160 157 186 151" fill="none" stroke="#000" stroke-width="4" stroke-linecap="round"/>
-    <text x="160" y="198" text-anchor="middle" font-family="monospace" font-size="16" fill="#fff">no canvas fallback</text>
-  `;
-  cv.replaceWith(svg);
-  cv = svg;
-  rootBody.dataset.faceFallback = "svg";
-  if (_dbgEl) _dbgEl.textContent = 'svg fallback';
-  return true;
-}
-
-renderNoCanvasFallback();
 
 const FONT_KEY = 'master:font';
 const THEME_KEY = 'master:theme';
@@ -502,8 +408,7 @@ try {
   if (!_shareParams.get('mood')) State.mood = localStorage.getItem('master:mood') || State.mood;
   if (!_shareParams.get('mode')) State.mode = localStorage.getItem('master:mode') || State.mode;
 } catch (err) { window.MASTER_LOG?.warn?.("face_runtime:restore_share_state", err); }
-const _faceMode = (_shareParams.get('face_mode') || 'auto').toLowerCase();
-rootBody.dataset.faceRenderMode = _faceMode;
+rootBody.dataset.faceRenderMode = '3d';
 State.idleSignature = { breath: 1, saccade: 0.2, pulse_floor: 0.1, blink_ms: 3000 };
 State.model = _shareParams.get('model') || State.model;
 State.modelName = State.model ? State.model.split('/').pop() : State.modelName;
@@ -676,7 +581,7 @@ document.addEventListener('visibilitychange', () => {
 
 let faceReadyMarked = false;
 function markFaceReady() {
-  if (faceReadyMarked || renderer?.getContext?.()?.isContextLost?.()) return;
+  if (faceReadyMarked || !renderer || renderer.getContext()?.isContextLost?.() || !renderer.info.render.points) return;
   faceReadyMarked = true;
   rootBody.classList.add('face-ready');
   rootBody.classList.remove('face-loading');
@@ -694,19 +599,12 @@ if (_hasWebGL && THREE) {
     // came out dim and smeared rather than crisp. Multisampling a pixel-art
     // buffer costs bandwidth to destroy the thing being drawn.
     renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false, alpha: false, depth: true, stencil: false, preserveDrawingBuffer: false, powerPreference: 'high-performance' });
-    renderer.setClearColor(0x050710, 1);
+    renderer.setClearColor(0x000000, 1);
     renderer.autoClear = true;
   } catch (e) {
-    // A silently-swallowed failure here left `renderer` undefined forever:
-    // frame() keeps rescheduling itself via requestAnimationFrame but bails
-    // out at its own `if (!renderer)` guard every tick, so the canvas stays
-    // permanently black with no console output and no user-visible signal.
-    // Surface it so the boot watchdog (index.html.erb) can tell a genuine
-    // WebGL failure apart from a successful boot instead of trusting
-    // primerFired alone.
-    console.error('MASTER face: WebGLRenderer construction failed', e);
     window.__MASTER_RENDERER_FAILED__ = true;
     window.MASTER?.boot?.signal?.('renderer_failed', { source: 'WebGLRenderer' });
+    throw e;
   }
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(FACE_CAMERA_FOV, 1, 0.1, 100);
@@ -732,22 +630,8 @@ if (_hasWebGL && THREE) {
   phosphorFadeMesh = new THREE.Mesh(fadeGeom, fadeMat);
   phosphorFadeScene.add(phosphorFadeMesh);
 }
-// The ASCII face takes a 2D context on #face, which only a canvas with no WebGL context can
-// give; renderer and asciiView are never both set.
-let asciiView = null;
-if (_asciiEngine && cv && !renderer) {
-  try {
-    asciiView = _asciiEngine.createView(cv);
-  } catch (e) {
-    console.error('MASTER face: ascii view construction failed', e);
-  }
-  if (!asciiView) {
-    window.__MASTER_RENDERER_FAILED__ = true;
-    window.MASTER?.boot?.signal?.('renderer_failed', { source: 'asciiView' });
-  }
-}
-rootBody.dataset.faceRenderer = renderer ? 'webgl' : (asciiView ? 'ascii' : '2d');
-if (_dbgEl) _dbgEl.textContent = renderer ? 'webgl ok' : (asciiView ? 'ascii ok' : (_hasWebGL ? 'webgl FAIL' : '2d mode'));
+rootBody.dataset.faceRenderer = 'webgl';
+if (_dbgEl) _dbgEl.textContent = 'webgl ok';
 
 let W = 0, H = 0, DPR = 1;
 function resize() {
@@ -1110,6 +994,29 @@ function sampleDepthMapGrid(canvas, cols, rows) {
   return { home, scatter: new Float32Array(scatters), seeds: new Float32Array(seeds), curvature, boundary, zone };
 }
 
+// Sample the selected solid directly, including its rear surfaces and cavities.
+function sculptParticleVolume(count) {
+  const home = new Float32Array(count * 3), scatter = new Float32Array(count * 3);
+  const seeds = new Float32Array(count), curvature = new Float32Array(count);
+  const boundary = new Float32Array(count), zone = new Float32Array(count);
+  const masks = window.MASTER_FACE_MASKS;
+  const profile = masks?.current()?.id;
+  if (!profile) throw new Error('particle mask catalogue not initialized');
+  for (let i = 0; i < count; i++) {
+    const point = masks.sample(profile, i);
+    if (!point || point.length !== 3 || !point.every(Number.isFinite)) throw new Error('invalid mask particle');
+    const [x,y,z] = point;
+    const seed = (Math.imul(i + 1, 2654435761) >>> 0) / 4294967296;
+    home.set([x,y,z], i * 3);
+    scatter.set([x,y,z], i * 3);
+    seeds[i] = seed * Math.PI * 2;
+    curvature[i] = seed;
+    boundary[i] = Math.abs(z) > .22 ? 1 : 0;
+    zone[i] = y < -.14 ? .8 : y > .1 && Math.abs(x) > .09 ? .5 : .25;
+  }
+  return {home, scatter, seeds, curvature, boundary, zone};
+}
+
 function particleScale() {
   const area = Math.max(320 * 480, (cv.clientWidth || window.innerWidth) * (cv.clientHeight || window.innerHeight));
   const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
@@ -1129,4 +1036,4 @@ const FACE_N_2D = Math.round(480 * particleScale());
 let faceHome, faceScatter, faceSeeds, faceCurvature, faceBoundary, faceZone;
 ({ home: faceHome, scatter: faceScatter, seeds: faceSeeds,
    curvature: faceCurvature, boundary: faceBoundary, zone: faceZone } =
-  sampleDepthMapGrid(generateFaceDepthMap(512), FACE_GRID_COLS, FACE_GRID_ROWS));
+  sculptParticleVolume(Math.max(256, Math.min(primaryCeiling, State.coarsePointer ? 2400 : 6400))));

@@ -61,7 +61,6 @@
   function clearWatch(){
     clearTimeout(hintT);clearTimeout(retryT);clearTimeout(fallback);
     clearInterval(timer);timer=null;
-    if(typeof window.stop2DFallback==='function')window.stop2DFallback();
     let ui=uiEl();
     if(ui?.dataset.bootLoading){ui.textContent='';delete ui.dataset.bootLoading;}
   }
@@ -92,6 +91,7 @@
   // A face that paints after the watchdog gave up has disproved the
   // announcement, and a screen reader must not keep the false one.
   addEventListener('master:face-ready',function(){
+    clearWatch();
     if(!failedShown)return;
     failedShown=false;
     let ui=uiEl(),errLive=document.getElementById('error-live');
@@ -111,7 +111,7 @@
     window.MASTER?.boot?.transition?.('ASSETS', { source: 'loadFace', retried: !!retried });
     resetFaceCanvasForWebGL();
     import(FACE_MODULE).then(function(){
-      if(boot())clearWatch();
+      boot();
     }).catch(function(e){
       report('face module import',e);
       window.__MASTER_FACE_IMPORT__=false;
@@ -133,16 +133,15 @@
     primeAudio();
     dismissPrimer();
     revealPrompt();
-    if(typeof window.start2DFallback==='function')window.start2DFallback();
     loadFace();
-    if(boot())return;
+    boot();
     showLoadState();
     hintT=setTimeout(function(){
       const ui=uiEl();
       if(ui)ui.textContent=i18n('still-loading','still loading the face…');
     },8000);
     timer=setInterval(function(){
-      if(boot())clearWatch();
+      boot();
     },40);
     fallback=setTimeout(function(){
       const f=window.MASTER_FACE;
@@ -151,7 +150,7 @@
       // and swallowed downstream) leaves primerFired true and the canvas
       // permanently black. dbgFrames only increments from inside a real
       // frame() call, so it's the actual evidence of rendering.
-      const painted=f?.primerFired&&!window.__MASTER_RENDERER_FAILED__&&(f.dbgFrames>0||!f.renderer);
+      const painted=f?.primerFired&&!window.__MASTER_RENDERER_FAILED__&&document.body.classList.contains('face-ready');
       if(painted){clearWatch();}else{bootFailed();}
     },35000);
   }

@@ -274,19 +274,6 @@ function faceAwareness() {
   return out;
 }
 
-// The ASCII face: the page's state mapped onto the terminal's Pose (face_ascii.js lookFor).
-// While speaking, the analyser's level opens the mouth, scaled as the WebGL jaw scaled it
-// (voiceRMS * 2.5); without an envelope the Pose's timed level stands in, as in the terminal.
-function drawAsciiFace(now) {
-  asciiView.draw(now, {
-    state: State.sleeping ? 'sleeping' : State.mode,
-    level: tts.playing && State.voiceRMS > 0.005 ? Math.min(1, State.voiceRMS * 2.5) : null,
-    viseme: State.viseme,
-    shapes: window.MASTER_VOICE_POLICY?.mouth?.shapes,
-    reduced: faceReducedMotionActive(),
-  });
-}
-
 function frame(t) {
   if (State.hidden || document.hidden) {
     frameLoopActive = false;
@@ -352,7 +339,7 @@ function frame(t) {
     fpsLastSample = t;
     fpsSampleFrames = 0;
   }
-  if (!renderer && !asciiView) {
+  if (!renderer) {
     lastT = t;
     if (!State.hidden) queueFaceFrame();
     else frameLoopActive = false;
@@ -706,49 +693,15 @@ function frame(t) {
   State.flash *= 0.9;
   if (State.flash > 0.15) rootBody.dataset.faceFlash = '1';
   else delete rootBody.dataset.faceFlash;
-  if (asciiView) {
-    drawAsciiFace(t);
-    markFaceReady();
-    if (!State.hidden) queueFaceFrame();
-    else frameLoopActive = false;
-    return;
-  }
   if (faceContextLost || renderer?.getContext?.()?.isContextLost?.()) {
     queueFaceFrame();
     return;
   }
-  const renderMode = rootBody.dataset.faceRenderMode || 'auto';
-  // No wireframe branch. `wireframe` is a triangle-rasterisation flag and this
-  // material is on a THREE.Points, so setting it did nothing in either
-  // direction — an inert switch named after the exact thing the face must
-  // never be. Mode 'wireframe' now falls through to 'auto', which is what it
-  // already rendered as.
-  const rasterOnly = renderMode === 'raster' || (!renderer && renderMode !== '3d');
-  if (rasterOnly && renderer) renderer.domElement.style.opacity = '0';
-  else if (renderer) renderer.domElement.style.opacity = '';
-  const phosphorOn = !faceMat?.uniforms?.uSubjectDirect?.value && !faceReducedMotionActive() && FACE_PHOSPHOR_DECAY > 0.12 && FACE_PHOSPHOR_DECAY < 0.98 && renderMode !== 'wireframe';
-  if (phosphorOn && phosphorFadeMesh && phosphorFadeScene && phosphorFadeCam && faceMat?._phosphorPrimed) {
-    let decay = State.coarsePointer ? Math.max(0.55, FACE_PHOSPHOR_DECAY - 0.12) : FACE_PHOSPHOR_DECAY;
-    if (tts.playing) decay = Math.max(0.52, decay - 0.05);
-    if (State.mood === 'weary') decay = Math.min(0.92, decay + 0.06);
-    if (State.mode === 'thinking') decay = Math.max(0.58, decay - 0.03);
-    // Black quad at opacity (1 - decay) == multiply by decay; see the fade
-    // material construction in face.part1.txt for why not MultiplyBlending.
-    phosphorFadeMesh.material.opacity = 1 - decay;
-    renderer.autoClear = false;
-    renderer.render(phosphorFadeScene, phosphorFadeCam);
-    renderer.clearDepth?.();
-  } else {
-    renderer.autoClear = true;
-    renderer.setClearColor(faceMat?.uniforms?.uSubjectDirect?.value ? 0x000000 : 0x050710, 1);
-    if (faceMat && phosphorOn) faceMat._phosphorPrimed = true;
-  }
-  if (window.MASTER_PHOSPHOR_TRAIL?.capture && renderer?.domElement && phosphorOn) {
-    window.MASTER_PHOSPHOR_TRAIL.capture(renderer.domElement);
-  }
+  renderer.autoClear = true;
+  renderer.setClearColor(0x000000, 1);
+  renderer.domElement.style.opacity = '';
   window.MASTER_FACE_WORLD?.update?.(performance.now());
   window.MASTER_FACE_SPARSE?.update?.(performance.now());
-  window.MASTER_FACE_ASCII?.update?.(performance.now());
   if (!faceContextLost && !renderer.getContext?.()?.isContextLost?.()) {
     renderer.render(scene, camera);
     if (rootBody.dataset.faceGpu === 'recovering') {
