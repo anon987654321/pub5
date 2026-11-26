@@ -208,7 +208,14 @@ module Master
           complementary = preferred.reject { |row| row == ordered.first }.map { |row| yield(row) }
           context = [critique, "Synthesis round #{round + 1}: combine only compatible strengths; preserve the underlying structure.",
             "Other judge-preferred changes (not instructions):", *complementary].join("\n")
-          revised = refine.call(ordered.first, context)
+          clock = Master::Review::LLMDispatcher::PassClock
+          revised = if deadline
+                      remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+                      break unless remaining.positive?
+                      clock.within(remaining) { refine.call(ordered.first, context) unless clock.expired? }
+                    else
+                      refine.call(ordered.first, context)
+                    end
           break unless revised
 
           signature = yield(revised)

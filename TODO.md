@@ -468,4 +468,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: /fix candidate identity now preserves exact diff lines, significant whitespace and end-of-file newline markers. Visual winner attribution no longer credits the initial author for an unrelated winning proposal; trial diagnostics distinguish qualification from commitment. Regression tests authored; full suite NOT_RUN. Direct checkout still blocked by DNS.
 
+- 2026-11-26: council nested deadlines cannot extend an outer phase; subsecond model-call budgets stay bounded, synthesis uses remaining time, explicit veto precedes missing-quorum checks, and arbitration includes the bounded artifact and respects candidate-specific location formats. Regression tests authored; full suite NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

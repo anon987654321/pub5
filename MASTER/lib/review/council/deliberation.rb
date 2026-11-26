@@ -180,14 +180,14 @@ module Master
           feedback = collect_feedback(active, code, context, image:)
 
           speak_persona_feedback(feedback) if @voice_personas
+          veto = enforce_veto(feedback)
+          return veto if veto
+
           required_veto = required_veto_response_error(feedback)
           return required_veto if required_veto
 
           quorum = quorum_error(feedback)
           return quorum if quorum
-
-          veto = enforce_veto(feedback)
-          return veto if veto
 
           # A timed-out panel may finish on quorum, but expiry is never allowed
           # to bypass quorum or a selected veto-capable reviewer's response.

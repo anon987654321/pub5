@@ -34,8 +34,13 @@ module Master
 
           def within(budget = nil)
             seconds = budget || pass_budget_s
-            previous = sync { [@deadline, @budget] }
-            sync { @deadline = now + seconds; @budget = seconds }
+            previous = sync do
+              outer = [@deadline, @budget]
+              started = now
+              @deadline = [@deadline, started + seconds].compact.min
+              @budget = [@deadline - started, 0.0].max
+              outer
+            end
             yield
           ensure
             sync { @deadline, @budget = previous }
@@ -60,7 +65,7 @@ module Master
             capped = [default, sync { @call_cap }].compact.min
             return capped unless active?
 
-            [capped, call_timeout_s, [remaining, 1.0].max].min
+            [capped, call_timeout_s, remaining].min
           end
 
           # A /fix run caps every model call below its stall window, so one slow call fails its file

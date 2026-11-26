@@ -21,10 +21,10 @@ module Master
           findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
           prompt = [prompt, context && "Review brief and preservation constraints:\n#{context}"].compact.join("\n\n")
           InterModelContract.wrap_prompt(
-            "#{prompt}\nSelect only the strongest actionable repairs after comparing all rounds. Prefer transformations that improve the whole without unintended loss; judge interactions between repairs rather than their isolated merits. Combine complementary proposals where warranted. Preserve minority objections, reject unsupported consensus, and explain why each selected repair beats its alternatives. Put the exact repository-relative file and stable line or selector in each finding location; put the selected change in proposed_repair. Return no findings when no repair is justified.", role: "judge", task: "Arbitrate the supplied council proposals and state evidence-backed concurrence or dissent.",
+            "#{prompt}\nSelect only the strongest actionable repairs after comparing all rounds. Prefer transformations that improve the whole without unintended loss; judge interactions between repairs rather than their isolated merits. Combine complementary proposals where warranted. Preserve minority objections, reject unsupported consensus, and explain why each selected repair beats its alternatives. Use the location and proposed_repair format explicitly required by the review brief. Otherwise put the exact repository-relative file and stable line or selector in each finding location and the selected change in proposed_repair. Return no findings when no repair is justified.", role: "judge", task: "Arbitrate the supplied council proposals and state evidence-backed concurrence or dissent.",
             success_criteria: "Return a schema-valid JSON response with an explicit position and zero or more evidence-backed findings.",
             constraints: %w[INTER_MODEL_CONTRACT ROBUSTNESS SINGULARITY],
-            artifact: rounds, prior_findings: findings,
+            artifact: [truncate_code(code.to_s), rounds].reject(&:empty?).join("\n\n"), prior_findings: findings,
             forbidden: ["invent evidence", "claim tests passed", "expand review scope"]
           )
         end

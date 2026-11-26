@@ -51,6 +51,18 @@ class TestCouncilDeliberation < Minitest::Test
   # reach ENV through EnvLoader at boot — which neither tests nor bare
   # requires run. This test failed on any shell without exported keys and
   # passed on any with them, which is an environment reading, not a test.
+  def test_explicit_veto_does_not_require_a_full_panel
+    personas = [
+      Persona.new(name: "Security", role: "Attacker", bias: "paranoid", prompt: "be strict", veto_role: true),
+      Persona.new(name: "Reviewer A", role: "Reviewer", bias: "review", prompt: "review"),
+      Persona.new(name: "Reviewer B", role: "Reviewer", bias: "review", prompt: "review"),
+    ]
+    agent = StubAgent.new("You are Security" => CouncilAnswer.json(severity: "critical", claim: "unsafe eval path"))
+    deliberation = Master::Review::Council::Deliberation.new(personas:, agent:, judge_enabled: false)
+    feedback = [{ persona: "Security", veto_role: true, structured_findings: [{ "severity" => "critical" }], feedback: "unsafe eval path" }]
+    assert_match(/council: veto/, deliberation.send(:enforce_veto, feedback).message)
+  end
+
   def test_veto_blocks_review
     personas = [
       Persona.new(name: "Security", role: "Attacker", bias: "paranoid", prompt: "be strict", veto_role: true),

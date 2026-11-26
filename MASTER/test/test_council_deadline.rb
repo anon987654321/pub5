@@ -37,6 +37,24 @@ class TestCouncilDeadline < Minitest::Test
     refute Clock.active?
   end
 
+  def test_nested_budget_cannot_extend_its_parent
+    Clock.within(5) do
+      outer = Clock.remaining
+      Clock.within(60) do
+        assert_operator Clock.remaining, :<=, outer
+        assert_operator Clock.call_deadline(300), :<=, 5
+      end
+      assert_operator Clock.remaining, :<=, outer
+    end
+    refute Clock.active?
+  end
+
+  def test_subsecond_call_budget_is_not_rounded_up
+    Clock.within(0.2) do
+      assert_operator Clock.call_deadline(300), :<=, 0.2
+    end
+  end
+
   def test_the_budget_expires_and_a_cancel_expires_it_early
     Clock.within(0.05) do
       refute Clock.expired?
