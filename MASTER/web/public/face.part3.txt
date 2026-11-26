@@ -560,10 +560,11 @@ function frame(t) {
       const progress = 1-Math.max(0, Math.min(1, morphCurrent));
       const sculpture = window.MASTER_FACE_CONTRACT?.sculpture || {};
       const restYaw = Math.max(-.35, Math.min(.35, Number(sculpture.rest_yaw ?? .18) || 0));
-      const turn = motionFrozen ? restYaw :
-        restYaw + Math.sin(Math.PI * progress) * .30 + State.mouseX * .16 + Math.sin(sec * .14) * .055;
-      head.rotation.set(0, turn, 0);
-      head.scale.setScalar(motionFrozen ? 1 : 1 + Math.sin(sec * .6) * .006);
+      const turn = motionFrozen ? restYaw : restYaw + Math.sin(Math.PI * progress) * .30;
+      const curiosity = !motionFrozen && State.mood === 'curious' && State.mode !== 'idle';
+      head.rotation.set(0, turn, curiosity ? .055 : 0);
+      head.scale.setScalar(1);
+      faceMat.uniforms.uSculptureMotion.value = motionFrozen ? 0 : 1;
       head.position.set(0, 0, 0);
     }
     faceMat.uniforms.uMorph.value = morphCurrent;
