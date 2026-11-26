@@ -134,8 +134,18 @@ test("bottom sheets ignore interactive controls and cancelled drags restore stat
   assert.equal(controller.levelValue, 1)
   assert.equal(sheet.style.transform, "translateY(50%)")
   assert.equal(sheet.style.transition, "")
+  controller.pointerDown({ target: surface, pointerId: 2, clientY: 200 })
+  controller.pointerMove({ pointerId: 2, clientY: 0 })
   controller.close()
+  controller.pointerUp({ pointerId: 2, clientY: 0 })
+  assert.equal(controller.levelValue, 0)
+  assert.equal(controller.dragging, false)
+  assert.equal(sheet.style.transform, "translateY(100%)")
   assert.equal(focused, 1)
+  controller.open()
+  controller.pointerDown({ target: surface, pointerId: 3, clientY: 0 })
+  controller.pointerUp({ pointerId: 3, clientY: 100 })
+  assert.equal(controller.levelValue, 1)
   delete globalThis.document
 })
 
@@ -168,5 +178,52 @@ test("a failed conversation history request leaves manual retry available", asyn
     assert.equal(attributes.has("aria-busy"), false)
   } finally {
     globalThis.fetch = originalFetch
+  }
+})
+
+test("conversation edits and duplicate replacements do not count as unread", async () => {
+  const source = await readSource("__shared/frontend/conversation_log_controller.js")
+  const { default: ConversationLog } = await import("data:text/javascript," +
+    encodeURIComponent(source.replace(/^import .*$/m, "class Controller {}")))
+  const controller = new ConversationLog()
+  const original = { document: globalThis.document, MutationObserver: globalThis.MutationObserver,
+    getComputedStyle: globalThis.getComputedStyle, Node: globalThis.Node }
+  const callbacks = []
+  const log = {
+    children: [], scrollHeight: 1000, scrollTop: 100, clientHeight: 200,
+    querySelectorAll: () => [], addEventListener() {}, removeEventListener() {},
+    insertAdjacentElement() {}
+  }
+  const node = (id, senderId) => ({
+    id, parentElement: log, nodeType: 1, matches: () => false,
+    querySelectorAll: () => [], querySelector: () => ({ dataset: { senderId } })
+  })
+  try {
+    globalThis.MutationObserver = class {
+      constructor(callback) { callbacks.push(callback) }
+      observe() {}
+      disconnect() {}
+    }
+    globalThis.Node = { ELEMENT_NODE: 1 }
+    globalThis.getComputedStyle = () => ({ overflowY: "auto" })
+    globalThis.document = {
+      addEventListener() {}, removeEventListener() {},
+      createElement: () => ({ addEventListener() {}, setAttribute() {}, remove() {} })
+    }
+    Object.assign(controller, { element: log, viewerIdValue: "self",
+      unreadOneValue: "%{count}", unreadOtherValue: "%{count}" })
+    controller.connect()
+    const edit = node("message_1", "peer")
+    callbacks[0]([{ addedNodes: [edit], removedNodes: [node("message_1", "peer")] }])
+    assert.equal(controller.unread, 0)
+    const fresh = node("message_2", "peer")
+    callbacks[0]([{ addedNodes: [fresh, fresh, node("message_3", "self")], removedNodes: [] }])
+    assert.equal(controller.unread, 1)
+    controller.disconnect()
+  } finally {
+    for (const [key, value] of Object.entries(original)) {
+      if (value === undefined) delete globalThis[key]
+      else globalThis[key] = value
+    }
   }
 })
