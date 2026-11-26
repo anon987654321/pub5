@@ -86,7 +86,7 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, 'const httpPage=location.protocol==="http:"||location.protocol==="https:";'
     assert_match(/const rg69AudioProfileReady=!httpPage\|\|location\.origin==="null"\s*\?Promise\.resolve\(\)/, js)
     assert_includes js, 'if((!httpPage||location.origin==="null")&&!fileClockConfigured)'
-    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
+    assert_includes js, 'Tone.setContext(new Tone.Context({context:native,clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
   end
 
   def test_ratchets_fit_before_the_next_humanized_step
@@ -266,7 +266,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_opaque_origin_uses_non_blob_transport_clock
-    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
+    assert_includes js, 'Tone.setContext(new Tone.Context({context:native,clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
   end
 
   def test_audio_context_is_created_before_resume_inside_the_user_gesture
@@ -377,7 +377,9 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "tape.connect(comp);"
     assert_includes js, "comp.connect(widener);"
     assert_includes js, "widener.connect(limiter);"
-    assert_includes js, "limiter.connect(outputGate);"
+    assert_includes js, "dryMaster.connect(outputGate);"
+    assert_includes js, "wetMaster.connect(outputGate);"
+    assert_includes js, "outputGate.connect(finalLimiter);finalLimiter.connect(ctx.destination);"
     assert_includes js, "if(masterG)smooth(masterG.gain,mix_.master/100);"
     assert_includes js, "if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);"
     assert_includes js, "if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);"
@@ -416,6 +418,16 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "hatN.connect(hatFlt)"
     assert_includes js, "openN.connect(openFlt)"
     assert_includes js, "hitGate(Math.min(sixteenthDuration*.5,.06))"
+  end
+
+  def test_console_bridge_and_audio_probe
+    assert_includes html, '<script id="console-bridge">'
+    assert_operator html.index('<script id="console-bridge">'), :<, html.index('<script id="tone-vendor">')
+    assert_includes js, "window.rg69ConsoleSink=mirrorConsole;"
+    assert_includes html, 'id="copy-log"'
+    assert_includes html, 'id="audio-test"'
+    assert_includes js, "gain.connect(ctx.destination);"
+    assert_includes js, "logAudioState();"
   end
 
   def test_percussion_uses_independent_one_shots_and_permanent_dry_routes
@@ -566,7 +578,7 @@ class TestRg69PlaybackRecovery < Minitest::Test
   end
 
   def test_reverb_failure_stays_bypassed_after_later_fx_updates
-    assert_includes js, "graph.ready.then(ok=>{reverbReady=ok;applyFX();});"
+    assert_includes js, "graph.ready.then(ok=>{reverbReady=ok;applyFX();}).catch("
     assert_includes js, "if(fxRev)fxRev.wet.value=reverbReady?1:0;"
     assert_includes js, "if(!reverbReady&&revSend)revSend.gain.value=0;"
   end
