@@ -4,7 +4,6 @@
 # so every selection path asks one question: is this lane dead.
 schema: 1
 dead:
-  - codex-cli
   - gemini
   # Replicate is off for now, LLM and media alike (operator, 2026-11-26).
   - replicate
