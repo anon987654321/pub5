@@ -80,20 +80,18 @@ module Master
 
         def print_thinking_indicator
           init_thinking_state!
+          request_thinking_paint
+        end
+
+        # The activity row is driven by execution events, never a timer. A
+        # silent child remains visibly "waiting"; actual output, tool work and
+        # completion repaint it at the moment they occur.
+        def request_thinking_paint
           return unless $stdout.tty?
 
-          @spin_thread = Thread.new do
-            loop do
-              # The spinner owns its row: guarded off, or every tick would step
-              # below the draft first.
-              Master::Trace::Dmesg.terminal_write(guard: false) { |target| paint_spin_row(target) }
-              break if @spin_paused
-
-              sleep spin_pause(@spin_intensity)
-            end
-          rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "cli.spinner", event_bus: @refs.bus)
-          end
+          Master::Trace::Dmesg.terminal_write(guard: false) { |target| paint_spin_row(target) }
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.spinner", event_bus: @refs.bus)
         end
 
         # One repaint under the dmesg terminal mutex; @spin_paused stops the
@@ -104,14 +102,13 @@ module Master
           @spin_paused = paused
           return if paused
 
-          @spin_intensity, @spin_probe_at = probe_intensity(@spin_intensity, @spin_probe_at)
           reserve_activity_row_after_quiet(target)
           line = one_row(spin_line(stage, spin_frame_glyph, activity: tool_activity_line))
           @spin_frame += 1
           return if static_spinner? && line == @spin_last_line
 
           @spin_last_line = line
-          draw_spin_row(target, spin_tinted(line, @spin_intensity))
+          draw_spin_row(target, spin_tinted(line, nil))
           target.flush
         end
 
@@ -347,14 +344,12 @@ module Master
 
           @spin_frame = 0
           @spinner_row_visible = false
-          @spin_intensity = nil
-          @spin_probe_at = 0.0
           @spin_paused = false
 
           @activity&.reset!
           @think_active_tools = {}
           @think_last_tool_activity = nil
-          @tool_activity_sink = ->(**details) { update_tool_activity(**details) }
+          @tool_activity_sink = ->(**details) { update_tool_activity(**details); request_thinking_paint }
           Master::Trace::Dmesg.set_activity_sink(@tool_activity_sink)
           # `**`: a single star is colon-free names only, and every stage event has one.
           @think_sub = @refs.bus&.subscribe("**") { |payload| update_think_stage(payload) }
@@ -507,8 +502,6 @@ module Master
         # The spinner stops when a reply streams; detailed events still print.
         def stop_thinking_indicator
           @think_mutex&.synchronize { @think_paused = true }
-          @spin_thread&.join
-          @spin_thread = nil
           @think_sub&.call
           @think_sub = nil
           Master::Trace::Dmesg.clear_activity_sink(@tool_activity_sink) if @tool_activity_sink
@@ -553,6 +546,7 @@ module Master
               @think_stage = stage
             end
           end
+          request_thinking_paint
         end
 
         def update_scan_activity(event, payload)
