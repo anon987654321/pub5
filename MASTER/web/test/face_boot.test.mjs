@@ -1635,7 +1635,9 @@ test("thinking face keeps the single composer ready", () => {
   assert.ok(cliSpinner.includes("TICK_SECONDS = 0.18"));
   assert.ok(cliSpinner.includes('SPINNER_FRAMES = ["*", "+", "x", "+"].freeze'));
   assert.ok(cliSpinner.includes("ResourceLoad.cpu_load"));
-  assert.ok(cliSpinner.includes("def spin_line(_stage, frame)"));
+  assert.match(cliSpinner, /def spin_line\(stage, frame, activity: nil\)/);
+  assert.ok(cliSpinner.includes("spin_line(stage, spin_frame_glyph, activity: tool_activity_line)"));
+  assert.ok(cliSpinner.includes("activity.to_s.empty? ? stage.to_s : activity.to_s"));
   assert.ok(!cliSpinner.includes("elapsed_seconds"));
   assert.ok(!cliSpinner.includes("SPIN_WHITE_HOT_START"));
 });
