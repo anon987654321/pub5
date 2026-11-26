@@ -177,6 +177,25 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_empty_and_ambiguous_file_names_are_refused
+    with_sheet do |path|
+      other = File.join(File.dirname(path), "other", File.basename(path))
+      ["", File.basename(path)].each do |name|
+        edit = EDIT.parse(reply(name, find: "padding: 4px;", replace: "padding: 16px;"), allowed: [path, other])
+        assert_match(/not one of the offered/, refused(edit))
+      end
+      edit = EDIT.parse(reply(path, find: "padding: 4px;", replace: "padding: 16px;"), allowed: [path, other])
+      assert_equal path, edit.file
+    end
+  end
+
+  def test_focus_outline_cannot_be_deleted_or_zeroed
+    with_sheet(".card { outline: 2px solid blue; outline-width: 2px; }") do |path|
+      assert_match(/focus outline/, refused(parse(path, find: "outline: 2px solid blue;", replace: "")))
+      assert_match(/focus outline/, refused(parse(path, find: "outline-width: 2px;", replace: "outline-width: 0;")))
+    end
+  end
+
   def test_a_file_that_was_not_offered_is_refused
     with_sheet do |path|
       edit = EDIT.parse(reply("/etc/passwd", find: "a", replace: "b"), allowed: [path])

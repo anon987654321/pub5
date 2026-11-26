@@ -47,7 +47,12 @@ module Master
 
       def self.parse(reply, allowed:, rules: NO_RULES)
         data = JSON.parse(reply.to_s[/\{.*\}/m].to_s)
-        file = allowed.find { |path| path == data["file"] || path.end_with?(data["file"].to_s) }
+        requested = data["file"]
+        file = if requested.is_a?(String) && !requested.strip.empty?
+                 exact = allowed.find { |path| path == requested }
+                 matches = allowed.select { |path| path.end_with?("/#{requested}") }
+                 exact || (matches.first if matches.one?)
+               end
         text = ->(key) { data[key].to_s }
         proposal = Proposal.new(file:, find: text.("find"), replace: text.("replace"), why: text.("why").strip)
         (file.to_s.end_with?(".erb") ? MarkupEdit : self).new(proposal, rules)
@@ -140,6 +145,10 @@ module Master
         end
         raise Refused, "removes a rendered value (#{lost.first})" if lost
         raise Refused, "changes a border or outline colour" if colour_changed?
+        outlines = /\Aoutline(?:-[a-z]+)*\z/
+        if (removed + changed).any? { |name, _| name.match?(outlines) }
+          raise Refused, "changes a focus outline"
+        end
       end
 
       # A new rule has to name a class or id. `main > h1 ~ *` matched every element after
@@ -208,7 +217,7 @@ module Master
       # Neutralise an existing decoration without inventing a new rendered value.
       # Never grant this exception to outlines: they may be keyboard focus cues.
       def neutral_frame?(name, value)
-        name.match?(NEUTRAL_FRAME) && %w[none 0].include?(value) &&
+        name.match?(NEUTRAL_FRAME) && (value == "none" || (value == "0" && name.start_with?("border"))) &&
           declarations(proposal.find).any? { |property, old| property == name && !%w[none 0].include?(old) }
       end
 

@@ -443,4 +443,11 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 - [ ] [Issue #5](https://github.com/anon987654321/pub5/issues/5): brokered Chromium acceptance.
 - [ ] [Issue #6](https://github.com/anon987654321/pub5/issues/6): end-to-end completion.
 
+## Execution receipts
+
+- 2026-11-26: source acceptance contract reconciled for the single 3D face.
+- 2026-11-26: inspected shared-029; first-party thumbnail cache is already wired into the embed view. Leave acceptance open pending endpoint/cache and browser privacy tests.
+- 2026-11-26: design candidate admission hardened against empty/ambiguous file names, focus-outline removal and invalid zero shadow values; focused tests authored, NOT_RUN.
+- 2026-11-26: direct Git checkout retried in the Ruby 3.3.8 environment; DNS resolution of github.com failed. Connector delivery works. Continue independent source work without claiming runtime proof.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.
