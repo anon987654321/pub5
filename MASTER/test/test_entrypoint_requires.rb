@@ -140,8 +140,8 @@ class TestEntrypointRequires < Minitest::Test
     MESSAGE
   end
 
-  def test_relative_requires_resolve
-    missing = ruby_entrypoints.flat_map do |script, source|
+  def missing_relative_requires(scripts)
+    scripts.flat_map do |script, source|
       source.scan(/^\s*require_relative\s+["']([^"']+)["']/).filter_map do |(feature)|
         target = File.expand_path(feature, File.dirname(script))
         next if File.file?(target) || File.file?("#{target}.rb")
@@ -150,6 +150,10 @@ class TestEntrypointRequires < Minitest::Test
           "but #{relative(target)}.rb does not exist"
       end
     end
+  end
+
+  def test_relative_requires_resolve
+    missing = missing_relative_requires(ruby_entrypoints)
 
     assert_empty missing, <<~MESSAGE
       An entry-point script require_relative's a file that is not on disk. A
@@ -170,15 +174,7 @@ class TestEntrypointRequires < Minitest::Test
     scripts = Dir.glob(File.join(MASTER_ROOT, "plugins", "*", "checks", "*.rb")).sort
     refute_empty scripts, "no plugin check scripts found -- the glob is wrong, not the tree"
 
-    missing = scripts.flat_map do |script|
-      File.read(script).scan(/^\s*require_relative\s+["']([^"']+)["']/).filter_map do |(feature)|
-        target = File.expand_path(feature, File.dirname(script))
-        next if File.file?(target) || File.file?("#{target}.rb")
-
-        "#{relative(script)} requires_relative #{feature.inspect}, " \
-          "but #{relative(target)}.rb does not exist"
-      end
-    end
+    missing = missing_relative_requires(scripts.map { |script| [script, File.read(script)] })
 
     assert_empty missing, <<~MESSAGE
       A plugin check script require_relative's a file that is not on disk. The
