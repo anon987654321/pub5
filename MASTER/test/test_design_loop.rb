@@ -283,6 +283,17 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_design_prompt_does_not_treat_inapplicable_measures_as_defects
+    plan = LOOP::Plan.new(surfaces: [], root: Dir.pwd, rounds: 1, candidates: 1)
+    runner = LOOP.new(plan:, world: nil)
+    runner.instance_variable_set(:@target, { payload: {} })
+    result = Struct.new(:subs).new({ "measure" => nil, "edges" => 0.2, "grid" => 0.0, "scale" => 0.8, "density" => 0.9 })
+
+    Master::Fix::LayoutScoreStore.stub(:measure, result) do
+      assert_equal "grid 0.0, edges 0.2, scale 0.8", runner.send(:weakest_measures)
+    end
+  end
+
   def test_design_rounds_rotate_candidate_scales_even_with_one_candidate
     with_sheet do |path|
       prompts = []

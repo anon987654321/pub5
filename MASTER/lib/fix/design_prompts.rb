@@ -95,8 +95,8 @@ module Master
 
       def weakest_measures
         subs = LayoutScoreStore.measure(@plan.root, @target[:payload]).subs
-        weakest = subs.sort_by { |_, value| value.to_f }.first(3)
-        weakest.map { |name, value| "#{name} #{value&.round(2)}" }.join(", ")
+        weakest = subs.compact.sort_by { |_, value| value }.first(3)
+        weakest.map { |name, value| "#{name} #{value.round(2)}" }.join(", ")
       end
 
       # A font-size may be set to a declared step in either direction; with no steps declared it may not be set.

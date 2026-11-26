@@ -82,6 +82,24 @@ class VisualQualityChecksTest < Minitest::Test
     assert_equal 0, Q.load(@root, @surface)["metrics"]["contrast"]
   end
 
+  def test_regression_cannot_move_an_existing_defect_to_a_new_control
+    small = { "interactive" => true, "rect" => { "x" => 0, "y" => 0, "w" => 20, "h" => 20 } }
+    Q.record(captures(payload(el("old", **small), el("new"))), root: @root)
+
+    verdict = Q.judge([[@surface, payload(el("old"), el("new", **small))]], root: @root, prior: ok)
+    refute verdict.ok?
+    assert_match(/tap_target 1->1\.0 \(new\)/, verdict.message)
+  end
+
+  def test_a_truncated_offender_list_cannot_prove_new_identities
+    old = { "metrics" => { "contrast" => 51 }, "offenders" => { "contrast" => (1..50).map(&:to_s) } }
+    now = { "metrics" => { "contrast" => 50 }, "offenders" => { "contrast" => (2..51).map(&:to_s) } }
+
+    assert_empty Q.worse(old, now)
+    now["metrics"]["contrast"] = 52
+    refute_empty Q.worse(old, now)
+  end
+
   def test_judge_keeps_a_failing_prior
     prior = Master::Result.err("custody", category: :policy)
     assert_equal prior, Q.judge([[@surface, payload(el("a"))]], root: @root, prior:)

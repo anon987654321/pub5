@@ -127,9 +127,19 @@ module Master
         base["metrics"].filter_map do |name, was|
           now = cur["metrics"][name].to_f
           next if allow_layout_change && name == "layout_shift"
-          next if name == "layout_shift" ? now <= [was.to_f, SHIFT_GOOD].max : now <= was.to_f
+          if name == "layout_shift"
+            next if now <= [was.to_f, SHIFT_GOOD].max
+            next "#{name} #{was}->#{now}"
+          end
 
-          fresh = Array(cur["offenders"][name]) - Array(base["offenders"][name])
+          prior = Array(base.dig("offenders", name))
+          current = Array(cur.dig("offenders", name))
+          fresh = current - prior
+          # Truncated or anonymous baseline keys cannot establish new identities.
+          comparable = prior.size == was.to_i && prior.none?(&:empty?)
+          fresh = fresh.reject(&:empty?)
+          next if now <= was.to_f && (!comparable || fresh.empty?)
+
           "#{name} #{was}->#{now}#{fresh.empty? ? "" : " (#{fresh.first(3).join(", ")})"}"
         end
       end
