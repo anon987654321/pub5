@@ -36,7 +36,7 @@ module Studio
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @direction = direction.to_s
-        unless @direction == "varied" || Studio::Lora::Selfie::DIRECTIONS.key?(@direction) || %w[shoots warp best scenarios selfies].include?(@direction)
+        unless @direction == "varied" || Studio::Lora::Selfie::DIRECTIONS.key?(@direction) || %w[shoots warp best scenarios selfies film_still].include?(@direction)
           raise ArgumentError, "unknown photographic direction"
         end
         @scenes = scenes.nil? ? nil : Array(scenes)
@@ -183,7 +183,8 @@ module Studio
             frame = File.join(@directory, "#{@subject}_frame_#{format("%02d", index)}.jpg")
             start = Studio::ReplicateClient::Motion.last_frame(piece.last, out: frame)
           end
-          clip = @series.animate(start, MOTION_PROMPT, duration: length).fetch("clip")
+          motion = index.zero? ? motion_for_still(source) : MOTION_PROMPT
+          clip = @series.animate(start, motion, duration: length).fetch("clip")
           piece << clip
           record("film", clip: File.basename(clip), index: index, seconds: length,
                  continuous_from: index.zero? ? nil : File.basename(piece[index - 1]))
@@ -256,6 +257,11 @@ module Studio
 
       # Review is separately authorized; generation inputs are not independent
       # evaluation evidence. Without a private holdout, no face scoring runs.
+      def motion_for_still(path)
+        row = Studio::Lora::Judge.delivery_row(path, ledger: @ledger_path)
+        row&.dig("recipe", "motion") || MOTION_PROMPT
+      end
+
       def review_reference
         directory = File.join(@subjects_root, @subject)
         Studio::Lora::Consent.require!(subject: @subject, subject_directory: directory,
