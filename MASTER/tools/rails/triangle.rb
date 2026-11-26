@@ -144,6 +144,11 @@ module Deploy
 
     def self.pid_file(app) = File.join(RUN_DIR, "#{app[:name]}.pid")
 
+    # Rails otherwise shares tmp/pids/server.pid with a developer's server in
+    # the same checkout. A Triangle capture on another port then waits for a
+    # server Rails already refused to start.
+    def self.rails_pid_file(app) = File.join(RUN_DIR, "#{app[:name]}.rails.pid")
+
     def self.log_file(app) = File.join(RUN_DIR, "#{app[:name]}.log")
 
     # application.css is built output and git-ignored, so a fresh worktree has
@@ -161,6 +166,7 @@ module Deploy
     end
 
     def self.migrate(app)
+      puts "triangle: #{app[:name]} prepare"
       seed_from_main(app)
       return false unless build_css(app)
 
@@ -190,6 +196,7 @@ module Deploy
     def self.boot(app)
       clear_asset_manifest(app)
       FileUtils.mkdir_p(RUN_DIR)
+      puts "triangle: #{app[:name]} boot #{app[:port]}"
       # Truncated, not appended. What this log is for is "why did this boot
       # fail", which the current boot answers; keeping every prior one grew
       # brgen.log to 1.8 GB and filled the disk.
@@ -197,6 +204,7 @@ module Deploy
       pid = Process.spawn(
         Master::Io::ProcessSpawn.environment(env_for(app)),
         BUNDLE, "exec", RUBY, "bin/rails", "server", "-p", app[:port].to_s, "-b", "127.0.0.1",
+        "--pid", rails_pid_file(app),
         chdir: app[:dir], out: log, err: log, pgroup: true
       )
       Process.detach(pid)
@@ -205,6 +213,7 @@ module Deploy
     end
 
     def self.wait_for(app)
+      puts "triangle: #{app[:name]} wait /up (#{BOOT_TIMEOUT}s)"
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + BOOT_TIMEOUT
       until Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
         return true if listening?(app[:port])

@@ -32,6 +32,13 @@ class TestTriangleOwnership < Minitest::Test
     assert_equal File.join(Deploy::Triangle::ROOT, "MASTER", "web"), face.fetch(:dir)
   end
 
+  def test_triangle_rails_pid_file_is_separate_from_the_app_default
+    app = Deploy::Triangle.apps.find { |row| row.fetch(:name) == "master" }
+
+    assert_equal File.join(Deploy::Triangle::RUN_DIR, "master.rails.pid"), Deploy::Triangle.rails_pid_file(app)
+    refute_equal File.join(app.fetch(:dir), "tmp", "pids", "server.pid"), Deploy::Triangle.rails_pid_file(app)
+  end
+
   # A server left behind by a killed /fix run answers /up like a live one. The
   # triangle has to know whose tree it was started in before trusting it.
   def test_listener_reports_the_directory_the_server_was_started_in
