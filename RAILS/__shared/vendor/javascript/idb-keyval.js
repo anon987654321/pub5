@@ -34,13 +34,12 @@ const transact = (db, storeName, mode, callback) => new Promise((resolve, reject
   const tx = db.transaction(storeName, mode)
   const store = tx.objectStore(storeName)
   const request = callback(store)
-  if (!request) {
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-    return
-  }
-  request.onsuccess = () => resolve(request.result)
-  request.onerror = () => reject(request.error)
+  // A successful request is not a committed write: quota errors and aborts
+  // can still roll back the transaction after the request has succeeded.
+  tx.oncomplete = () => resolve(request?.result)
+  tx.onerror = () => reject(tx.error || new Error("IndexedDB transaction failed"))
+  tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"))
+  if (request) request.onerror = () => reject(request.error)
 })
 
 const withStore = async (storeName, callback) => {

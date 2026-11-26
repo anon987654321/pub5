@@ -149,6 +149,17 @@ test("a 422 does not block the queue behind it", async () => {
   assert.ok(events.some((event) => event.type === "rejected" && event.status === 422))
 })
 
+test("overlapping replay requests share a single send", async () => {
+  reset()
+  await enqueueSync({ url: "/dating/likes", body: { user_id: "1" } })
+  const first = runtime.replay()
+  const second = runtime.replay()
+  assert.equal(first, second)
+  await Promise.all([first, second])
+  assert.equal(requests.length, 1)
+  assert.equal(rows.size, 0)
+})
+
 test("a server error stops the replay and keeps the write", async () => {
   reset()
   await enqueueSync({ url: "/dating/likes", body: { user_id: "1" } })
@@ -192,4 +203,48 @@ test("install folds the retired localStorage queue in and words the status only 
   assert.equal(acknowledgements.length, 2)
   assert.ok(acknowledgements.every(event => event.type === "pub5:offline-queued" && rows.has(event.detail.id)))
   globalThis.navigator.onLine = true
+})
+
+
+test("draft storage acknowledges transactions, not individual requests", async () => {
+  const vendor = await import(pathToFileURL(new URL("../__shared/vendor/javascript/idb-keyval.js", import.meta.url).pathname).href)
+  const original = globalThis.indexedDB
+  let transaction
+  let request
+  const db = {
+    objectStoreNames: { contains: () => true },
+    close() {},
+    transaction() {
+      request = { result: "stored" }
+      transaction = { objectStore: () => ({ put: () => request }) }
+      return transaction
+    }
+  }
+  globalThis.indexedDB = {
+    open() {
+      const opening = { result: db }
+      queueMicrotask(() => opening.onsuccess())
+      return opening
+    }
+  }
+  try {
+    let acknowledged = false
+    const pending = vendor.set("draft", "content").then(() => { acknowledged = true })
+    await new Promise(resolve => setImmediate(resolve))
+    request.onsuccess?.()
+    await Promise.resolve()
+    assert.equal(acknowledged, false)
+    transaction.oncomplete()
+    await pending
+    assert.equal(acknowledged, true)
+
+    const failed = vendor.set("draft", "content")
+    const rejected = assert.rejects(failed, /aborted/)
+    await new Promise(resolve => setImmediate(resolve))
+    request.onsuccess?.()
+    transaction.onabort()
+    await rejected
+  } finally {
+    globalThis.indexedDB = original
+  }
 })

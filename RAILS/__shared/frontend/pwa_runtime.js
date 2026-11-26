@@ -33,12 +33,12 @@ const withStore = async (mode, work) => {
   try {
     const tx = db.transaction(STORE, mode)
     const store = tx.objectStore(STORE)
-    const value = await work(store)
-    await new Promise((resolve, reject) => {
+    const committed = new Promise((resolve, reject) => {
       tx.oncomplete = resolve
       tx.onerror = () => reject(tx.error)
       tx.onabort = () => reject(tx.error || new Error("transaction aborted"))
     })
+    const [value] = await Promise.all([Promise.resolve().then(() => work(store)), committed])
     return value
   } finally {
     db.close()
@@ -134,7 +134,7 @@ const send = (record, url, token) => {
 // queue. A 422 after a fresh token is the server refusing the write itself, so
 // it leaves too, reported as rejected, rather than blocking every write behind
 // it for good. Any other failure stops the replay and keeps the record.
-export const replay = async () => {
+const replayRecords = async () => {
   if (!navigator.onLine || !canUseIndexedDB()) return
   const records = await allRecords()
   if (records.length === 0) return
@@ -169,6 +169,18 @@ export const replay = async () => {
     }
   }
   notify("drained", { count: await queueSize() })
+}
+
+// Online, startup and manual replay can arrive together. Share one in-flight
+// replay in this document; Web Locks also serialize cooperating tabs.
+let replaying = null
+export const replay = () => {
+  if (replaying) return replaying
+  const run = () => replayRecords()
+  replaying = (navigator.locks?.request
+    ? navigator.locks.request("pub5-pwa-replay", run)
+    : run()).finally(() => { replaying = null })
+  return replaying
 }
 
 // Entries the retired localStorage queue still holds on a device move into this
