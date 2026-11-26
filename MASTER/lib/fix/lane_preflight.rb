@@ -16,6 +16,15 @@ module Master
 
       module_function
 
+      # A lexical read with all model phases disabled needs no provider admission.
+      # A repair or explicitly requested critique still uses the ordinary gate.
+      def deterministic_observation?(mode:, writes_requested:, critique:, only:, env: ENV)
+        mode == "repair" && !writes_requested && critique != true &&
+          (only.nil? || only.to_s == "fix") && env["MASTER_SCAN_DETERMINISTIC"] == "1" &&
+          %w[MASTER_FIX_TREE MASTER_FIX_DEEP_TRACE MASTER_FIX_STRUCTURAL_REVIEW MASTER_FIX_PREVIEW]
+            .all? { |key| env[key] == "0" }
+      end
+
       # nil when the run may start, else a Result::Err naming the operation,
       # the model it would get, and the lane it should have had.
       def check(agent:, env: ENV)

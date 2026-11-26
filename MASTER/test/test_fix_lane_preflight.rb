@@ -60,6 +60,25 @@ class TestFixLanePreflight < Minitest::Test
     [result, lines]
   end
 
+  def test_only_model_free_read_only_observation_skips_provider_admission
+    env = {
+      "MASTER_SCAN_DETERMINISTIC" => "1",
+      "MASTER_FIX_TREE" => "0",
+      "MASTER_FIX_DEEP_TRACE" => "0",
+      "MASTER_FIX_STRUCTURAL_REVIEW" => "0",
+      "MASTER_FIX_PREVIEW" => "0",
+    }
+    options = { mode: "repair", writes_requested: false, critique: nil, only: nil, env: }
+    assert Preflight.deterministic_observation?(**options)
+    assert Preflight.deterministic_observation?(**options.merge(only: "fix"))
+    [{ writes_requested: true }, { critique: true }, { only: "critique" }, { mode: "audit" }].each do |override|
+      refute Preflight.deterministic_observation?(**options.merge(override)), override.inspect
+    end
+    env.each_key do |key|
+      refute Preflight.deterministic_observation?(**options.merge(env: env.reject { |name, _| name == key })), key
+    end
+  end
+
   def test_preflight_leaves_provider_and_consensus_probes_to_their_owners
     agent = ProbingAgent.new({})
 

@@ -629,7 +629,8 @@ module Master
         lane_refusal = Master::Fix::WorkLane.refusal(target)
         return Master::Result.err("fix: #{lane_refusal}", category: :validation) if lane_refusal
 
-        preflight = fix_lane_preflight(deliberation, cancellation)
+        lexical = Master::Fix::LanePreflight.deterministic_observation?(mode:, writes_requested:, critique:, only:)
+        preflight = fix_lane_preflight(lexical ? nil : deliberation, cancellation)
         return preflight if preflight
 
         run_fix_report(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, raw:, targets:,
