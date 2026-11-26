@@ -45,7 +45,7 @@ assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
 console.log("profile origin checks: "+origins.length);
 
  // Strict graph mock: reject undefined instrument and connection endpoints.
-const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createAnalogRig(","function applyFX("]];
+const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createConsoleStrip(","function applyFX("]];
 const graphFixture=`
 const edges=[];
 const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
@@ -71,6 +71,7 @@ const g=createAudioGraph(aud,mix,null),offline=createAudioGraph(aud,mix,null,{of
 const expected=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
 for(const graph of [g,offline]){
 assert(graph.analog&&typeof graph.analog.update==="function","native analogue rig must build");
+assert(graph.consoleStrips.length===5,"five console strips");
 graph.analog.update({...aud,tape:100,wobble:100,vinyl:100,crackle:100},mix);
 graph.analog.update({...aud,tape:0,wobble:0,vinyl:0,crackle:0},mix);
 assert(JSON.stringify(Object.keys(graph.instruments).sort())===JSON.stringify(expected.slice().sort()),"instrument registry disagrees with scheduler");
@@ -104,3 +105,20 @@ assert(JSON.stringify(laneNote("keys",0,pat,seq_,duration))===JSON.stringify(row
 return {progressions:HARMONY_CATALOGUE.length,fullCycles:"passed"};
 `);
 console.log(JSON.stringify(harmonyCheck(assert),null,2));
+
+const songTest=new Function("assert",prefix+sources[0]+sources[1]+state+sources.slice(2).join("\n")+`
+assert(SONG_BARS===64,"64-bar arrangement");
+const take=session();take.song=true;take.pat={d:"hate-grind",b:"dronebass",k:"darkchrom",p:"noisewash"};take.aud.bpm=150;
+const count={},sections=new Set();
+for(let i=0;i<SONG_BARS*16;i++){
+const frame=songFrame(i,true);sections.add(frame.name);
+const ev=compileStep(i%16,.05+i*.1,{session:take,tick:i,stepCount:16,muteMap:{},applyProb:true,applyRatchet:true,applyTranspose:true,addSwing:true,sixteenth:.1});
+count[frame.name]=(count[frame.name]||0)+ev.length;
+if(frame.name==="Breakdown")assert(!ev.some(e=>e.voice==="kick"||e.voice==="bass"),"breakdown must breathe");
+}
+assert(sections.size===7&&Object.values(count).every(n=>n>0),"all sections play");
+assert(compileStep(0,103,{session:take,tick:1024,stepCount:16,muteMap:{}}).length===0,"song ends");
+const midi=midiBytes(take);assert(midi.length>1000,"full song MIDI");
+return {bars:SONG_BARS,sections:count,midiBytes:midi.length};
+`);
+console.log(JSON.stringify(songTest(assert),null,2));
