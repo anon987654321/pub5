@@ -4,6 +4,8 @@ class Marketplace::SavedSearch < ApplicationRecord
   include Shared::Notifiable
 
   belongs_to :user
+  belongs_to :city, optional: true
+  before_validation(on: :create) { self.city ||= ActsAsTenant.current_tenant }
   belongs_to :category, class_name: "Marketplace::Category", optional: true
 
   validates :name, length: { maximum: 120 }, allow_blank: true
@@ -12,7 +14,9 @@ class Marketplace::SavedSearch < ApplicationRecord
   # Rows with alerts switched on that the job has not looked at recently. The
   # `notify` column and its "alerts on" chip predate anything that could act on
   # them: saving a search was a bookmark, and ticking the box changed a label.
-  scope :alerting, -> { where(notify: true).joins(:user).where(users: { deleted_at: nil, deletion_scheduled_at: nil }) }
+  scope :alerting, -> { where(notify: true).where.not(city_id: nil).joins(:user).where(users: { deleted_at: nil, deletion_scheduled_at: nil }) }
+  scope :for_listing, ->(listing) { listing.city_id ? where(city_id: listing.city_id) : all }
+  scope :for_city, ->(city) { where(city_id: [ city&.id, nil ]) }
 
   # At most one alert per search per this window, however often the job runs.
   # A quarter-hourly job with a chatty seller would otherwise be a notification
@@ -25,11 +29,13 @@ class Marketplace::SavedSearch < ApplicationRecord
   MAX_LISTINGS_PER_ALERT = 20
 
   def title
-    name.presence || query.presence || category&.name || "Saved search"
+    name.presence || query.presence || strict_safe(:category)&.name || "Saved search"
   end
 
+  def alerts_enabled? = notify? && city_id.present?
+
   def due_for_alert?(now: Time.current)
-    notify? && (last_notified_at.nil? || last_notified_at <= now - ALERT_INTERVAL)
+    alerts_enabled? && (last_notified_at.nil? || last_notified_at <= now - ALERT_INTERVAL)
   end
 
   # One listing, on create: the queue never runs, so this is how "alerts on"
@@ -37,6 +43,7 @@ class Marketplace::SavedSearch < ApplicationRecord
   # the periodic job cannot disagree.
   def matches_listing?(listing)
     return false if listing.blank? || listing.user_id == user_id
+    return false unless city_id && (listing.city_id.nil? || listing.city_id == city_id)
     return false unless Marketplace::Listing.publicly_visible.exists?(id: listing.id)
     return false if category_id.present? && listing.category_id != category_id
     return false if location.present? && listing.location != location
@@ -54,7 +61,9 @@ class Marketplace::SavedSearch < ApplicationRecord
   # — otherwise switching alerts on mails you the entire back catalogue.
   def new_matches(since: nil)
     cutoff = since || last_notified_at || created_at
-    scope = Marketplace::Listing.publicly_visible.where.not(user_id: user_id)
+    return Marketplace::Listing.none unless city_id
+
+    scope = Marketplace::Listing.publicly_visible.where(city_id: [ city_id, nil ]).where.not(user_id: user_id)
                        .where("marketplace_listings.created_at > ?", cutoff)
     scope = scope.where(category_id: category_id) if category_id.present?
     scope = scope.where(location: location) if location.present?
@@ -73,10 +82,12 @@ class Marketplace::SavedSearch < ApplicationRecord
   # own columns and union the ids.
   def price_drop_matches(since: nil)
     cutoff = since || last_notified_at || created_at
+    return Marketplace::Deal.none unless city_id
+
     scope = Marketplace::Deal.live
               .joins(:listing)
-              .merge(Marketplace::Listing.publicly_visible.where.not(user_id: user_id))
-              .where("marketplace_deals.created_at > ?", cutoff)
+              .merge(Marketplace::Listing.publicly_visible.where(city_id: [ city_id, nil ]).where.not(user_id: user_id))
+              .where("marketplace_deals.created_at > :cutoff OR marketplace_deals.starts_at > :cutoff", cutoff: cutoff)
 
     scope = scope.where(marketplace_listings: { category_id: category_id }) if category_id.present?
     scope = scope.where(marketplace_listings: { location: location }) if location.present?
@@ -111,18 +122,22 @@ class Marketplace::SavedSearch < ApplicationRecord
   def deliver_alert!(listings, now: Time.current, kind: :new)
     return false if listings.empty?
 
-    title_key = kind == :price_drop ? "marketplace.saved_search_alert.price_drop_title" : "marketplace.saved_search_alert.title"
+    with_lock do
+      next false unless due_for_alert?(now: now) && self.class.alerting.exists?(id: id)
+      next false unless listings.all? { |listing| listing.city_id.nil? || listing.city_id == city_id }
 
-    deliver_notification(
-      user,
-      title: I18n.t(title_key, search: title, count: listings.size),
-      body: listings.first(3).map(&:title).join(" · "),
-      source: self,
-      # A saved search matching is exactly what the reader asked to be told
-      # about, which is what makes it worth a lock screen.
-      kind: "alert"
-    )
-    update!(last_notified_at: now)
-    true
+      title_key = kind == :price_drop ? "marketplace.saved_search_alert.price_drop_title" : "marketplace.saved_search_alert.title"
+      notification = deliver_notification(
+        strict_safe(:user),
+        title: I18n.t(title_key, search: title, count: listings.size),
+        body: listings.first(3).map(&:title).join(" · "),
+        source: self,
+        kind: "alert"
+      )
+      next false unless notification&.persisted?
+
+      update!(last_notified_at: now)
+      true
+    end
   end
 end

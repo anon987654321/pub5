@@ -162,6 +162,7 @@ en:
     move_down: "Move down"
     any_query: Any query
     alerts_on: alerts on
+    choose_alert_city: Turn alerts on in this city to resume notifications
     confirm_decline: Decline this offer? The buyer is told at once.
     alerts_turn_on: Turn alerts on
     alerts_turn_off: Turn alerts off

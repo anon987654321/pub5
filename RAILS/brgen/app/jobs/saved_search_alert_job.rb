@@ -21,10 +21,10 @@ class SavedSearchAlertJob < ApplicationJob
     now = Time.current
     alerted = 0
 
-    Marketplace::SavedSearch.alerting.includes(:user, :category).find_each do |saved_search|
+    Marketplace::SavedSearch.alerting.includes(:user, :category, :city).find_each do |saved_search|
       next unless saved_search.due_for_alert?(now: now)
 
-      kind, listings = saved_search.matches_for_alert
+      kind, listings = ActsAsTenant.with_tenant(saved_search.city) { saved_search.matches_for_alert }
       # No matches is not "nothing happened": last_notified_at stays put so the
       # next run still measures from the last thing the user was actually told
       # about, rather than silently swallowing listings posted in between.

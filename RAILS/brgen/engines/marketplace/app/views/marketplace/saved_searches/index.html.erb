@@ -17,9 +17,9 @@
                                   location: saved_search.location.presence) %>
       <% search_actions = capture do %>
         <%= link_to t("marketplace.run_search"), run_path, class: "feed-action feed-action--primary" %>
-        <%= button_to (saved_search.notify? ? t("marketplace.alerts_turn_off") : t("marketplace.alerts_turn_on")),
-              saved_search_path(saved_search), method: :patch, params: { notify: !saved_search.notify? },
-              class: "feed-action", aria: { pressed: saved_search.notify? } %>
+        <%= button_to (saved_search.alerts_enabled? ? t("marketplace.alerts_turn_off") : t("marketplace.alerts_turn_on")),
+              saved_search_path(saved_search), method: :patch, params: { notify: !saved_search.alerts_enabled? },
+              class: "feed-action", aria: { pressed: saved_search.alerts_enabled? } %>
         <%= button_to t("actions.delete"), saved_search_path(saved_search), method: :delete,
               data: { turbo_confirm: t("marketplace.confirm_delete_saved_search") }, class: "feed-action" %>
       <% end %>
@@ -29,7 +29,8 @@
           saved_search.query.presence || t("marketplace.any_query"),
           saved_search.category&.name,
           saved_search.location.presence,
-          (saved_search.notify? ? t("marketplace.alerts_on") : nil)
+          (saved_search.alerts_enabled? ? t("marketplace.alerts_on") : nil),
+          (t("marketplace.choose_alert_city") if saved_search.city_id.nil?)
         ].compact.join(" · "),
         actions: search_actions,
         url: run_path,

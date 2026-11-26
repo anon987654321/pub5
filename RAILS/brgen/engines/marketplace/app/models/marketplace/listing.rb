@@ -408,7 +408,7 @@ class Marketplace::Listing < ApplicationRecord
   end
 
   def alert_matching_saved_searches
-    Marketplace::SavedSearch.alerting.includes(:user, :category).find_each do |search|
+    Marketplace::SavedSearch.alerting.for_listing(self).includes(:user, :category).find_each do |search|
       next unless search.due_for_alert?
       next unless search.matches_listing?(self)
 

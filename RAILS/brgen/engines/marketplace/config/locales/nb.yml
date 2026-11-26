@@ -162,6 +162,7 @@ nb:
     move_down: "Flytt ned"
     any_query: Alle søkeord
     alerts_on: varsler på
+    choose_alert_city: Slå på varsler i denne byen for å gjenoppta varsling
     confirm_decline: Avslå dette budet? Kjøperen får beskjed med en gang.
     alerts_turn_on: Slå på varsler
     alerts_turn_off: Slå av varsler

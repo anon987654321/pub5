@@ -64,9 +64,9 @@ module Marketplace
 
     def alert_matching_saved_searches
       listed = strict_safe(:listing) || listing
-      return unless listed
+      return unless listed && active?
 
-      Marketplace::SavedSearch.alerting.includes(:user, :category).find_each do |search|
+      Marketplace::SavedSearch.alerting.for_listing(listed).includes(:user, :category).find_each do |search|
         next unless search.due_for_alert?
         next unless search.matches_listing?(listed)
 

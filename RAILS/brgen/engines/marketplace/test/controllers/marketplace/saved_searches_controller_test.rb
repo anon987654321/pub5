@@ -8,6 +8,8 @@ require "test_helper"
 class Marketplace::SavedSearchesControllerTest < ActionDispatch::IntegrationTest
   setup do
     host! "markedsplass.brgen.no"
+    Brgen::CitySeed.sync! if City.table_exists?
+    @city = City.find_by!(domain: "brgen.no")
     @buyer = User.create!(email_address: "ss_buyer_#{SecureRandom.hex(3)}@example.com", password: "secret1234")
   end
 
@@ -31,6 +33,7 @@ class Marketplace::SavedSearchesControllerTest < ActionDispatch::IntegrationTest
 
     patch marketplace.saved_search_path(search), params: { notify: true }
     assert search.reload.notify?
+    assert_equal @city.id, search.city_id
     assert_equal I18n.t("flash.marketplace.alerts_on"), flash[:notice]
 
     patch marketplace.saved_search_path(search), params: { notify: false }
@@ -39,7 +42,7 @@ class Marketplace::SavedSearchesControllerTest < ActionDispatch::IntegrationTest
 
   test "the list offers the toggle and runs the search in its place" do
     sign_in
-    search = @buyer.marketplace_saved_searches.create!(query: "sykkel", location: "Sandviken", notify: true)
+    search = @buyer.marketplace_saved_searches.create!(query: "sykkel", location: "Sandviken", notify: true, city: @city)
 
     get marketplace.saved_searches_path
 

@@ -145,6 +145,60 @@ class SavedSearchAlertJobTest < ActiveJob::TestCase
   # Create-time alerts are per-event, so a new listing that already notified
   # leaves the deal inside the interval. That is the interval test, not this one.
 
+  test "searches follow their saved city rather than the account home city" do
+    other_city = City.find_by!(domain: "oshlo.no")
+    search = ActsAsTenant.with_tenant(other_city) { saved_search(query: "sykkel") }
+    assert_equal other_city.id, search.city_id
+
+    assert_no_difference -> { @watcher.notifications.count } do
+      listing(title: "Sykkel i Bergen")
+    end
+    assert_nil search.reload.last_notified_at
+
+    assert_difference -> { @watcher.notifications.count }, 1 do
+      ActsAsTenant.with_tenant(other_city) { listing(title: "Sykkel i Oslo") }
+    end
+  end
+
+  test "the periodic job uses the saved city even outside a request" do
+    other_city = City.find_by!(domain: "oshlo.no")
+    search = ActsAsTenant.with_tenant(other_city) { saved_search(query: "sykkel", notify: false) }
+    listing(title: "Sykkel i Bergen")
+    search.update!(notify: true)
+
+    assert_no_difference -> { @watcher.notifications.count } do
+      ActsAsTenant.without_tenant { SavedSearchAlertJob.perform_now }
+    end
+
+    search.update!(notify: false)
+    ActsAsTenant.with_tenant(other_city) { listing(title: "Sykkel i Oslo") }
+    search.update!(notify: true)
+    assert_difference -> { @watcher.notifications.count }, 1 do
+      ActsAsTenant.without_tenant { SavedSearchAlertJob.perform_now }
+    end
+  end
+
+  test "unassigned legacy searches stay quiet until a city is chosen" do
+    search = saved_search(query: "sykkel")
+    search.update_columns(city_id: nil)
+    assert_no_difference -> { @watcher.notifications.count } do
+      listing(title: "Sykkel")
+      SavedSearchAlertJob.perform_now
+    end
+    assert_nil search.reload.last_notified_at
+  end
+
+  test "a future or expired deal does not trigger an immediate alert" do
+    bike = listing(title: "Sykkel", created_at: 2.days.ago)
+    search = saved_search(query: "sykkel")
+    assert_no_difference -> { @watcher.notifications.count } do
+      Marketplace::Deal.create!(listing: bike, headline: "Tomorrow", starts_at: 1.day.from_now)
+      Marketplace::Deal.create!(listing: bike, headline: "Yesterday", ends_at: 1.day.ago)
+      SavedSearchAlertJob.perform_now
+    end
+    assert_nil search.reload.last_notified_at
+  end
+
   test "nothing matching leaves the watermark alone" do
     search = saved_search(query: "kajakk")
     listing(title: "Terrengsykkel til salgs", description: "Pent brukt")
