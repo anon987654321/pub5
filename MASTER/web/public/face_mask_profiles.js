@@ -1,158 +1,141 @@
 /* MASTER pixel-mask profile catalogue.
- * A bounded relief sampler morphs the existing face point field; no second renderer,
+ * A bounded implicit surface sampler morphs the existing face point field; no second renderer,
  * bitmap, connected mesh, or downloaded asset is introduced. Cultural labels
  * identify reference families, not claims of ceremonial authenticity.
  */
 (() => {
   "use strict";
 
+  // Original concept studies, ordered as the approved 4 × 4 sheet, then five individual studies.
   const PROFILES = Object.freeze([
-    { id: "iatmul-river", name: "MASTER — River", family: "Original Sepik study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.405, h: 0.56, jaw: 0.24, crown: 0.29, asym: 0.018, brow: 0.34, nose: 0.32, mouth: 0.2 },
-    { id: "iatmul-concentric", name: "MASTER — Orbit", family: "Original Iatmul study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.445, h: 0.5, jaw: 0.26, crown: 0.31, asym: 0.024, brow: 0.37, nose: 0.28, mouth: 0.21 },
-    { id: "sepik-split", name: "MASTER — Rift", family: "Original Sepik study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.335, h: 0.61, jaw: 0.18, crown: 0.27, asym: 0.044, brow: 0.3, nose: 0.36, mouth: 0.18 },
-    { id: "tatanua-crest", name: "MASTER — Crest", family: "Original New Ireland study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.4, h: 0.59, jaw: 0.21, crown: 0.34, asym: 0.03, brow: 0.36, nose: 0.29, mouth: 0.19 },
-    { id: "elema-hollow", name: "MASTER — Hollow", family: "Original Gulf study", note: "Original carved particle volume; not a museum scan", outer: "ring", w: 0.385, h: 0.54, jaw: 0.28, crown: 0.28, asym: 0.036, brow: 0.33, nose: 0.26, mouth: 0.22 }
-  ]);
+    { id: "folded-seed", name: "Folded seed", solid: [[0,0.06,0,0.48,0.48,0.39,-0.32],[0.05,-0.24,0.05,0.32,0.27,0.27,0.2]], voids: [[-0.19,0.08,0.24,0.21,0.17,0.62,-0.3],[0.21,0.13,0.21,0.17,0.24,0.55,0.5],[0.04,-0.27,0.32,0.13,0.09,0.18]] },
+    { id: "block-portal", name: "Block portal", solid: [[0,0.05,0,0.43,0.49,0.35,0,5],[0,-0.23,0.04,0.32,0.26,0.28,0,4]], voids: [[-0.19,0.1,0.22,0.15,0.22,0.55,0,4],[0.19,0.1,0.22,0.15,0.22,0.55,0,4],[0,-0.27,0.22,0.17,0.1,0.5,0,4]] },
+    { id: "trefoil", name: "Trefoil", solid: [[-0.22,0.1,0,0.29,0.39,0.31,-0.45],[0.22,0.06,0.02,0.3,0.33,0.35,0.45],[0,-0.25,0.03,0.3,0.27,0.28]], voids: [[-0.2,0.15,0.22,0.15,0.2,0.51,-0.4],[0.23,0.09,0.23,0.16,0.14,0.45,0.4],[0,-0.25,0.23,0.15,0.09,0.43]] },
+    { id: "stacked-fins", name: "Stacked fins", solid: [[0,0.3,0,0.51,0.15,0.31,-0.12],[0,0.02,0,0.43,0.15,0.34,0.16],[0.05,-0.28,0,0.34,0.18,0.26,-0.12],[0,0,-0.08,0.14,0.47,0.2]], voids: [[-0.22,0.12,0.18,0.2,0.1,0.35],[0.21,-0.12,0.15,0.17,0.1,0.35]] },
+    { id: "paired-lobes", name: "Paired lobes", solid: [[-0.23,0.05,0,0.32,0.44,0.36,-0.28],[0.22,0.08,0.02,0.32,0.42,0.34,0.28],[0,-0.27,0.02,0.26,0.25,0.28]], voids: [[-0.23,0.02,0.23,0.17,0.26,0.53,-0.25],[0.22,0.08,0.23,0.17,0.25,0.52,0.25],[0,-0.28,0.25,0.11,0.09,0.35]] },
+    { id: "yoke", name: "Yoke", solid: [[-0.26,0.19,0,0.32,0.25,0.27,-0.38],[0.25,0.18,0,0.32,0.25,0.3,0.38],[0,-0.14,0,0.24,0.4,0.29]], voids: [[-0.22,0.19,0.24,0.19,0.12,0.4,-0.3],[0.24,0.18,0.24,0.19,0.13,0.44,0.3],[0,-0.18,0.28,0.14,0.19,0.42]] },
+    { id: "porous-orb", name: "Porous orb", solid: [[0,0,0,0.47,0.48,0.45],[0.1,0.16,-0.03,0.38,0.37,0.39]], voids: [[-0.21,0.16,0.24,0.17,0.19,0.51,-0.4],[0.22,0.12,0.25,0.16,0.21,0.5,0.2],[0.03,-0.23,0.23,0.2,0.14,0.49],[0.05,0.39,-0.12,0.12,0.13,0.29],[-0.35,-0.2,0,0.12,0.13,0.24]] },
+    { id: "crescent", name: "Crescent", solid: [[0,0.1,0,0.49,0.43,0.35,-0.38],[0.09,-0.29,0,0.26,0.22,0.28,0.55]], voids: [[-0.09,0.04,0.11,0.36,0.29,0.55,-0.42],[0.02,-0.19,0.21,0.15,0.13,0.33]] },
+    { id: "fragment", name: "Fragment", solid: [[-0.22,0.1,0,0.27,0.31,0.29,-0.3],[0.21,0.12,0.01,0.25,0.32,0.27,0.4],[0.01,-0.22,0.02,0.22,0.23,0.25]], voids: [[-0.22,0.1,0.18,0.15,0.14,0.43],[0.21,0.14,0.17,0.14,0.15,0.43],[0.01,-0.22,0.2,0.12,0.09,0.35]] },
+    { id: "twin-bulb", name: "Twin bulb", solid: [[-0.22,0.1,0,0.3,0.37,0.35,-0.34],[0.21,0.12,0,0.33,0.36,0.37,0.34],[0,-0.22,0,0.29,0.24,0.25]], voids: [[-0.18,0.07,0.27,0.13,0.16,0.42],[0.22,0.14,0.27,0.16,0.16,0.43],[0.02,-0.22,0.24,0.12,0.08,0.32]] },
+    { id: "branching", name: "Branching", solid: [[0,0,0,0.23,0.42,0.3],[-0.27,0.19,0,0.29,0.13,0.19,-0.55],[0.26,0.21,0,0.29,0.13,0.19,0.55],[-0.23,-0.22,0,0.28,0.13,0.2,0.5],[0.23,-0.22,0,0.28,0.13,0.2,-0.5]], voids: [[-0.14,0.07,0.18,0.1,0.15,0.38],[0.15,0.08,0.18,0.1,0.15,0.38]] },
+    { id: "asymmetric-pocket", name: "Asymmetric pocket", solid: [[-0.13,0.05,0,0.4,0.43,0.36,-0.35],[0.23,-0.08,0,0.3,0.34,0.32,0.4]], voids: [[-0.16,0.13,0.23,0.24,0.21,0.54,-0.4],[0.27,-0.08,0.26,0.13,0.14,0.42,0.35]] },
+    { id: "layered-cap", name: "Layered cap", solid: [[0,0.3,0,0.47,0.16,0.35,-0.08],[-0.1,0.02,0,0.43,0.16,0.29,0.2],[0.09,-0.24,0,0.35,0.17,0.27,-0.22],[0,0,-0.06,0.17,0.43,0.18]], voids: [[-0.16,0.14,0.19,0.17,0.1,0.35],[0.18,-0.08,0.18,0.17,0.1,0.37]] },
+    { id: "double-ring", name: "Double ring", solid: [[-0.22,0.06,0,0.33,0.42,0.35,-0.35],[0.22,0.06,0.03,0.34,0.42,0.35,0.35],[0.02,-0.21,0,0.26,0.26,0.29]], voids: [[-0.24,0.09,0.12,0.2,0.24,0.6,-0.3],[0.23,0.08,0.13,0.19,0.25,0.6,0.3],[0.02,-0.24,0.23,0.12,0.1,0.41]] },
+    { id: "three-void-shell", name: "Three-void shell", solid: [[0,0.05,0,0.48,0.48,0.41,-0.35],[0.09,-0.2,0.03,0.34,0.28,0.31,0.4]], voids: [[-0.18,0.19,0.16,0.23,0.19,0.58,-0.35],[0.22,0.03,0.17,0.18,0.22,0.58,0.4],[-0.02,-0.24,0.2,0.17,0.12,0.49,-0.25]] },
+    { id: "dispersed", name: "Dispersed", solid: [[-0.21,0.07,0,0.27,0.32,0.28,-0.3],[0.19,0.1,0.01,0.27,0.32,0.28,0.3],[0,-0.22,0,0.22,0.22,0.23]], voids: [[-0.2,0.09,0.19,0.17,0.16,0.46],[0.19,0.11,0.19,0.17,0.16,0.46],[0,-0.22,0.2,0.12,0.09,0.36]] },
+    { id: "round-knot", name: "Round knot", solid: [[-0.23,0.02,0,0.3,0.4,0.36,-0.55],[0.21,0.15,0,0.34,0.38,0.34,0.55],[0.08,-0.22,0.02,0.31,0.28,0.29,0.45]], voids: [[-0.22,0.03,0.19,0.17,0.22,0.55,-0.45],[0.23,0.17,0.19,0.2,0.19,0.53,0.45],[0.1,-0.25,0.23,0.16,0.1,0.47,0.25]] },
+    { id: "oblique-hollow", name: "Oblique hollow", solid: [[-0.08,0.09,0,0.46,0.44,0.4,-0.45],[0.2,-0.16,0.03,0.29,0.31,0.32,0.38]], voids: [[-0.16,0.17,0.18,0.28,0.25,0.59,-0.45],[0.24,-0.15,0.29,0.1,0.09,0.35]] },
+    { id: "open-ribbon", name: "Open ribbon", solid: [[-0.24,0.06,0,0.31,0.39,0.28,-0.4],[0.19,0.22,0.01,0.36,0.27,0.3,0.45],[0.1,-0.25,0,0.3,0.23,0.27,-0.45]], voids: [[-0.24,0.06,0.17,0.2,0.24,0.52,-0.4],[0.21,0.22,0.18,0.24,0.15,0.5,0.45],[0.06,-0.25,0.19,0.21,0.12,0.46,-0.45]] },
+    { id: "eroded-monolith", name: "Eroded monolith", solid: [[-0.07,0.02,0,0.43,0.51,0.41,-0.3,3],[0.24,-0.04,-0.04,0.27,0.39,0.35,0.2,3]], voids: [[-0.2,0.12,0.23,0.24,0.17,0.54,-0.4],[0.23,0.04,0.27,0.13,0.23,0.42,0.2],[0.03,-0.28,0.28,0.18,0.15,0.44],[0.09,0.34,0.24,0.11,0.12,0.32]] },
+    { id: "bifurcate", name: "Bifurcate", solid: [[-0.22,0.16,0,0.32,0.32,0.29,-0.35],[0.23,0.16,0,0.34,0.33,0.32,0.35],[0.02,-0.23,0.03,0.28,0.27,0.31]], voids: [[-0.22,0.13,0.18,0.21,0.19,0.54,-0.35],[0.23,0.15,0.18,0.23,0.2,0.54,0.35],[0.03,-0.27,0.25,0.14,0.08,0.38]] }
+  ].map(profile => Object.freeze({ ...profile, family: "Original biomorphic sculpture", note: "Operator-approved concept; procedural interpretation, not a scan" })));
 
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, Number(v) || 0));
-  const beam = (key, center, size, axis = "x") => ({ key, primitive: "beam", center, size, axis });
-  function descriptor(profile) {
-    const w = clamp(profile.w, .22, .48);
-    const h = clamp(profile.h, .30, .62);
-    const jaw = clamp(profile.jaw, .10, .36);
-    const asym = clamp(profile.asym, 0, .15);
-    const mouth = clamp(profile.mouth ?? Math.min(.36, Math.max(.18, profile.crown * .62)), .14, .36);
-    const eyeY = .15 - RELIEF[profile.id][2] * .25;
-    const cheekPart = profile.inner
-      ? { key: "inner-face", primitive: "ring", center: [asym * .2, -.02, .12], size: [w * .62, h * .66, .06] }
-      : profile.lattice
-        ? beam("lattice", [asym, -.13, .06], [.06, .20, .06], "y")
-        : beam("cheeks", [asym, -.13, .06], [Math.max(.18, jaw * 1.55), .06, .06]);
-    // The eight pieces use the original shared particle field. The outline,
-    // eye wells, bridge, cheeks, mouth and jaw keep the result readable as a
-    // human face without copying a source mask's surface or ceremonial motifs.
-    const parts = [
-      { key: "outer", primitive: profile.outer || "ring", center: [asym * .25, 0, .06], size: [w, h, .08] },
-      beam("brow", [asym, .25, .08], [profile.brow, .06, .06]),
-      { key: "left-eye", primitive: "ring", center: [-.18 - asym, eyeY, .13], size: [.105, .060, .06] },
-      { key: "right-eye", primitive: "ring", center: [.18 + asym, eyeY, .13], size: [.105, .060, .06] },
-      beam("nose", [asym * .4, -.06, .16], [.06, profile.nose, .06], "y"),
-      cheekPart,
-      beam("mouth", [asym, -.225, .14], [mouth, .06, .06]),
-      beam("jaw", [asym, -.31, .06], [Math.max(.16, jaw * 1.65), .06, .06])
-    ];
-    const cheekKey = profile.inner ? "inner-face" : profile.lattice ? "lattice" : "cheeks";
-    return {
-      kind: "custom",
-      maskProfile: profile.id,
-      label: profile.name,
-      confidence: 1,
-      sequence: ["outer", "brow", "left-eye", "right-eye", "nose", cheekKey, "mouth", "jaw"],
-      parts
-    };
-  }
-
-
-  // Original geometric reliefs, not photographs or traced ceremonial designs.
-  // Profiles vary independently in silhouette, eye voids, cheek fullness,
-  // bridge depth and mouth proportions. All coordinates remain bounded.
-  const RELIEF = Object.freeze({
-    "iatmul-river": [0.25, 2.15, 0.4, 0.185, 0.124, 0.09, 0.13, 0.055],
-    "iatmul-concentric": [0.14, 2.55, 0.34, 0.195, 0.132, 0.093, 0.1, 0.065],
-    "sepik-split": [0.35, 1.85, 0.43, 0.145, 0.106, 0.091, 0.16, 0.045],
-    "tatanua-crest": [0.3, 2.75, 0.56, 0.18, 0.126, 0.088, 0.11, 0.05],
-    "elema-hollow": [0.1, 1.95, 0.28, 0.17, 0.13, 0.105, 0.09, 0.045]
-  });
   const randomUnit = (index, salt) => {
     let n = Math.imul((index + 1) ^ Math.imul(salt + 1, 0x9e3779b1), 0x85ebca6b);
     n = Math.imul(n ^ (n >>> 13), 0xc2b2ae35);
     return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
   };
-  const gaussian = (v, width) => Math.exp(-Math.pow(v / width, 2));
-  function mouthGeometry(id) {
-    const p = PROFILES[profileIndex(id)];
-    const shape = RELIEF[id];
-    if (!p || !shape) return null;
-    const forehead = shape[2], cheeks = shape[7];
-    return { y: -.26 - forehead * .09, width: (p.mouth ?? p.crown * .62) * .56,
-      height: .035 + cheeks * .11 };
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const descriptor = profile => ({
+    kind: "custom", maskProfile: profile.id, label: profile.name, confidence: 1,
+    sequence: profile.solid.map((_, i) => "mass-" + i),
+    parts: profile.solid.map(([x,y,z,a,b,c], i) => ({
+      key: "mass-" + i, primitive: "sphere", center: [x,y,z],
+      size: [a,b,c].map(v => clamp(v,.06,.62))
+    }))
+  });
+
+  // Superellipsoid fields and smooth CSG define a single continuous sculpture.
+  // Cavities are spatial subtraction, never dark sprites or a projected stencil.
+  const smoothMin = (a,b,k) => {
+    const h = clamp(.5 + .5 * (b-a)/k,0,1);
+    return b*(1-h)+a*h-k*h*(1-h);
+  };
+  function primitive([cx,cy,cz,a,b,c,angle=0,power=2]) {
+    const co = Math.cos(angle), si = Math.sin(angle), scale = Math.min(a,b,c);
+    return (x,y,z) => {
+      x -= cx; y -= cy; z -= cz;
+      const u = (co*x+si*y)/a, v = (-si*x+co*y)/b, w = z/c;
+      return ((Math.abs(u)**power+Math.abs(v)**power+Math.abs(w)**power)**(1/power)-1)*scale;
+    };
+  }
+  const fields = new Map(PROFILES.map(profile => {
+    const solids = profile.solid.map(primitive), voids = profile.voids.map(primitive);
+    return [profile.id, (x,y,z) => {
+      let d = solids[0](x,y,z);
+      for (let i=1;i<solids.length;i++) d = smoothMin(d,solids[i](x,y,z),.085);
+      for (const cut of voids) d = -smoothMin(-d,cut(x,y,z),.035);
+      return d;
+    }];
+  }));
+
+  function normalAt(id,x,y,z) {
+    const field = fields.get(id);
+    if (!field) return [0,0,1];
+    const h = .002;
+    const n = [field(x+h,y,z)-field(x-h,y,z),field(x,y+h,z)-field(x,y-h,z),field(x,y,z+h)-field(x,y,z-h)];
+    const len = Math.hypot(...n);
+    return len > 1e-10 ? n.map(v=>v/len) : [0,0,1];
   }
 
-  // An implicit volume defines both the sampling field and relief normals.
-  // Eye and mouth apertures subtract matter through the entire thickness.
-  function section(p, shape, y) {
-    const [taper, exponent, forehead] = shape;
-    const v = Math.max(-.999, Math.min(.999, y / p.h));
-    const outline = Math.pow(Math.max(.0001, 1 - Math.pow(Math.abs(v), exponent)), 1 / exponent);
-    const erosion = 1 + .024 * Math.sin(v * 37) + .013 * Math.cos(v * 71);
-    return { width: p.w * (1 + forehead * .24 * Math.max(0, v)) * outline *
-      (1 - taper * Math.max(0, -v)) * erosion, center: p.asym * v * .45, outline };
-  }
-
-  function volumeAt(p, shape, mouth, x, y) {
-    const [, , forehead, eyeX, eyeW, eyeH, noseDepth, cheeks] = shape;
-    const slice = section(p, shape, y);
-    const edge = Math.abs((x - slice.center) / slice.width);
-    const eyeY = .15 - forehead * .25;
-    const ax = Math.abs(x);
-    const eye = ((ax - eyeX) / eyeW) ** 2 + ((y - eyeY) / eyeH) ** 2;
-    const smile = .018 * Math.min(1, (x / mouth.width) ** 2);
-    const lip = (x / mouth.width) ** 2 + ((y - mouth.y - smile) / mouth.height) ** 2;
-    const curvature = Math.sqrt(Math.max(0, 1 - edge * edge));
-    const brow = gaussian(y - eyeY - eyeH * 1.35, .045) * gaussian(ax - eyeX, .15);
-    const bridge = gaussian(x, .045 + noseDepth * .12) * gaussian(y + .025, p.nose * .64);
-    const cheek = gaussian(ax - p.w * .60, .11) * gaussian(y + .12, .19);
-    const rim = gaussian(eye - 1.22, .65) + gaussian(lip - 1.24, .78);
-    const front = .025 + .21 * curvature + noseDepth * bridge + .026 * brow + cheeks * cheek +
-      .014 * Math.min(1, rim);
-    const rear = -.43 * curvature * slice.outline;
-    const grain = .5 + .5 * Math.sin(x * 67 + Math.cos(y * 33) * 2) * Math.cos(y * 53 - x * 11);
-    const density = Math.min(1, .27 + .20 * edge + .18 * bridge + .13 * rim + .16 * grain);
-    return { front, rear, density, inside: edge <= 1 && eye >= 1 && lip >= 1 };
-  }
-
-  function normalAt(id, x, y, z = 0) {
-    const p = PROFILES[profileIndex(id)], shape = RELIEF[id];
-    if (!p || !shape) return [0, 0, 1];
-    const mouth = mouthGeometry(id), surface = z < 0 ? "rear" : "front";
-    const h = .006;
-    const height = (a, b) => volumeAt(p, shape, mouth, a, b)[surface];
-    const dx = (height(x + h, y) - height(x - h, y)) / (2 * h);
-    const dy = (height(x, y + h) - height(x, y - h)) / (2 * h);
-    const sign = z < 0 ? -1 : 1;
-    const length = Math.hypot(dx, dy, 1);
-    return [-sign * dx / length, -sign * dy / length, sign / length];
-  }
-
-  function sample(id, index) {
-    const p = PROFILES[profileIndex(id)], shape = RELIEF[id];
-    if (!p || !shape) return null;
-    const mouth = mouthGeometry(id);
-    const contract = window.MASTER_FACE_CONTRACT?.sculpture || {};
-    const coreFraction = clamp(contract.interior_fraction ?? .40, .20, .65);
-    const rearFraction = clamp(contract.rear_fraction ?? .24, .15, .30);
-    const cohort = randomUnit(index, 195);
-    const frac = (n) => n - Math.floor(n);
-    for (let attempt = 0; attempt < 64; attempt += 1) {
-      const salt = attempt * 5;
-      const v = frac((index + .5) * .7548776662466927 + attempt * .5698402909980532 +
-        .026 * randomUnit(index, salt)) * 2 - 1;
-      const u = frac((index + .5) * .5698402909980532 + attempt * .7548776662466927 +
-        .026 * randomUnit(index, salt + 1)) * 2 - 1;
-      const y = v * p.h;
-      const slice = section(p, shape, y);
-      const x = slice.center + u * slice.width;
-      const field = volumeAt(p, shape, mouth, x, y);
-      if (!field.inside || randomUnit(index, salt + 2) > field.density) continue;
-      const t = cohort < rearFraction ? .025 + .045 * randomUnit(index, salt + 3)
-        : cohort < rearFraction + coreFraction ? .15 + .70 * randomUnit(index, salt + 3)
-        : .94 + .06 * randomUnit(index, salt + 3);
-      return [x, y, field.rear + (field.front - field.rear) * t];
+  // Marching tetrahedra build an invisible area table once per selected form.
+  // Only sampled points reach WebGL; triangles never become a rendered mesh.
+  const corners = [[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+  const tetrahedra = [[0,5,1,6],[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6]];
+  let cachedId, cachedSurface;
+  function surface(id) {
+    if (cachedId === id) return cachedSurface;
+    const field = fields.get(id);
+    if (!field) return null;
+    const n = 30, side = n+1, extent = .72, step = 2*extent/n;
+    const index = (x,y,z) => (z*side+y)*side+x;
+    const values = new Float32Array(side**3);
+    for(let z=0;z<=n;z++) for(let y=0;y<=n;y++) for(let x=0;x<=n;x++)
+      values[index(x,y,z)] = field(x*step-extent,y*step-extent,z*step-extent);
+    const triangles = [], cumulative = [];
+    let total=0;
+    function triangle(a,b,c) {
+      const u=b.map((v,i)=>v-a[i]), v=c.map((v,i)=>v-a[i]);
+      const area=.5*Math.hypot(u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]);
+      if(area<1e-10) return;
+      total+=area; triangles.push([a,b,c]); cumulative.push(total);
     }
-    const y = p.h * (.86 + .08 * randomUnit(index, 193));
-    const slice = section(p, shape, y);
-    return [slice.center + slice.width * (randomUnit(index, 194) - .5), y, .025];
+    for(let z=0;z<n;z++) for(let y=0;y<n;y++) for(let x=0;x<n;x++) {
+      const ds=corners.map(([a,b,c])=>values[index(x+a,y+b,z+c)]);
+      if(ds.every(v=>v>=0)||ds.every(v=>v<0)) continue;
+      const ps=corners.map(([a,b,c])=>[(x+a)*step-extent,(y+b)*step-extent,(z+c)*step-extent]);
+      const edge=(a,b)=>ps[a].map((v,i)=>v+(ps[b][i]-v)*ds[a]/(ds[a]-ds[b]));
+      for(const tet of tetrahedra) {
+        const inside=tet.filter(i=>ds[i]<0), outside=tet.filter(i=>ds[i]>=0);
+        if(!inside.length||!outside.length) continue;
+        if(inside.length===1||outside.length===1) {
+          const single=inside.length===1?inside:outside, rest=inside.length===1?outside:inside;
+          triangle(...rest.map(i=>edge(single[0],i)));
+        } else {
+          const [a,b]=inside,[c,d]=outside;
+          const p=edge(a,c),q=edge(a,d),r=edge(b,c),s=edge(b,d);
+          triangle(p,q,r); triangle(q,s,r);
+        }
+      }
+    }
+    cachedId=id; cachedSurface={triangles,cumulative,total};
+    return cachedSurface;
   }
+
+  function sample(id,index) {
+    const mesh=surface(id);
+    if(!mesh?.triangles.length) return null;
+    const target=randomUnit(index,1)*mesh.total;
+    let lo=0,hi=mesh.cumulative.length-1;
+    while(lo<hi) { const mid=(lo+hi)>>>1; if(mesh.cumulative[mid]<target) lo=mid+1; else hi=mid; }
+    const [a,b,c]=mesh.triangles[lo], u=Math.sqrt(randomUnit(index,2)), v=randomUnit(index,3);
+    return a.map((p,i)=>p*(1-u)+b[i]*u*(1-v)+c[i]*u*v);
+  }
+
+  // These nonhuman forms have no mandatory anatomical mouth.
+  function mouthGeometry() { return null; }
 
   function hash(value) {
     let h = 2166136261;
