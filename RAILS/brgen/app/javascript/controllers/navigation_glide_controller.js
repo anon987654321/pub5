@@ -8,14 +8,28 @@ import { Controller } from "@hotwired/stimulus"
 //   wheel   a vertical wheel scrolls the run sideways while it can still move
 //           that way; at either end the event is left alone and the page scrolls
 //   drag    press and pull; a move under DRAG_THRESHOLD is still a click, so a
-//           link opens, and a real drag swallows the click it would end in
+//           link opens, and a real drag swallows the click it would end in.
+//           Let go mid-pull and the run carries on and settles (momentum)
 //   glide   resting the pointer in the band at either faded edge slides the run
-//           toward that side, faster the deeper into the band, stopping at the end
+//           toward that side, faster the deeper into the band, stopping at the end;
+//           the speed eases in and out rather than jumping, so the strip follows
+//           the pointer instead of lurching
+//
+// Reduced motion keeps wheel and drag, and drops momentum and glide: the run
+// moves exactly as far as the hand does and no further.
 //
 // It also marks the ends (data-at-start, data-at-end) so the stylesheet can drop
 // the fade on a side that has nothing more to show.
+//
+// Native overflow scrolling, not Swiper: touch keeps the platform's own
+// momentum and scroll-snap, the strip still scrolls with JS off, and the CSS
+// fade reads scrollLeft-driven end markers rather than a transform.
 const DRAG_THRESHOLD = 6
 const GLIDE_SPEED = 12
+const GLIDE_EASE = 0.15
+const FRICTION = 0.92
+const REST_SPEED = 0.3
+const MAX_FLING = 40
 
 export default class extends Controller {
   static values = { edgeBand: { type: Number, default: 72 } }
@@ -23,6 +37,8 @@ export default class extends Controller {
   connect() {
     this.motion = window.matchMedia("(prefers-reduced-motion: reduce)")
     this.glideSpeed = 0
+    this.glideTarget = 0
+    this.velocity = 0
     this.frame = null
     this.drag = null
     this.swallowClick = false
@@ -35,7 +51,8 @@ export default class extends Controller {
       ["pointermove", (event) => this.pointerMove(event)],
       ["pointerup", (event) => this.pointerUp(event)],
       ["pointercancel", (event) => this.pointerUp(event)],
-      ["pointerleave", () => this.stopGlide()],
+      // Ease the edge glide out; a fling already in flight keeps settling.
+      ["pointerleave", () => { this.glideTarget = 0 }],
       ["click", (event) => this.click(event), { capture: true }],
       ["dragstart", (event) => event.preventDefault()],
       ["focusin", (event) => this.reveal(event.target)]
@@ -75,13 +92,16 @@ export default class extends Controller {
     if (delta === 0 || !this.canMove(delta)) return
 
     event.preventDefault()
+    this.stopGlide()
     this.element.scrollBy({ left: delta, behavior: "auto" })
   }
 
   pointerDown(event) {
     if (event.pointerType !== "mouse" || event.button !== 0 || this.room <= 1) return
 
-    this.drag = { x: event.clientX, left: this.element.scrollLeft, moved: false, id: event.pointerId }
+    this.stopGlide()
+    this.drag = { x: event.clientX, left: this.element.scrollLeft, moved: false, id: event.pointerId,
+                  lastX: event.clientX, lastT: event.timeStamp, velocity: 0 }
   }
 
   pointerMove(event) {
@@ -100,17 +120,34 @@ export default class extends Controller {
       this.element.toggleAttribute("data-moving", true)
     }
     this.element.scrollLeft = this.drag.left - distance
+
+    // Pixels per 16ms frame, smoothed, so the release speed is the hand's
+    // recent speed rather than the last event's jitter.
+    const elapsed = Math.max(1, event.timeStamp - this.drag.lastT)
+    const sample = ((this.drag.lastX - event.clientX) / elapsed) * 16
+    this.drag.velocity = this.drag.velocity * 0.6 + sample * 0.4
+    this.drag.lastX = event.clientX
+    this.drag.lastT = event.timeStamp
   }
 
   pointerUp(event) {
     if (!this.drag) return
 
-    if (this.drag.moved) {
-      this.swallowClick = true
-      if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId)
-      this.element.toggleAttribute("data-moving", false)
-    }
+    const drag = this.drag
     this.drag = null
+    if (!drag.moved) return
+
+    this.swallowClick = true
+    if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId)
+    // A pause before letting go means the hand stopped; nothing to carry.
+    const still = event.timeStamp - drag.lastT > 80
+    if (this.motion.matches || still || Math.abs(drag.velocity) < REST_SPEED * 4) {
+      this.element.toggleAttribute("data-moving", false)
+      return
+    }
+    // Two pointer events a millisecond apart read as a huge speed; cap it.
+    this.velocity = Math.max(-MAX_FLING, Math.min(MAX_FLING, drag.velocity))
+    if (!this.frame) this.frame = requestAnimationFrame(this.step)
   }
 
   // A drag ends on a link; the click it produces is the drag's, not a choice.
@@ -139,24 +176,37 @@ export default class extends Controller {
     if (fromStart < band) speed = -GLIDE_SPEED * (1 - fromStart / band)
     else if (fromEnd < band) speed = GLIDE_SPEED * (1 - fromEnd / band)
 
-    if (speed === 0 || !this.canMove(speed)) {
-      this.stopGlide()
-      return
-    }
+    // Leaving the band eases the run to rest rather than cutting it.
+    this.glideTarget = speed !== 0 && this.canMove(speed) ? speed : 0
+    if (this.glideTarget === 0 && this.glideSpeed === 0) return
 
-    this.glideSpeed = speed
     this.element.toggleAttribute("data-moving", true)
     if (!this.frame) this.frame = requestAnimationFrame(this.step)
   }
 
+  // One frame loop for both motions: the edge glide eases toward its target
+  // speed, and a released drag decays by FRICTION. Either one ends at rest or
+  // at an end of the run.
   step() {
     this.frame = null
-    if (this.glideSpeed === 0) return
+    let speed
+
+    if (this.velocity !== 0) {
+      this.velocity *= FRICTION
+      speed = this.velocity
+    } else {
+      this.glideSpeed += (this.glideTarget - this.glideSpeed) * GLIDE_EASE
+      speed = this.glideSpeed
+    }
+    if (Math.abs(speed) < REST_SPEED && (this.velocity !== 0 || this.glideTarget === 0)) {
+      this.stopGlide()
+      return
+    }
 
     // At least a whole pixel a frame: scrollLeft rounds, and a shallower step
     // at the inner edge of the band would round to no movement at all.
     const before = this.element.scrollLeft
-    this.element.scrollLeft = before + Math.sign(this.glideSpeed) * Math.max(1, Math.abs(this.glideSpeed))
+    this.element.scrollLeft = before + Math.sign(speed) * Math.max(1, Math.abs(speed))
     if (this.element.scrollLeft === before) {
       this.stopGlide()
       return
@@ -166,6 +216,8 @@ export default class extends Controller {
 
   stopGlide() {
     this.glideSpeed = 0
+    this.glideTarget = 0
+    this.velocity = 0
     if (this.frame) cancelAnimationFrame(this.frame)
     this.frame = null
     if (!this.drag?.moved) this.element.toggleAttribute("data-moving", false)

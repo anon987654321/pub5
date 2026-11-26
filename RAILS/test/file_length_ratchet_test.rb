@@ -236,7 +236,7 @@ class FileLengthRatchetTest < Minitest::Test
     # growth from the same feature work, measured and carried.
     "__shared/app/assets/stylesheets/_affiliate_feed_unit.scss" => 456,
     "__shared/app/assets/stylesheets/_minimal.scss" => 455,
-    "brgen/app/assets/stylesheets/_brgen_core_shell.scss" => 528,
+    "brgen/app/assets/stylesheets/_brgen_core_shell.scss" => 524,
     "brgen/app/assets/stylesheets/_brgen_feed_posts.scss" => 526,
     "brgen/app/assets/stylesheets/_brgen_marketplace.scss" => 967,
     "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 640,

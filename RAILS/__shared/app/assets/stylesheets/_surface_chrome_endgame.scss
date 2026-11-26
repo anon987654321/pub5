@@ -121,7 +121,6 @@
     #navBar.storefront-nav--bol,
     .storefront-utility--bol,
     #bottomHalf,
-    .bol-market-hero,
     .store-buybox,
     .deal-card-img,
     .listing-review-card,
@@ -152,8 +151,19 @@
       border-radius: 0;
     }
 
+    // Flat and soft (operator, 2026-11-26): beside the pill search field a
+    // square filled tab, a square hero and a square primary read as rugged.
+    // The hero is an inset panel, so it is a card; the id carries the rule
+    // past ultra_minimal's main#main-content :where(section) reset. Its
+    // overflow clips the media half to the same corners.
+    main#main-content .bol-market-hero {
+      border: 0;
+      border-radius: var(--radius-card);
+      overflow: hidden;
+    }
+
     #navBar .section {
-      border-radius: 0;
+      border-radius: var(--radius-pill);
     }
 
     #navBar .nav-search-input,
@@ -187,7 +197,7 @@
     .listing-buy-bar-cta,
     .bol-primary {
       border: 0;
-      border-radius: 0;
+      border-radius: var(--radius-pill);
     }
 
     .store-results-body > .deal-card {
@@ -299,12 +309,16 @@
   // .button-primary's fill and pill to the field surface, so "Publiser" and
   // "Kommenter" sat as grey slabs beside black pill buttons in the same row.
   $field: "input:not([type=submit], [type=button], [type=reset], [type=image])";
+  // Flat and soft (operator, 2026-11-26: "rounded smooth flat"). Still no
+  // border and no shadow; the corner is the control radius, because at 0 the
+  // 600px Nabolag select sat square between the pill composer and the pill
+  // sign-in, the one hard-cornered control on the screen.
   main#main-content :is(#{$field}, select, textarea) {
     min-block-size: var(--tap-min);
     border: 0;
     background: var(--surface);
     color: var(--text);
-    border-radius: 0;
+    border-radius: var(--radius-medium);
   }
   main#main-content :is(#{$field}, select, textarea):focus-visible {
     border: 0;

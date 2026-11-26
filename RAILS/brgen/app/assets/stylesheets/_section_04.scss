@@ -142,6 +142,43 @@
   --nav-badge-ink: #000000;
   --font: "Helvetica Neue Pro", "Helvetica Neue", Arial, sans-serif;
 }
+
+/* brgen's control geometry, on body so it holds in both themes: the light
+   root above re-includes app-root-tokens at (0,2,0), which would restate the
+   shared values over anything set on a plain :root.
+
+   The vote rail sits at the tap floor rather than app-root-tokens' 64px
+   (operator, 2026-11-26: calm sizing). A 64px disc in a 64px column gave every
+   post a loose gutter beside 18px text; 44px is still a full target, with a
+   24px arrow and the score one step above body.
+
+   --search-trigger-end is where the search glyph sits from the trailing edge.
+   Two things read it: the glyph (_brgen_core_shell) and the nav strip
+   (_brgen_navigation), which has to stop short of the whole right-hand corner.
+   The strip used to clear only the theme toggle (76.5px) while the corner held
+   the glyph and the "Logg inn" pill too (248px at 1280), so its last label ran
+   under them half faded. The base is one tap target clear of the toggle; at
+   the plain inset the two overlapped by 32px and the toggle took the taps. */
+body {
+  --vote-target: var(--tap-min);
+  --vote-icon: 24px;
+  --vote-score-size: var(--text-large);
+  --search-trigger-end: calc(var(--chrome-inset) + var(--tap-min) + var(--space-1));
+}
+
+/* From md the corner holds sign-in and the toggle side by side, so the glyph
+   clears two tap targets (clearing only the toggle put it over sign-in by
+   28px); from 1265 sign-in is the fixed 7.5rem pill. */
+@media (min-width: 768px) {
+  body:has(.chrome-auth) {
+    --search-trigger-end: calc(var(--chrome-inset) + 2 * var(--tap-min) + var(--space-1));
+  }
+}
+@media (min-width: 1265px) {
+  body:has(.chrome-auth) {
+    --search-trigger-end: calc(var(--chrome-inset) + var(--tap-min) + 7.5rem + var(--space-2) + var(--space-1));
+  }
+}
 @each $v, $c in x.$vertical-accents {
   body.vertical-#{$v} {
     --accent: #{list.nth($c, 1)};

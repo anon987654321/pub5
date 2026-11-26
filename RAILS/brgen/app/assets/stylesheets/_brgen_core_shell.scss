@@ -76,11 +76,9 @@ label { display: block; font-size: var(--text-small); color: var(--text-secondar
   /* On the band's centre line with the mark and the corner controls, which
      take their top from the bar rather than from the screen edge. */
   inset-block-start: calc(var(--chrome-inset-block) + var(--safe-top) + var(--top-band-nudge));
-  /* One tap target clear of the theme toggle, which is fixed to the same
-     corner. At the plain inset the two overlap by 32px and the toggle sits
-     higher, so it takes the taps; the brand mark's gutter prevents the same
-     swallowed tap in the opposite corner. */
-  inset-inline-end: calc(var(--chrome-inset) + var(--tap-min) + var(--space-1));
+  /* --search-trigger-end is a token in _section_04, stepped with the corner,
+     because the nav strip reads it too. */
+  inset-inline-end: var(--search-trigger-end);
   /* The brand layer, because this is the mark's peer: fixed chrome that must
      stay above the feed and the swiper both. */
   z-index: var(--z-brand);
@@ -715,15 +713,6 @@ table.lines {
 /* The label shows only where the sign-in becomes a pill, below. */
 .chrome-auth-label { display: none; }
 
-/* From md the corner holds sign-in and the toggle side by side, so the search
-   glyph clears two tap targets, not one: clearing only the toggle put it over
-   the sign-in link by 28px. */
-@media (min-width: 768px) {
-  body:has(.chrome-auth) .search_palette_trigger {
-    inset-inline-end: calc(var(--chrome-inset) + 2 * var(--tap-min) + var(--space-1));
-  }
-}
-
 /* The one black pill in the header, antigravity.google's (operator,
    2026-09-25). Fixed width, so the search glyph beside it can clear it by
    arithmetic; 7.5rem holds "Logg inn" and "Sign in" with the icon. */
@@ -741,11 +730,24 @@ table.lines {
   }
 
   .chrome-auth-label { display: inline; }
-
-  body:has(.chrome-auth) .search_palette_trigger {
-    inset-inline-end: calc(var(--chrome-inset) + var(--tap-min) + 7.5rem + var(--space-2) + var(--space-1));
-  }
 }
+
+/* Rounded, smooth, flat (operator, 2026-11-26). The consent sheet floats
+   --space-2 in from three edges, so it is a card and takes the card radius;
+   its choices take the pill every other brgen button wears. Still no border,
+   no shadow. The shared partial keeps its square for the apps whose dialect
+   is square. */
+.cookie-banner { border-radius: var(--radius-card); }
+.cookie-banner-button { border-radius: var(--radius-pill); }
+
+/* The nearby-chat tab sits flush in the bottom-right corner and stays square
+   on its two screen edges, as _nearby_chat_widget explains; its one inner
+   corner is softened so the tab reads as a control rather than a notch. While
+   the consent sheet is open the tab is hidden: it peeked 9px out from under the
+   sheet's corner, the ragged edge measured at 1280, and the sheet is the one
+   decision on screen until it is answered. */
+.nearby-chat-widget-tab { border-start-start-radius: var(--radius-medium); }
+body:has(.cookie-banner:not([hidden])) .nearby-chat-widget-tab { visibility: hidden; }
 
 /* From md the wordmark returns to the leading edge beside the nav, and the
    light/dark control returns to the opposite corner, where the base

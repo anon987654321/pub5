@@ -204,13 +204,16 @@ label.compose-action:hover { color: var(--text); }
      control on its row to clear. The md rule below restores the clearance for
      the arrangement that needs it. */
   --nav-clear: 0px;
+  --nav-clear-end: 0px;
   /* margin, not padding. Padding insets where the content *starts*; it cannot
      say where the scrolling viewport ends, so once the run overflows a 390px
      screen any link could be dragged under the fixed wordmark or the theme
      toggle: visible, faded by the mask below, and not pressable. The box itself
      stops short of both controls, so no scroll position can put a link under
-     them. */
-  margin-inline: var(--nav-clear);
+     them. The two ends clear different chrome, so they take different values:
+     the wordmark on the leading side, the whole search-and-sign-in corner on
+     the trailing one. */
+  margin-inline: var(--nav-clear) var(--nav-clear-end);
   justify-content: safe center;
   /* Same swipe contract as .feed-tabs: pan-x so Chrome on a phone does not
      wait to see if the gesture is a vertical page scroll, and overscroll that
@@ -220,19 +223,15 @@ label.compose-action:hover { color: var(--text); }
   scroll-snap-type: x proximity;
   scroll-padding-inline: var(--space-1);
   background: var(--bg);
-  /* Fades BOTH edges, and the two do different jobs.
-     Right: the "there is more, drag me" signal the operator asked for.
-     Left: the wordmark is fixed on top of this bar at --z-brand, so a link
-     scrolled to the leading edge would slide out from behind solid type; the
-     fade dissolves it into the background instead.
-     Both stops are the footprints of the chrome they sit under, not round
-     numbers: --brand-mark-inline leading, --chrome-toggle-inline trailing, so a
-     link is fully dissolved before it reaches either control, at any width.
-     The ramp FINISHES where the toggle starts, completing over the 2.5rem
-     before it; a ramp that begins there leaves a link half opaque under the sun
-     icon, and the two read as one smudge. */
-  /* On a phone both fades are edge fades — the only thing to dissolve into is
-     the screen edge, because nothing overlaps the bar any more. */
+  /* Fades BOTH edges of a contained strip (operator, 2026-11-26: the cut-off
+     "is supposed to fade out on the right side and be navigable").
+     Right: the "there is more, drag me" signal. Left: appears once the run has
+     moved off its start, so the reader sees which way the rest lies.
+     Both are edge fades at every width. The box itself now stops short of the
+     wordmark and of the whole right-hand corner (margin-inline above), so
+     there is no chrome over the bar to dissolve under — the ramp finishes
+     inside the box, 1rem before its edge, and no label is ever half opaque
+     next to the search glyph or the sign-in pill. */
   --nav-fade-lead: 0px;
   --nav-fade-stop: calc(100% - var(--space-4));
   --nav-fade-start: calc(var(--nav-fade-stop) - 2.5rem);
@@ -246,22 +245,13 @@ label.compose-action:hover { color: var(--text); }
    and the fade that remains says which way there is more. */
 .nav_swiper_bar[data-at-start] { --nav-fade-lead: 0px; }
 
-/* On a phone nothing overlaps the bar, so the fades are only about direction:
-   a leading fade appears once the run has moved off its start, and the trailing
-   one goes once it reaches its end. From md up both are restated, because there
-   they also dissolve links under the wordmark and the toggle. */
+/* Nothing overlaps the bar at any width, so the fades are only about
+   direction: a leading fade appears once the run has moved off its start, and
+   the trailing one goes once it reaches its end. */
 .nav_swiper_bar:not([data-at-start]) { --nav-fade-lead: var(--space-8); }
 .nav_swiper_bar[data-at-end] {
   --nav-fade-start: 100%;
   --nav-fade-stop: 100%;
-}
-
-@media (min-width: 768px) {
-  .nav_swiper_bar:not([data-at-start]) { --nav-fade-lead: var(--brand-mark-inline); }
-  .nav_swiper_bar[data-at-end] {
-    --nav-fade-stop: calc(100% - var(--chrome-toggle-inline));
-    --nav-fade-start: calc(var(--nav-fade-stop) - 2.5rem);
-  }
 }
 
 /* A mouse drag or edge glide moves the run a pixel at a time; snapping would
@@ -286,14 +276,19 @@ label.compose-action:hover { color: var(--text); }
 .nav_link {
   flex: 0 0 auto;
   position: relative;
-  /* Large, by order (operator, 2026-10-12: the nav bar "must be way larger").
-     The box is --nav-target tall (64px on a phone, 72px from md up) with a
-     generous inline pad; the bar swipes when eight entries outrun the screen,
-     so width is spent on legibility rather than saved. */
-  padding: var(--space-3) var(--space-5);
-  /* Big Swiss sans, bold; the red rule still marks the active entry. */
+  /* Large, by order (operator, 2026-10-12: the nav bar "must be way larger"),
+     and narrow (operator, 2026-11-26: "helvetica regular but large sized, but
+     not that wide", so the most important control fits a smaller area). The
+     box stays --nav-target tall; the width comes out of the inline pad and the
+     tracking, not the size. */
+  padding: var(--space-3) var(--space-4);
+  /* Big Swiss sans at regular weight, tracked in as large type should be
+     (SIZE_COMPENSATED_SPACING). The installed Helvetica Neue ships no regular
+     condensed cut, and NO_FAUX_TYPE forbids a synthesised one, so tracking is
+     the narrowing. The blue rule and the ink still mark the active entry. */
   font: var(--nav-text)/1 var(--font);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-normal);
+  letter-spacing: var(--tracking-tighter);
   color: var(--text-secondary);
   white-space: nowrap;
   transition: color var(--transition-fast) var(--ease-in-out),
@@ -321,7 +316,8 @@ label.compose-action:hover { color: var(--text); }
    so the rule is as wide as the word. */
 .nav_link.active {
   color: var(--text);
-  background: linear-gradient(var(--nav-rule), var(--nav-rule)) center bottom / calc(100% - var(--space-5) * 2) var(--nav-rule-w) no-repeat;
+  background: linear-gradient(var(--nav-rule), var(--nav-rule)) center bottom
+              / calc(100% - var(--space-4) * 2) var(--nav-rule-w) no-repeat;
 }
 
 /* The badge on a new surface.
@@ -357,15 +353,14 @@ label.compose-action:hover { color: var(--text); }
   letter-spacing: 0;
 }
 
-/* From md the bar shares its row with the wordmark and the toggle again, so the
-   clearances and the leading fade come back. Same values the phone rule zeroes;
-   stated once here rather than duplicated into both branches. */
+/* From md the bar shares its row with the wordmark and the corner controls
+   again, so the clearances come back. The trailing one is the search glyph's
+   own offset plus its box and one gap, so it follows the corner as the sign-in
+   control grows from an icon into the pill (_brgen_core_shell). */
 @media (min-width: 768px) {
   .nav_swiper_bar {
-    --nav-clear: max(var(--brand-mark-inline), var(--chrome-toggle-inline));
-    --nav-fade-lead: var(--brand-mark-inline);
-    --nav-fade-stop: calc(100% - var(--chrome-toggle-inline));
-    scroll-padding-inline: var(--brand-mark-inline) var(--space-1);
+    --nav-clear: var(--brand-mark-inline);
+    --nav-clear-end: calc(var(--search-trigger-end) + var(--tap-min) + var(--space-2));
   }
 
   /* The bar is --nav-target tall and shares its row with the wordmark and the
