@@ -54,6 +54,13 @@ end
 # thing as a luma-to-chroma coefficient. Mixed as sqrt(1-p^2) own + p shared,
 # which is the mix that leaves the field at unit variance.
 GRAIN_CHROMA_CORRELATION = 0.35
+# Measured on flat grey through the portrait preset: the three channel fields
+# laid 2.15 levels of independent chroma against 2.75 of luma, so grain of 2.75
+# arrived as 78% hue speckle. Dye clouds do clump coarser than silver, but they
+# carry less contrast — a scan sits nearer 45%. Attenuating each band's
+# deviation from the luma field leaves the luma grain exactly as it measures,
+# because the weighted sum of the attenuated bands is the luma field itself.
+GRAIN_CHROMA_ATTENUATION = 0.55
 # Worley, not Perlin: a Worley field is a random cell tessellation, which is
 # what a halide layer is, where Perlin is a smooth gradient field, which is what
 # a cloud is. Measured on the same construction, Worley returns kurtosis 3.50
@@ -147,12 +154,14 @@ def grain_field_statistics(field)
   [tile.avg, tile.deviate]
 end
 
+GRAIN_LUMA_WEIGHTS = [0.2126, 0.7152, 0.0722].freeze
+
 # Three unit-variance channel fields, correlated by GRAIN_CHROMA_CORRELATION, do
 # not sum to a unit-variance luma: the Rec.709 weights and the per-stock channel
 # scales decide that, and they differ per stock. Dividing the factor out is what
 # lets GRAIN_SIGMA_SCALE mean the same number of levels for Ektar and for Delta.
 def grain_luma_factor(scales)
-  weighted = [0.2126, 0.7152, 0.0722].each_with_index.map { |weight, i| weight * scales[i] }
+  weighted = GRAIN_LUMA_WEIGHTS.each_with_index.map { |weight, i| weight * scales[i] }
   cross = weighted.combination(2).sum { |a, b| a * b }
   Math.sqrt(weighted.sum { |v| v * v } + 2 * GRAIN_CHROMA_CORRELATION**2 * cross)
 end
@@ -165,6 +174,15 @@ def grain_crystals(width, height, cell, seed)
   else
     Vips::Image.perlin(width, height, cell_size: cell, seed: seed % 2_147_483_647)
   end
+end
+
+# Pull every band toward the luma field. The weighted sum of the result is the
+# weighted sum of the input, so luma grain measures the same before and after.
+def attenuate_chroma(bands)
+  return bands if GRAIN_CHROMA_ATTENUATION >= 1.0
+
+  luma = bands.each_with_index.map { |band, i| band * GRAIN_LUMA_WEIGHTS[i] }.reduce(:+)
+  bands.map { |band| luma + (band - luma).linear([GRAIN_CHROMA_ATTENUATION], [0]) }
 end
 
 def grain(image, iso = 400, stock = :kodak_portra, intensity = 0.4)
@@ -188,6 +206,7 @@ def grain(image, iso = 400, stock = :kodak_portra, intensity = 0.4)
                       postpro_seed(100 + ci))
     (own * mix + shared * GRAIN_CHROMA_CORRELATION).linear([peak * chan_scale], [0])
   end
+  bands = attenuate_chroma(bands)
 
   safe_cast((linear + Vips::Image.bandjoin(bands) * envelope).colourspace("srgb"))
 rescue StandardError => e
