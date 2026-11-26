@@ -505,3 +505,68 @@ entries:
     newsyslog(8)), on the box or at man.openbsd.org for the running release. A
     change whose commit cannot name the guide section or man page it followed
     is not ready.
+- key: operator_fix_evidence_and_delivery
+  name: /fix repairs by evidence, in bounded proven batches
+  description: Operator decision 2026-11-26 - a named repair writes by default; every evidence stream reports truthfully
+  type: project
+  body: |-
+    A named /fix is write-enabled unless --dry-run or --read-only says otherwise.
+    It has one owner per stage: deterministic lexical repair, semantic and
+    conceptual assessment, rendered review where applicable, proof, and
+    delivery. No verifier may invoke another complete /fix. Each applicable
+    stream reports PASS, FAIL, INCONCLUSIVE or NOT_APPLICABLE; missing
+    provider, host, browser, screenshot or timeout is never PASS. Progress
+    names the target, stage, bounded work and current evidence. Delivery is a
+    coherent verified batch: commit after focused proof, push after a safe
+    fast-forward or rebase, and never claim an unmeasured surface is complete.
+- key: operator_brgen_verticals_are_distinct_products
+  name: brgen verticals share foundations, not a costume
+  description: Operator decision 2026-11-26 - city products retain their task-specific hierarchy
+  type: project
+  body: |-
+    brgen shares typography, tokens, responsive rhythm, accessible controls and
+    honest state across verticals. Each vertical remains native to its job:
+    dating puts people, consent and safety first; marketplace puts item,
+    condition, price, place and fulfillment first; messenger puts conversation
+    first; playlist puts the current track, queue and playback first; events
+    put time and place first. Do not force a dashboard, card grid or decorative
+    animation vocabulary across them. A vertical's primary task must remain
+    visible at narrow viewports without hiding essential information.
+- key: operator_brgen_messenger_continuity
+  name: brgen messenger is a calm continuity surface
+  description: Operator decision 2026-11-26 - messages and truthful state outrank chrome
+  type: project
+  body: |-
+    Messenger gives the active conversation its space. Consecutive turns group
+    naturally; scroll position is preserved while reading history; new-message,
+    sending, sent, failed and retry states are explicit. The composer is always
+    reachable and predictable. Attachments expose preview, progress, cancel and
+    retry. Context from a listing, event or match is small, factual and pinned,
+    never advertising. Reporting, blocking, muting and privacy choices are
+    accessible contextual actions, not buried settings. Motion and colour carry
+    state only; they never compete with the conversation.
+- key: operator_master_operator_surfaces
+  name: MASTER web and CLI are focused operator instruments
+  description: Operator decision 2026-11-26 - conversation web and dmesg CLI share truthful state, not layout
+  type: project
+  body: |-
+    MASTER web is one zoom-safe conversation plane with one reachable composer,
+    restrained state presence and explicit connecting, thinking, streaming,
+    interrupted, retrying and completed states. The CLI reports target, phase,
+    bounded progress, evidence, change, failure and next action; spinners are
+    never evidence. Both surfaces reserve decoration for meaning, keep reduced
+    motion usable, and do not present a skipped or unavailable measurement as
+    success.
+- key: operator_studio_and_biz_source_first
+  name: STUDIO and BIZ keep source, provenance and acceptance legible
+  description: Operator decision 2026-11-26 - accepted artifacts are reproducible and decision documents are actionable
+  type: project
+  body: |-
+    STUDIO keeps the source, selected inputs, renderer settings, accepted take
+    and visual/playback evidence together; caches, model downloads, redundant
+    transcodes and rejected variations are not authoritative output. BIZ keeps
+    one current decision per reader task: sourced facts, clearly marked
+    inferences, current choice, uncertainty and next action. Generated PDF,
+    DOCX, spreadsheet or slide output remains derived from an owned source and
+    receives rendered review. Neither tree grows parallel notes, plans or final
+    copies that obscure the active source of truth.
