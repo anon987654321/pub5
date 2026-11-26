@@ -1426,15 +1426,11 @@ void main(){
   p = mix(p, subjectPoint, uSubjectDirect);
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
-  // Identical opaque footprints; discrete neutral tones reveal relief.
+  // Identical opaque bitmap ink; geometry supplies depth.
   gl_PointSize=3.0;
   gl_Position=projectionMatrix*mv;
   vAlpha=1.0;
-  vec3 reliefNormal = normalize(normalMatrix * mix(vec3(0.0, 0.0, 1.0), subjectNormal, uMaskMouth.w));
-  float light = clamp(dot(reliefNormal, normalize(vec3(-0.36, 0.55, 0.75))), 0.0, 1.0);
-  float reliefTone = 0.58 * light + 0.42 * clamp((p.z + 0.42) / 0.85, 0.0, 1.0);
-  float ink = mix(0.9333333, mix(0.42, 0.9333333, floor(reliefTone * 4.0 + 0.5) / 4.0), uMaskMouth.w);
-  vColor=vec3(ink);
+  vColor=vec3(0.9333333);
   vDepth=depth;
   vZoneVal=zone;
 }`;
