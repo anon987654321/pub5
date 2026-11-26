@@ -62,6 +62,18 @@ class TestRg69Defaults < Minitest::Test
                     "boot must pick its style from the filtered, playable pool"
   end
 
+  def test_industrial_techno_remains_a_first_class_style
+    %w[Industrial].concat(["Hard Techno", "HATE Style"]).each do |name|
+      assert_includes style_names, name
+    end
+    %w[hate-pummel hate-grind].each do |pattern|
+      kick = boot_drum(pattern).fetch("k")
+      [0, 4, 8, 12].each { |step| assert_equal 1, kick[step] }
+    end
+    assert_includes js, "const bootStylePool=industrialBoot.length?industrialBoot:"
+    assert_includes js, "aud_.pocket=industrial?12:68;"
+  end
+
   def test_f_minor_dub_is_labelled_as_an_engine_original
     progression = dilla_data.fetch("progressions").find { |row| row.fetch("id") == "blue_hour" }
     assert_equal "F-minor Dub Study (engine original)", progression.fetch("title")
@@ -70,6 +82,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_local_profile_and_clock_do_not_require_a_worker_or_fetch
+    assert_includes js, "kick:Tone.mtof(24+Number(kit.kick.tune))"
     assert_includes js, 'const httpPage=location.protocol==="http:"||location.protocol==="https:";'
     assert_match(/const rg69AudioProfileReady=!httpPage\|\|location\.origin==="null"\s*\?Promise\.resolve\(\)/, js)
     assert_includes js, 'if((!httpPage||location.origin==="null")&&!fileClockConfigured)'
@@ -366,7 +379,9 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "widener.connect(limiter);"
     assert_includes js, "limiter.connect(outputGate);"
     assert_includes js, "if(masterG)smooth(masterG.gain,mix_.master/100);"
-    assert_includes js, "Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);"
+    assert_includes js, "if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);"
+    assert_includes js, "if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100);"
+    assert_includes js, "drumDrive.connect(drumG);"
     assert_includes js, "rg69AudioProfileLocked=true;"
     refute_includes js, "await rg69AudioProfileReady"
   end
