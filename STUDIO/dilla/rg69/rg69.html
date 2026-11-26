@@ -1180,7 +1180,7 @@ const valid=n=>typeof n==="string"&&/^[A-G][#b]?[0-8]$/.test(n);
 const note=lane==="b"&&valid(x.note)?x.note:["keys","p"].includes(lane)&&Array.isArray(x.note)&&x.note.length>0&&x.note.length<=6&&x.note.every(valid)?x.note.slice():undefined;
 seq_[lane][i]={v:clamp(x.v,0,1,1),t:clamp(x.t,-25,25,0),p:clamp(x.p,0,100,100),r:[1,2,4].includes(x.r)?x.r:1,g:clamp(x.g,.05,2,1),cond:[1,2,3,4].includes(x.cond)?x.cond:1,pitch:Math.round(clamp(x.pitch,-24,24,0)),off:!!x.off,...(Number.isFinite(x.hit)?{hit:clamp(x.hit,0,1,0)}:{}),...(note?{note}:{})};
 }
-if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:64},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&sampleAudio.name!==sampleSettings.name)sampleAudio=null;}
+if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:64},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&(sampleAudio.name!==sampleSettings.name||Math.abs(sampleAudio.buffer.duration-sampleSettings.duration)>.001))sampleAudio=null;}
 if(data.mute)for(const lane of LANES)st_.muteState[lane]=data.mute[lane]?1:0;
 if(STEP_COUNTS.includes(data.steps))st_.stepCount=data.steps;
 st_.bank=Math.floor(clamp(data.bank,0,Math.max(0,Math.ceil(st_.stepCount/16)-1),0));
@@ -1418,6 +1418,7 @@ return {instruments,sampleG,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,l
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
 function applyFX(){
+if(st_.offlineRendering)return;
 const smooth=(param,value)=>param.rampTo(value,.025);
 const profile=rg69AudioProfile;
 if(st_.started)Tone.Transport.bpm.value=aud_.bpm;
@@ -1700,19 +1701,21 @@ st_.rafId=null;
 });
 
 function randomize(){
-const style=STYLES[Math.floor(Math.random()*STYLES.length)];
 pushHistory();
 sessionSeed=newSeed();
 const isLocked=sec=>document.querySelector(`.lock-btn[data-lock="${sec}"]`)?.classList.contains('locked');
+const compatible=STYLES.filter(s=>(!isLocked('keys')||s.k===pat_.k)&&(!isLocked('bass')||s.b===pat_.b)&&(!isLocked('pads')||s.p===pat_.p));
+const pool=compatible.length?compatible:STYLES;
+const style=pool[Math.floor(randomAt(sessionSeed,0,'k',31)*pool.length)];
 if(!isLocked('drum'))pat_.d=style.d;
 if(!isLocked('bass'))pat_.b=style.b;
 if(!isLocked('keys'))pat_.k=style.k;
 if(!isLocked('pads'))pat_.p=style.p;
-aud_.bpm=style.bpm[0]+Math.random()*(style.bpm[1]-style.bpm[0]);
-aud_.swing=style.sw[0]+Math.random()*(style.sw[1]-style.sw[0]);
-aud_.drive=style.dr[0]+Math.random()*(style.dr[1]-style.dr[0]);
-aud_.tape=style.tm[0]+Math.random()*(style.tm[1]-style.tm[0]);
-LANES.forEach(t=>{seq_[t]=seq_[t].map((_,i)=>({v:.85+randomAt(sessionSeed,i,t,5)*.15,t:(randomAt(sessionSeed,i,t,7)-.5)*30,p:100,r:1}));});
+aud_.bpm=style.bpm[0]+randomAt(sessionSeed,0,'k',37)*(style.bpm[1]-style.bpm[0]);
+aud_.swing=style.sw[0]+randomAt(sessionSeed,1,'k',37)*(style.sw[1]-style.sw[0]);
+aud_.drive=style.dr[0]+randomAt(sessionSeed,2,'k',37)*(style.dr[1]-style.dr[0]);
+aud_.tape=style.tm[0]+randomAt(sessionSeed,3,'k',37)*(style.tm[1]-style.tm[0]);
+LANES.forEach(t=>{if(isLocked(DRUM_LANES.includes(t)?'drum':{b:'bass',keys:'keys',p:'pads'}[t]))return;seq_[t]=seq_[t].map((_,i)=>({v:.85+randomAt(sessionSeed,i,t,5)*.15,t:(randomAt(sessionSeed,i,t,7)-.5)*30,p:100,r:1,g:1,cond:1,pitch:0}));});
 syncUIFromState();saveSession();
 log(`random: ${style.n}`,"k");
 randomizeFX();
@@ -1961,7 +1964,8 @@ const rate=2**(settings.pitch/12),length=(end-begin)*settings.gate/100;
 const trim=(end-begin)*settings.offset/100,offset=settings.reverse?audio.buffer.duration-end+trim:begin+trim;
 const duration=Math.min(length,end-begin-trim)/rate;
 if(duration<=.005)return;
-const at=Math.max(0,time+swingOffsetSeconds(index,opts.sixteenth,opts.session?.aud.swing??aud_.swing,true));
+const aud=opts.session?.aud||aud_;
+const at=Math.max(0,time+swingOffsetSeconds(index,opts.sixteenth||60/aud.bpm/4,aud.swing*(aud.pocket??68)/100,true));
 const voice=new Tone.ToneBufferSource({url:settings.reverse?audio.reversed:audio.buffer,playbackRate:rate,fadeIn:.002,fadeOut:Math.min(.005,duration/4),onended:node=>{if(!opts.session)node.dispose();}});
 voice.connect(opts.sampleGraph.sampleG);voice.start(at,offset,duration,.8);
 }
@@ -2007,10 +2011,10 @@ Object.keys(BASS_PATS).forEach(k=>{const o=document.createElement('option');o.va
 Object.keys(KEYS_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_k.appendChild(o)});
 Object.keys(PAD_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_p.appendChild(o)});
 sel_d.value=pat_.d;sel_b.value=pat_.b;sel_k.value=pat_.k;sel_p.value=pat_.p;
-sel_d.addEventListener('change',e=>{pushHistory();pat_.d=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();log(`drum: ${pat_.d}`)});
-sel_b.addEventListener('change',e=>{pushHistory();pat_.b=e.target.value;updateRootDisplay();highlightActiveChip();log(`bass: ${pat_.b}`)});
-sel_k.addEventListener('change',e=>{pushHistory();pat_.k=e.target.value;updateRootDisplay();highlightActiveChip();log(`keys: ${pat_.k}`)});
-sel_p.addEventListener('change',e=>{pushHistory();pat_.p=e.target.value;updateRootDisplay();highlightActiveChip();log(`pads: ${pat_.p}`)});
+sel_d.addEventListener('change',e=>{pushHistory();pat_.d=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`drum: ${pat_.d}`)});
+sel_b.addEventListener('change',e=>{pushHistory();pat_.b=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`bass: ${pat_.b}`)});
+sel_k.addEventListener('change',e=>{pushHistory();pat_.k=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`keys: ${pat_.k}`)});
+sel_p.addEventListener('change',e=>{pushHistory();pat_.p=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`pads: ${pat_.p}`)});
 const styles_c=$id('styles');
 const filterStyles=q=>{
 const query=q.trim().toLowerCase();
@@ -2288,9 +2292,9 @@ applyFX();saveSession();log(`tap tempo: ${Math.round(bpm)} BPM`,"k");
 setTimeout(()=>{st_.tapTimes=[]},2000);
 }
 
-const encodeState=()=>btoa(JSON.stringify(session()));
+const encodeState=()=>btoa(Array.from(new TextEncoder().encode(JSON.stringify(session())),byte=>String.fromCharCode(byte)).join(''));
 const decodeState=h=>{
-try{restoreSession(JSON.parse(atob(h)));saveSession();log("state loaded from URL","k");return true;}
+try{restoreSession(JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(h),c=>c.charCodeAt(0)))));saveSession();log("state loaded from URL","k");return true;}
 catch(e){log("decode failed: "+e.message,"e");return false;}
 };
 const shareURL=async()=>{
@@ -2593,7 +2597,7 @@ else log('usage: bpm <60-170>','e');
 break;
 case'steps':{
 const s=parseInt(args[0]);
-if(STEP_COUNTS.includes(s)){st_.bank=0;st_.stepCount=s;$id('steps').textContent=`${s} steps`;$id('steps').setAttribute('aria-pressed',s===8?'true':'false');document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('inactive',i%16>=s));log(`steps → ${s}`,'k');}
+if(STEP_COUNTS.includes(s)){pushHistory();st_.bank=0;st_.stepCount=s;syncUIFromState();saveSession();log(`steps → ${s}`,'k');}
 else log('usage: steps <8|16|32|64>','e');
 break;}
 case'style':{
