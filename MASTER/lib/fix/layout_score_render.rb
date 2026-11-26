@@ -31,7 +31,8 @@ module Master
 
       # A failed navigation or empty geometry is missing evidence, not a low score.
       def valid_measurements(measured)
-        measured.select { |_surface, payload| valid_payload?(payload) }
+        counts = measured.map { |surface, _| surface.id }.tally
+        measured.select { |surface, payload| counts.fetch(surface.id) == 1 && valid_payload?(payload) }
       end
 
       def valid_payload?(payload)

@@ -202,12 +202,15 @@ class TestDesignLoop < Minitest::Test
     seen = options.fetch(:seen, [])
     prompts = options.fetch(:prompts, [])
     on_build = options.fetch(:on_build, ->(_app) {})
-    elements = options.fetch(:classes, FILLER + [".card"]).map { |key| { "key" => "body>main>#{key}" } }
+    elements = options.fetch(:classes, FILLER + [".card"]).map do |key|
+      { "key" => "body>main>#{key}", "rect" => { "w" => 300, "h" => 30 } }
+    end
     measure = lambda do |surfaces|
       seen << surfaces.map(&:id)
       wide = File.read(path).include?("padding: 16px")
       surfaces.map do |surface|
-        payload = { "score" => fake_score(surface, wide:, other_drop: drop, flat:), "elements" => elements }
+        payload = { "score" => fake_score(surface, wide:, other_drop: drop, flat:),
+                    "vw" => 390, "vh" => 844, "elements" => elements }
         [surface, payload, screenshot(path, surface)]
       end
     end
@@ -507,6 +510,19 @@ class TestDesignLoop < Minitest::Test
         assert_empty committed
         assert_includes File.read(path), "padding: 4px;"
       end
+    end
+  end
+
+  def test_failed_navigation_cannot_seed_design_baseline
+    with_sheet do |path|
+      committed = []
+      world = world_for(path, committed:)
+      measure = ->(surfaces) { world.measure.call(surfaces).map { |s, p, shot| [s, p.merge("status" => 503), shot] } }
+      plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
+
+      error = assert_raises(RuntimeError) { LOOP.new(plan:, world: world.with(measure:)).run }
+      assert_match(/baseline incomplete/, error.message)
+      assert_empty committed
     end
   end
 

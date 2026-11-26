@@ -8,7 +8,7 @@ require_relative "../io/exec"
 require_relative "transaction"
 require_relative "design_edit"
 require_relative "design_prompts"
-require_relative "layout_score_store"
+require_relative "layout_score_render"
 require_relative "visual_quality_checks"
 require_relative "../review/council/evidence"
 require_relative "repair_outcomes"
@@ -75,6 +75,8 @@ module Master
       end
 
       def row(surface:, payload:, shot:)
+        return unless LayoutScoreRender.valid_payload?(payload)
+
         value = score(payload)
         return unless value.is_a?(Numeric) && value.real? && value.finite?
         return unless shot && File.file?(shot) && File.size(shot).positive?

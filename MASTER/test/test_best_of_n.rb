@@ -98,6 +98,14 @@ class BestOfNTest < Minitest::Test
     end
   end
 
+  def test_duplicate_surface_captures_are_not_scored
+    render = Master::Fix::LayoutScoreRender
+    other = Surface.new("brgen/home/desktop", "desktop")
+    good = rendering("good")
+
+    assert_equal [other.id], render.scores([[@surface, good], [@surface, good], [other, good]], root: @root).keys
+  end
+
   def test_failed_and_empty_payloads_do_not_enter_the_score
     render = Master::Fix::LayoutScoreRender
     good = rendering("good")
