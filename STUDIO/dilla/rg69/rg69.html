@@ -225,6 +225,7 @@ body[data-density=compact] .step{min-height:28px}
 </div>
 </div></details>
 </details>
+<details><summary>Experimental DSP</summary><fieldset><label for="lab-space">Convolution space <output id="lab-space-o">0</output></label><input id="lab-space" type="range" min="0" max="100" value="0"><label for="lab-morph">Spectral colour morph <output id="lab-morph-o">0</output></label><input id="lab-morph" type="range" min="0" max="100" value="0"><label for="lab-chaos">Chaotic modulation <output id="lab-chaos-o">0</output></label><input id="lab-chaos" type="range" min="0" max="100" value="0"><label for="lab-grain">Sample grains <output id="lab-grain-o">0</output></label><input id="lab-grain" type="range" min="0" max="100" value="0"><label for="lab-notch">50 Hz hum rejection <output id="lab-notch-o">0</output></label><input id="lab-notch" type="range" min="0" max="100" value="0"></fieldset><p class="shield-note">Grains use loaded samples. Hum rejection filters the music signal, not external room noise. Spatial convolution is stereo, not head-tracked.</p></details>
 <details><summary>Dream Shield · noise masking</summary>
 <p class="shield-note">Soft masking for distracting sounds. Not room-scale cancellation. Start at a low device volume; do not turn up to overpower loud noise.</p>
 <fieldset><label for="shield-mode">Mode</label><select id="shield-mode"><option value="speech">Speech masking</option><option value="bass">Low-frequency masking</option><option value="impact">Impact masking</option><option value="adaptive">Adaptive masking</option><option value="sleep">Sleep ambience</option></select>
@@ -522,6 +523,20 @@ const ratios=patch.variant===1?[1,2.76,5.4,8.93]:patch.variant===2?[1,2.002,3.00
 ratios.forEach((ratio,i)=>{const level=.65/(1+i*1.5),part=oscillator("sine",ratio,level);part.amp.gain.setValueAtTime(level,at);part.amp.gain.exponentialRampToValueAtTime(.0001,at+Math.max(.06,decay/(1+i*.7)));});
 sustain=.52;release=.7;break;
 }
+case "physical":{
+const period=Math.max(2,Math.round(ctx.sampleRate/freq)),length=Math.min(period*2,ctx.sampleRate),buffer=ctx.createBuffer(1,length,ctx.sampleRate),data=buffer.getChannelData(0);
+let seed=(Math.round(freq*1000)^0x69)>>>0;
+for(let i=0;i<length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;data[i]=(seed/2147483648-1)*Math.sin(Math.PI*i/length)*.26;}
+const excitation=ctx.createBufferSource(),delay=ctx.createDelay(1),damp=ctx.createBiquadFilter(),feedback=gain(patch.variant?.88:.93);
+excitation.buffer=buffer;delay.delayTime.value=1/freq;damp.type="lowpass";damp.frequency.value=patch.variant?Math.min(11000,freq*12):Math.min(6500,freq*6);
+excitation.connect(delay);delay.connect(damp);damp.connect(feedback);feedback.connect(delay);damp.connect(filter);sources.push(excitation);nodes.push(delay,damp,feedback);
+if(patch.variant)for(const ratio of [1.414,2.31,3.76]){const partial=oscillator("sine",ratio,.09);partial.amp.gain.exponentialRampToValueAtTime(.0001,at+decay*.6);}
+sustain=.62;release=1.2;break;
+}
+case "freeze":{
+for(let i=1;i<=9;i++){const part=oscillator("sine",i,.32/(i**1.25),Math.sin(i*2.17)*4);if(patch.variant){const lfo=ctx.createOscillator(),depth=gain(.025/i);lfo.frequency.value=.07+i*.037;lfo.connect(depth);depth.connect(part.amp.gain);sources.push(lfo);nodes.push(depth);}}
+sustain=.85;release=2.2;break;
+}
 case "fold":{
 const fold=ctx.createWaveShaper();fold.curve=Float32Array.from({length:2049},(_,i)=>Math.sin((i/1024-1)*Math.PI*1.8));fold.oversample="2x";fold.connect(filter);nodes.push(fold);oscillator("sine",1,.68,0,fold);oscillator("sine",.5,.22);sustain=.72;release=1.2;break;
 }
@@ -753,6 +768,12 @@ silk_fold:{name:"Silk fold · wavefolded sine",type:"fold",attack:.04,decay:4,br
 pearl_chorus:{name:"Pearl chorus · detuned ensemble",type:"juno",attack:.24,decay:7,brightness:.46,level:.8},
 rose_brass:{name:"Rose brass · soft poly",type:"prophet",attack:.09,decay:5,brightness:.34,level:.8}
 });
+Object.assign(PATCH_CATALOGUE,{
+dream_string:{name:"Dream string · plucked model",type:"physical",decay:5,brightness:.55,level:.72},
+dream_plate:{name:"Dream plate · resonant metal",type:"physical",variant:1,decay:7,brightness:.65,level:.64},
+frozen_halo:{name:"Frozen halo · spectral cloud",type:"freeze",attack:.7,decay:9,brightness:.42,level:.65},
+stochastic_silk:{name:"Stochastic silk · evolving partials",type:"freeze",variant:1,attack:.4,decay:8,brightness:.5,level:.68}
+});
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
@@ -836,7 +857,7 @@ const bootStylePool=bootStyleCandidates.filter(style=>style.n==="Boom Bap");
 const bootStyle=bootStylePool[0]||bootStyleCandidates.find(style=>/dilla|hip.hop|lo.fi/i.test(style.n))||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,drumSonitex:100,drumVcs:100,tape:100,wobble:100,vinyl:100,crackle:100};
-let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,drift:0.05};
+let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,labSpace:0,labMorph:0,labChaos:0,labGrain:0,labNotch:0,drift:0.05};
 let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
 let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106'};
 let seq_={};
@@ -1016,6 +1037,7 @@ $id("song-mode").textContent=st_.song?"Song":"Loop";
 $id("song-mode").setAttribute("aria-pressed",String(!!st_.song));
 }
 function syncUIFromState(){
+for(const [id,key] of [["lab-space","labSpace"],["lab-morph","labMorph"],["lab-chaos","labChaos"],["lab-grain","labGrain"],["lab-notch","labNotch"]]){$id(id).value=aud_[key];$id(id+"-o").textContent=Math.round(aud_[key]);}
 for(const [id,key] of [["drum-sonitex","drumSonitex"],["drum-vcs","drumVcs"]]){ $id(id).value=aud_[key];$id(id+"-o").textContent=Math.round(aud_[key]);}
 showSongPosition(st_.tick??-1);
 $id('bank').textContent='Bank '+String.fromCharCode(65+st_.bank);$id('bank').disabled=st_.stepCount<=16;
@@ -1361,6 +1383,20 @@ osc.frequency.setTargetAtTime(.035*2**(rate*7),now,.08);
 for(const target of targets){target.filter.frequency.setTargetAtTime(18000-11500*depth,now,.08);target.depth.gain.setTargetAtTime(3000*depth,now,.08);}
 }};
 }
+function createExperimentalDSP(ctx,source,destination){
+const gain=v=>{const n=ctx.createGain();n.gain.value=v;return n;};
+const filter=(type,hz,q)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;n.Q.value=q;return n;};
+const smooth=(p,v)=>p.setTargetAtTime(v,ctx.currentTime,.06);
+const dry=gain(1),space=gain(0),verb=ctx.createConvolver(),sum=gain(1),notch=filter("notch",50,12),notch2=filter("notch",100,16),notchDry=gain(1),notchWet=gain(0),color=filter("peaking",900,.7),high=filter("highshelf",4200,.7);
+const len=Math.round(ctx.sampleRate*1.4),ir=ctx.createBuffer(2,len,ctx.sampleRate);
+for(let ch=0;ch<2;ch++){const data=ir.getChannelData(ch);let seed=0x6972+ch*373;for(let i=0;i<len;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;data[i]=(seed/2147483648-1)*Math.exp(-6*i/len)*.08;}data[Math.floor(ctx.sampleRate*(.013+ch*.006))]+=.6;data[Math.floor(ctx.sampleRate*(.047-ch*.004))]+=.25;}
+verb.buffer=ir;Tone.connect(source,dry);Tone.connect(source,verb);dry.connect(sum);verb.connect(space);space.connect(sum);sum.connect(notchDry);sum.connect(notch);notch.connect(notch2);notch2.connect(notchWet);notchDry.connect(color);notchWet.connect(color);color.connect(high);Tone.connect(high,destination);
+return {update(aud){
+const room=(aud.labSpace??0)/100,morph=(aud.labMorph??0)/100,hum=(aud.labNotch??0)/100;
+smooth(dry.gain,1-room*.22);smooth(space.gain,room*.22);smooth(notchDry.gain,1-hum);smooth(notchWet.gain,hum);
+smooth(color.frequency,900+2600*morph);smooth(color.gain,3*morph);smooth(high.gain,-5*morph);
+}};
+}
 function createAudioGraph(aud,mix,seed,{offline=false,duration=0,patches={}}={}){
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
@@ -1384,7 +1420,7 @@ rev.wet.value=1;
 dly.wet.value=1;
 tape.wet.value=aud.tape/100*.25;
 const mixSum=new Tone.Gain(1);
-mixSum.connect(flt);
+
 flt.connect(tape);
 tape.connect(comp);
 comp.connect(widener);
@@ -1396,6 +1432,7 @@ masterG.connect(dryMaster);dryMaster.connect(mixSum);
 limiter.connect(outputGate);
 // Use the actual context destination, not a second Tone destination chain.
 const ctx=Tone.getContext().rawContext,finalLimiter=ctx.createDynamicsCompressor();
+const experimental=createExperimentalDSP(ctx,mixSum,flt);experimental.update(aud);
 finalLimiter.threshold.value=-1.5;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
 const masteringInput=ctx.createGain(),masterHP=ctx.createBiquadFilter(),harsh=ctx.createBiquadFilter(),warm=ctx.createBiquadFilter(),matte=ctx.createBiquadFilter(),glue=ctx.createDynamicsCompressor();
 const hf=ctx.createBiquadFilter(),hfComp=ctx.createDynamicsCompressor(),hfRestore=ctx.createBiquadFilter();
@@ -1488,7 +1525,7 @@ tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,dreamLFO,drumColor,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1514,7 +1551,7 @@ if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar){compPar.ratio.value=1+aud_.comp/100*2;compPar.release.value=Math.min(.5,60/aud_.bpm*.5);}
 if(liveGraph?.glue)liveGraph.glue.release.value=Math.min(.5,30/aud_.bpm);
 if(widener)widener.width.value=aud_.width/100;
-liveGraph?.drumColor?.update(aud_);liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
+liveGraph?.experimental?.update(aud_);liveGraph?.drumColor?.update(aud_);liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
 for(const stage of liveGraph?.recordingStages||[])stage.update(aud_);
 for(const strip of liveGraph?.consoleStrips||[])strip.update(aud_);
 if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
@@ -1566,6 +1603,7 @@ const frame=songFrame(tick,take?take.song:st_.song);
 const allowed=lane=>!opts.muteMap?.[lane]&&(!frame||frame.lanes.includes(lane));
 const phrase=lane=>!frame?1:frame.level*(frame.name==='Outro'?Math.max(.14,1-frame.progress*.86):1)*(frame.name==='Intro'&&lane==='h'?.7:1);
 const sixteenth=opts.sixteenth||60/aud.bpm/4;
+const chaos=(aud.labChaos??0)/100;
 const pocket=(aud.pocket??68)/100,bias={k:7,s:-6,c:-4,h:-5,o:-3,b:4,keys:2,p:0};
 const lengths=take?.lengths||st_.laneLengths||{};
 const index=(lane,delta=0)=>lengths[lane]?(tick+delta)%lengths[lane]:(stepIdx+delta)%(opts.stepCount||16);
@@ -1576,7 +1614,7 @@ const noteTime=lane=>Math.max(0,baseTime+swing(lane,stepIdx)+microtimingSeconds(
 const chance=lane=>!opts.applyProb||(Math.floor(tick/(lengths[lane]||opts.stepCount||16))%(detail(lane).cond||1)===0&&randomAt(seed,tick,lane)*100<(detail(lane).p??100));
 const accent=lane=>detail(lane).v*(1-pocket*.12*(stepIdx%4!==0))*phrase(lane);
 const gate=lane=>detail(lane).g??1;
-const transpose=(lane,note)=>midiNote(clamp(noteMidi(note)+(detail(lane).pitch||0)+(frame?.transpose||0),12,119,60));
+const transpose=(lane,note)=>midiNote(clamp(noteMidi(note)+(detail(lane).pitch||0)+(frame?.transpose||0)+(chaos>0&&lane!=="b"&&randomAt(seed,tick,lane,71)<chaos*.12?12:0),12,119,60));
 // Resolve note lengths to seconds before scheduling. Tone's musical-time
 // parser consults Transport when given strings such as "8n"; doing that
 // inside a Transport callback causes timing warnings and extra work.
@@ -2213,6 +2251,7 @@ $id("panic").addEventListener("click",()=>stop());
 }
 function buildSampler(){
 buildDreamShield();
+for(const [id,key] of [["lab-space","labSpace"],["lab-morph","labMorph"],["lab-chaos","labChaos"],["lab-grain","labGrain"],["lab-notch","labNotch"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 for(const [id,key] of [["drum-sonitex","drumSonitex"],["drum-vcs","drumVcs"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 for(const [id,key] of [["note-routing","noteRouting"],["pitch-rhythm","pitchRhythm"],["lfo-morph","lfoMorph"],["lfo-depth","lfoDepth"],["lfo-rate","lfoRate"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);if($id(id+"-o"))$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 $id("ambience").addEventListener("change",e=>{pushHistory();aud_.ambience=Number(e.target.value);applyFX();saveSession();});
@@ -2241,6 +2280,8 @@ const duration=Math.min(length,end-begin-trim)/rate;
 if(duration<=.005)return;
 const aud=opts.session?.aud||aud_;
 const at=Math.max(0,time+swingOffsetSeconds(index,opts.sixteenth||60/aud.bpm/4,aud.swing*(aud.pocket??68)/100,true));
+const grain=(aud.labGrain??0)/100;
+if(grain>0){const count=2+Math.round(grain*6),span=Math.min(.7,duration),size=Math.min(.07,span/count*1.8);for(let i=0;i<count;i++){const position=randomAt(opts.session?.seed??sessionSeed,opts.tick??index,"keys",110+i),speed=rate*2**((position-.5)*grain),offsetGrain=offset+position*Math.max(0,Math.min(length,end-begin-trim)-size*speed);const grainVoice=new Tone.ToneBufferSource({url:settings.reverse?audio.reversed:audio.buffer,playbackRate:speed,fadeIn:size*.35,fadeOut:size*.35,onended:node=>{if(!opts.session)node.dispose();}});grainVoice.connect(opts.sampleGraph.sampleG);grainVoice.start(at+i*span/count,offsetGrain,size,.22*grain);} }
 const copies=[[],[[.5,false,.34,.014]],[[.5,true,.25,.018],[2,true,.18,.037]],[[.5,false,.25,.012],[.75,true,.2,.029],[2,false,.13,.047]]][settings.copies??0]||[];
 for(const [speed,flip,level,lag] of [[1,false,copies.length?.58:.8,0],...copies]){
 const backwards=Boolean(settings.reverse)!==flip,copyOffset=backwards?audio.buffer.duration-end+trim:begin+trim;
