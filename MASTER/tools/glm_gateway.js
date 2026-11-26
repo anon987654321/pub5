@@ -12,6 +12,49 @@ const PORT = Number(process.env.GLM_GATEWAY_PORT) || 8787;
 const CONFIG = process.env.GLM_GATEWAY_CONFIG || "/etc/.z-ai-config";
 const cfg = () => JSON.parse(fs.readFileSync(CONFIG, "utf8"));
 
+// The upstream endpoint rate-limits concurrency: a burst of parallel lane
+// calls (worklist batches, adversarial law scans) came back 4 of 6 rejected
+// with 429 in under 0.1 s, MASTER's LaneHealth then read the lane as offline
+// and the /fix pass crashed on MassSkipError. Pace the burst here instead of
+// in every caller: at most two upstream calls in flight (two proved to pass),
+// and a 429 or 5xx is retried with backoff before any body byte is consumed,
+// so streaming responses still pass through untouched.
+const MAX_CONCURRENT = Number(process.env.GLM_GATEWAY_CONCURRENCY) || 2;
+const RETRIES = Number(process.env.GLM_GATEWAY_RETRIES) || 5;
+let active = 0;
+const waiters = [];
+function acquire() {
+  if (active < MAX_CONCURRENT) { active++; return Promise.resolve(); }
+  return new Promise((resolve) => waiters.push(resolve));
+}
+function release() {
+  active--;
+  const next = waiters.shift();
+  if (next) { active++; next(); }
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function upstreamFetch(base, target, payload) {
+  for (let attempt = 0; ; attempt++) {
+    await acquire();
+    let up;
+    try {
+      up = await fetch(base + target, {
+        method: "POST",
+        headers: upstreamHeaders(),
+        body: payload,
+      });
+    } finally {
+      release();
+    }
+    if ((up.status === 429 || up.status >= 500) && attempt < RETRIES) {
+      await sleep(Math.min(500 * 2 ** attempt, 8000));
+      continue;
+    }
+    return up;
+  }
+}
+
 function upstreamHeaders() {
   const c = cfg();
   const h = {
@@ -63,11 +106,7 @@ const server = http.createServer(async (req, res) => {
     const payload = JSON.stringify(body);
 
     try {
-      const up = await fetch(base + target, {
-        method: "POST",
-        headers: upstreamHeaders(),
-        body: payload,
-      });
+      const up = await upstreamFetch(base, target, payload);
       res.writeHead(up.status, {
         "Content-Type": up.headers.get("content-type") || "application/json",
       });
