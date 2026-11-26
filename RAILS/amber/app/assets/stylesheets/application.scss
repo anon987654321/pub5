@@ -1318,13 +1318,15 @@
      wardrobe card sizes its actions here by where they sit, not by a class. */
   /* The size-class leads stay only for the markup that still names a size
      pending its per-site rendered check (shared-010): the bare button-small
-     sites on the item page, declutter and the creator showcase, plus the two
+     sites on the item page and declutter, plus the two
      shared partials whose containers also hold full-size buttons
      (_live_search_form, _master_invite). Every other compact button sizes from
      where it sits; each context here held only compact buttons at the
      2026-11-07 tree-wide sweep. */
   .button-small,
   .button.button-small,
+  .creator-profile-header > .button,
+  .creator-showcase-list .button,
   .item-card-actions :is(a, button),
   .profile-creator-link .button,
   .flash .button,

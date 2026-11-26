@@ -6,13 +6,13 @@
 <section>
   <%= tag.h2 t("creator.showcase_items") %>
   <% if @profile.creator_wardrobe_items.any? %>
-    <ul>
+    <ul class="creator-showcase-list">
       <% @profile.creator_wardrobe_items.includes(:item).order(:position).each do |showcase| %>
         <li>
           <%= showcase.item.title %>
           <% if showcase.caption.present? %> — <%= showcase.caption %><% end %>
           <%# destructive: no-confirm-ok — reversible — the same form re-adds the item to the profile %>
-          <%= button_to t("actions.remove"), creator_profile_wardrobe_item_path(handle: @profile.handle, id: showcase), method: :delete, class: "button button-small" %>
+          <%= button_to t("actions.remove"), creator_profile_wardrobe_item_path(handle: @profile.handle, id: showcase), method: :delete, class: "button" %>
         </li>
       <% end %>
     </ul>

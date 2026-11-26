@@ -452,4 +452,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-029 cache intake now checks image signatures against the declared MIME type, with mismatched and truncated-header cases. Isolated Ruby signature smoke test: 1 run, 10 assertions, 0 failures; full service and browser acceptance NOT_RUN.
 
+- 2026-11-26: shared-010 Amber creator profile edit/show migrated from explicit size classes to semantic header/showcase contexts, keeping existing compact declarations. Source regression authored; browser and Rails tests NOT_RUN. Keep shared-010 open for remaining sites.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

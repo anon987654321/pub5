@@ -23,6 +23,16 @@ class WardrobeClassNamesTest < ActionDispatch::IntegrationTest
     assert_select ".item-grid--wardrobe"
   end
 
+  test "creator showcase actions use contextual sizing" do
+    root = Rails.root.join("app/views/creator_profiles")
+    %w[edit show].each do |name|
+      refute_includes root.join("#{name}.html.erb").read, "button-small"
+    end
+    scss = Rails.root.join("app/assets/stylesheets/application.scss").read
+    assert_includes scss, ".creator-profile-header > .button,"
+    assert_includes scss, ".creator-showcase-list .button,"
+  end
+
   test "the stylesheet sizes the card's actions by where they sit" do
     scss = Rails.root.join("app/assets/stylesheets/application.scss").read
     # The rule sits inside @layer base, so its selectors are indented.

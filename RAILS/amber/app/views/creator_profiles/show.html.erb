@@ -1,7 +1,7 @@
 <% content_for :title, @profile.display_name %>
 <%= turbo_stream_from @profile %>
 
-<header class="profile-header" aria-label="<%= t("creator.profile_label") %>">
+<header class="profile-header creator-profile-header" aria-label="<%= t("creator.profile_label") %>">
   <%= tag.h1 @profile.display_name %>
   <p>@<%= @profile.handle %></p>
   <% if @profile.bio.present? %>
@@ -9,7 +9,7 @@
     <div class="prose"><%= rich_text @profile.bio %></div>
   <% end %>
   <% if authenticated? && Current.user == @profile.user %>
-    <%= link_to t("wardrobe.edit_profile"), edit_my_creator_profile_path, class: "button button-small" %>
+    <%= link_to t("wardrobe.edit_profile"), edit_my_creator_profile_path, class: "button" %>
   <% elsif @can_remix %>
     <p><%= t("creator.remix_friendly") %></p>
   <% end %>
