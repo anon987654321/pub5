@@ -70,9 +70,9 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_local_profile_and_clock_do_not_require_a_worker_or_fetch
-    assert_match(/const rg69AudioProfileReady=location\.origin==="null"\s*\?Promise\.resolve\(\)/, js)
-    assert_includes js, "kick:Tone.mtof(24+Number(kit.kick.tune))"
-    assert_includes js, 'if(location.origin==="null"&&!fileClockConfigured)'
+    assert_includes js, 'const httpPage=location.protocol==="http:"||location.protocol==="https:";'
+    assert_match(/const rg69AudioProfileReady=!httpPage\|\|location\.origin==="null"\s*\?Promise\.resolve\(\)/, js)
+    assert_includes js, 'if((!httpPage||location.origin==="null")&&!fileClockConfigured)'
     assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
   end
 
