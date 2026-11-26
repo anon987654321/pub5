@@ -6,11 +6,11 @@
     <p><%= t("tv.channel_subtitle", city: city_name) %></p>
     <%= tag.h1 @channel.name %>
   </hgroup>
-  <nav>
+  <nav class="tv-channel-actions">
     <%# user_id: the channel is strict-loaded and its user is not preloaded. %>
     <% if authenticated? && Current.user.id == @channel.user_id %>
-      <%= link_to t("tv.upload_video"), new_channel_video_path(@channel), class: "button button-primary button-small" %>
-      <%= link_to t("actions.edit"), edit_channel_path(@channel), class: "button button-ghost button-small" %>
+      <%= link_to t("tv.upload_video"), new_channel_video_path(@channel), class: "button button-primary" %>
+      <%= link_to t("actions.edit"), edit_channel_path(@channel), class: "button button-ghost" %>
     <% elsif authenticated? %>
       <%= render "tv/channels/subscribe_button", channel: @channel,
             subscribed: @channel.subscriptions.exists?(user: Current.user) %>

@@ -106,9 +106,9 @@
     <% if authenticated? && Current.user != @video.channel.user %>
       <% if @video.channel.subscriptions.exists?(user: Current.user) %>
         <%# destructive: no-confirm-ok — reversible — the button becomes Subscribe again in place %>
-        <%= button_to t("tv.unsubscribe"), unsubscribe_channel_path(@video.channel), method: :delete, class: "button button-ghost button-small" %>
+        <%= button_to t("tv.unsubscribe"), unsubscribe_channel_path(@video.channel), method: :delete, form_class: "button_to tv-subscription", class: "button button-ghost" %>
       <% else %>
-        <%= button_to t("tv.subscribe"), subscribe_channel_path(@video.channel), method: :post, class: "button button-primary button-small" %>
+        <%= button_to t("tv.subscribe"), subscribe_channel_path(@video.channel), method: :post, form_class: "button_to tv-subscription", class: "button button-primary" %>
       <% end %>
     <% end %>
   </article>
@@ -124,7 +124,7 @@
                collection: @video.video_notes.chronological.includes(:user), as: :video_note %>
   </div>
   <% if authenticated? %>
-    <%= form_with url: video_video_notes_path(@video), scope: :video_note, id: "video_note_form", data: { turbo: true } do |f| %>
+    <%= form_with url: video_video_notes_path(@video), scope: :video_note, id: "video_note_form", class: "tv-video-note-form", data: { turbo: true } do |f| %>
       <div class="field">
         <%= f.label :body, t("tv.add_note") %>
         <div data-controller="character-counter" data-character-counter-countdown-value="true">
@@ -140,7 +140,7 @@
         <%= tag.button t("tv.use_current_time"), type: "button", class: "video-note-time-fill",
                        data: { tv_fill_timestamp: "video_note_timestamp" }, hidden: true %>
       </div>
-      <%= f.submit t("tv.save_note"), class: "button button-primary button-small" %>
+      <%= f.submit t("tv.save_note"), class: "button button-primary" %>
     <% end %>
   <% end %>
 </section>
@@ -161,7 +161,7 @@
     <%# scope: matters -- Tv::CommentsController requires params[:tv_comment],
         and without it the field posted as a bare "body" and every comment
         came back 400. The video-notes form above sets its scope the same way. %>
-    <%= form_with url: video_comments_path(@video), scope: :tv_comment, data: { turbo: true } do |f| %>
+    <%= form_with url: video_comments_path(@video), scope: :tv_comment, class: "tv-video-comment-form", data: { turbo: true } do |f| %>
       <div class="field">
         <%= f.label :body, t("tv.add_comment") %>
         <div data-controller="character-counter" data-character-counter-countdown-value="true">
@@ -169,7 +169,7 @@
   <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
 </div>
       </div>
-      <%= f.submit t("tv.post_comment"), class: "button button-primary button-small" %>
+      <%= f.submit t("tv.post_comment"), class: "button button-primary" %>
     <% end %>
   <% end %>
 </section>

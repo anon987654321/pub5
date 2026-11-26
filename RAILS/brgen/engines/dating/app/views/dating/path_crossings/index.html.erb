@@ -48,7 +48,7 @@
               <% area = neighborhood_names[crossing.neighborhood_id] || t("dating.path_crossings_approximate_area") %>
               <% ago = t("dating.crossed_ago", time: time_ago_in_words(crossing.crossed_at)) %>
               <%= tag.p safe_join([ tag.span(area), time_tag(crossing.crossed_at, ago) ]), class: "meta-facts" %>
-              <%= button_to t("dating.like"), likes_path, params: { user_id: profile.user_id }, method: :post, class: "button button-primary button-small" %>
+              <%= button_to t("dating.like"), likes_path, params: { user_id: profile.user_id }, method: :post, class: "button button-primary" %>
             </div>
           </article>
         <% end %>

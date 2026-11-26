@@ -1,10 +1,10 @@
 <% content_for :title, t("dating.your_profile") %>
 
-<div class="page-header">
+<div class="page-header dating-profile-header">
   <%= tag.h1 t("dating.your_profile") %>
-  <%= link_to t("dating.edit_profile"), edit_profile_path, class: "button button-ghost button-small" %>
+  <%= link_to t("dating.edit_profile"), edit_profile_path, class: "button button-ghost" %>
   <% if Current.user == @profile.user && @profile.verified_at.present? %>
-    <%= button_to t("growth.referral_share"), referral_splinters_path, params: { vertical: "dating" }, method: :post, class: "button button-ghost button-small" %>
+    <%= button_to t("growth.referral_share"), referral_splinters_path, params: { vertical: "dating" }, method: :post, class: "button button-ghost" %>
   <% end %>
 </div>
 

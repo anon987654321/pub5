@@ -347,6 +347,27 @@ def test_brgen_old_dialect_outranks_the_social_stack
     end
   end
 
+  def test_dating_and_tv_actions_use_contextual_sizing
+    %w[
+      dating/app/views/dating/likes/index.html.erb
+      dating/app/views/dating/matches/index.html.erb
+      dating/app/views/dating/profiles/show.html.erb
+      dating/app/views/dating/verifications/index.html.erb
+      dating/app/views/dating/home/_card.html.erb
+      dating/app/views/dating/path_crossings/index.html.erb
+      radio/tv/app/views/tv/feed/_item.html.erb
+      radio/tv/app/views/tv/channels/show.html.erb
+      radio/tv/app/views/tv/channels/index.html.erb
+      radio/tv/app/views/tv/videos/show.html.erb
+      radio/tv/app/views/tv/stream_chats/_composer.html.erb
+      radio/tv/app/views/tv/video_notes/create.turbo_stream.erb
+      radio/tv/app/views/tv/channels/_subscribe_button.html.erb
+    ].each do |name|
+      source = File.read(File.join(ROOT, "brgen", "engines", name))
+      refute_includes source, "button-small", name
+    end
+  end
+
   def test_brgen_maps_search_uses_the_place_list_column
     source = File.read(File.join(ROOT, "brgen", "app", "assets", "stylesheets", "_brgen_vertical_surfaces.scss"))
     list = source[/body\.vertical-maps\s+\.place-list\s*\{([^}]*)\}/m, 1]

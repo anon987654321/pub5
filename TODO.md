@@ -462,4 +462,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-010 migrated fourteen remaining Brgen core view files across Messenger, Stories, Communities, moderation, partner programmes, federation and account settings. Scoped compact styling to the actual action groups; engine views and rendered acceptance remain open. Source tests authored, NOT_RUN.
 
+- 2026-11-26: shared-010 migrated thirteen Dating and TV templates, including Turbo replacement forms; mixed verification and report controls retain their distinct sizes. Source contracts authored; rendered parity NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

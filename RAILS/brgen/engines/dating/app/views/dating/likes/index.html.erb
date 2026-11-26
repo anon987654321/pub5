@@ -1,8 +1,8 @@
 <% content_for :title, t("dating.who_liked_you") %>
 
-<div class="page-header">
+<div class="page-header collection-header">
   <%= tag.h1 t("dating.who_liked_you") %>
-  <%= link_to t("dating.back_to_deck"), root_path, class: "button button-ghost button-small" %>
+  <%= link_to t("dating.back_to_deck"), root_path, class: "button button-ghost" %>
 </div>
 
 <% if @likes.any? %>
@@ -34,11 +34,11 @@
           <blockquote class="like-comment"><%= like.comment %></blockquote>
         <% end %>
 
-        <div class="cluster">
+        <div class="cluster dating-like-actions">
           <%= button_to t("dating.like_back"), likes_path(user_id: like.liker_id),
-                method: :post, class: "button button-primary button-small" %>
+                method: :post, class: "button button-primary" %>
           <%= button_to t("dating.pass"), dislikes_path(user_id: like.liker_id),
-                method: :post, class: "button button-ghost button-small" %>
+                method: :post, class: "button button-ghost" %>
         </div>
         <%# The same report and block the deck card offers. %>
         <details class="swipe-overflow">
@@ -47,11 +47,11 @@
             <%= render "shared/report_button", target: like.liker, reason: nil %>
             <% if @blocked_ids.include?(like.liker_id) %>
               <%# destructive: no-confirm-ok — reversible — the button becomes Block again in place %>
-              <%= button_to t("block.unblock"), main_app.unblock_user_path(like.liker), method: :delete,
-                    class: "button button-ghost button-small" %>
+              <%= button_to t("block.unblock"), main_app.unblock_user_path(like.liker), method: :delete, form_class: "button_to dating-block-action",
+                    class: "button button-ghost" %>
             <% else %>
-              <%= button_to t("block.block"), main_app.block_user_path(like.liker), method: :post,
-                    class: "button button-ghost button-small" %>
+              <%= button_to t("block.block"), main_app.block_user_path(like.liker), method: :post, form_class: "button_to dating-block-action",
+                    class: "button button-ghost" %>
             <% end %>
           </div>
         </details>
