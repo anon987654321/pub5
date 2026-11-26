@@ -46,6 +46,12 @@ module Studio
         prompt = request["prompt"].to_s
         raise ArgumentError, "render needs a prompt" if prompt.empty?
 
+        # Generic rendering remains available verbatim. Photographic requests
+        # share the same craft compiler as the subject-aware LoRA entrypoint.
+        if request["photographic"] == true
+          require_relative "../lora/lora"
+          prompt = Studio::Lora::Craft.photographic(prompt)
+        end
         engine = request["engine"] || MODELS.default_engine
         client = Studio::ReplicateClient.new
         output = client.predict(engine, { "prompt" => prompt }, timeout: request.fetch("timeout", 600))
@@ -63,6 +69,7 @@ module Studio
           p.on("--free", "list the free-tier models") { options[:free] = true }
           p.on("--account", "show the connected Replicate account") { options[:account] = true }
           p.on("--render PROMPT", "run one prediction") { |v| options[:render] = v }
+          p.on("--photographic", "compile with shared photographic craft") { options[:photographic] = true }
           p.on("--engine NAME", "engine for --render") { |v| options[:engine] = v }
           p.on("--out FILE", "write the --render output here") { |v| options[:out] = v }
         end
@@ -81,6 +88,7 @@ module Studio
           when :account then options[:account] = true
           when :render
             options[:render] = wizard.ask("Describe the picture")
+            options[:photographic] = wizard.confirm("Photographic image?", default: true)
             options[:engine] = wizard.ask("Engine", default: MODELS.default_engine)
             options[:out] = wizard.ask("Write the file to", default: "replicate.png")
           end
@@ -104,7 +112,7 @@ module Studio
         elsif options[:account]
           puts "account: #{Studio::ReplicateClient.new.account_username}"
         elsif options[:render]
-          puts JSON.generate(render("prompt" => options[:render], "engine" => options[:engine], "out" => options[:out]))
+          puts JSON.generate(render("prompt" => options[:render], "engine" => options[:engine], "out" => options[:out], "photographic" => options[:photographic] == true))
         end
       end
     end
