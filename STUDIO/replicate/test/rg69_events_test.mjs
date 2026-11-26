@@ -43,3 +43,36 @@ assert(calls===expected,"unexpected fetch "+protocol+" "+origin);
 assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
 }
 console.log("profile origin checks: "+origins.length);
+
+ // Strict graph mock: reject undefined instrument and connection endpoints.
+const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["function createDefaultFX(","const DENSITIES="],["function createAudioGraph(","function applyFX("]];
+const graphFixture=`
+const edges=[];
+const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(){},linearRampToValueAtTime(){}});
+class Node {
+constructor(){for(const key of ["gain","wet","frequency","detune","volume","Q","attack","ratio","width","threshold","knee","release","feedback","delayTime","pan","playbackRate"])this[key]=param();this.ready=Promise.resolve();}
+connect(to){assert(to instanceof Node||to?.audioParam===true,"undefined or invalid connection destination");edges.push([this,to]);return this;}
+disconnect(){}
+start(){return this;}
+stop(){return this;}
+triggerAttackRelease(){}
+}
+const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
+const Tone=Object.fromEntries("Gain Filter Distortion Compressor StereoWidener Limiter Reverb FeedbackDelay Noise LFO Chebyshev Chorus Tremolo Panner Synth MonoSynth FMSynth PolySynth".split(" ").map(name=>[name,Node]));
+Object.assign(Tone,{getContext:()=>({rawContext:raw}),mtof:n=>440*2**((n-69)/12),connect:(from,to)=>from.connect(to)});
+const log=()=>{};
+`;
+const graphCheck=`
+const rg69AudioProfile=finalizeRG69AudioProfile(RG69_AUDIO_FALLBACK);
+const aud={bpm:150,drive:90,filter:80,comp:60,width:50,delay:20,tape:5,reverb:20,vinyl:0,crackle:0,wobble:0};
+const mix={drum:80,bass:70,keys:60,pads:50,master:75};
+const g=createAudioGraph(aud,mix,null),offline=createAudioGraph(aud,mix,null,{offline:true,duration:8});
+const expected=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
+for(const graph of [g,offline]){
+assert(JSON.stringify(Object.keys(graph.instruments).sort())===JSON.stringify(expected.slice().sort()),"instrument registry disagrees with scheduler");
+for(const name of expected)assert(typeof graph.instruments[name].triggerAttackRelease==="function","missing "+name);
+}
+return {graphs:2,voices:expected.length,connections:edges.length};
+`;
+const graphResult=new Function("assert",graphFixture+graphRanges.map(([a,b])=>extract(a,b)).join("\n")+graphCheck)(assert);
+console.log(JSON.stringify(graphResult,null,2));
