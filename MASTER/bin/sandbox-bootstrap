@@ -43,7 +43,7 @@ else
 fi
 LIBS=${PUB5_SANDBOX_LIBS:-$CACHE_ROOT/pub5/libs}
 VIPS_LIB="$LIBS/extracted/usr/lib/x86_64-linux-gnu"
-POOL=http://deb.debian.org/debian/pool/main
+POOL=https://deb.debian.org/debian/pool/main
 
 DRY=0
 case "${1:-}" in
@@ -54,7 +54,7 @@ say() { printf 'sandbox-bootstrap: %s\n' "$*"; }
 run() { if [ "$DRY" = 1 ]; then say "would run: $*"; else "$@"; fi; }
 
 # 1. Ruby
-if [ -x "$MASTER/.tools/ruby/bin/ruby" ] && "$MASTER/.tools/ruby/bin/ruby" -e 'exit 0' 2>/dev/null; then
+if [ -x "$MASTER/.tools/ruby/bin/ruby" ] && "$MASTER/.tools/ruby/bin/ruby" -ropenssl -rpsych -rfiddle -e 'exit 0' 2>/dev/null; then
   say "ruby ok: $MASTER/.tools/ruby/bin/ruby"
 else
   say "building the vendored ruby (this compiles; minutes)"
@@ -63,13 +63,18 @@ fi
 RUBY="$MASTER/.tools/ruby/bin/ruby"
 GEM_HOME_BIN="$MASTER/.tools/ruby/bin"
 BUNDLE="$GEM_HOME_BIN/bundle"
+# Native gem compilation shares memory with the runtime; serialize by default.
+BUNDLE_JOBS=${BUNDLE_JOBS:-1}
+case "$BUNDLE_JOBS" in
+  ""|0|*[!0-9]*) say "invalid BUNDLE_JOBS"; exit 64 ;;
+esac
 
 # 2. MASTER's bundle
-if "$RUBY" -e 'begin; require "ruby_llm"; exit 0; rescue LoadError; exit 1; end' 2>/dev/null; then
+if (cd "$MASTER" && env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" check >/dev/null 2>&1); then
   say "MASTER bundle ok"
 else
   say "bundle install MASTER"
-  (cd "$MASTER" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --jobs 4)
+  (cd "$MASTER" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --jobs "$BUNDLE_JOBS")
 fi
 
 # 3. RAILS app bundles (serial: one shared gem home, parallel installs race).
@@ -82,12 +87,12 @@ for app in brgen amber bsdports mrdamascy; do
   [ -f "$gemfile" ] || continue
   say "bundle check RAILS/$app"
   (cd "$ROOT/RAILS/$app" && run env PATH="$GEM_HOME_BIN:$PATH" BUNDLE_GEMFILE="$gemfile" "$BUNDLE" install --local --quiet) || \
-    (cd "$ROOT/RAILS/$app" && run env PATH="$GEM_HOME_BIN:$PATH" BUNDLE_GEMFILE="$gemfile" "$BUNDLE" install --jobs 4)
+    (cd "$ROOT/RAILS/$app" && run env PATH="$GEM_HOME_BIN:$PATH" BUNDLE_GEMFILE="$gemfile" "$BUNDLE" install --jobs "$BUNDLE_JOBS")
 done
 if [ -f "$ROOT/MASTER/web/Gemfile" ]; then
   say "bundle check MASTER/web"
   (cd "$ROOT/MASTER/web" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --local --quiet) || \
-    (cd "$ROOT/MASTER/web" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --jobs 4)
+    (cd "$ROOT/MASTER/web" && run env PATH="$GEM_HOME_BIN:$PATH" "$BUNDLE" install --jobs "$BUNDLE_JOBS")
 fi
 
 # 4. libvips for ruby-vips, from Debian pool debs, extracted without root.
