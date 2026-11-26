@@ -16,7 +16,7 @@ class Message
       # anyone. Reload with those associations and strict loading off first.
       # `targets:` (a CSS selector), not `target:` (one dom id): the corner chat
       # widget lives in the layout, so a channel page has two logs — a selector
-      # appends to every open .conversation-log rather than whichever came first.
+      # appends to every open log for this conversation, not unrelated rooms.
       after_create_commit :broadcast_to_logs
       # An edit replaces the line in every open thread; unsend! does the same by
       # hand, because update_columns runs no callbacks.
@@ -31,7 +31,7 @@ class Message
       fresh = reloaded_for_render
       fresh.broadcast_append_to(
         fresh.conversation,
-        targets: ".conversation-log",
+        targets: ".conversation-log[data-conversation-id='#{fresh.conversation_id}']",
         partial: "messages/message",
         locals: { message: fresh, broadcast: true },
       )
@@ -44,7 +44,7 @@ class Message
       fresh = reloaded_for_render
       fresh.broadcast_replace_to(
         fresh.conversation,
-        targets: "##{ActionView::RecordIdentifier.dom_id(fresh)}",
+        targets: ".conversation-log[data-conversation-id='#{fresh.conversation_id}'] > ##{ActionView::RecordIdentifier.dom_id(fresh)}",
         partial: "messages/message",
         locals: { message: fresh, broadcast: true },
       )

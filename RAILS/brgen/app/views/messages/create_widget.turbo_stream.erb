@@ -1,5 +1,4 @@
-<%# Reset the corner widget's own composer. The message itself arrives through
-    Message#broadcasts_to, which appends to every .conversation-log on the page.
+<%# Echo the committed message to matching logs even if the socket is offline.
     On validation failure we re-render the same form with the invalid message.
 
     A fresh Message on success, and only the rejected one on failure. Passing
@@ -8,6 +7,9 @@
     the composer kept the message visible and turned into an edit form for it.
     routes.rb declares `resources :messages, only: [ :create ]`, so there is no
     PATCH route and the second send could not succeed. %>
+<% if @message.persisted? %>
+  <%= turbo_stream.append_all ".conversation-log[data-conversation-id='#{@conversation.id}']", partial: "messages/message", locals: { message: @rendered } %>
+<% end %>
 <%= turbo_stream.replace "nearby_widget_message" do %>
   <%= render "nearby/widget_composer",
         conversation: @conversation,

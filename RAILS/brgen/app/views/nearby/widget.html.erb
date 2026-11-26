@@ -29,6 +29,7 @@
     <ul id="nearby-widget-log" class="nearby-chat-widget-log conversation-log"
         data-nearby-chat-target="log"
         data-controller="conversation-log"
+        data-conversation-id="<%= @conversation.id %>"
         data-conversation-log-viewer-id-value="<%= Current.user&.id %>"
         data-conversation-log-viewer-account-value="<%= authenticated? %>"
         data-conversation-log-unread-one-value="<%= t("messages.unread_one") %>"

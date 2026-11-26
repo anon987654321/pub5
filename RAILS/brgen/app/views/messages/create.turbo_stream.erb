@@ -4,7 +4,7 @@
     state of a phone that has just come back online. Turbo removes an existing
     child with the same id before appending, so when both arrive there is one
     line, not two. %>
-<%= turbo_stream.append_all ".conversation-log", partial: "messages/message", locals: { message: @rendered } %>
+<%= turbo_stream.append_all ".conversation-log[data-conversation-id='#{@conversation.id}']", partial: "messages/message", locals: { message: @rendered } %>
 <%= turbo_stream.replace "new_message" do %>
   <% if @conversation.channel? %>
     <%= render "channels/composer", conversation: @conversation, message: Message.new %>

@@ -51,6 +51,7 @@ class MessageBroadcastTest < ActiveSupport::TestCase
     streams = capture_turbo_stream_broadcasts(conversation) do
       Message.create!(conversation:, sender: @user, content: "hei", message_type: "text")
     end
+    assert_equal ".conversation-log[data-conversation-id='#{conversation.id}']", streams.last["targets"]
     html = streams.last.to_html
     assert_includes html, 'data-for="sender"', "edit and unsend reach the sender's own copy"
     assert_includes html, 'data-for="others"', "report reaches the recipients"
@@ -65,6 +66,7 @@ class MessageBroadcastTest < ActiveSupport::TestCase
 
     edited = capture_turbo_stream_broadcasts(conversation) { message.edit!("rettet") }
     assert_equal "replace", edited.last["action"]
+    assert_equal ".conversation-log[data-conversation-id='#{conversation.id}'] > #message_#{message.id}", edited.last["targets"]
     assert_includes edited.last.to_html, "rettet"
 
     unsent = capture_turbo_stream_broadcasts(conversation) { message.reload.unsend! }
