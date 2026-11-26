@@ -205,7 +205,6 @@ test("install folds the retired localStorage queue in and words the status only 
   globalThis.navigator.onLine = true
 })
 
-
 test("draft storage acknowledges transactions, not individual requests", async () => {
   const vendor = await import(pathToFileURL(new URL("../__shared/vendor/javascript/idb-keyval.js", import.meta.url).pathname).href)
   const original = globalThis.indexedDB

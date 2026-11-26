@@ -331,11 +331,9 @@ curl -fsS http://127.0.0.1:61352/up
 doas zsh RAILS/amber/amber.sh
 ```
 
-
 ## Brand and demo-media references
 
 The following design and asset guidance is consolidated here so Amber has one project entry point.
-
 
 ### Demo media
 
@@ -366,7 +364,6 @@ committing generated assets. That rule keeps build output and renders out of his
 they can be made again from source. These cannot: a render costs money and never comes out the
 same twice, and the deploy copies only tracked files to the box, where the seeds read them. So
 the app keeps a small copy, and the full renders stay out of git on the machine that made them.
-
 
 ### PROPOSALS — plur1bus plates: eleven directions for the amber® mark
 
@@ -493,7 +490,6 @@ RAILS/amber/__logo/
 ```
 
 Home rationale: the logo is owned by Amber, so its generator, previews and research live beside the app. No candidate replaces the production logo until it is selected. The plates are brand documentation, not production assets; rendered PNGs stay out of the repo and the SVGs remain the source of truth.
-
 
 ### RESEARCH — plur1bus plates
 

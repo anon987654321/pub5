@@ -127,7 +127,6 @@ For implementation detail, read [product specification](#product-specification).
 constraints, read [AGENTS.md](AGENTS.md). Historical repair transcripts remain
 in Git history; they are not an operational checklist or a second specification.
 
-
 ## Product specification
 
 The following specification is part of the Mr. Damascy project contract. Implementation and deployed behavior remain the source of truth; update this section with material product changes.

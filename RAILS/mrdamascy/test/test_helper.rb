@@ -165,10 +165,9 @@ module ActiveSupport
     # users.role enum (APP_SPEC §4): customer:0 staff:1 courier:2 admin:3
     ROLES = { customer: 0, staff: 1, courier: 2, admin: 3 }.freeze
 
-    # ------------------------------------------------------------------
     # Auth helpers — the same contract as SessionsController#create:
     # a plain Session row + the token cookie (cookies[:session_token]).
-    # ------------------------------------------------------------------
+
     def sign_in(user)
       # Drive the app's real phone + mock-OTP sign-in (POST /session) so the
       # session cookie is exactly what SessionsController#create sets — a
@@ -206,9 +205,8 @@ module ActiveSupport
       User.create!(phone: phone, name: name, role: ROLES.fetch(:customer))
     end
 
-    # ------------------------------------------------------------------
     # Seed helpers — minimal inline world builders (money in øre).
-    # ------------------------------------------------------------------
+
     def seed_kitchen!
       # Idempotent on slug: setup blocks often call seed_kitchen! and then a
       # helper like seed_order! that seeds the kitchen again — the second

@@ -425,12 +425,9 @@ host and SHA, observed evidence, and the next safe read-only diagnostic. Do not 
 automatically, skip tests, weaken a gate, change unrelated host configuration, or claim
 success. Recovery and rollback are deliberate, separately reviewed operations.
 
-
-
 ## Vertical and demo-media guides
 
 Brgen is one application with several mounted engines, not a fleet of separately deployed apps. Their product notes and implementation contracts are collected here; the engine directories remain the code owners.
-
 
 ### Demo media
 
@@ -478,7 +475,6 @@ Active Storage blob metadata, and post cards/post pages can display a credit whe
 Do not bulk scrape Unsplash: its license excludes compiling its images to reproduce a similar or
 competing service. Use the existing generated frames, the credited Wikimedia Commons sources, or
 another source whose license permits the specific intended use.
-
 
 ### brgen dating
 
@@ -553,7 +549,6 @@ The engine depends on `pub5-shared` for `User`, authentication, tenancy and the 
 and its boot shape comes from `Shared::VerticalEngine`. Its strings live in the engine's own
 Norwegian and English locale files, and Norwegian is the default.
 
-
 ### brgen maps
 
 **Places and a live map, for whichever city you arrived through.** Maps puts the shops, cafes
@@ -586,7 +581,6 @@ the shared tiptap editor runs over a mounted editor. The controller lives in the
 `app/javascript/controllers`, which brgen pins through the vertical list in its
 `config/importmap.rb`; nothing refreshes the page yet, and the guard is in place before one
 does. Its first controller tests run inside brgen's suite, under `test/controllers`.
-
 
 ### brgen marketplace
 
@@ -708,7 +702,6 @@ with a database the Solidus deployment supports. Before any production cutover, 
 Dintero Shopping payload against the current test account, and exercise authorisation, capture,
 refund, duplicate delivery, seller approval and settlement events.
 
-
 ### brgen takeaway
 
 **Good food from kitchens in your city, ordered without leaving the local network.** Takeaway
@@ -802,7 +795,6 @@ consistent with Marketplace's provider contracts.
 Do not revive the old PostgreSQL, Redis, Mapbox, Nginx or Rails 8.0 setup instructions. The
 current stack is pinned in `RAILS/apps.yml` and the Brgen host's Gemfile/lockfile.
 
-
 ### brgen messenger
 
 **The city's conversations, without losing the thread.** Messenger is the private and group
@@ -890,7 +882,6 @@ Turbo broadcasts whenever those contracts change.
 Do not revive the historical PostgreSQL/Redis/ActionCable/StimulusReflex instructions. The active
 stack is the one pinned in `RAILS/apps.yml` and the host Gemfile/lockfile.
 
-
 ### Brgen Radio and TV
 
 Brgen's local media surfaces let a city publish and discover sound and moving images without
@@ -922,7 +913,6 @@ separate tenant and rights preconditions documented in the [Playlist section](#b
 Do not create separate Rails applications for Radio or TV. Their engine code is mounted by Brgen
 and their records live in the Brgen database. The active implementation and remaining work are
 listed in `RAILS/apps.yml`.
-
 
 ### brgen playlist
 
@@ -1029,7 +1019,6 @@ The task is intended to preflight all source files, attach them through Active S
 create the playlist in the original order. It is idempotent for matching audio
 and refuses to silently overwrite a changed attachment. The confirmation flag
 is an operator attestation, not a legal determination.
-
 
 ### brgen tv
 

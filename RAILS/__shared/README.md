@@ -159,7 +159,6 @@ ruby MASTER/checks/runner.rb stimulus_components
 ruby MASTER/checks/runner.rb frontend_auditor
 ```
 
-
 ## Fonts
 
 The RAILS shared engine serves these assets from `/fonts`. The CSS makes no third-party font requests.
@@ -191,7 +190,6 @@ The WOFF2 assets are web projections, not an installer for the operating
 system or terminal. MASTER never changes the emulator's font or size.
 
 Keep the license text with the font binaries in source distributions and deployments.
-
 
 ## Shared social front page
 

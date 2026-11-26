@@ -220,7 +220,6 @@ stays open until its evidence lands.
 
 The RAILS contract suite also rejects literal JSON-LD `<script>` elements in view templates; views must use `SchemaHelper`/`Shared::SeoKit#json_ld_script`, whose serializer escapes HTML-significant characters before marking the JSON safe. The existing helper-level test covers a `</script>` payload. The root check runner's `security_headers_source` contract checks the shared Rails security-header initializer, relayd's edge headers, and both nonce-CSP initializers. CSP must remain app-owned: a global relayd CSP can replace the app's nonce-bearing policy and break the MASTER face. The check does not claim production enforcement; `PUB5_CSP_ENFORCE=1` remains a live operator change and must be verified against real vm23 response headers.
 
-
 ## Optional integrations
 
 RAILS-side parks. MASTER's plugin loader does not scan this tree; these are

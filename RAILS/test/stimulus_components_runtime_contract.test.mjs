@@ -77,7 +77,6 @@ test("the timeago adapter keeps the canonical week duration and a real consumer"
   assert.match(reports, /data-timeago-refresh-interval-value="60000"/)
 })
 
-
 test("live search waits for IME input and cancels stale debounced submissions", async () => {
   const source = await readSource("__shared/frontend/live_search_controller.js")
   // Substitute only the Stimulus base class; execute the shipped methods.
@@ -108,7 +107,6 @@ test("live search waits for IME input and cancels stale debounced submissions", 
   assert.equal(sends, 2)
   controller.disconnect()
 })
-
 
 test("bottom sheets ignore interactive controls and cancelled drags restore state", async () => {
   const source = await readSource("__shared/frontend/bottom_sheet_controller.js")
