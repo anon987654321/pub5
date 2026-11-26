@@ -32,6 +32,12 @@ module Master
       TRIES_PER_SURFACE = DesignPrompts::VARIANTS.size
       SHARED = "/RAILS/__shared/"
       MARKUP_FILES = 2
+      MAX_CANDIDATE_FILES = 4
+      Candidate = Data.define(:edits, :why) do
+        def files = edits.map(&:file)
+        def key = edits.map(&:key).sort
+        def markup? = edits.all?(&:markup?)
+      end
       Round = Data.define(:number, :surface, :why, :outcome, :before, :after)
 
       # What the loop works on and how long.
@@ -180,15 +186,33 @@ module Master
       def propose(sources, variant)
         reply = @world.ask.call(prompt(sources, variant), [@target[:shot]])
         rules = DesignEdit::Rules.new(guard: @world.guard, scale: nil, type_scale: type_steps, classes: sheet_classes(sources))
-        edit = DesignEdit.parse(reply, allowed: sources, rules:)
-        raise DesignEdit::Refused, "already tried and undone" if @rejected.include?(edit.key)
+        candidate = parse_candidate(reply, sources, rules)
+        raise DesignEdit::Refused, "already tried and undone" if @rejected.include?(candidate.key)
 
-        refuse_unseen_selector!(edit)
-        refuse_lone_shared!(edit)
-        edit
+        candidate.edits.each { |edit| refuse_unseen_selector!(edit) }
+        refuse_lone_shared!(candidate)
+        candidate
       rescue DesignEdit::Refused, StandardError => e
         @say.call("#{@target[:surface].id}: edit not usable, #{e.message.lines.first.to_s.strip}")
         nil
+      end
+
+      def parse_candidate(reply, sources, rules)
+        data = JSON.parse(reply.to_s[/\{.*\}/m].to_s)
+        rows = data.key?("edits") ? data["edits"] : [data]
+        unless rows.is_a?(Array) && rows.size.between?(1, MAX_CANDIDATE_FILES) && rows.all? { |row| row.is_a?(Hash) }
+          raise DesignEdit::Refused, "candidate must contain one to #{MAX_CANDIDATE_FILES} file edits"
+        end
+
+        why = data["why"].to_s.strip
+        raise DesignEdit::Refused, "candidate needs a design rationale" if why.empty?
+
+        edits = rows.map { |row| DesignEdit.parse(JSON.generate(row.merge("why" => why)), allowed: sources, rules:) }
+        edits.each(&:check!)
+        files = edits.map(&:file)
+        raise DesignEdit::Refused, "candidate repeats a file" unless files.uniq.size == files.size
+
+        Candidate.new(edits:, why:)
       end
 
       # An edit to a rule that matches nothing on the page changes nothing the judges can
@@ -214,7 +238,7 @@ module Master
                                    "#{measured_apps.first}; name more apps with --app"
       end
 
-      def shared?(edit) = edit.file.to_s.include?(SHARED)
+      def shared?(candidate) = candidate.files.any? { |file| file.include?(SHARED) }
 
       def measured_apps = @state.map { |row| row[:surface].app }.uniq
 
@@ -257,8 +281,7 @@ module Master
         verdict = nil
         begin
           transaction = begin_candidate_transaction(edit)
-          original = edit.apply!
-          observe_candidate_write!(transaction, edit, original)
+          apply_candidate!(transaction, edit)
           if rebuild(edit)
             after = measured(@fresh.map { |row| row[:surface] })
             verdict = judge(@fresh, after)
@@ -269,8 +292,8 @@ module Master
               candidate = {
                 capture:,
                 edit:, gain: verdict[:gain], after:,
-                source_hash: transaction.snapshot_content_hash(edit.file),
-                candidate_hash: transaction.observed_content_hash(edit.file),
+                source_hash: source_hashes(transaction, edit),
+                candidate_hash: observed_hashes(transaction, edit),
               }
             else
               @rejected << edit.key
@@ -295,10 +318,10 @@ module Master
 
       def begin_candidate_transaction(edit)
         transaction = Transaction.new(
-          root: @plan.root, paths: [edit.file], id: "design-#{SecureRandom.hex(10)}"
+          root: @plan.root, paths: edit.files, id: "design-#{SecureRandom.hex(10)}"
         )
         transaction.begin!
-        return transaction if transaction.observed_current?(edit.file)
+        return transaction if candidate_current?(transaction, edit)
 
         transaction.release_conflicts!
         result = transaction.rollback!
@@ -308,6 +331,28 @@ module Master
       rescue StandardError
         transaction&.close! if transaction&.active?
         raise
+      end
+
+      def source_hashes(transaction, candidate)
+        candidate.files.to_h { |file| [file, transaction.snapshot_content_hash(file)] }
+      end
+
+      def observed_hashes(transaction, candidate)
+        candidate.files.to_h { |file| [file, transaction.observed_content_hash(file)] }
+      end
+
+      def candidate_current?(transaction, candidate)
+        candidate.files.all? { |file| transaction.observed_current?(file) }
+      end
+
+      def apply_candidate!(transaction, candidate)
+        candidate.edits.each(&:check!)
+        candidate.edits.each do |edit|
+          raise DesignEdit::Refused, "source changed before write" unless transaction.observed_current?(edit.file)
+
+          original = edit.apply!
+          observe_candidate_write!(transaction, edit, original)
+        end
       end
 
       # The text read by DesignEdit#apply! must still be the transaction's
@@ -337,7 +382,7 @@ module Master
           return :pending
         end
 
-        conflict = !transaction.observed_current?(edit.file)
+        conflict = !candidate_current?(transaction, edit)
         transaction.release_conflicts! if conflict
         result = transaction.rollback!
         unless result.ok?
@@ -481,8 +526,10 @@ module Master
         receipt = comparison && comparison[:receipt]
         return unless receipt
 
-        RepairOutcomes.new(root: @plan.root).record(edit.file, ["RENDERED_VISUAL_REFINEMENT"],
-          { outcome => 1 }, pattern: "design-loop", receipt:, lesson: @vision)
+        edit.files.each do |file|
+          RepairOutcomes.new(root: @plan.root).record(file, ["RENDERED_VISUAL_REFINEMENT"],
+            { outcome => 1 }, pattern: "design-loop", receipt:, lesson: @vision)
+        end
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "design_loop.remember_comparison")
       end
@@ -546,14 +593,13 @@ module Master
         after = @target[:score] + best[:gain]
         begin
           transaction = begin_candidate_transaction(edit)
-          unless transaction.snapshot_content_hash(edit.file) == best[:source_hash]
+          unless source_hashes(transaction, edit) == best[:source_hash]
             cleanup = restore_candidate_transaction(transaction, edit)
             @say.call("#{edit.why}: source changed after measurement; cleanup=#{cleanup}")
             return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
           end
-          original = edit.apply!
-          observe_candidate_write!(transaction, edit, original)
-          unless transaction.observed_content_hash(edit.file) == best[:candidate_hash]
+          apply_candidate!(transaction, edit)
+          unless observed_hashes(transaction, edit) == best[:candidate_hash]
             cleanup = restore_candidate_transaction(transaction, edit)
             @say.call("#{edit.why}: candidate bytes changed after measurement; cleanup=#{cleanup}")
             return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
@@ -566,7 +612,7 @@ module Master
             return round(number:, why: edit.why, outcome:, after: @target[:score])
           end
 
-          unless transaction.observed_current?(edit.file)
+          unless candidate_current?(transaction, edit)
             cleanup = restore_candidate_transaction(transaction, edit)
             @say.call("#{edit.why}: source changed before delivery; candidate cleanup=#{cleanup}")
             return round(number:, why: edit.why, outcome: :failed, after: @target[:score])
@@ -584,7 +630,7 @@ module Master
           end
           after = @target[:score] + verification[:gain]
 
-          committed = @world.commit_file.call(edit.file, commit_message(edit, after), transaction)
+          committed = @world.commit_file.call(edit.files.size == 1 ? edit.files.first : edit.files, commit_message(edit, after), transaction)
           unless committed && transaction.state == "committed" && !transaction.active?
             @rejected << edit.key
             @undone << "#{edit.why} (commit refused or missing transaction receipt)"

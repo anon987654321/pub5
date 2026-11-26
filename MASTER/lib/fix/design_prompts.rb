@@ -74,7 +74,7 @@ module Master
           not survive merely because they already exist. Prefer space, alignment and hierarchy to containers.
           Preserve essential capabilities and discoverable accessible controls. If a subtraction needs changes outside
           this loop's permitted scope, do not disguise it as a spacing fix.
-          Make ONE edit to ONE of the stylesheets below that improves the layout you can see: spacing, alignment,
+          Make ONE edit or a coordinated candidate of up to four distinct offered files to improve the layout: spacing, alignment,
           sizing, hierarchy, grid or flex structure, overflow, reading width. Diagnose a specific relationship
           between visible elements, not merely an isolated number. Prefer intrinsic reflow and meaningful
           group separation over uniform gaps or enlarging every element. Use flex wrapping and gap for linear flow, grid for\n          two-dimensional alignment, minmax(0, 1fr) for shrinkable tracks, and container queries only when container\n          size is the actual constraint. Prefer repairing the shared owning rule to adding overrides. Preserve product\n          designs, keyboard order, focus, and touch behavior. Explain the intended optical gain. Change layout properties or neutralise existing decorative borders and shadows to none or 0. Never change
@@ -87,8 +87,8 @@ module Master
           A sparse interface is not a defect; do not add furniture merely to fill empty space.
           #{undone_note}
           #{prior_design_lessons(sources)}
-          Return only JSON: {"file": "<one path below>", "find": "<exact text from that file, occurring once>",
-          "replace": "<new text>", "why": "<one short sentence>"}.
+          Return only JSON: {"why": "<one coherent design rationale>", "edits": [{"file": "<offered path>",
+          "find": "<exact source occurring once>", "replace": "<new text>"}]}. One edit per file. All edits form one candidate.
 
           #{sources.map { |path| "FILE #{path}\n#{File.read(path, encoding: 'UTF-8')[0, SOURCE_CHARS]}" }.join("\n\n")}
         TEXT

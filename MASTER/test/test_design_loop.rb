@@ -303,6 +303,28 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_coordinated_candidate_is_committed_as_one_transaction
+    with_sheet do |path|
+      other = File.join(File.dirname(path), "second.scss")
+      File.write(other, ".card { margin: 4px; }")
+      committed = []
+      world = world_for(path, committed:)
+      ask = world.ask
+      proposal = JSON.generate("why" => "unify composition", "edits" => [
+        { "file" => path, "find" => "padding: 4px;", "replace" => "padding: 16px;" },
+        { "file" => other, "find" => "margin: 4px;", "replace" => "margin: 8px;" }
+      ])
+      world = world.with(sources_for: ->(_) { [path, other] },
+                         ask: ->(prompt, images) { prompt.include?("Two renders") ? ask.call(prompt, images) : proposal })
+      plan = LOOP::Plan.new(surfaces: HOME_AND_FEED, root: File.dirname(path), rounds: 1, candidates: 1)
+      stub_scoring do
+        assert_equal :kept, LOOP.new(plan:, world:).run.first.outcome
+      end
+      assert_equal [path, other], committed.first.first
+      assert_includes File.read(other), "margin: 8px;"
+    end
+  end
+
   def test_sparse_compositions_remain_eligible_for_design_review
     with_sheet do |path|
       committed = []

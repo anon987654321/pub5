@@ -138,15 +138,21 @@ module Operator
 
     def commit(file, message, root:, transaction:)
       repository = File.realpath(root)
-      absolute = File.expand_path(file, repository)
       prefix = "#{repository}#{File::SEPARATOR}"
-      raise ArgumentError, "design commit path escapes repository" unless absolute.start_with?(prefix)
+      relative = Array(file).map do |path|
+        absolute = File.expand_path(path, repository)
+        raise ArgumentError, "design commit path escapes repository" unless absolute.start_with?(prefix)
 
-      relative = Pathname.new(absolute).relative_path_from(Pathname.new(repository)).to_s
+        Pathname.new(absolute).relative_path_from(Pathname.new(repository)).to_s
+      end
       before = git_head(repository)
-      transaction.delivery.begin!(head_before: before, paths: [relative])
-      expected_hash = transaction.observed_content_hash(relative)
-      raise "design transaction has no observed source digest" unless expected_hash&.match?(/\A[0-9a-f]{64}\z/)
+      expected_hashes = relative.to_h do |path|
+        hash = transaction.observed_content_hash(path)
+        raise "design transaction has no observed source digest" unless hash&.match?(/\A[0-9a-f]{64}\z/)
+
+        [path, hash]
+      end
+      transaction.delivery.begin!(head_before: before, paths: relative)
 
       body = message.to_s.sub(
         /\n\n#{Regexp.escape(Master::Core::World::COMMIT_TRAILER)}\s*\z/, ""
@@ -156,7 +162,7 @@ module Operator
 
       begin
         Master::Io::GitOperations.new(repository).commit(
-          delivered_message, paths: [relative], expected_hashes: { relative => expected_hash }
+          delivered_message, paths: relative, expected_hashes:
         )
       rescue StandardError => error
         landed = marked_design_commit(repository, before, marker)
