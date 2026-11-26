@@ -1492,9 +1492,9 @@ function masterColorCurve(kind,amount){
 const a=Math.max(0,Math.min(1,amount));
 return Float32Array.from({length:4097},(_,i)=>{
 const x=i/2048-1,d=1+a*.65;
-if(kind==="triode")return Math.tanh(d*(x+a*.12*x*x))/d;
-if(kind==="pentode")return x*(1-a*.22)+a*.22*Math.sin(Math.PI*x/2)/(Math.PI/2);
-return Math.atan(d*x)/d;
+if(kind==="triode")return x+a*(Math.tanh(d*(x+.12*x*x))/d-x);
+if(kind==="pentode")return x+a*(Math.sin(Math.PI*x/2)/(Math.PI/2)-x)*.42;
+return x+a*(Math.atan(d*x)/d-x);
 });
 }
 function createMasterColor(ctx,source,destination,aud){
@@ -1505,9 +1505,9 @@ for(const n of [triode,pentode,magnetic])n.oversample="2x";
 source.connect(dry);dry.connect(destination);source.connect(input);input.connect(triode);triode.connect(pentode);pentode.connect(pre);pre.connect(magnetic);magnetic.connect(post);post.connect(dc);dc.connect(trim);trim.connect(wet);wet.connect(destination);
 let last=-1;
 function update(settings){
-const amount=Math.max(0,Math.min(1,(settings.console??100)/100)),tape=Math.max(0,Math.min(1,(settings.tape??100)/100)),key=Math.round(amount*20)+21*Math.round(tape*20);
-if(key!==last){triode.curve=masterColorCurve("triode",amount*.55);pentode.curve=masterColorCurve("pentode",amount*.4);magnetic.curve=masterColorCurve("magnetic",tape*.45);last=key;}
-const smooth=(p,v)=>p.setTargetAtTime(v,ctx.currentTime,.035);
+const amount=Math.max(0,Math.min(1,(settings.console??100)/100)),tape=Math.max(0,Math.min(1,(settings.tape??100)/100)),tubeStep=Math.round(amount*20),tapeStep=Math.round(tape*20),key=tubeStep+21*tapeStep;
+if(key!==last){triode.curve=masterColorCurve("triode",tubeStep/20*.55);pentode.curve=masterColorCurve("pentode",tubeStep/20*.4);magnetic.curve=masterColorCurve("magnetic",tapeStep/20*.45);last=key;}
+const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.035);};
 smooth(dry.gain,1-.42*Math.max(amount,tape));smooth(wet.gain,.42*Math.max(amount,tape));smooth(input.gain,1+.12*amount);smooth(trim.gain,1/(1+.12*amount));smooth(pre.gain,2*tape);smooth(post.gain,-2*tape);
 }
 update(aud);return {update};
