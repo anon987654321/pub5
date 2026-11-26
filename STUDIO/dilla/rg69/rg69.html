@@ -1599,9 +1599,12 @@ const dryMaster=new Tone.Gain(1),wetMaster=new Tone.Gain(0);
 masterG.connect(dryMaster);dryMaster.connect(mixSum);
 limiter.connect(outputGate);
 // Use the actual context destination, not a second Tone destination chain.
-const ctx=Tone.getContext().rawContext,finalLimiter=ctx.createDynamicsCompressor();
+const ctx=Tone.getContext().rawContext,finalDynamics=ctx.createDynamicsCompressor(),finalLimiter=ctx.createGain(),ceiling=ctx.createWaveShaper();
+// Sample-peak safety net after all coloration; not a true-peak limiter.
+ceiling.curve=Float32Array.from({length:8193},(_,i)=>Math.max(-.891250938,Math.min(.891250938,i/4096-1)));
 const experimental=createExperimentalDSP(ctx,mixSum,flt);experimental.update(aud);
-finalLimiter.threshold.value=-1.5;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
+finalDynamics.threshold.value=-1.5;finalDynamics.knee.value=0;finalDynamics.ratio.value=20;finalDynamics.attack.value=.003;finalDynamics.release.value=.08;
+finalDynamics.connect(ceiling);ceiling.connect(finalLimiter);
 const masteringInput=ctx.createGain(),masterHP=ctx.createBiquadFilter(),harsh=ctx.createBiquadFilter(),warm=ctx.createBiquadFilter(),matte=ctx.createBiquadFilter(),glue=ctx.createDynamicsCompressor();
 const hf=ctx.createBiquadFilter(),hfComp=ctx.createDynamicsCompressor(),hfRestore=ctx.createBiquadFilter();
 hf.type="highshelf";hf.frequency.value=5500;hf.gain.value=5;hfRestore.type="highshelf";hfRestore.frequency.value=5500;hfRestore.gain.value=-5;
@@ -1612,7 +1615,7 @@ harsh.type="peaking";harsh.frequency.value=4100;harsh.Q.value=1.25;harsh.gain.va
 warm.type="lowshelf";warm.frequency.value=125;warm.gain.value=.8;
 matte.type="highshelf";matte.frequency.value=7800;matte.gain.value=-1.6;
 updateMasterGlue(glue,aud);
-const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);const glueOut=ctx.createGain(),programmeGlue=createProgrammeGlue(ctx,hfRestore,glueOut,glue,aud);const masterColor=createMasterColor(ctx,glueOut,finalLimiter,aud);finalLimiter.connect(ctx.destination);
+const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);const glueOut=ctx.createGain(),programmeGlue=createProgrammeGlue(ctx,hfRestore,glueOut,glue,aud);const masterColor=createMasterColor(ctx,glueOut,finalDynamics,aud);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
 const roomTone=new Tone.Filter(5400,"lowpass");rev.connect(roomTone);roomTone.connect(masterG);
