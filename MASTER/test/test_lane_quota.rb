@@ -31,6 +31,25 @@ class TestLaneQuota < Minitest::Test
     FileUtils.remove_entry(@dir)
   end
 
+  # dead? runs per candidate per filter pass; parsing both YAML files on every
+  # call was most of a 66 s boot (2026-11-26). Repeated reads parse once, and a
+  # write or an outside edit is seen at once.
+  def test_repeated_reads_parse_each_file_once_and_see_every_change
+    Quota.note("agy:auto", AGY_REPLY)
+    parses = 0
+    real = YAML.method(:safe_load_file)
+
+    YAML.stub(:safe_load_file, ->(*args, **kw) { parses += 1; real.call(*args, **kw) }) do
+      5.times { assert Quota.dead?("agy:auto") }
+      assert_operator parses, :<=, 2, "one parse per file, not per call"
+
+      Quota.revive(Quota.lane_of("agy:auto"))
+      refute Quota.dead?("agy:auto"), "our own write clears the cache"
+      File.write(Quota.path, { "agy" => @now + 60 }.to_yaml)
+      assert Quota.dead?("agy:auto"), "an outside edit changes the file stamp"
+    end
+  end
+
   def test_reset_durations_in_the_forms_providers_use
     assert_equal 165 * 3600 + 22 * 60 + 49, Quota.wait_in(AGY_REPLY)
     assert_equal 7200, Quota.wait_in("quota exceeded, resets in 2h")
@@ -155,7 +174,7 @@ class TestLaneQuota < Minitest::Test
     assert Quota.dead?("grok-cli:auto", manual:)
     Quota.note("agy:auto", AGY_REPLY)
     assert Quota.dead?("agy:auto", manual:)
-    refute Quota.dead?("grok-cli:x", manual:)
+    refute Quota.dead?("zai-cli:x", manual:), "a lane off the manual list is live"
     assert_equal :manual, Quota.until_for("ollama:glm-4", manual:)
   end
 

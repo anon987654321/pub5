@@ -290,7 +290,7 @@ module Master
       end
 
       def raw
-        rows = YAML.safe_load_file(path) || {}
+        rows = cached_yaml(path) || {}
         live = rows.select do |key, deadline| !key.start_with?(MANUAL_PROBE_PREFIX, MANUAL_REVIVED_PREFIX) &&
                                                    deadline.is_a?(Numeric) && deadline > @clock.call end
         why = rows.select { |key, reason| key.start_with?(REASON_PREFIX) && reason.is_a?(String) && live.key?(key.delete_prefix(REASON_PREFIX)) }
@@ -324,7 +324,7 @@ module Master
 
       # Entries are plain strings or "agy:" which YAML reads as a one-key map.
       def manual_dead(source = DATA)
-        list = source.is_a?(Hash) ? source["dead"] : YAML.safe_load_file(source)&.fetch("dead", nil)
+        list = source.is_a?(Hash) ? source["dead"] : cached_yaml(source)&.fetch("dead", nil)
         entries = Array(list).flat_map { |e| e.is_a?(Hash) ? e.keys : [e] }
                           .map { |e| e.to_s.strip.chomp(":") }.reject(&:empty?)
         return entries unless source == DATA
@@ -352,7 +352,24 @@ module Master
         defined?(Master::Ground::Swallow) ? Master::Ground::Swallow.log(error, context:) : warn("#{context}: #{error.message}")
       end
 
-      def write(rows) = write_atomic(path, rows.to_yaml)
+def write(rows)
+  @yaml_cache = nil
+  write_atomic(path, rows.to_yaml)
+end
+
+# Parsed YAML per file identity. dead? runs for every candidate on every
+# filter pass and parsed data/lanes.yml and the quota file afresh each time:
+# the largest share of a 66 s bin/master boot (2026-11-26). Our own write
+# clears it; an edit from elsewhere changes the stamp.
+def cached_yaml(file)
+  stat = File.stat(file)
+  stamp = [stat.ino, stat.size, stat.mtime.to_r]
+  @yaml_cache ||= {}
+  hit = @yaml_cache[file]
+  return hit.last if hit&.first == stamp
+
+  YAML.safe_load_file(file).tap { |data| @yaml_cache[file] = [stamp, data.freeze] }
+end
     end
   end
 end
