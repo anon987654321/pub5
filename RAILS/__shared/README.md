@@ -8,7 +8,7 @@ vendored Stimulus components. Apps load it by local path.
 
 The design values do not start here. They are declared in `MASTER/data/tokens.yml`,
 and the `design_tokens.yml` beside this README is a file generated from it by
-`MASTER/tools/rails/sync_dialect_tokens.rb`. Edit the source and regenerate, and
+`ruby MASTER/tools/design_tokens.rb sync_dialect_tokens`. Edit the source and regenerate, and
 never hand-edit the projection. MASTER's browser face is assembled from ordered
 source modules in `MASTER/web/styles/face/` by
 `MASTER/tools/rails/build_face_css.rb`; edit those modules rather than the public
