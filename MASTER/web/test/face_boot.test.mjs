@@ -1269,6 +1269,59 @@ test("the web face owns one animation callback and no decorative orbit populatio
   assert.doesNotMatch(part3, /ensureOrbitalField|orbitalField = new THREE\.Points/);
 });
 
+test("the sole face scheduler recovers a stalled rAF and releases its resources", () => {
+  const source = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  const start = source.indexOf("let frameLoopActive"), end = source.indexOf("// WebGL context loss", start);
+  assert.ok(start >= 0 && end > start);
+  let now = 0, sequence = 0, maxQueued = 0;
+  const callbacks = new Map(), intervals = new Map(), events = new Map();
+  const document = { hidden: false, addEventListener: (key, fn) => events.set("d:" + key, fn) };
+  const window = { addEventListener: (key, fn) => events.set("w:" + key, fn) };
+  const api = runInNewContext(
+    "let _dbgFrames=0; function frame(){ _dbgFrames++; queueFaceFrame(); }\n" +
+    source.slice(start, end) +
+    "\n({ensureFrameLoop, stats:()=>({frameRequest,pumpTimer,watchdogTimer,frames:_dbgFrames})});",
+    {
+      window, document, State: { hidden: false }, performance: { now: () => now },
+      requestAnimationFrame(fn) {
+        callbacks.set(++sequence, fn);
+        maxQueued = Math.max(maxQueued, callbacks.size);
+        return sequence;
+      },
+      cancelAnimationFrame: id => callbacks.delete(id),
+      setInterval(fn, ms) { intervals.set(++sequence, { fn, ms }); return sequence; },
+      clearInterval: id => intervals.delete(id)
+    }
+  );
+  const advance = ms => {
+    now += ms;
+    for (const timer of [...intervals.values()]) if (timer.ms === ms) timer.fn();
+  };
+  const raf = () => {
+    const entries = [...callbacks.values()];
+    callbacks.clear();
+    entries.forEach(fn => fn(now));
+  };
+  for (let i = 0; i < 10; i++) api.ensureFrameLoop();
+  for (let i = 0; i < 100; i++) {
+    now += 16; raf(); api.ensureFrameLoop();
+  }
+  assert.equal(maxQueued, 1);
+  document.hidden = true; events.get("d:visibilitychange")();
+  assert.equal(callbacks.size, 0);
+  document.hidden = false; api.ensureFrameLoop();
+  for (let i = 0; i < 4; i++) advance(2000);
+  assert.notEqual(api.stats().pumpTimer, null);
+  for (let i = 0; i < 10; i++) advance(40);
+  assert.equal(api.stats().frames, 110);
+  raf();
+  assert.equal(api.stats().pumpTimer, null);
+  assert.equal(maxQueued, 1);
+  events.get("w:pagehide")();
+  assert.equal(callbacks.size, 0);
+  assert.equal(intervals.size, 0);
+});
+
 test("face runtime keeps chat stream and particle worker boot paths", () => {
   const runtime = faceSource;
   assert.match(runtime, /function sendMessage/);
