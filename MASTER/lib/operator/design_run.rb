@@ -126,11 +126,12 @@ module Operator
       verdict.blocked? ? verdict.reason : nil
     end
 
-    def build_css(app, root:)
+    def build_css(app, root:, force: false)
       tool = CSS_BUILDERS.fetch(app, "build_all_css.rb")
       args = tool == "build_all_css.rb" ? ["--app", app] : []
       script = File.join(root, "MASTER", "tools", "rails", tool)
-      _out, status = Master::Io::Exec.capture2e(RbConfig.ruby, script, *args, chdir: root, timeout: 600)
+      env = force ? { "PUB5_CSS_FORCE" => "1" } : {}
+      _out, status = Master::Io::Exec.capture2e(env, RbConfig.ruby, script, *args, chdir: root, timeout: 600)
       FileUtils.rm_f(File.join(root, "RAILS", app, "public", "assets", ".manifest.json"))
       status.success?
     end

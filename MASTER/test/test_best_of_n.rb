@@ -40,9 +40,10 @@ class BestOfNTest < Minitest::Test
   def measurer = ->(_surfaces, root:) { [[@surface, rendering(File.read(@path)[/kind-(\w+)/, 1] || "mid")]] }
   def read = -> { File.read(@path) }
   def write = ->(src) { File.write(@path, src) }
+  def rebuild = -> { true }
 
   def rank(*candidates, **over)
-    B.rank(candidates, original: @original, surfaces: [@surface], root: @root, measurer:, read:, write:, **over)
+    B.rank(candidates, original: @original, surfaces: [@surface], root: @root, measurer:, read:, write:, rebuild:, **over)
   end
 
   def test_the_best_scoring_candidate_wins_and_the_original_is_restored
@@ -70,12 +71,12 @@ class BestOfNTest < Minitest::Test
 
   def test_unrenderable_candidates_are_discarded
     none = ->(_s, root:) { [] }
-    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: none, read:, write:)
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: none, read:, write:, rebuild:)
   end
 
   def test_failed_navigation_is_not_a_candidate
     bad = ->(_surfaces, root:) { [[@surface, rendering("good").merge("status" => 503)]] }
-    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: bad, read:, write:)
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: bad, read:, write:, rebuild:)
     assert_equal @original, File.read(@path)
   end
 
@@ -116,11 +117,55 @@ class BestOfNTest < Minitest::Test
 
     error = assert_raises(B::SourceChanged) do
       B.rank([good], original: @original, surfaces: [@surface], root: @root,
-             measurer:, read:, write:)
+             measurer:, read:, write:, rebuild:)
     end
 
     assert_match(/concurrent content was preserved/, error.message)
     assert_equal concurrent, File.read(@path)
+  end
+
+  def test_each_candidate_and_original_are_rebuilt
+    good = ".a { margin: 16px; } /* kind-good */\n"
+    mid = ".a { margin: 12px; } /* kind-mid */\n"
+    builds = []
+    build = -> { builds << File.read(@path); true }
+    measure = ->(_surfaces, root:) do
+      assert_equal builds.last, File.read(@path)
+      measurer.call([@surface], root:)
+    end
+
+    assert_equal good, B.rank([mid, good], original: @original, surfaces: [@surface], root: @root,
+                              measurer: measure, read:, write:, rebuild: build)
+    assert_equal [mid, @original, good, @original], builds
+  end
+
+  def test_failed_candidate_build_is_never_rendered
+    build = -> { File.read(@path) == @original }
+    measure = ->(*) { flunk "failed build must not be rendered" }
+
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root,
+                       measurer: measure, read:, write:, rebuild: build)
+    assert_equal @original, File.read(@path)
+  end
+
+  def test_failed_original_build_refuses_the_candidate
+    build = -> { File.read(@path) != @original }
+
+    assert_raises(B::RestoreFailed) do
+      B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root,
+             measurer:, read:, write:, rebuild: build)
+    end
+    assert_equal @original, File.read(@path)
+  end
+
+  def test_concurrent_candidate_before_trial_is_not_overwritten
+    candidate = ".a{}"
+    File.write(@path, candidate)
+
+    assert_raises(B::SourceChanged) do
+      rank(candidate)
+    end
+    assert_equal candidate, File.read(@path)
   end
 
   def test_one_candidate_keeps_todays_behaviour
@@ -138,7 +183,7 @@ class BestOfNTest < Minitest::Test
 
   def test_missing_surface_rejects_candidate
     other = Surface.new("brgen/home/desktop", "desktop")
-    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface, other], root: @root, measurer:, read:, write:)
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface, other], root: @root, measurer:, read:, write:, rebuild:)
   end
 
   def test_active_only_for_visual_style_findings_with_n_above_one
@@ -170,7 +215,7 @@ class BestOfNTest < Minitest::Test
     loop = FakeLoop.new([".a { margin: 3px; } /* kind-bad */\n", good])
     violation = { law: B::LAW_ID, file: @path }
     first = ".a { margin: 12px; } /* kind-mid */\n"
-    assert_equal good, B.pick(loop, violation, first, custody:, root: @root, measurer:)
+    assert_equal good, B.pick(loop, violation, first, custody:, root: @root, measurer:, rebuild:)
     assert_equal @original, File.read(@path)
   ensure
     ENV.delete("MASTER_FIX_BEST_OF")
@@ -184,7 +229,7 @@ class BestOfNTest < Minitest::Test
     Thread.current[:master_fix_candidate_author_models] = ["anthropic/claude-opus-5-5"]
 
     assert_equal good, B.pick(loop, { law: B::LAW_ID, file: @path },
-                              ".a { margin: 12px; } /* kind-mid */\n", custody:, root: @root, measurer:)
+                              ".a { margin: 12px; } /* kind-mid */\n", custody:, root: @root, measurer:, rebuild:)
     assert_equal ["anthropic/claude-opus-5-5", "moonshotai/kimi-k2"],
                  Thread.current[:master_fix_candidate_author_models]
   ensure

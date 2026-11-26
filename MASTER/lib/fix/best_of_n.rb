@@ -34,6 +34,7 @@ module Master
       Scored = Data.define(:source, :score, :problems, :diff, :floor)
 
       class SourceChanged < StandardError; end
+      class RestoreFailed < StandardError; end
 
       module_function
 
@@ -49,10 +50,11 @@ module Master
 
       # The first proposal plus N-1 more, scored; returns the winning source
       # or nil when every candidate regressed.
-      def pick(loop, violation, first, custody:, root:, measurer: LayoutScoreRender.method(:measure))
+      def pick(loop, violation, first, custody:, root:, measurer: LayoutScoreRender.method(:measure), rebuild: nil)
         path = violation[:file]
         root = File.basename(root) == "MASTER" ? File.dirname(root) : root
         original = File.read(path, encoding: "UTF-8")
+        rebuild ||= -> { rebuild_css(path, custody.surfaces, root:) }
         initial_authors = Array(Thread.current[:master_fix_candidate_author_models])
         extra_authors = Hash.new { |hash, key| hash[key] = [] }
         extra = extra_candidate_sources(loop, violation, original, extra_authors)
@@ -62,6 +64,7 @@ module Master
           surfaces: custody.surfaces,
           root:,
           measurer:,
+          rebuild:,
           anchors: [violation[:anchor]].compact,
           read: -> { File.read(path, encoding: "UTF-8") },
           write: ->(src) { loop.send(:write_atomic, path, src) },
@@ -93,26 +96,44 @@ module Master
           (initial_authors + Array(selected_authors)).compact.map(&:to_s).reject(&:empty?).uniq.freeze
       end
 
-      def rank(candidates, original:, surfaces:, root:, measurer:, read:, write:, anchors: [])
+      def rebuild_css(path, surfaces, root:)
+        require_relative "../operator/design_run"
+        relative = File.expand_path(path, root).delete_prefix("#{root}/")
+        apps = if relative.start_with?("RAILS/__shared/")
+                 surfaces.map(&:app).uniq
+               else
+                 [RailsApp.app_name(path, repo_root: root)].compact
+               end
+        !apps.empty? && apps.map { |app| ::Operator::DesignRun.build_css(app, root:, force: true) }.all?
+      end
+
+      def rank(candidates, original:, surfaces:, root:, measurer:, read:, write:, rebuild:, anchors: [])
         pool = candidates.map(&:to_s).reject { |c| c.strip.empty? || c == original }.uniq
         scored = pool.each_with_index.map do |source, i|
           raise SourceChanged, "source changed before visual candidate trial" unless read.call == original
 
-          write.call(source)
-          raise SourceChanged, "candidate write did not match the proposed source" unless read.call == source
+          begin
+            write.call(source)
+            raise SourceChanged, "candidate write did not match the proposed source" unless read.call == source
 
-          measured = measurer.call(surfaces, root:)
-          row = score(source, original, measured, root:, anchors:, expected: surfaces)
-          log(i + 1, pool.size, row)
-          row
-        ensure
-          current = read.call
-          if current == source
-            write.call(original)
-          elsif current != original
-            raise SourceChanged, "source changed during visual measurement; concurrent content was preserved"
+            row = if rebuild.call
+                    score(source, original, measurer.call(surfaces, root:), root:, anchors:, expected: surfaces)
+                  else
+                    Scored.new(source:, score: 0.0, problems: ["CSS rebuild failed"], diff: 0, floor: 0.0)
+                  end
+            log(i + 1, pool.size, row)
+            row
+          ensure
+            current = read.call
+            if current == source
+              write.call(original)
+            elsif current != original
+              raise SourceChanged, "source changed during visual measurement; concurrent content was preserved"
+            end
+            raise SourceChanged, "original source restoration could not be verified" unless read.call == original
+            raise RestoreFailed, "original CSS rebuild failed" unless rebuild.call
+            raise SourceChanged, "source changed during original CSS rebuild" unless read.call == original
           end
-          raise SourceChanged, "original source restoration could not be verified" unless read.call == original
         end
         scored.select { |row| row.problems.empty? }.max_by { |row| [(row.floor / TIE).round, (row.score / TIE).round, -row.diff] }&.source
       end
