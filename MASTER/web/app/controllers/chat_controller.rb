@@ -32,7 +32,8 @@ class ChatController < ApplicationController
     @face_mask_characters = mask_archive["characters"].is_a?(Hash) ? mask_archive["characters"] : {}
     @face_mask_character_rotation = Array(mask_archive["character_rotation"])
     @face_mask_entry = face_mask_entry_for(conversation, mask_archive)
-    @face_character_id = @face_mask_character_rotation[Integer(cookies.signed[:master_face_mask_rotation]&.fetch("index", 0), exception: false) || 0]
+    character_index = Integer(cookies.signed[:master_face_mask_rotation]&.fetch("index", 0), exception: false) || 0
+    @face_character_id = @face_mask_character_rotation[character_index % [@face_mask_character_rotation.length, 1].max]
     @face_mask_profile = @face_mask_entry ? @face_mask_entry.fetch("particle_profile", "").to_s : ""
     @model = c&.[](:agent)&.model.to_s.split("/").last.presence || "booting"
     @tier = request.env["master.tier"].to_s
@@ -219,9 +220,9 @@ class ChatController < ApplicationController
     return unless rotation.is_a?(Hash) && rotation["conversation_id"].to_s == conversation.to_s
 
     index = Integer(rotation["index"], exception: false)
-    return unless index && index >= 0 && index < character_ids.length
+    return unless index && index >= 0 && !character_ids.empty?
 
-    character_note_for(character_ids[index], archive:)
+    character_note_for(character_ids[index % character_ids.length], archive:)
   rescue StandardError => e
     Master::Ground::Swallow.log(e, context: "ChatController.face_character_note", event_bus: container&.dig(:bus))
     nil
@@ -271,11 +272,11 @@ class ChatController < ApplicationController
                      else
                        Integer(rotation, exception: false)
                      end
-    character_count = [Array(archive["character_rotation"]).length, 1].max
+    cycle_count = profiles.length.lcm([Array(archive["character_rotation"]).length, 1].max)
     index = if same_conversation && previous_index
-              previous_index % character_count
+              previous_index % cycle_count
             else
-              ((previous_index || -1) + 1) % character_count
+              ((previous_index || -1) + 1) % cycle_count
             end
     entry = entries.find do |row|
       row.is_a?(Hash) && row["particle_profile"].to_s == profiles.fetch(index % profiles.length)
