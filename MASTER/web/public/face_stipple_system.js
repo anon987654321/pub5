@@ -217,7 +217,7 @@
     const config = window.MASTER_FACE_CONTRACT?.stipple?.fingerprint || {};
     const center = Array.isArray(config.center) ? config.center : [0.08, 0.06];
     return {
-      enabled: config.enabled !== false,
+      enabled: config.enabled === true,
       spacing: clamp(config.spacing, 22, 6, 48),
       strength: clamp(config.strength, 0.28, 0, 0.6),
       centerX: clamp(center[0], 0.08, -0.8, 0.8),
