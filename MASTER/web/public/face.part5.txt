@@ -1663,7 +1663,7 @@ function setSubjectScatter(positions, stages = null) {
       };
       displace(activity*pulse*Math.exp(-Math.pow((y+.12)*3,2))*.018);
       const peripheral = smooth(.28,.58,Math.hypot(x,y));
-      if (faceSeeds[index]>=.97) displace(peripheral*activity*pressure*.045);
+      if (faceSeeds[index]>=.97*6.28318) displace(peripheral*activity*pressure*.045);
     }
     from.array[i]=x; from.array[i+1]=y; from.array[i+2]=z;
   }
