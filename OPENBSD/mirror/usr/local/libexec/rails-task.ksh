@@ -176,7 +176,7 @@ if [[ "$task" == bundle-sibling-hydrate ]]; then
   hydrated=0
   unborrowed=
   for needed_gem in $needed; do
-    printf "%s\n" "$needed_gem" | grep -Eq "^[A-Za-z0-9_.+-]+$" || {
+    printf "%s\n" "$needed_gem" | grep -Eq '^[A-Za-z0-9_.+-]+$' || {
       echo "rails-task: refusing an odd lockfile spec name: $needed_gem" >&2
       exit 1
     }
