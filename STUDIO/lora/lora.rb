@@ -885,7 +885,18 @@ module Studio
           "shot" => plan.fetch("shot"), "direction" => direction }
       end
 
+      def self.film_still_recipe(number)
+        n = Integer(number)
+        raise ArgumentError, "sitting must be positive" unless n.positive?
+        beats = Guides.load.fetch("cinematic_craft").fetch("beats")
+        beat = beats.fetch((n - 1) % beats.length)
+        { "scene" => "#{beat.fetch("scene")}, natural unretouched skin, realistic photographic texture",
+          "preset" => beat.fetch("preset"), "sitting" => n, "direction" => "film_still",
+          "motion" => beat.fetch("motion"), "historical_source" => beat }
+      end
+
       def self.recipe(number, subject: nil, direction: "varied")
+        return film_still_recipe(number) if direction == "film_still"
         return selfie_recipe(number) if direction == "selfies"
         return scenario_recipe(number) if direction == "scenarios"
         return historical_recipe(number, direction:) if %w[shoots warp best].include?(direction)
@@ -900,6 +911,9 @@ module Studio
         # series. Experimental Warp work remains a separate artistic brief.
         offset = subject.to_s.bytes.sum
         case index % 4
+        when 0
+          return film_still_recipe((offset + index / 4) % 6 + 1)
+            .merge("sitting" => n, "direction" => "varied")
         when 1
           return historical_recipe((offset + index / 4) % 50 + 1, direction: "shoots")
             .merge("sitting" => n, "direction" => "varied")
@@ -907,7 +921,7 @@ module Studio
           return selfie_recipe((offset + index / 4) % 48 + 1)
             .merge("sitting" => n, "direction" => "varied")
         end
-        index /= 2
+        index /= 4
         if index < scenes.size
           body = scenes.fetch(index)
           preset = PRESET_BY_STOCK.fetch(stocks.fetch(index))
