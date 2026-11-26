@@ -506,7 +506,7 @@ function frame(t) {
       head.rotation.x += nodImpulse;
       const microOrbit = Math.sin(sec * 0.157) * 0.022 * composureFactor;
       head.rotation.z = -0.021 + microOrbit * 0.3;
-      head.scale.setScalar(breath);
+      head.scale.setScalar(State.pinchScale);
       if (State.shake > 0.01 && isRichMotionProfile()) {
         // Seeded per 60 Hz frame so the shake is deterministic like the orbital field.
         const shakeFrame = Math.floor(sec * 60);
