@@ -194,19 +194,26 @@ export default class extends Controller {
       this.historyUrlValue = response.headers.get("X-History-Next") || ""
       const heightBefore = this.element.scrollHeight
       this.appendingHistory = true
+      // MutationObserver callbacks run after this synchronous insertion. Do
+      // not let older lines enter the new-message observer at all.
+      this.observer?.disconnect()
       this.sentinel?.remove()
       this.sentinel = null
       this.element.insertAdjacentHTML("afterbegin", html)
+      this.#stampAll()
+      this.#dayBreaks()
+      this.#group()
+      this.#installHistorySentinel()
       // The lines the reader was reading just moved down by the height of the
       // page inserted above them; move the scroll with them, so walking back
       // through a thread does not teleport anyone.
       this.element.scrollTop += this.element.scrollHeight - heightBefore
-      this.#installHistorySentinel()
       loaded = true
     } catch {
       // The URL and the button survive unchanged: nothing was loaded, so the
       // affordance keeps telling the truth.
     } finally {
+      if (this.appendingHistory) this.observer?.observe(this.element, { childList: true })
       this.loadingHistory = false
       this.appendingHistory = false
       if (button) button.disabled = false
