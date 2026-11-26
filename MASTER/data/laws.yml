@@ -2934,6 +2934,11 @@ SELFIE_DEPARTMENT_RECIPE:
     off one instruction. Capture geometry, motivated light, eye focus,
     expression and subject emphasis before development; do not substitute
     added texture for absent detail or a grade for failed likeness.
+    Prefer a coherent, emotionally engaging moment over elaborate prompt
+    ornament. Treat camera-distance and lens instructions as hypotheses until
+    the selected model demonstrates their effect. Preserve natural expression,
+    motivated catchlights, and subject-specific proportions. Do not impose
+    portrait geometry on unrelated photographic subjects.
   severity: warning
   resolution: review
 
@@ -2972,7 +2977,11 @@ SELFIE_CONTACT_REVIEW:
     Review requires separately authorized independent reference evidence;
     preference learning uses explicit human decisions. Paid refinement has a
     bounded prediction budget, and a grade-induced fault is corrected in the
-    laboratory before a new capture is considered.
+    laboratory before a new capture is considered. Retain private originals
+    by default. Reuse requires matching capture and development provenance,
+    not merely a sitting number; rejected candidates remain evidence, not
+    delivered photographs. Compare materially different candidates only within
+    the authorized prediction budget; no automatic paid retries.
   severity: warning
   resolution: review
 
