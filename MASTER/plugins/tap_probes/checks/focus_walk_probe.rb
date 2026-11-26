@@ -11,8 +11,8 @@
 #   ruby checks/focus_walk_probe.rb                    # default pages
 #   ruby checks/focus_walk_probe.rb <url> [steps]
 
-require_relative "support/cdp_session"
-require_relative "support/fleet"
+require_relative "../../../checks/support/cdp_session"
+require_relative "../../../checks/support/fleet"
 require "json"
 
 PAGES = Fleet.urls({

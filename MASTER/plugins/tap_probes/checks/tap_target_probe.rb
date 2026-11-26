@@ -14,8 +14,8 @@
 # single dimension inside a roomy row (a text link in prose) is WCAG-fine and
 # skipped. display:none/zero-rect elements are invisible, not undersized.
 
-require_relative "support/cdp_session"
-require_relative "support/fleet"
+require_relative "../../../checks/support/cdp_session"
+require_relative "../../../checks/support/fleet"
 
 PAGES = Fleet.urls({
   # Routes, not numbers. This map restated the whole fleet, which

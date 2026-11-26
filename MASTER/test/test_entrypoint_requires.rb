@@ -161,6 +161,34 @@ class TestEntrypointRequires < Minitest::Test
     MESSAGE
   end
 
+  # The plugin host execs these scripts directly (`Open3.capture2e(RbConfig.ruby,
+  # target)`), so they are entry points too. When the parked probes moved under
+  # plugins/, their `require_relative "support/..."` lines kept pointing beside
+  # the old home; the canonical support files live in MASTER/checks/support.
+  # A LoadError before argv is parsed reads as a normal `plugin run` failure.
+  def test_plugin_check_requires_resolve
+    scripts = Dir.glob(File.join(MASTER_ROOT, "plugins", "*", "checks", "*.rb")).sort
+    refute_empty scripts, "no plugin check scripts found -- the glob is wrong, not the tree"
+
+    missing = scripts.flat_map do |script|
+      File.read(script).scan(/^\s*require_relative\s+["']([^"']+)["']/).filter_map do |(feature)|
+        target = File.expand_path(feature, File.dirname(script))
+        next if File.file?(target) || File.file?("#{target}.rb")
+
+        "#{relative(script)} requires_relative #{feature.inspect}, " \
+          "but #{relative(target)}.rb does not exist"
+      end
+    end
+
+    assert_empty missing, <<~MESSAGE
+      A plugin check script require_relative's a file that is not on disk. The
+      plugin host runs the script directly, so the LoadError is the whole
+      result of `plugin run`. Point the require at the canonical owner.
+
+      #{missing.join("\n")}
+    MESSAGE
+  end
+
   # `exec`, `spawn` and `system` targets are built with File.join off a root the
   # script computes from __dir__. Resolving those roots is the only way to see a
   # path that moved out from under a literal.

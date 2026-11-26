@@ -39,8 +39,8 @@ require "base64"
 require "fileutils"
 require "json"
 require "optparse"
-require_relative "support/cdp_session"
-require_relative "support/fleet"
+require_relative "../../../checks/support/cdp_session"
+require_relative "../../../checks/support/fleet"
 
 options = {
   url: nil, audio: nil, out: nil, fps: 20, seconds: nil, clip: nil,
