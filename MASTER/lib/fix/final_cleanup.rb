@@ -70,15 +70,7 @@ module Master
           receipt[:warnings] = warnings
         end
 
-        @bus&.publish("fix_loop:cleanup", **receipt)
-        if defined?(Master::Trace::Dmesg)
-          Master::Trace::Dmesg.status(
-            "cleanup0",
-            "#{receipt[:status]} run=#{run_id || 'preflight'} " \
-              "completed=#{completed.join(',') || 'none'} skipped=#{skipped.size} warnings=#{warnings.size}",
-          )
-        end
-        receipt
+        notify(receipt)
       rescue StandardError => error
         # This last-resort guard must never mask the repair outcome or its exception.
         fallback = {
@@ -91,13 +83,35 @@ module Master
           warnings: [warning("cleanup_stage", error)],
           finished_at: Time.now.utc.iso8601(6),
         }
-        @bus&.publish("fix_loop:cleanup", **fallback)
-        Master::Trace::Dmesg.status("cleanup0", "warning, stage failed: #{error.class}: #{error.message.to_s[0, 160]}") if
-          defined?(Master::Trace::Dmesg)
-        fallback
+        notify(fallback)
       end
 
       private
+
+      # Each reporting sink is optional; a failure must preserve the cleanup
+      # results and must not retry a publication that may already have succeeded.
+      def notify(receipt)
+        begin
+          @bus&.publish("fix_loop:cleanup", **receipt)
+        rescue StandardError => error
+          receipt[:warnings] << warning("cleanup_publish", error)
+          receipt[:status] = "warning"
+        end
+
+        begin
+          if defined?(Master::Trace::Dmesg)
+            Master::Trace::Dmesg.status(
+              "cleanup0",
+              "#{receipt[:status]} run=#{receipt[:run_id] || 'preflight'} " \
+                "completed=#{receipt[:completed].join(',') || 'none'} skipped=#{receipt[:skipped].size} warnings=#{receipt[:warnings].size}",
+            )
+          end
+        rescue StandardError => error
+          receipt[:warnings] << warning("cleanup_log", error)
+          receipt[:status] = "warning"
+        end
+        receipt
+      end
 
       def step(name, completed, skipped, warnings, available:)
         unless available

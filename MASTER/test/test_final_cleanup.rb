@@ -91,6 +91,21 @@ class TestFinalCleanup < Minitest::Test
     assert_equal "cleanup_warning", @kernel.events.fetch(0).fetch(0)
   end
 
+  def test_failed_bus_cannot_mask_terminal_outcome
+    bus = Object.new
+    def bus.publish(*) = raise(IOError, "bus unavailable")
+    committer = Committer.new(:active)
+    receipt = Master::Fix::FinalCleanup.new(root: Dir.pwd, bus:, committer:).run(
+      target: Dir.pwd, terminal_state: :done,
+    )
+
+    assert_equal "warning", receipt[:status]
+    assert_equal "done", receipt[:terminal_state]
+    assert_includes receipt[:completed], "commit_lease"
+    assert_nil committer.lease_guard
+    assert_equal ["cleanup_publish"], receipt[:warnings].map { |warning| warning[:step] }
+  end
+
   def test_durable_receipt_failure_is_not_reported_as_clean
     receipt = build_stage(fail_receipt: true).run(
       target: Dir.pwd, run_id: "run-current", terminal_state: :blocked,
