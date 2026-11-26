@@ -1196,23 +1196,23 @@ const bits=16-Math.round((16-targetBits)*amount);if(bits!==lastBits){const level
 smooth(dry.gain,1-.72*amount);smooth(wet.gain,.72*amount);smooth(pre.gain,1+(boost-1)*amount);smooth(shelf.gain,2*amount);smooth(band.frequency,18000-(18000-cutoff)*amount);smooth(playback.frequency,18000-(18000-cutoff)*amount);smooth(noise.gain,.15*amount*dustLevel);
 smooth(clean.gain,1-.8*color);smooth(colored.gain,.8*color);smooth(phase1.frequency,90+70*color);smooth(phase2.frequency,700+480*color);smooth(low.gain,2.2*color);smooth(mid.gain,-1.6*color);smooth(high.gain,-1.8*color);smooth(drive.gain,1+.32*color);smooth(comp.threshold,-12-4*color);smooth(comp.ratio,1+1.3*color);smooth(comp.release,Math.min(.32,20/aud.bpm));smooth(trim.gain,1+.1*color);
 },hit(at,velocity){
-if(amount<=0)return;const src=ctx.createBufferSource(),level=gain(Math.min(1,velocity)*.36);src.buffer=dust;src.connect(level);level.connect(noise);src.onended=()=>{src.disconnect();level.disconnect();};src.start(Math.max(ctx.currentTime,at));
+if(amount<=0)return;const src=ctx.createBufferSource(),level=gain(Math.pow(Math.max(0,Math.min(1,velocity)),.7)*.26);src.buffer=dust;src.connect(level);level.connect(noise);src.onended=()=>{src.disconnect();level.disconnect();};src.playbackRate.value=.9+.2*Math.min(1,velocity);src.start(Math.max(ctx.currentTime,at));
 }};
 }
 function createConsoleStrip(ctx,source,destination,lane){
 const gain=value=>{const n=ctx.createGain();n.gain.value=value;return n;};
 const filter=(type,hz)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;n.Q.value=.707;return n;};
 const [hp,lp,frequency,drive]=({drum:[24,16000,190,1.6],bass:[28,4400,95,1.5],keys:[130,10500,620,1.3],pads:[170,9000,920,1.25],sample:[55,12500,420,1.4]})[lane];
-const pre=gain(1),wet=gain(1),hi=filter("highpass",hp),lo=filter("lowpass",lp),phase=filter("allpass",frequency),shape=ctx.createWaveShaper(),dc=filter("highpass",12),comp=ctx.createDynamicsCompressor(),dry=gain(0),eq=filter("peaking",lane==="bass"?95:lane==="drum"?180:lane==="keys"?340:lane==="pads"?440:280);
+const pre=gain(1),wet=gain(1),hi=filter("highpass",hp),lo=filter("lowpass",lp),phase=filter("allpass",frequency),phaseHigh=filter("allpass",frequency*4.3),shape=ctx.createWaveShaper(),dc=filter("highpass",12),comp=ctx.createDynamicsCompressor(),dry=gain(0),eq=filter("peaking",lane==="bass"?95:lane==="drum"?180:lane==="keys"?340:lane==="pads"?440:280);
 shape.curve=Float32Array.from({length:2049},(_,i)=>{const x=i/1024-1;return Math.tanh(drive*(x+.10*x*x))/drive;});
 shape.oversample="2x";
 comp.threshold.value=-15;comp.knee.value=16;comp.ratio.value=1.35;comp.attack.value=lane==="drum"?.03:.018;eq.Q.value=.75;
-Tone.connect(source,pre);pre.connect(hi);hi.connect(eq);eq.connect(phase);phase.connect(shape);shape.connect(dc);dc.connect(lo);lo.connect(comp);comp.connect(wet);Tone.connect(wet,destination);Tone.connect(source,dry);Tone.connect(dry,destination);
+Tone.connect(source,pre);pre.connect(hi);hi.connect(eq);eq.connect(phase);phase.connect(phaseHigh);phaseHigh.connect(shape);shape.connect(dc);dc.connect(lo);lo.connect(comp);comp.connect(wet);Tone.connect(wet,destination);Tone.connect(source,dry);Tone.connect(dry,destination);
 const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.035);};
 return {update(aud){
 const color=(aud.console??58)/100,rotation=(aud.phase??28)/100;
 const blend=Math.max(color,rotation);smooth(wet.gain,blend);smooth(dry.gain,1-blend);smooth(pre.gain,1+.35*color);smooth(eq.gain,(lane==="bass"?2:lane==="drum"?1.4:-1.2)*color);
-smooth(phase.frequency,frequency*(.5+rotation*2));smooth(phase.Q,.5+rotation*.7);
+smooth(phase.frequency,frequency*(.5+rotation*2));smooth(phase.Q,.5+rotation*.7);smooth(phaseHigh.frequency,frequency*(2.5+rotation*3));smooth(phaseHigh.Q,.55+rotation*.4);
 smooth(comp.release,Math.min(.5,60/aud.bpm*.5));
 }};
 }
@@ -1408,18 +1408,21 @@ imag[k]=m<=.5?sine+(triangle-sine)*m*2:triangle+(pulse-triangle)*(m*2-1);
 return {real,imag};
 }
 function createDreamLFO(ctx,aud,offline,duration){
-const osc=ctx.createOscillator(),targets=[];let lastMorph=-1;
-const start=ctx.currentTime;osc.start(start);if(offline&&duration>start)osc.stop(duration);
-return {insert(source){
-const filter=ctx.createBiquadFilter(),depth=ctx.createGain();
-filter.type="lowpass";filter.frequency.value=6500;filter.Q.value=.65;depth.gain.value=0;
-Tone.connect(source,filter);osc.connect(depth);depth.connect(filter.frequency);targets.push({filter,depth});return filter;
-},update(settings){
+const targets=[];let latest=aud;
+function updateTarget(target,settings){
 const now=ctx.currentTime,morph=(settings.lfoMorph??35)/100,depth=(settings.lfoDepth??100)/100,rate=(settings.lfoRate??20)/100;
-if(morph!==lastMorph){const {real,imag}=morphCoefficients(morph);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));lastMorph=morph;}
-osc.frequency.setTargetAtTime(.035*2**(rate*7),now,.08);
-for(const target of targets){target.filter.frequency.setTargetAtTime(18000-11500*depth,now,.08);target.depth.gain.setTargetAtTime(3000*depth,now,.08);}
-}};
+if(morph!==target.lastMorph){const {real,imag}=morphCoefficients(morph);target.osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));target.lastMorph=morph;}
+const cycles=[1/16,1/8,1/4,1/2,1,2,4,8],tempo=Math.max(60,settings.bpm||88);
+target.osc.frequency.setTargetAtTime(tempo/60*cycles[Math.round(rate*7)]*(target.index%2?.5:1),now,.08);
+target.filter.frequency.setTargetAtTime(18000-10000*depth,now,.08);target.depth.gain.setTargetAtTime((target.index%2?-1:1)*2400*depth,now,.08);
+target.amp.gain.setTargetAtTime(1-.035*depth,now,.08);target.trem.gain.setTargetAtTime(.035*depth,now,.08);
+}
+return {insert(source){
+const osc=ctx.createOscillator(),filter=ctx.createBiquadFilter(),depth=ctx.createGain(),amp=ctx.createGain(),trem=ctx.createGain();
+filter.type="lowpass";filter.frequency.value=18000;filter.Q.value=.65;depth.gain.value=0;trem.gain.value=0;amp.gain.value=1;
+Tone.connect(source,filter);filter.connect(amp);osc.connect(depth);depth.connect(filter.frequency);osc.connect(trem);trem.connect(amp.gain);
+const target={osc,filter,depth,amp,trem,index:targets.length,lastMorph:-1};targets.push(target);updateTarget(target,latest);osc.start(ctx.currentTime);if(offline&&duration>ctx.currentTime)osc.stop(duration);return amp;
+},update(settings){latest=settings;for(const target of targets)updateTarget(target,settings);}};
 }
 // Radix-2 FFT shared by the sample freeze and spectral subtraction paths.
 function labFFT(real,imag,inverse=false){
@@ -1484,6 +1487,31 @@ smooth(dry.gain,1-room*.22);smooth(space.gain,room*.22);smooth(notchDry.gain,1-h
 smooth(color.frequency,900+2600*morph);smooth(color.gain,3*morph);smooth(high.gain,-5*morph);
 },scan};
 }
+// Original, hardware-inspired transfer functions; not measured device models.
+function masterColorCurve(kind,amount){
+const a=Math.max(0,Math.min(1,amount));
+return Float32Array.from({length:4097},(_,i)=>{
+const x=i/2048-1,d=1+a*.65;
+if(kind==="triode")return Math.tanh(d*(x+a*.12*x*x))/d;
+if(kind==="pentode")return x*(1-a*.22)+a*.22*Math.sin(Math.PI*x/2)/(Math.PI/2);
+return Math.atan(d*x)/d;
+});
+}
+function createMasterColor(ctx,source,destination,aud){
+const gain=v=>{const n=ctx.createGain();n.gain.value=v;return n;};
+const filter=(type,hz)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;return n;};
+const dry=gain(1),wet=gain(0),input=gain(1),trim=gain(1),triode=ctx.createWaveShaper(),pentode=ctx.createWaveShaper(),magnetic=ctx.createWaveShaper(),pre=filter("highshelf",3200),post=filter("highshelf",3200),dc=filter("highpass",12);
+for(const n of [triode,pentode,magnetic])n.oversample="2x";
+source.connect(dry);dry.connect(destination);source.connect(input);input.connect(triode);triode.connect(pentode);pentode.connect(pre);pre.connect(magnetic);magnetic.connect(post);post.connect(dc);dc.connect(trim);trim.connect(wet);wet.connect(destination);
+let last=-1;
+function update(settings){
+const amount=Math.max(0,Math.min(1,(settings.console??100)/100)),tape=Math.max(0,Math.min(1,(settings.tape??100)/100)),key=Math.round(amount*20)+21*Math.round(tape*20);
+if(key!==last){triode.curve=masterColorCurve("triode",amount*.55);pentode.curve=masterColorCurve("pentode",amount*.4);magnetic.curve=masterColorCurve("magnetic",tape*.45);last=key;}
+const smooth=(p,v)=>p.setTargetAtTime(v,ctx.currentTime,.035);
+smooth(dry.gain,1-.42*Math.max(amount,tape));smooth(wet.gain,.42*Math.max(amount,tape));smooth(input.gain,1+.12*amount);smooth(trim.gain,1/(1+.12*amount));smooth(pre.gain,2*tape);smooth(post.gain,-2*tape);
+}
+update(aud);return {update};
+}
 function createAudioGraph(aud,mix,seed,{offline=false,duration=0,patches={}}={}){
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
@@ -1530,8 +1558,8 @@ masterHP.type="highpass";masterHP.frequency.value=24;masterHP.Q.value=.707;
 harsh.type="peaking";harsh.frequency.value=4100;harsh.Q.value=1.25;harsh.gain.value=-1.4;
 warm.type="lowshelf";warm.frequency.value=125;warm.gain.value=.8;
 matte.type="highshelf";matte.frequency.value=7800;matte.gain.value=-1.6;
-glue.threshold.value=-10;glue.knee.value=12;glue.ratio.value=1.5;glue.attack.value=.03;glue.release.value=Math.min(.5,30/aud.bpm);
-const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);hfRestore.connect(glue);glue.connect(finalLimiter);finalLimiter.connect(ctx.destination);
+glue.threshold.value=-8-4*aud.comp/100;glue.knee.value=18;glue.ratio.value=1+.65*aud.comp/100;glue.attack.value=.03;glue.release.value=Math.min(.5,30/aud.bpm);
+const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);hfRestore.connect(glue);const masterColor=createMasterColor(ctx,glue,finalLimiter,aud);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
 rev.connect(masterG);
@@ -1612,7 +1640,7 @@ tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,glue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1636,7 +1664,8 @@ if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTE
 if(tapeSat)smooth(tapeSat.wet,liveGraph?.analog?0:aud_.tape/100*.65);
 if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar){compPar.ratio.value=1+aud_.comp/100*2;compPar.release.value=Math.min(.5,60/aud_.bpm*.5);}
-if(liveGraph?.glue)liveGraph.glue.release.value=Math.min(.5,30/aud_.bpm);
+if(liveGraph?.glue){const c=aud_.comp/100;liveGraph.glue.release.value=Math.min(.5,30/aud_.bpm);liveGraph.glue.ratio.value=1+.65*c;liveGraph.glue.threshold.value=-8-4*c;}
+liveGraph?.masterColor?.update(aud_);
 if(widener)widener.width.value=aud_.width/100;
 liveGraph?.experimental?.update(aud_);liveGraph?.drumColor?.update(aud_);liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
 for(const stage of liveGraph?.recordingStages||[])stage.update(aud_);
