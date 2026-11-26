@@ -872,9 +872,7 @@ const keys=KEYS_PATS[style.k]||[];
 const pads=PAD_PATS[style.p]||[];
 return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass.some(note=>note)&&keys.some(note=>note&&note!==0)&&pads.some(note=>note&&note!==0);
 });
-const industrialBoot=bootStyleCandidates.filter(style=>['Industrial','Hard Techno','HATE Style'].includes(style.n));
-const bootStylePool=bootStyleCandidates.filter(style=>style.n==="Boom Bap");
-const bootStyle=bootStylePool[0]||bootStyleCandidates.find(style=>/dilla|hip.hop|lo.fi/i.test(style.n))||bootStyleCandidates[0]||STYLES[0];
+const bootStyle=bootStyleCandidates.find(style=>style.n==="Neo-Soul")||bootStyleCandidates.find(style=>style.n==="Dusty")||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,drumSonitex:100,drumVcs:100,tape:100,wobble:100,vinyl:100,crackle:100};
 let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,labSpace:0,labMorph:0,labChaos:0,labGrain:0,labNotch:0,labFreeze:0,labSpatial:0,labAdaptive:0,labDenoise:0,drift:0.05};
@@ -1573,20 +1571,20 @@ drumSat.connect(drumDrive);drumDrive.connect(drumG);
 bassN.connect(bassDuck);bassSub.connect(bassDuck);bassDuck.connect(bassG);
 keysN.connect(keySat);keySat.connect(keysChorus);keysChorus.connect(keysTrem);keysTrem.connect(keysDrive);
 keysDrive.connect(keysDuck);keysDuck.connect(keysG);keysG.connect(keysTexture);keysTexture.connect(keysLP);
-keysLP.connect(panners.keys);panners.keys.connect(masterG);panners.keys.connect(revSend);panners.keys.connect(dlySend);
+keysLP.connect(panners.keys);panners.keys.connect(revSend);panners.keys.connect(dlySend);
 padsN.connect(padsFlt);padsFlt.connect(padsDuck);padsDuck.connect(padsG);padsG.connect(padsBW);padsBW.connect(padsSat);
-padsSat.connect(panners.pads);panners.pads.connect(masterG);panners.pads.connect(revSend);panners.pads.connect(dlySend);
+padsSat.connect(panners.pads);panners.pads.connect(revSend);panners.pads.connect(dlySend);
 const drumColor=createDrumColor(ctx,drumG);drumColor.update(aud);
 const drumFXSend=new Tone.Gain(.2),bassFXSend=new Tone.Gain(.15);
-drumColor.output.connect(masterG);drumColor.output.connect(drumFXSend);bassG.connect(masterG);bassG.connect(bassFXSend);
+Tone.connect(drumColor.output,drumFXSend);bassG.connect(bassFXSend);
 const routes={drum:[drumFXSend,masterG,revSend,dlySend],bass:[bassFXSend,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
 const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
 installLaneFX(routes,effects);
 
-const sampleG=new Tone.Gain(.65);sampleG.connect(masterG);sampleG.connect(revSend);sampleG.connect(dlySend);
+const sampleG=new Tone.Gain(.65);sampleG.connect(revSend);sampleG.connect(dlySend);
 const consoleStrips=[],recordingStages=[],dreamLFO=createDreamLFO(ctx,aud,offline,duration);
 for(const [source,lane] of [[drumColor.output,'drum'],[bassG,'bass'],[panners.keys,'keys'],[panners.pads,'pads'],[sampleG,'sample']]){
-try{const recording=createRecordingStage(ctx,lane==="keys"||lane==="pads"?dreamLFO.insert(source):source,lane);recording.update(aud);const strip=createConsoleStrip(ctx,recording.output,masterG,lane);strip.update(aud);source.disconnect(masterG);recordingStages.push(recording);consoleStrips.push(strip);}catch(error){log('console0 '+lane+': '+error.message,'w');}
+try{const recording=createRecordingStage(ctx,lane==="keys"||lane==="pads"?dreamLFO.insert(source):source,lane);recording.update(aud);const strip=createConsoleStrip(ctx,recording.output,masterG,lane);strip.update(aud);recordingStages.push(recording);consoleStrips.push(strip);}catch(error){Tone.connect(source,masterG);log('console0 '+lane+': '+error.message,'w');}
 }
 dreamLFO.update(aud);
 let analog=null;
