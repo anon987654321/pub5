@@ -360,12 +360,24 @@ module Master
             return
           end
 
+          candidates = BestOfN.distinct_changes(candidates.reject { |source| source == original }) do |source|
+            BestOfN.change_signature(original, source)
+          end
+          @bus&.publish("repair_loop:candidate_diversity", requested: UserSimulation.candidate_count,
+            generated: proposals.size, distinct: candidates.size)
           baseline = rescan_candidate(original, path)
           viable = Array(candidates).map(&:to_s).reject(&:empty?).uniq.filter_map do |candidate|
             count = rescan_candidate(candidate, path)
             next if candidate == original || count > baseline
 
             { source: candidate, findings: count, diff_bytes: UnifiedDiff.between(original, candidate, context: 0).to_s.bytesize, author_models: proposal_authors.fetch(candidate, []) }
+          end
+          return if viable.empty?
+
+          remaining = @file_deadline && (@file_deadline.to_f - Time.now.to_f).floor
+          budget = remaining ? [remaining / 3, 120].min : 120
+          viable = BestOfN.council_order(viable, agent: @agent, domain: :general, artifact: path, bus: @bus, budget:) do |row|
+            BestOfN.change_signature(original, row.fetch(:source)).join("\n")
           end
           return if viable.empty?
 
@@ -400,7 +412,7 @@ module Master
               row.fetch(:author_models),
             ]
           end
-          selected = ranked.min_by(&:first)
+          selected = ranked.min_by { |row| row.first.first(2) + [viable.index { |item| item[:source] == row[1] }, row.first.last] }
           unless selected
             @bus&.publish(
               "repair_loop:candidate_selection_blocked",

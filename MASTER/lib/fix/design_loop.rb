@@ -7,6 +7,7 @@ require "securerandom"
 require_relative "../io/exec"
 require_relative "transaction"
 require_relative "design_edit"
+require_relative "best_of_n"
 require_relative "design_prompts"
 require_relative "layout_score_render"
 require_relative "visual_quality_checks"
@@ -46,7 +47,9 @@ module Master
       # Everything outside: measure ->(surfaces) { [[surface, payload, shot], ...] };
       # ask ->(prompt, image) { reply }; build ->(app) { ok }; commit_file ->(path, message, transaction) { delivered };
       # sources_for ->(surface) { [stylesheet paths] }; guard ->(path, new_text) { refusal or nil }.
-      World = Data.define(:measure, :ask, :build, :commit_file, :sources_for, :guard)
+      World = Data.define(:measure, :ask, :build, :commit_file, :sources_for, :guard, :council) do
+        def initialize(measure:, ask:, build:, commit_file:, sources_for:, guard:, council: nil) = super
+      end
 
       def initialize(plan:, world:, say: ->(_) {})
         @plan = plan
@@ -180,7 +183,15 @@ module Master
         id = @target[:surface].id
         start = @variant_cursor[id]
         @variant_cursor[id] += @plan.candidates
-        Array.new(@plan.candidates) { |variant| propose(sources, start + variant) }.compact.uniq(&:key)
+        generated = Array.new(@plan.candidates) { |variant| propose(sources, start + variant) }.compact
+        distinct = BestOfN.distinct_changes(generated) do |candidate|
+          candidate.edits.flat_map do |edit|
+            proposal = edit.proposal
+            BestOfN.change_signature(proposal.find, proposal.replace).map { |line| [edit.file, line] }
+          end.sort
+        end
+        @say.call("candidate exploration: requested #{@plan.candidates}, generated #{generated.size}, distinct #{distinct.size}")
+        @world.council ? @world.council.call(distinct, @target) : distinct
       end
 
       def propose(sources, variant)

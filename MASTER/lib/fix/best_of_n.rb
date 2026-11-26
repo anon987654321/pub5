@@ -4,6 +4,7 @@ require "digest"
 require "fileutils"
 require "json"
 require_relative "../io/exec"
+require_relative "unified_diff"
 require_relative "rails_app"
 require_relative "layout_score_render"
 require_relative "visual_quality_checks"
@@ -108,6 +109,71 @@ module Master
 
         Thread.current[:master_fix_candidate_author_models] =
           (initial_authors + Array(selected_authors)).compact.map(&:to_s).reject(&:empty?).uniq.freeze
+      end
+
+      # Compare changes rather than the unchanged majority of each file.
+      # Whitespace-equivalent edits are duplicates; token overlap is a
+      # conservative heuristic, not proof of semantic equivalence.
+      def change_signature(original, source)
+        diff = UnifiedDiff.between(original, source, context: 0).to_s
+        diff.lines.grep(/\A[+-](?![+-])/).map { |line| line.gsub(/\s+/, " ").strip }.reject(&:empty?).uniq.sort
+      end
+
+      def distinct_changes(rows)
+        seen = []
+        rows.select do |row|
+          signature = yield(row)
+          next false if signature.empty? || seen.include?(signature)
+
+          seen << signature
+          true
+        end
+      end
+
+      # Existing reciprocal tribunal reviews a bounded, numbered pool.
+      # Only an explicit judge selection can influence ordering; it cannot
+      # waive the caller's mechanical or runtime verification.
+      def council_order(rows, agent:, domain:, artifact:, bus: nil, budget: nil, image: nil)
+        return rows if rows.size < 2
+        return rows if budget && budget <= 0
+
+        require_relative "../review/council/tribunal"
+        council = Master::Review::Council
+        names = domain == :design ?
+          ["Architect", "Graphic Designer", "Web Designer", "Typographer", "Accessibility", "Hip-Hop Producer", "Skeptic"] :
+          ["Architect", "Maintainer", "QA Engineer", "Security", "Reliability", "Skeptic", "User Advocate"]
+        panel = council::Personas.load.select { |persona| names.include?(persona.name) }
+        observations = rows.each_with_index.map { |row, i| "candidate #{i + 1}: #{yield(row)}" }
+        evidence = council::Evidence.new(artifact:, domain:, observations:,
+          anchors: rows.each_index.map { |i| "candidate #{i + 1}" })
+        context = "Compare these competing changes to the same artifact. Preserve its underlying structure, contracts and identity. " \
+                  "Challenge other specialists' proposals in subsequent rounds. Do not invent execution evidence. " \
+                  "In the final judge findings, use location 'candidate N' and proposed_repair 'select candidate N' " \
+                  "for preferred existing candidates only. Do not select a candidate with an unresolved critical objection."
+        result = Master::Review::LLMDispatcher::PassClock.within(budget) do
+          council::Tribunal.new(agent:, event_bus: bus).review(evidence:, personas: panel, context:, image:,
+            required_veto_roles: domain == :design ? [] : ["Security"])
+        end
+        unless result.ok?
+          bus&.publish("fix:candidate_council_inconclusive", count: rows.size)
+          return [] if result.message.to_s.start_with?("council: veto")
+          return rows
+        end
+
+        feedback = result.value!
+        judge = feedback.is_a?(Array) && feedback.find { |entry| entry[:persona] == "Judge" }
+        preferred = Array(judge && judge[:structured_findings]).filter_map do |finding|
+          match = finding["proposed_repair"].to_s.match(/\Aselect candidate (\d+)\z/i)
+          index = match && match[1].to_i - 1
+          index if index && index >= 0 && index < rows.size && finding["location"].to_s.casecmp?("candidate #{index + 1}")
+        end.uniq
+        bus&.publish("fix:candidate_council", count: rows.size, selected: preferred.size,
+          status: preferred.empty? ? :inconclusive : :observed)
+        preferred.map { |index| rows[index] } + rows.each_with_index.reject { |_, index| preferred.include?(index) }.map(&:first)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "BestOfN.council_order")
+        bus&.publish("fix:candidate_council_inconclusive", count: rows.size)
+        rows
       end
 
       def rebuild_css(path, surfaces, root:)

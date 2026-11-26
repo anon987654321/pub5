@@ -176,6 +176,13 @@ class BestOfNTest < Minitest::Test
     assert_equal candidate, File.read(@path)
   end
 
+  def test_diversity_compares_changed_lines_not_the_unchanged_file
+    original = "a\nb\nc\n"
+    variants = ["a\nnew value\nc\n", "a\nnew  value\nc\n", "a\nb\nother\n"]
+    distinct = B.distinct_changes(variants) { |source| B.change_signature(original, source) }
+    assert_equal [variants.first, variants.last], distinct
+  end
+
   def test_visual_exploration_defaults_to_ten_and_clamps_to_fifty
     ENV.delete("MASTER_FIX_BEST_OF")
     assert_equal 10, B.n

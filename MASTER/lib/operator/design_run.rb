@@ -85,6 +85,16 @@ module Operator
         commit_file: ->(file, message, transaction) { commit(file, message, root:, transaction:) },
         sources_for: ->(surface) { sources(graph, surface) },
         guard: method(:law_refusal),
+        council: lambda do |candidates, target|
+          shot = target.fetch(:shot)
+          image = { path: shot, name: File.basename(shot), mime: "image/png" }
+          Master::Fix::BestOfN.council_order(candidates, agent:, domain: :design,
+            artifact: target.fetch(:surface).id, budget: 120, image:) do |candidate|
+            ([candidate.why] + candidate.edits.map do |edit|
+              "#{edit.file}: #{edit.proposal.find} -> #{edit.proposal.replace}"
+            end).join("\n")
+          end
+        end,
       )
     end
 
