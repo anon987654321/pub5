@@ -15,8 +15,12 @@ class TvFeedControllerTest < Minitest::Test
   PAGE = <<~JS
     const button = () => ({ attributes: {}, textContent: "Lyd", setAttribute(k, v) { this.attributes[k] = v } })
     const video = () => ({
-      muted: true, played: 0, controls: false, pause() {}, addEventListener() {},
-      play() { this.played += 1; return Promise.resolve() }
+      muted: true, played: 0, controls: false, currentTime: 0,
+      listeners: new Map(),
+      addEventListener(name, fn) { this.listeners.set(name, fn) },
+      removeEventListener(name, fn) { if (this.listeners.get(name) === fn) this.listeners.delete(name) },
+      pause() { this.listeners.get("pause")?.() },
+      play() { this.played += 1; this.listeners.get("play")?.(); return Promise.resolve() }
     })
     const item = () => { const v = video(); return { video: v, dataset: {}, querySelector: () => v } }
 
@@ -81,6 +85,32 @@ class TvFeedControllerTest < Minitest::Test
     console.log(JSON.stringify({ played: only.video.played, controls: only.video.controls }))
   JS
 
+  PLAYBACK = <<~JS
+    const controller = feed(1)
+    controller.signedInValue = true
+    const [only] = controller.itemTargets
+    only.dataset.viewEventsUrl = "/videos/clip/view_events"
+    let finish
+    globalThis.fetch = () => new Promise(resolve => { finish = resolve })
+    const reports = []
+    Object.defineProperty(navigator, "sendBeacon", { configurable: true, value: (url, body) => reports.push([url, body.get("watch_time_seconds")]) })
+
+    // Failed autoplay must not create a view.
+    const play = only.video.play.bind(only.video)
+    only.video.play = () => Promise.reject(new Error("blocked"))
+    controller.visibility.callback([{ target: only, isIntersecting: true }])
+    await Promise.resolve()
+    const blocked = controller.events.size
+    only.video.play = play
+    await only.video.play()
+    only.video.currentTime = 4
+    controller.visibility.callback([{ target: only, isIntersecting: false }])
+    finish({ ok: true, json: async () => ({ url: "/views/1" }) })
+    await new Promise(resolve => setTimeout(resolve, 5))
+    console.log(JSON.stringify({ blocked, timers: controller.timers.size, reports }))
+    controller.disconnect()
+  JS
+
   def run_page(script)
     source = File.read(CONTROLLER)
     assert source.include?(STIMULUS), "#{CONTROLLER} no longer imports Stimulus through #{STIMULUS.inspect}"
@@ -104,6 +134,10 @@ class TvFeedControllerTest < Minitest::Test
 
     assert_equal "true", result["pressed"]
     assert_equal [ "Lyd av", "Lyd av" ], result["labels"]
+  end
+
+  def test_only_playback_creates_a_view_and_scrolling_away_stops_tracking
+    assert_equal({ "blocked" => 0, "timers" => 0, "reports" => [["/views/1", "4"]] }, run_page(PLAYBACK))
   end
 
   def test_a_reader_asking_for_less_motion_gets_a_play_button_not_autoplay

@@ -17,6 +17,9 @@ export default class extends Controller {
       navigator.connection?.saveData)
     this.events = new Map()   // item element -> { url, watched }
     this.timers = new Map()
+    this.handlers = new Map()
+    this.visible = new Set()
+    this.active = true
 
     // 0.6 rather than 1.0: a snapped item is never quite fully visible during
     // the settle, and waiting for 1.0 leaves a video paused under the reader.
@@ -24,7 +27,7 @@ export default class extends Controller {
       entries => entries.forEach(entry => this.#onVisibility(entry)),
       { threshold: [0.6] }
     )
-    this.itemTargets.forEach(item => this.visibility.observe(item))
+    this.itemTargets.forEach(item => this.observeItem(item))
 
     // Load the next screenful before the reader reaches the end, so the feed
     // never shows a bottom.
@@ -32,10 +35,11 @@ export default class extends Controller {
   }
 
   disconnect() {
-    this.#reportAll()
+    this.active = false
     this.visibility?.disconnect()
     this.endWatcher?.disconnect()
-    this.timers.forEach(id => clearInterval(id))
+    this.handlers.forEach((_handlers, item) => this.unobserveItem(item))
+    this.#reportAll()
   }
 
   // Sound is opt-in: iOS refuses to autoplay anything unmuted, and a feed that
@@ -54,7 +58,41 @@ export default class extends Controller {
 
   itemTargetConnected(item) {
     // Appended items (the next page) need observing too.
-    this.visibility?.observe(item)
+    if (this.active) this.observeItem(item)
+  }
+
+  itemTargetDisconnected(item) {
+    this.unobserveItem(item)
+  }
+
+  observeItem(item) {
+    if (this.handlers.has(item)) return
+    const video = item.querySelector("video")
+    if (!video) return
+
+    const play = () => {
+      if (this.visible.has(item)) this.#startTracking(item, video)
+    }
+    const pause = () => this.#stopTracking(item, video)
+    this.handlers.set(item, { video, play, pause })
+    video.muted = this.muted
+    video.addEventListener("play", play)
+    video.addEventListener("pause", pause)
+    this.visibility.observe(item)
+  }
+
+  unobserveItem(item) {
+    const handlers = this.handlers?.get(item)
+    if (!handlers) return
+
+    const { video, play, pause } = handlers
+    this.visible.delete(item)
+    video.removeEventListener("play", play)
+    video.removeEventListener("pause", pause)
+    video.pause()
+    this.#stopTracking(item, video)
+    this.visibility?.unobserve?.(item)
+    this.handlers.delete(item)
   }
 
   #onVisibility(entry) {
@@ -62,33 +100,33 @@ export default class extends Controller {
     const video = item.querySelector("video")
     if (!video) return
 
-    if (entry.isIntersecting && this.calm) {
-      this.#offerPlay(item, video)
-    } else if (entry.isIntersecting) {
+    const visible = entry.isIntersecting && (entry.intersectionRatio ?? 1) >= 0.6
+    if (visible) {
+      this.visible.add(item)
       video.muted = this.muted
-      video.play().catch(() => {})
-      this.#startTracking(item, video)
+      video.controls = true
+      if (!this.calm) video.play().catch(() => {})
     } else {
+      this.visible.delete(item)
       video.pause()
       this.#stopTracking(item, video)
     }
   }
 
-  // The native controls are the play button; watching is recorded once the
-  // reader presses it.
-  #offerPlay(item, video) {
-    video.muted = this.muted
-    video.controls = true
-    video.addEventListener("play", () => this.#startTracking(item, video), { once: true })
-  }
-
   async #startTracking(item, video) {
-    if (!this.signedInValue) return
-    if (this.timers.has(item)) return
+    if (!this.active || !this.signedInValue || this.timers.has(item)) return
 
-    // One view-event row per video, created the first time it is on screen.
-    if (!this.events.has(item)) {
-      this.events.set(item, { url: null, watched: 0 })
+    // Install the timer before the network round-trip, so leaving the clip
+    // during event creation cannot leave a timer running for a paused video.
+    const state = this.events.get(item) || { url: null, watched: 0 }
+    const firstPlay = !this.events.has(item)
+    this.events.set(item, state)
+    const timer = setInterval(() => {
+      state.watched = Math.max(state.watched, video.currentTime ?? 0)
+    }, 1000)
+    this.timers.set(item, timer)
+
+    if (firstPlay) {
       try {
         const response = await fetch(item.dataset.viewEventsUrl, {
           method: "POST",
@@ -100,27 +138,21 @@ export default class extends Controller {
         })
         if (response.ok) {
           const body = await response.json()
-          this.events.get(item).url = body.url
+          state.url = body.url
+          if (!this.timers.has(item)) this.#report(item)
         }
       } catch (_) { /* a feed that cannot record still has to play */ }
     }
-
-    // Furthest point reached, sampled while it plays — a looping video's
-    // currentTime returns to zero, so the max is the only honest number.
-    const timer = setInterval(() => {
-      const state = this.events.get(item)
-      if (!state) return
-      state.watched = Math.max(state.watched, video.currentTime ?? 0)
-    }, 1000)
-    this.timers.set(item, timer)
   }
 
-  #stopTracking(item) {
+  #stopTracking(item, video) {
     const timer = this.timers.get(item)
-    if (timer) {
-      clearInterval(timer)
-      this.timers.delete(item)
-    }
+    if (!timer) return
+
+    clearInterval(timer)
+    this.timers.delete(item)
+    const state = this.events.get(item)
+    if (state) state.watched = Math.max(state.watched, video.currentTime ?? 0)
     this.#report(item)
   }
 
@@ -160,8 +192,9 @@ export default class extends Controller {
         headers: { "Accept": "text/vnd.turbo-stream.html" },
         credentials: "same-origin"
       })
-      if (!response.ok) return
+      if (!response.ok || !this.active) return
       const html = await response.text()
+      if (!this.active) return
       const before = this.itemTargets.length
       window.Turbo?.renderStreamMessage(html)
       // Turbo renders the stream on the next repaint; this frame runs after it.
@@ -173,6 +206,7 @@ export default class extends Controller {
   // is the bottom: re-arming on the same, still visible, last item fetched
   // empty pages in a loop.
   #afterPage(before) {
+    if (!this.active) return
     const count = this.itemTargets.length
     if (count === before) {
       this.nextUrlValue = ""
