@@ -48,6 +48,7 @@ console.log("profile origin checks: "+origins.length);
  // Strict graph mock: reject undefined instrument and connection endpoints.
 const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["const DRUM_MACHINES=","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createRecordingStage(","function applyFX("]];
 const graphFixture=`
+let httpPage=true;const location={origin:"https://example.test"};
 const edges=[];
 const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
 class Node {
@@ -71,19 +72,22 @@ const rg69AudioProfile=finalizeRG69AudioProfile(RG69_AUDIO_FALLBACK);
 const aud={bpm:150,drive:90,filter:80,comp:60,width:50,delay:20,tape:5,reverb:20,vinyl:0,crackle:0,wobble:0};
 const mix={drum:80,bass:70,keys:60,pads:50,master:75};
 const g=createAudioGraph(aud,mix,null),offline=createAudioGraph(aud,mix,null,{offline:true,duration:8});
+httpPage=false;const local=createAudioGraph(aud,mix,null);const localOffline=createAudioGraph(aud,mix,null,{offline:true,duration:8});
 const expected=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
-for(const graph of [g,offline]){
-assert(graph.analog&&typeof graph.analog.update==="function","native analogue rig must build");
+for(const graph of [g,offline,local,localOffline]){
+const hosted=graph===g||graph===offline;
+assert(hosted?typeof graph.analog?.update==="function":graph.analog===null,"origin-specific analog graph");
+assert(!("monitorGate" in graph),"no duplicate transport gate");
 assert(graph.consoleStrips.length===5,"five console strips");
 assert(graph.monoBass,"low-side reduction connected");
 graph.duck(.25,.9,{bpm:150,duck:20});
-graph.analog.update({...aud,tape:100,wobble:100,vinyl:100,crackle:100},mix);
-graph.analog.update({...aud,tape:0,wobble:0,vinyl:0,crackle:0},mix);
+graph.analog?.update({...aud,tape:100,wobble:100,vinyl:100,crackle:100},mix);
+graph.analog?.update({...aud,tape:0,wobble:0,vinyl:0,crackle:0},mix);
 assert(JSON.stringify(Object.keys(graph.instruments).sort())===JSON.stringify(expected.slice().sort()),"instrument registry disagrees with scheduler");
 for(const name of expected)assert(typeof graph.instruments[name].triggerAttackRelease==="function","missing "+name);
 for(const id of Object.keys(PATCH_CATALOGUE))for(const lane of ["keys","pads"]){graph.instruments[lane].setPatch(id);graph.instruments[lane].triggerAttackRelease(["C4","Eb4","G4"],.2,.1,.8);graph.instruments[lane].setPatch("original");}
 }
-return {graphs:2,voices:expected.length,connections:edges.length,patches:Object.keys(PATCH_CATALOGUE).length,analog:"constructed and extremes applied"};
+return {graphs:4,voices:expected.length,connections:edges.length,patches:Object.keys(PATCH_CATALOGUE).length,analog:"constructed and extremes applied"};
 `;
 const graphResult=new Function("assert",graphFixture+graphRanges.map(([a,b])=>extract(a,b)).join("\n")+graphCheck)(assert);
 console.log(JSON.stringify(graphResult,null,2));
