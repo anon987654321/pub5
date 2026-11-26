@@ -78,7 +78,11 @@ class Port < ApplicationRecord
   # A port named or pathed exactly as typed leads; "git" listed git-annex,
   # git-crypt and gitea before git itself.
   scope :exact_match_first, ->(q) {
-    exact = sanitize_sql_array([ "CASE WHEN ports.name = :q OR ports.pkgpath = :q THEN 0 ELSE 1 END", { q: q.to_s } ])
+    exact = sanitize_sql_array([ <<~SQL.squish, { q: q.to_s.strip } ])
+      CASE WHEN ports.name = :q OR ports.pkgpath = :q THEN 0
+           WHEN LOWER(ports.name) = LOWER(:q) OR LOWER(ports.pkgpath) = LOWER(:q) THEN 1
+           ELSE 2 END
+    SQL
     order(Arel.sql(exact))
   }
   # The order the index and its later pages share: newest first on request,

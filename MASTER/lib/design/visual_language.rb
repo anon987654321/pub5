@@ -283,7 +283,7 @@ module Master
         return unless app == "brgen"
 
         # A nested engine must win over its shared city host or commerce parent.
-        return "takeaway" if label.match?(%r{takeaway|restaurants?})
+        return "takeaway" if label.match?(%r{takeaway|restaurants?|/food(?:/|$)})
         return "tv" if label.match?(%r{(?:^|[./_])tv(?:[./_]|$)})
         return "radio" if label.match?(%r{radio|playlist|/sets(?:/|$)})
         return "maps" if label.match?(%r{maps|/places(?:/|$)})

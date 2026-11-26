@@ -156,7 +156,7 @@ class PortsController < ApplicationController
   # A submitted pkgpath names one port; a list of one is a step too many. The
   # live search asks for a stream as the reader types and keeps its list.
   def exact_pkgpath_port
-    return if request.format.turbo_stream? || !live_search_query.include?("/")
+    return if request.format.turbo_stream? || params[:category_id].present? || !live_search_query.include?("/")
 
     matches = Port.where(pkgpath: live_search_query).limit(2).to_a
     matches.first if matches.one?

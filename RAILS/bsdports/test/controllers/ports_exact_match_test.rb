@@ -25,6 +25,27 @@ class PortsExactMatchTest < ActionDispatch::IntegrationTest
     assert_includes response.body, %(<turbo-stream action="update" target="live_search_results">)
   end
 
+  test "search keeps the selected category and sort in the form" do
+    get ports_path(q: "git", category_id: @git.category_id, sort: "updated")
+    assert_response :success
+    assert_select "form input[type=hidden][name=category_id][value=?]", @git.category_id.to_s
+    assert_select "form input[type=hidden][name=sort][value=updated]"
+  end
+
+  test "an explicit category prevents an exact path redirect" do
+    get ports_path(q: "devel/git", category_id: @git.category_id)
+    assert_response :success
+  end
+
+  test "a case-insensitive exact name leads related results" do
+    Port.find_by(name: "git-annex").update!(name: "agit")
+    get ports_path(q: "GIT")
+    assert_response :success
+    assert_select "a.port-name" do |links|
+      assert_equal "git", links.first.text.strip
+    end
+  end
+
   test "an exact name is listed first" do
     Port.find_by(name: "git-annex").update!(name: "agit")
     get ports_path(q: "git")

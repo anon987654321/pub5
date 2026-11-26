@@ -9,6 +9,7 @@ class DesignDirectionTest < Minitest::Test
     language = Master::Design::VisualLanguage
     {
       ["brgen", "marketplace.brgen.no", "/takeaway/restaurants"] => :transactional_food,
+      ["brgen", "marketplace.brgen.no", "/food"] => :transactional_food,
       ["brgen", "dating.brgen.no", "/"] => :intimate_social,
       ["brgen", "radio.brgen.no", "/sets"] => :media_station,
       ["brgen", "tv.brgen.no", "/"] => :media_station,

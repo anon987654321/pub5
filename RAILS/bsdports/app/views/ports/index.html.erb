@@ -50,7 +50,10 @@
                         results_partial: "ports/live_search_results",
                         placeholder: t("ports.search_placeholder"),
                         label: t("ports.search_label"),
-                        frame_id: "bsdports-ports" %>
+                        frame_id: "bsdports-ports" do |f| %>
+    <%= f.hidden_field :category_id, value: params[:category_id] if params[:category_id].present? %>
+    <%= f.hidden_field :sort, value: params[:sort] if params[:sort].present? %>
+  <% end %>
 </header>
 
 <%# An empty tree and a quiet tree look identical once the category list renders
