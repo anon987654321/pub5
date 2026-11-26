@@ -77,7 +77,7 @@ module Master
         law = law.to_s
         return if path.empty? || law.empty?
 
-        impacted = [path, *Array(related)].map(&:to_s).reject(&:empty?).uniq.first(MAX_FILES)
+        impacted = [path, *Array(related).map(&:to_s).reject(&:empty?).uniq.sort].uniq.first(MAX_FILES)
         [path, law, message.to_s, impacted]
       end
 
@@ -104,7 +104,7 @@ module Master
 
       def related?(group, candidate)
         candidate_files = candidate.last.to_set
-        group.any? { |row| (row.last.to_set & candidate_files).any? }
+        group.any? { |row| row.last.any? { |path| candidate_files.include?(path) } }
       end
 
       def within_bounds?(group, candidate)

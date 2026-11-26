@@ -12,12 +12,24 @@ module Master
         @tree = tree
       end
 
-      def render(max_lines: 400)
+      def render(max_lines: 400, max_bytes: nil)
         directories = @tree.directories
         lines = directory_lines(directories.first(max_lines))
         lines << "... #{directories.size - max_lines} more directories" if directories.size > max_lines
 
-        (lines + sprawl_lines).join("\n")
+        return (lines + sprawl_lines).join("\n") unless max_bytes
+
+        evidence = sprawl_lines + lines
+        selected = []
+        remaining = max_bytes - 80
+        evidence.each do |line|
+          next if line.bytesize + 1 > remaining
+
+          selected << line
+          remaining -= line.bytesize + 1
+        end
+        selected << "... #{evidence.size - selected.size} evidence lines omitted by prompt budget" if selected.size < evidence.size && max_bytes >= 80
+        selected.join("\n")
       end
 
       private

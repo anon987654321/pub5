@@ -37,8 +37,7 @@ module Master
               [path, finding[:law].to_s, message, []]
             end
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.findings", path:)
-            []
+            raise "structural scan failed for #{path}: #{e.class}: #{e.message}"
           end
           cohesion = FixLoop::StructuralStage.structural_findings(files: production_files(target)).map do |finding|
             [finding.fetch(:file), finding.fetch(:law), finding.fetch(:message), finding.fetch(:related_paths)]
@@ -55,8 +54,7 @@ module Master
           end
           subtrees.sort_by { |_path, _rule, message, _files| [message[/\d+/].to_i, message] }
         rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "restructure.dead_subtree", target:)
-          []
+          raise "dead subtree census failed: #{e.class}: #{e.message}"
         end
 
         # One directory's finding, or nil while anything outside it names it.
@@ -78,8 +76,6 @@ module Master
           outside.any? do |path|
             code = File.read(path, encoding: "UTF-8")
             needles.any? { |needle| code.match?(needle) }
-          rescue StandardError
-            false
           end
         end
 
@@ -89,8 +85,6 @@ module Master
             .scan(/^\s*(?:class|module)\s+([A-Z][\w:]+)/).flatten
           [stem.length >= 4 ? Regexp.new(Regexp.escape(stem)) : nil,
            *constants.map { |name| Regexp.new("\\b#{Regexp.escape(name)}\\b") }].compact
-        rescue StandardError
-          []
         end
 
         def self.relative_static(path, target)
@@ -112,8 +106,7 @@ module Master
             [path, finding[:law].to_s, finding[:message].to_s, related]
           end
         rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "restructure.cross_file_findings", target:)
-          []
+          raise "cross-file census failed: #{e.class}: #{e.message}"
         end
 
         private_class_method :dead_subtree_findings, :cross_file_findings
@@ -132,10 +125,10 @@ module Master
         end
 
         def self.repository_files(root)
-          out, status = Master::Io::Exec.capture2e("git", "-C", root.to_s, "ls-files")
-          return [] unless status.success?
+          out, status = Master::Io::Exec.capture2e("git", "-C", root.to_s, "ls-files", "-z")
+          raise "git ls-files failed for #{root}" unless status.success?
 
-          out.lines.map { |line| File.join(root.to_s, line.strip) }.select { |path| File.file?(path) }
+          out.split("\0").map { |path| File.join(root.to_s, path) }.select { |path| File.file?(path) && !File.symlink?(path) }
         end
 
         # Reverse-reference audits include dependency manifests and lockfiles,
@@ -157,9 +150,8 @@ module Master
         end
 
         def self.tracked(target)
-          out, = Master::Io::Exec.capture2e("git", "-C", target.to_s, "ls-files")
-          out.lines.map { |line| File.join(target.to_s, line.strip) }.select do |path|
-            SOURCE_EXT.include?(File.extname(path)) && File.file?(path) &&
+          repository_files(target).select do |path|
+            SOURCE_EXT.include?(File.extname(path)) &&
               !Master::Fix::Scanner.skip_path?(path, root: target.to_s)
           end
         end

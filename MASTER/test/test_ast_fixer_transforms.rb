@@ -443,6 +443,25 @@ class TestAstFixerTransforms < Minitest::Test
     assert_includes result[:transforms], :frozen_string_literal
   end
 
+  def test_comment_separator_transform_preserves_literals_and_directives
+    result = fix("separators.rb", <<~RUBY)
+      # frozen_string_literal: true
+      # ========
+      value = <<~TEXT
+        # --------
+      TEXT
+      # keep this reason
+      # ----------
+      value
+    RUBY
+
+    assert_includes result[:transforms], :comment_separators
+    refute_includes result[:content], "# ========"
+    assert_equal 1, result[:content].scan("# --------").size
+    assert_includes result[:content], "# keep this reason"
+    assert_includes result[:content], "# frozen_string_literal: true"
+  end
+
   def test_collapse_blank_lines_transform
     result = fix("blank.rb", "def call\n\n\n  :ok\nend\n")
 

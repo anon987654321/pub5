@@ -98,9 +98,11 @@ module Master
           Measurements: #{JSON.generate(tree.metrics)}
 
           Tree:
-          #{TreeView.new(tree).render}
         PROMPT
-        text.byteslice(0, MAX_PROMPT_BYTES).scrub("")
+        room = MAX_PROMPT_BYTES - text.bytesize
+        raise "structural review instructions exceed prompt budget" if room < 80
+
+        text + TreeView.new(tree).render(max_bytes: room)
       end
 
       # Constitutional order is defined by Soul. The flat catalogue supplies

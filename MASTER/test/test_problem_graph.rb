@@ -98,6 +98,14 @@ class TestProblemGraph < Minitest::Test
     end
   end
 
+  def test_related_path_order_does_not_duplicate_a_finding
+    paths = %w[MASTER/lib/b.rb MASTER/lib/c.rb]
+    first = finding("MASTER/lib/a.rb", "STRUCTURAL_COHESION", "owner", paths)
+    second = finding("MASTER/lib/a.rb", "STRUCTURAL_COHESION", "owner", paths.reverse)
+
+    assert_equal 1, @graph.call([first, second]).first.size
+  end
+
   def test_problem_identity_is_stable_for_same_observations
     rows = [
       finding("MASTER/lib/a.rb", "NO_GOD_CLASS", "tiny"),

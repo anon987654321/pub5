@@ -39,7 +39,7 @@ module Master
         STRATEGIES = [
           Strategy.new(
             predicate: :ruby?,
-            transforms: %i[add_frozen_header fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
+            transforms: %i[add_frozen_header remove_comment_separators fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
                            add_trailing_commas],
           ),
           Strategy.new(predicate: :sql_context?, transforms: %i[normalise_null_comparison]),
