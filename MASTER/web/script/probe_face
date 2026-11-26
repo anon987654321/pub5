@@ -265,7 +265,7 @@ begin
     failures << "late network errors present" unless network_errors.empty?
     failures << "shader compilation errors present" if console_msgs.any? { |line| line.match?(/shader error|VALIDATE_STATUS false|GL_INVALID_OPERATION/i) }
     File.write(File.join(target, "receipts.json"), JSON.pretty_generate(receipts) + "\n")
-    puts "mask probe: #{'#{receipts.size}'} sculptures, #{'#{receipts.sum { |r| r.fetch("angles").size }}'} viewpoints, #{'#{target}'}"
+    puts "mask probe: #{receipts.size} sculptures, #{receipts.sum { |r| r.fetch("angles").size }} viewpoints, #{target}"
   end
 
   puts "\n=== console log tail ==="
