@@ -928,8 +928,8 @@ const add=(arr,eff,wet)=>{if(eff){eff.wet.value=wet;arr.push(eff);}return arr;};
 try{add(drum,new Tone.Distortion(0.12),0.12);}catch(e){log('FX default: '+e.message,'w');}
 try{add(drum,new Tone.StereoWidener(0.3),0.35);}catch(e){log('FX default: '+e.message,'w');}
 // Keep bass centered; modulation belongs to the musical tracks.
-try{add(keys,new Tone.Chorus(1.6,2.5,0.5).start(),0.2);}catch(e){log('FX default: '+e.message,'w');}
-try{add(keys,new Tone.FeedbackDelay(60/bpm*.75,0.26),0.14);}catch(e){log('FX default: '+e.message,'w');}
+// Keys already have a dedicated chorus in the instrument strip.
+// Shared delay send handles chord echoes.
 try{add(pads,new Tone.Chorus(0.9,3.5,0.6).start(),0.28);}catch(e){log('FX default: '+e.message,'w');}
 // Pad ambience uses the shared native Reverb send; no FeedbackCombFilter worklet.
 try{add(pads,new Tone.StereoWidener(0.45),0.4);}catch(e){log('FX default: '+e.message,'w');}
@@ -1601,7 +1601,7 @@ const tape=new Tone.Distortion(0.08);
 const drumDrive=new Tone.Distortion(.65);drumDrive.wet.value=aud.drive/100*.75;
 const comp=new Tone.Compressor(-10,1+aud.comp/100*2);comp.attack.value=.03;comp.release.value=Math.min(.5,60/aud.bpm*.5);
 const widener=new Tone.StereoWidener(aud.width/100);
-const limiter=new Tone.Limiter(-1);
+const limiter=new Tone.Gain(1);
 const revSend=new Tone.Gain(0);
 const dlySend=new Tone.Gain((aud.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
 const rev=new Tone.Reverb(1+profileReverbDecay());
@@ -1615,17 +1615,19 @@ const mixSum=new Tone.Gain(1);
 flt.connect(tape);
 tape.connect(comp);
 comp.connect(widener);
-widener.connect(limiter);
+// Final native dynamics below replaces the redundant Tone limiter.
 // Preserve a direct dry master feed even if an optional stereo effect fails.
 const outputGate=new Tone.Gain(offline?1:0);
 const dryMaster=new Tone.Gain(1),wetMaster=new Tone.Gain(0);
 masterG.connect(dryMaster);dryMaster.connect(mixSum);
-limiter.connect(outputGate);
+const masterPath=new Tone.Gain(1);
+widener.connect(limiter);limiter.connect(masterPath);
+masterPath.connect(outputGate);
 // Use the actual context destination, not a second Tone destination chain.
 const ctx=Tone.getContext().rawContext,finalDynamics=ctx.createDynamicsCompressor(),finalLimiter=ctx.createGain(),ceiling=ctx.createWaveShaper();
 // Sample-peak safety net after all coloration; not a true-peak limiter.
 ceiling.curve=Float32Array.from({length:8193},(_,i)=>Math.max(-.891250938,Math.min(.891250938,i/4096-1)));
-const experimental=createExperimentalDSP(ctx,mixSum,flt);experimental.update(aud);
+const experimental=httpPage?createExperimentalDSP(ctx,mixSum,flt):{update(){},scan(){}};if(!httpPage)mixSum.connect(flt);experimental.update(aud);
 finalDynamics.threshold.value=-1.5;finalDynamics.knee.value=0;finalDynamics.ratio.value=20;finalDynamics.attack.value=.003;finalDynamics.release.value=.08;
 finalDynamics.connect(ceiling);ceiling.connect(finalLimiter);
 const masteringInput=ctx.createGain(),masterHP=ctx.createBiquadFilter(),harsh=ctx.createBiquadFilter(),warm=ctx.createBiquadFilter(),matte=ctx.createBiquadFilter(),glue=ctx.createDynamicsCompressor();
@@ -1639,8 +1641,6 @@ warm.type="lowshelf";warm.frequency.value=125;warm.gain.value=.8;
 matte.type="highshelf";matte.frequency.value=7800;matte.gain.value=-1.6;
 updateMasterGlue(glue,aud);
 const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);const glueOut=ctx.createGain(),programmeGlue=createProgrammeGlue(ctx,hfRestore,glueOut,glue,aud);const masterColor=createMasterColor(ctx,glueOut,finalDynamics,aud);finalLimiter.connect(ctx.destination);
-// Local playback keeps an independent, bounded clean monitor path around the expensive master effects.
-const monitor=new Tone.Gain(httpPage?0:.65),monitorGate=new Tone.Gain(offline?1:0);masterG.connect(monitor);monitor.connect(monitorGate);Tone.connect(monitorGate,ceiling);
 revSend.connect(rev);
 dlySend.connect(dly);
 const roomTone=new Tone.Filter(5400,"lowpass");rev.connect(roomTone);roomTone.connect(masterG);
@@ -1716,12 +1716,12 @@ try{const recording=createRecordingStage(ctx,lane==="keys"||lane==="pads"?dreamL
 }
 dreamLFO.update(aud);
 let analog=null;
-try{analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfile,aud,mix,offline,duration);
-tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
+try{if(httpPage){analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfile,aud,mix,offline,duration);
+tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;}
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready,programmeGlue.ready,...recordingStages.map(stage=>stage.ready)]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,monitorGate,glue,programmeGlue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,glue,programmeGlue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -2217,7 +2217,7 @@ st_.exporting=true;
 let context=null,resume=false;
 try{
 context=Tone.getContext();
-resume=st_.playing;if(resume){pauseClock();outputGate.gain.rampTo(0,.015);liveGraph?.monitorGate.gain.rampTo(0,.015);}
+resume=st_.playing;if(resume){pauseClock();outputGate.gain.rampTo(0,.015);}
 $id('export').disabled=true;
 rg69AudioProfileLocked=true;
 const take=session(),aud_=take.aud,mix_=take.mix,sampleTake=sampleAudio;
@@ -2565,7 +2565,7 @@ update();
 for(const [label,voice] of [["Kick","kick"],["Snare","snare"],["Clap","clap"],["Hat","hat"],["Open","open"]]){
 const button=document.createElement("button");button.type="button";button.textContent=label;button.addEventListener("click",async()=>{
 try{if(st_.exporting||st_.offlineRendering)return;const activation=startToneFromGesture();if(!st_.started){if(!st_.booting)st_.booting=initAudio(activation).then(()=>{st_.started=true;});try{await st_.booting;}finally{st_.booting=null;}}else await activation;
-const at=audioTime()+.015,pitch=rg69AudioProfile.notes[voice],synth=liveGraph.instruments[voice];outputGate.gain.setValueAtTime(1,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(1,audioTime());if(["snare","clap"].includes(voice))synth.triggerAttackRelease(.14,at,.8);else synth.triggerAttackRelease(pitch,.14,at,.8);liveGraph.drumColor.hit(at,.8);
+const at=audioTime()+.015,pitch=rg69AudioProfile.notes[voice],synth=liveGraph.instruments[voice];outputGate.gain.setValueAtTime(1,audioTime());if(["snare","clap"].includes(voice))synth.triggerAttackRelease(.14,at,.8);else synth.triggerAttackRelease(pitch,.14,at,.8);liveGraph.drumColor.hit(at,.8);
 }catch(error){log("pad: "+error.message,"e");showView("song");}
 });$id("drum-pads").append(button);
 }
@@ -2972,7 +2972,7 @@ await (activationPromise||Tone.start());
 }
 claimOwner();if(!st_.heartbeat)st_.heartbeat=setInterval(keepOwner,1800);
 st_.playing=true;
-outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(1,audioTime());
+outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());
 $id('play').setAttribute('aria-pressed','true');
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
 startClock();
@@ -3013,7 +3013,7 @@ $id('play').addEventListener('click',async()=>{
     }
   } else {
     pauseClock();
-    outputGate.gain.rampTo(0,.015);liveGraph?.monitorGate.gain.rampTo(0,.015);
+    outputGate.gain.rampTo(0,.015);
     st("paused");
     playButton.textContent = "▶ Play";
     playButton.setAttribute("aria-pressed", "false");
@@ -3034,7 +3034,7 @@ $id('song-mode').addEventListener('click',()=>{pushHistory();st_.song=!st_.song;
 $id('stop').addEventListener('click',()=>{
 st_.playing=false;
 clearInterval(st_.heartbeat);st_.heartbeat=null;releaseOwner();
-pauseClock();if(st_.started)outputGate.gain.rampTo(0,.015);liveGraph?.monitorGate.gain.rampTo(0,.015);
+pauseClock();if(st_.started)outputGate.gain.rampTo(0,.015);
 st_.idx=-1;st_.visualIdx=-1;
 st_.barCount=0;st_.tick=-1;st_.songEndAt=null;showSongPosition();
 const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
@@ -3069,14 +3069,14 @@ tone.frequency.value=440;gain.gain.setValueAtTime(0,at);gain.gain.linearRampToVa
 tone.connect(gain);gain.connect(ctx.destination);tone.onended=()=>{tone.disconnect();gain.disconnect();};tone.start(at);tone.stop(at+.24);
 if(!st_.started){await initAudio(Promise.resolve());st_.started=true;}
 const wasPlaying=st_.playing;
-if(!wasPlaying){outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(1,audioTime());}
+if(!wasPlaying){outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());}
 const base=audioTime()+.35;
 for(let i=0;i<4;i++){
 liveGraph.instruments.kick.triggerAttackRelease(rg69AudioProfile.notes.kick,.15,base+i*.2,.9);
 liveGraph.instruments.hat.triggerAttackRelease(rg69AudioProfile.notes.hat,.05,base+i*.2,.8);
 }
 setTimeout(()=>logAudioState(),480);
-setTimeout(()=>{if(!st_.playing&&st_.started){outputGate.gain.setValueAtTime(0,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(0,audioTime());}},1500);
+setTimeout(()=>{if(!st_.playing&&st_.started){outputGate.gain.setValueAtTime(0,audioTime());}},1500);
 }catch(error){console.error("audio test:",error);}
 }
 $id('audio-test').addEventListener('click',testAudio);
@@ -3128,7 +3128,7 @@ clearInterval(st_.heartbeat);st_.heartbeat=null;
 cancelAnimationFrame(st_.rafId);
 st_.rafId=null;
 releaseOwner();
-pauseClock();if(st_.started)outputGate.gain.rampTo(0,.005);liveGraph?.monitorGate.gain.rampTo(0,.005);
+pauseClock();if(st_.started)outputGate.gain.rampTo(0,.005);
 [kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN].forEach(s=>{
 s?.releaseAll?.(Tone.now());
 });
