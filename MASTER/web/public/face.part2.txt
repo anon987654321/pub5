@@ -280,7 +280,7 @@ void main(){
   float band = exp(-bandY * bandY);
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * activity * pulse * band * 0.018;
   float peripheral = smoothstep(0.28, 0.58, length(subjectPoint.xy));
-  float escape = step(0.97, seed) * peripheral * activity *
+  float escape = step(0.97 * 6.28318, seed) * peripheral * activity *
     clamp(uFracture + uEarPulse * 0.15, 0.0, 1.0) * 0.045;
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * escape;
   p = mix(p, subjectPoint, uSubjectDirect);
