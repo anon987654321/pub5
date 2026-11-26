@@ -91,6 +91,20 @@ class TestKeylessRouting < Minitest::Test
     end
   end
 
+  # With any key present, kilo, llm7 and ovh were refused as "not wired to any
+  # LLM" while every keyed lane was spent, and /fix stalled (2026-11-26).
+  def test_declared_keyless_hosted_providers_stay_reachable_when_other_keys_exist
+    ENV["OPENROUTER_API_KEY"] = "sk-or-v1-" + ("o" * 64)
+    resolver = Object.new
+    resolver.define_singleton_method(:hosted_model?) { |id| id.start_with?("ovh:") }
+    resolver.define_singleton_method(:hosted_endpoint_for) { |id| id == "ovh:gpt-oss-120b" ? { key: nil } : nil }
+
+    refute Master.keyless_llm_enabled?, "a key is present, so the browser lanes stay opt-in"
+    Master::CLI::Routing::ModelRouter.stub(:hosted_resolver, resolver) do
+      assert Master.llm_reachable?("ovh:gpt-oss-120b")
+    end
+  end
+
   def test_no_keyless_switch_blocks_anonymous_hosted_reachability
     ENV["MASTER_NO_KEYLESS"] = "1"
     resolver = Object.new

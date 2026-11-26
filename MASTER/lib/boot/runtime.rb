@@ -225,7 +225,12 @@ module Master
       return false unless endpoint
       return true unless endpoint[:key].nil?
 
-      free_only? || keyless_llm_enabled?
+      # A declared keyless endpoint is part of the free pool whether or not other
+      # keys exist. Gated on keyless_llm_enabled?, which is false whenever any key
+      # is present, kilo, llm7 and ovh were refused while every keyed lane was out
+      # of credit or rate-limited, and /fix stalled on two live models
+      # (2026-11-26). MASTER_NO_KEYLESS remains the explicit off.
+      ENV["MASTER_NO_KEYLESS"].to_s.empty?
     rescue StandardError => e
       Master::Ground::Swallow.log(e, context: "runtime.hosted_lane_reachable", model:)
       false
