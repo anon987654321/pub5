@@ -15,8 +15,8 @@ commits; never force-push.
 Before planning or acting, load MASTER's canonical context:
 
 1. `MASTER/data/soul.yml` is the highest source of global authority. It owns
-   system identity, preservation principles, source precedence and
-   `absolute.sacred_paths`. It cannot create individual Law identities or
+   system identity, preservation principles and source precedence. It
+   cannot create individual Law identities or
    restate their requirement statements.
 2. `MASTER/data/laws.yml` is the one catalogue of individual Law records and
    their execution policy. It owns Law identities and statements, parent and
@@ -54,8 +54,8 @@ source order and protected paths. The Law catalogue is authoritative for
 individual Law identities and statements; its nine invariant nodes order Laws
 internally. Git history is provenance, never an override of a live source.
 
-`MASTER/lib/soul.rb` reads the source hierarchy and protected-path list from
-`soul.yml`, and derives the nine-node Law order from `laws.yml`; it does not
+`MASTER/lib/soul.rb` reads the source hierarchy from `soul.yml`, names the
+preserved assets no automated writer may change, and derives the nine-node Law order from `laws.yml`; it does not
 author a competing graph. The executable Law Ruby in `MASTER/law/*.rb` holds
 the definitions and adapters. `MASTER/data/laws.yml#law_catalogue` owns per-Law execution
 policy and also holds scanner, veto, plugin and `/fix` runtime configuration

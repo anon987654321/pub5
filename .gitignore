@@ -40,7 +40,6 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/worktrees/
-.aider.tags.cache.v4/
 *.swp
 *.swo
 
