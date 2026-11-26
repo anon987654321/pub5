@@ -33,14 +33,12 @@ module Master
 
         def ask_cli_lane(name, model, prompt, reply_path)
           lane = cli_lanes.fetch(name)
-          if (path_env = lane["model_path_env"])
-            path = ENV[path_env].to_s
-            return Result.err("#{name}: set #{path_env} to a readable local GGUF file", category: :no_api_key) if
-              path.empty? || !File.file?(path) || !File.readable?(path)
-          end
+          missing = cli_lane_missing_model(name, lane)
+          return missing if missing
 
+          timeout_s = cli_lane_timeout_s(lane)
           out, err, status = with_cli_slot(name) do
-            capture3_with_timeout(CLI_LANE_TIMEOUT_S, cli_binary(lane["binary"]),
+            capture3_with_timeout(timeout_s, cli_binary(lane["binary"]),
                                   *cli_lane_args(lane, model, prompt, reply_path),
                                   stdin_data: cli_lane_stdin(lane, prompt))
           end
@@ -49,9 +47,28 @@ module Master
           record_estimated_cli_usage(model: "#{name}:#{model}", prompt:, reply: result.value!) if result.ok?
           result
         rescue Timeout::Error
-          Result.err("#{name}: timed out after #{PassClock.call_deadline(CLI_LANE_TIMEOUT_S)}s", category: :timeout)
+          waited = PassClock.call_deadline(timeout_s || CLI_LANE_TIMEOUT_S)
+          Result.err("#{name}: timed out after #{waited}s", category: :timeout)
         rescue StandardError => e
           Result.err("#{name}: #{e.message}", category: :provider_error)
+        end
+
+        # A local lane names the env var that holds its model file; nil when it is readable.
+        def cli_lane_missing_model(name, lane)
+          path_env = lane["model_path_env"]
+          return unless path_env
+
+          path = ENV[path_env].to_s
+          return unless path.empty? || !File.file?(path) || !File.readable?(path)
+
+          Result.err("#{name}: set #{path_env} to a readable local GGUF file", category: :no_api_key)
+        end
+
+        # A lane may declare `timeout_s:` in models.yml cli_lanes; an undeclared one keeps the
+        # 60s cap that bounds a silent CLI (codex hung past 250s on five attempts).
+        def cli_lane_timeout_s(lane)
+          declared = Integer(lane["timeout_s"].to_s, exception: false)
+          declared&.positive? ? declared : CLI_LANE_TIMEOUT_S
         end
 
         def cli_lane_args(lane, model, prompt, reply_path)

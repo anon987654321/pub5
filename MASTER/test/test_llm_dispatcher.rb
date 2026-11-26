@@ -932,6 +932,24 @@ class TestLLMDispatcher < Minitest::Test
     refute_includes seen[:args], "--model"
   end
 
+  # A lane declares its own cap in models.yml; one that declares none keeps the 60s
+  # that bounds a silent CLI, so codex still fails over promptly and grok gets room.
+  def test_a_cli_lane_declares_its_own_timeout
+    dispatcher, = build_dispatcher
+    seen = {}
+    dispatcher.define_singleton_method(:capture3_with_timeout) do |timeout_s, *_args, **_k|
+      seen[File.basename(_args.first)] = timeout_s
+      ["pong", "", Struct.new(:success?).new(true)]
+    end
+
+    %w[grok-cli:auto codex-cli:auto].each do |lane|
+      dispatcher.send(:send_cli_lane, lane, [{ role: "user", content: "ping" }], sys: nil)
+    end
+
+    assert_equal 180, seen.fetch("grok")
+    assert_equal Master::Review::LLMDispatcher::CLI_LANE_TIMEOUT_S, seen.fetch("codex")
+  end
+
   # A spent plan is a spent balance to the chain: it walks on rather than
   # retrying codex until tomorrow.
   def test_a_spent_cli_plan_reads_as_budget

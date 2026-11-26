@@ -606,6 +606,10 @@ cli_lanes:
     models: [auto]
     login: codex login
   grok-cli:
+    # timeout_s: a /fix prompt carries the law preamble and file context; grok answered 30 KB in
+    # 38.6s on a quiet Mac (2026-11-26), so the 60s default cut its first repair call off and the
+    # run walked down to free lanes. Codex keeps the default: it is the lane that hangs silent.
+    timeout_s: 180
     binary: grok
     signed_in: { args: [models], refuse: not authenticated }
     ask: [--single, "%{prompt}"]
