@@ -35,7 +35,13 @@
   <%# Named only when it is true: the provider the identity gate actually
       requires before a profile can be shown (Dating::BaseController). %>
   <% if identity_provider_name %>
-    <%= tag.p safe_join([t("dating.splash.protected_by"), tag.strong(identity_provider_name)], " "),
-              class: "dating-splash-trust" %>
+    <p class="dating-splash-trust">
+      <%= t("dating.splash.protected_by") %>
+      <% if identity_provider_name == "Vipps" %>
+        <%= image_tag "vipps/vipps-wordmark.svg", alt: "Vipps", width: 164, height: 66 %>
+      <% else %>
+        <%= tag.strong identity_provider_name %>
+      <% end %>
+    </p>
   <% end %>
 </section>

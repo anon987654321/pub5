@@ -30,6 +30,11 @@ export default class extends Controller {
   }
 
   step(direction) {
+    const carousel = this.application.getControllerForElementAndIdentifier(this.trackTarget, "carousel")
+    if (carousel?.swiper) {
+      direction > 0 ? carousel.swiper.slideNext() : carousel.swiper.slidePrev()
+      return
+    }
     const slides = Array.from(this.trackTarget.children)
     const current = this.currentIndex(slides)
     const target = slides[Math.min(Math.max(current + direction, 0), slides.length - 1)]

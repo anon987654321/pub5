@@ -21,6 +21,17 @@ Every HTML document inherits one chrome contract:
 - The `main` element has an id and its required role.
 - Primary controls meet the minimum tap target height.
 
+Navigation is swipe-first, not swipe-only. Reuse the registered
+`@stimulus-components/carousel` compatibility controller for browseable media
+and collections, with native scroll snap, keyboard navigation and visible
+links or buttons for essential destinations. Preserve vertical page scrolling,
+browser gestures, existing slide sizes and reduced-motion preferences.
+Do not use a browsing swipe to purchase, vote, like or pass; those are
+separate, intentional domain actions. A minimal first screen has one primary
+action, one visual anchor and only truthful trust cues. Reveal secondary
+controls as needed, rather than adding persistent chrome. Dating's original
+heart splash is the simplicity reference, not a shared visual skin.
+
 A product may restyle colour, type and radius. It may not invent a second
 z-scale, skip link or tap-size standard. The interface is flat: no shadows,
 blur or hairline rules. Space separates components. Form fields retain an

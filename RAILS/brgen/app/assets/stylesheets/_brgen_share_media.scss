@@ -263,6 +263,8 @@ label.field--check-label > input { min-height: var(--tap-min); min-width: var(--
    "liked" transform above it. */
 .track-row.queued { background: rgb(from var(--color-success) r g b / var(--opacity-soft)); border-radius: var(--radius-small); }
 .photo-strip { display: flex; gap: var(--space-2); padding: var(--space-4) 0; border-bottom: 0; flex-wrap: wrap; }
+.photo-strip--carousel { flex-wrap: nowrap; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-inline: contain; }
+.photo-strip--carousel > figure { flex: 0 0 auto; margin: 0; scroll-snap-align: start; }
 .photo-thumb { width: 96px; height: 96px; object-fit: cover; border-radius: var(--radius-small); }
 .dating-discover { margin-top: var(--space-5); }
 .tv-media { border-bottom: 0; }

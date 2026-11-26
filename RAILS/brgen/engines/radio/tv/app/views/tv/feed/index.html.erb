@@ -16,7 +16,8 @@
      data-tv-feed-sound-on-label-value="<%= t("tv.feed.sound_on") %>"
      data-tv-feed-sound-off-label-value="<%= t("tv.feed.sound_off") %>"
      data-tv-feed-next-url-value="<%= @has_more ? tv.feed_path(offset: @next_offset, format: :turbo_stream) : "" %>">
-  <div class="tv-feed-scroller" data-tv-feed-target="scroller" id="tv-feed-items">
+  <div class="tv-feed-scroller" tabindex="0" role="group" aria-label="<%= t("tv.feed.title") %>"
+       data-controller="carousel" data-carousel-options-value='{"direction":"vertical","preserveSizing":true}' data-tv-feed-target="scroller" id="tv-feed-items">
     <%= render partial: "tv/feed/item", collection: @videos, as: :video %>
   </div>
 

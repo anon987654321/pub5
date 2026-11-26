@@ -23,9 +23,9 @@ class Dating::BaseController < ApplicationController
     redirect_to sign_in_path, alert: t("dating.vipps_required")
   end
 
-  IDENTITY_PROVIDERS = { "bankid" => "BankID", "vipps" => "Vipps" }.freeze
+  IDENTITY_PROVIDERS = { "vipps" => "Vipps", "bankid" => "BankID" }.freeze
 
-  # The provider the gate asks for, BankID first: the one the first screen names.
+  # Prefer Vipps on the splash when configured; retain the BankID-only fallback.
   def identity_provider_name
     slugs = Rails.application.config.x.oauth_provider_slugs.to_a
     IDENTITY_PROVIDERS.find { |slug, _name| slugs.include?(slug) }&.last

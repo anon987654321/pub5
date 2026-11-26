@@ -121,7 +121,8 @@
           post-gallery instance and the source says so (FrontPageWeightTest
           counts the partial's data-controller attributes). %>
       <% if post.images.attached? || post.image.attached? %>
-        <div class="post-images" data-controller="post-gallery">
+        <div class="post-images" tabindex="0" role="group" aria-label="<%= post.title %>"
+             data-controller="post-gallery carousel" data-carousel-options-value='{"preserveSizing":true,"scrollSnapType":"x proximity"}'>
           <% if post.images.attached? %>
             <%# Each photo is told apart by its place in the set, and the first
                 says how many more follow, since the rest sit off to the side. %>

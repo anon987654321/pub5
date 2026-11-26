@@ -149,7 +149,7 @@
   padding: 4px 4px var(--space-3);
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
 }
 
 .photo-thumb-wrap {

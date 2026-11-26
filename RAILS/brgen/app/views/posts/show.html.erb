@@ -39,7 +39,8 @@
         </div>
       <% elsif @post.images.attached? %>
         <%# A gallery post keeps every photo on its own page, not only on the card. %>
-        <div class="post-images" data-controller="post-gallery">
+        <div class="post-images" tabindex="0" role="group" aria-label="<%= @post.title %>"
+             data-controller="post-gallery carousel" data-carousel-options-value='{"preserveSizing":true,"scrollSnapType":"x proximity"}'>
           <% gallery = @post.ordered_images %>
           <%= render partial: "posts/gallery_image", collection: gallery,
                 locals: { post: @post, total: gallery.size } %>

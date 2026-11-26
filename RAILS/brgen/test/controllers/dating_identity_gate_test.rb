@@ -114,8 +114,17 @@ class DatingIdentityGateTest < ActionDispatch::IntegrationTest
     get dating.root_path
 
     assert_response :success
-    assert_select ".dating-splash-trust strong", "BankID"
+    assert_select ".dating-splash-trust img[alt=Vipps]"
+    assert_select ".dating-splash-trust strong", count: 0
     assert_select "a.dating-splash-start[href=?]", dating.root_path(start: 1)
+  end
+
+  test "BankID-only installations retain honest fallback branding" do
+    Rails.application.config.x.oauth_provider_slugs = %w[bankid]
+    host! "dating.brgen.no"
+    get dating.root_path
+    assert_select ".dating-splash-trust strong", "BankID"
+    assert_select ".dating-splash-trust img[alt=Vipps]", count: 0
   end
 
   test "without a verifier the splash claims no protection" do

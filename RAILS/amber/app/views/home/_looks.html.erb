@@ -14,6 +14,8 @@
              tabindex="0"
              role="group"
              aria-label="<%= t("home.looks.swipe", name: name) %>"
+             data-controller="carousel"
+             data-carousel-options-value='{"preserveSizing":true,"keyboard":false}'
              data-look-track-target="track"
              data-action="keydown->look-track#key">
           <% slides.each_with_index do |caption, position| %>
