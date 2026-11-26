@@ -46,7 +46,9 @@ module Master
       SPAN = /\d+\s*(?:days?|hours?|hrs?|minutes?|mins?|seconds?|secs?|[dhms])(?![a-z])/i
       AFTER_RE = /(?:resets?|try\s+again|retry)\s+(?:in|after)\s+((?:#{SPAN}[\s,]*(?:and\s+)?)+)/i
       RETRY_AFTER_RE = /retry-after\W+(\d+)/i
-      CLOCK_RE = /resets?\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b(?:\s*\(([A-Za-z]+(?:\/[A-Za-z_+\-0-9]+)*)\))?/i
+      # Codex says "try again at 6:08 PM" (2026-11-26); without it a spent plan parked for a guessed hour.
+      ZONE = %r{\(([A-Za-z]+(?:/[A-Za-z_+\-0-9]+)*)\)}
+      CLOCK_RE = /(?:resets?|try\s+again)\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b(?:\s*#{ZONE})?/i
       @zone_lock = Mutex.new
 
       def incapable?(reply) = INCAPABLE_RE.match?(reply.to_s)

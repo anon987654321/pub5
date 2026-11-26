@@ -69,6 +69,12 @@ end
     assert_nil Quota.wait_in("quota reached")
   end
 
+  def test_codex_try_again_clock_is_the_stated_reset
+    now = Time.local(2026, 11, 26, 15, 0).to_f
+    codex = "ERROR: You’ve hit your usage limit. Upgrade to Pro or try again at 6:08 PM."
+    assert_equal (3 * 3600) + (8 * 60), Master::Io::LaneReply.stated_wait(codex, now)
+  end
+
   def test_ordinary_failures_are_not_quota
     refute Quota.spent?("agy: timed out after 120s")
     refute Quota.spent?("line 429 of the report is wrong")
