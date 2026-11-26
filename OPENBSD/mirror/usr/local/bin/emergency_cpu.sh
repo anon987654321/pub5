@@ -114,7 +114,7 @@ done
 [[ $_i -ge 25 ]] && echo "WARN: master /up still down after 75s"
 
 rcctl restart brgen 2>/dev/null || rcctl start brgen 2>/dev/null || echo "brgen restart failed"
-rcctl restart relayd 2>/dev/null || true
+/usr/local/libexec/relayd-kick.ksh || true
 
 sleep 3
 echo "=== after ==="

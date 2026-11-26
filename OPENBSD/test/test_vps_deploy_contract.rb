@@ -1071,6 +1071,21 @@ class VpsDeployContractTest < Minitest::Test
     assert_empty helper.lines.grep(/(?<![\w\/])chown\s/), "chown lives in /sbin, outside the helper's PATH"
   end
 
+  # An unchecked `rcctl restart relayd || true` in rc.d/master left relayd dead and every
+  # site refusing HTTPS (2026-11-26). Each app restart now goes through one helper that
+  # proves relayd is running and retries.
+  def test_app_restarts_kick_relayd_through_the_checking_helper
+    kick = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "relayd-kick.ksh"))
+    assert_includes kick, "/usr/sbin/rcctl check relayd"
+    assert_match(/while \[\[ \$attempt -le 3 \]\]/, kick)
+
+    %w[amber brgen bsdports master mrdamascy].each do |app|
+      rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", app))
+      assert_includes rc, "/usr/local/libexec/relayd-kick.ksh", app
+      refute_match(/^\s*rcctl restart relayd/, rc, app)
+    end
+  end
+
   def test_vps_deploy_and_master_deployer_are_build_free
     master = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_deploy_master.sh"), encoding: "UTF-8")
     rc = File.read(File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master"), encoding: "UTF-8")

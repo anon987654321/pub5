@@ -166,6 +166,10 @@ ownership:
     purpose: app-owned CI copy-tree sync from the fixed repository, never root filesystem mutation
     risk: critical
     check: ruby OPENBSD/checks/vps_safety_check.rb
+  mirror/usr/local/libexec/relayd-kick.ksh:
+    purpose: restarts relayd after an app restart and retries until rcctl check proves it running
+    risk: critical
+    check: ruby OPENBSD/test/test_vps_deploy_contract.rb
   mirror/usr/local/libexec/rails-task.ksh:
     purpose: closed Rails runtime task dispatcher; app code and Bundler run as the selected app user
     risk: critical

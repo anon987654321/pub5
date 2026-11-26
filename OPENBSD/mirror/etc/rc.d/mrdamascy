@@ -102,7 +102,7 @@ if [[ "$1" = "start" ]] || [[ "$1" = "restart" ]]; then
       _i=$((_i + 1))
     done
     if [[ "$_up_ok" = "1" ]]; then
-      rcctl restart relayd 2>/dev/null || true
+      /usr/local/libexec/relayd-kick.ksh || true
     else
       logger -t mrdamascy "relayd skipped: /up not ready after restart"
     fi
