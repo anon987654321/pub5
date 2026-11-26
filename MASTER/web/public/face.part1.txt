@@ -778,9 +778,10 @@ function resize() {
   camera.aspect = internalW / internalH;
   camera.updateProjectionMatrix();
 
-  // Ensure the canvas element itself is styled for crisp upscale (already in CSS)
-  const cv = renderer.domElement;
-  if (cv) cv.style.imageRendering = "pixelated";
+  // A const cv here shadowed the canvas binding for the whole function, so the
+  // first line of resize() threw "Cannot access cv before initialization".
+  const canvas = renderer.domElement;
+  canvas.style.imageRendering = "pixelated";
 }
 window.addEventListener('resize', resize, { passive: true });
 if ('ResizeObserver' in window && cv) {
