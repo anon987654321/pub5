@@ -326,6 +326,20 @@ def test_brgen_old_dialect_outranks_the_social_stack
     assert naming <= 75, "button-small naming grew to #{naming} files; the ratchet only shrinks"
   end
 
+  def test_brgen_collection_and_local_actions_use_contextual_sizing
+    %w[
+      nearby/index nearby/_alert nearby/_widget_composer events/_rsvp events/show
+      posts/index stories/index communities/index events/index communities/wiki/index
+    ].each do |name|
+      source = File.read(File.join(ROOT, "brgen", "app", "views", "#{name}.html.erb"))
+      refute_includes source, "button-small", name
+    end
+    stack = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_stack_brgen.scss"))
+    %w[nearby-room nearby-person nearby-chat-widget-composer rsvp-form event-organiser-actions collection-header].each do |context|
+      assert_includes stack, ".#{context}"
+    end
+  end
+
   def test_brgen_maps_search_uses_the_place_list_column
     source = File.read(File.join(ROOT, "brgen", "app", "assets", "stylesheets", "_brgen_vertical_surfaces.scss"))
     list = source[/body\.vertical-maps\s+\.place-list\s*\{([^}]*)\}/m, 1]

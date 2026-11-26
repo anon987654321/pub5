@@ -11,22 +11,22 @@
 </p>
 
 <% if @located %>
-  <article class="row-between section-divider--24">
+  <article class="row-between section-divider--24 nearby-room">
     <div> <%# scan: intentional — an anonymous text block; the flex row is the layout and a name here would have no reader %>
       <%= tag.strong t("nearby.room_title") %>
       <p><%= t("nearby.room_body", km: Conversation::GEO_ROOM_RADIUS_KM.to_i) %></p>
     </div>
-    <%= link_to t("nearby.join"), nearby_room_path, class: "button button-primary button-small" %>
+    <%= link_to t("nearby.join"), nearby_room_path, class: "button button-primary" %>
   </article>
 
   <% if @nearby.any? %>
     <% @nearby.each do |u, band| %>
-      <article class="row-between">
+      <article class="row-between nearby-person">
         <div> <%# scan: intentional — an anonymous text block; the flex row is the layout and a name here would have no reader %>
           <%= tag.strong u.anon_handle %>
           <%= tag.p t("nearby.distance_band.#{band}") %>
         </div>
-        <%= button_to t("nearby.chat"), nearby_path, params: { user_id: u.id }, method: :post, class: "button button-primary button-small" %>
+        <%= button_to t("nearby.chat"), nearby_path, params: { user_id: u.id }, method: :post, class: "button button-primary" %>
       </article>
     <% end %>
   <% else %>
@@ -44,7 +44,7 @@
     <p><%= t("nearby.share_location_body", km: @radius_km.to_i) %></p>
     <p class="nearby-locate-actions">
       <button type="button"
-              class="button button-primary button-small"
+              class="button button-primary"
               data-action="request-location#request"><%= t("chat.use_location") %></button>
       <%= link_to t("chat.open_brgen_channel"), channel_path("brgen"), class: "button" %>
     </p>

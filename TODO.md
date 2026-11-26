@@ -458,4 +458,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-010 shared search, MASTER invite and password toggle no longer name button size; Amber, Brgen and BSDPorts stylesheet contexts updated. Amber legacy selectors removed. Source contracts authored; runtime and rendering NOT_RUN.
 
+- 2026-11-26: shared-010 ten Brgen core views migrated (Nearby, Events, Posts, Stories, Communities and Wiki). Existing contexts reused or semantic containers named, with RSVP scoped to its forms and collection headers scoped to direct actions. Source contracts authored; rendered parity NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

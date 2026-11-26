@@ -2,10 +2,10 @@
 <%# Out of the index: stories are gone in a day. %>
 <% content_for :head, robots_meta(index: false) %>
 
-<div class="page-header">
+<div class="page-header collection-header">
   <%= tag.h1 t("stories.title") %>
   <% if authenticated? %>
-    <%= link_to t("stories.new"), new_story_path, class: "button button-small" %>
+    <%= link_to t("stories.new"), new_story_path, class: "button" %>
   <% end %>
 </div>
 

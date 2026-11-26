@@ -37,7 +37,9 @@
                       ".listing-published-notice", ".marketplace-actions",
                       ".menu-item-allergens-edit", ".store-pdp-description",
                       ".notification-actions", ".sidebar-card", ".playlist-admin",
-                      ".messenger-master-invite", ".password-field", ".search-form >")
+                      ".messenger-master-invite", ".password-field", ".search-form >",
+                      ".nearby-room", ".nearby-person", ".nearby-chat-widget-composer",
+                      ".rsvp-form", ".event-organiser-actions", ".collection-header >")
 );
 @forward "components";
 @forward "search_yep";
