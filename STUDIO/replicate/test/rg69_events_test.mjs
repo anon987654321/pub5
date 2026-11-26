@@ -45,10 +45,10 @@ assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
 console.log("profile origin checks: "+origins.length);
 
  // Strict graph mock: reject undefined instrument and connection endpoints.
-const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["function createDefaultFX(","const DENSITIES="],["function createAudioGraph(","function applyFX("]];
+const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["function createDefaultFX(","const DENSITIES="],["function createAnalogRig(","function applyFX("]];
 const graphFixture=`
 const edges=[];
-const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(){},linearRampToValueAtTime(){}});
+const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
 class Node {
 constructor(){for(const key of ["gain","wet","frequency","detune","volume","Q","attack","ratio","width","threshold","knee","release","feedback","delayTime","pan","playbackRate"])this[key]=param();this.ready=Promise.resolve();}
 connect(to){assert(to instanceof Node||to?.audioParam===true,"undefined or invalid connection destination");edges.push([this,to]);return this;}
@@ -57,7 +57,7 @@ start(){return this;}
 stop(){return this;}
 triggerAttackRelease(){}
 }
-const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
+const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBiquadFilter:()=>new Node(),createWaveShaper:()=>new Node(),createDelay:()=>new Node(),createOscillator:()=>new Node(),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
 const Tone=Object.fromEntries("Gain Filter Distortion Compressor StereoWidener Limiter Reverb FeedbackDelay Noise LFO Chebyshev Chorus Tremolo Panner Synth MonoSynth FMSynth PolySynth".split(" ").map(name=>[name,Node]));
 Object.assign(Tone,{getContext:()=>({rawContext:raw}),mtof:n=>440*2**((n-69)/12),connect:(from,to)=>from.connect(to)});
 const log=()=>{};
@@ -69,10 +69,36 @@ const mix={drum:80,bass:70,keys:60,pads:50,master:75};
 const g=createAudioGraph(aud,mix,null),offline=createAudioGraph(aud,mix,null,{offline:true,duration:8});
 const expected=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
 for(const graph of [g,offline]){
+assert(graph.analog&&typeof graph.analog.update==="function","native analogue rig must build");
+graph.analog.update({...aud,tape:100,wobble:100,vinyl:100,crackle:100},mix);
+graph.analog.update({...aud,tape:0,wobble:0,vinyl:0,crackle:0},mix);
 assert(JSON.stringify(Object.keys(graph.instruments).sort())===JSON.stringify(expected.slice().sort()),"instrument registry disagrees with scheduler");
 for(const name of expected)assert(typeof graph.instruments[name].triggerAttackRelease==="function","missing "+name);
 }
-return {graphs:2,voices:expected.length,connections:edges.length};
+return {graphs:2,voices:expected.length,connections:edges.length,analog:"constructed and extremes applied"};
 `;
 const graphResult=new Function("assert",graphFixture+graphRanges.map(([a,b])=>extract(a,b)).join("\n")+graphCheck)(assert);
 console.log(JSON.stringify(graphResult,null,2));
+
+const harmonySources=[["const DRUM_PATTERNS=","const STYLES="],["const LANES=","const tpCache="]].map(([a,b])=>extract(a,b));
+const harmonyCheck=new Function("assert",prefix+harmonySources.join("\n")+state+`
+assert(HARMONY_CATALOGUE.length>=40,"missing recovered catalogue entries");
+for(const [id,row] of Object.entries(HARMONIES)){
+const duration=row.segments.reduce((sum,chord)=>sum+chord.steps,0);
+assert(KEYS_PATS[id].length===duration&&PAD_PATS[id].length===duration&&BASS_PATS[id].split(",").length===duration,"cycle length "+id);
+const pat={b:id,k:id,p:id};
+let offset=0;
+for(const chord of row.segments){
+assert(chord.keys.length>=3&&chord.pads.length>=3,"complete chord "+id);
+for(const lane of ["keys","p","b"]){
+const got=laneNote(lane,offset%16,pat,seq_,offset);
+const expected=lane==="keys"?chord.keys:lane==="p"?chord.pads:chord.bass;
+assert(JSON.stringify(got)===JSON.stringify(expected),"chord onset "+id+" "+offset+" "+lane);
+}
+offset+=chord.steps;
+}
+assert(JSON.stringify(laneNote("keys",0,pat,seq_,duration))===JSON.stringify(row.segments[0].keys),"cycle wraps "+id);
+}
+return {progressions:HARMONY_CATALOGUE.length,fullCycles:"passed"};
+`);
+console.log(JSON.stringify(harmonyCheck(assert),null,2));
