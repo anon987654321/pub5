@@ -83,13 +83,13 @@ button{cursor:pointer;font-size:12px;font-weight:700;touch-action:manipulation}
 button:hover,button[aria-pressed="true"],.style-chip.active{border-color:var(--acc);color:var(--acc)}
 button:disabled{opacity:.45;cursor:not-allowed}
 :focus-visible{outline:2px solid var(--acc);outline-offset:3px}
-[data-kind="primary"],#welcome-start{background:var(--acc);border-color:var(--acc);color:var(--ink)}
+[data-kind="primary"]{background:var(--acc);border-color:var(--acc);color:var(--ink)}
 [data-kind="danger"]{color:var(--dng)}
 .machine-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 12px;border-bottom:1px solid var(--brd)}
-.brand-lockup{min-width:0}.brand-lockup h1,.welcome-title{font-size:clamp(40px,6vw,64px);line-height:.9;letter-spacing:-.085em;font-weight:700;color:var(--acc)}
+.brand-lockup{min-width:0}.brand-lockup h1{font-size:clamp(40px,6vw,64px);line-height:.9;letter-spacing:-.085em;font-weight:700;color:var(--acc)}
 .brand-subline{font-weight:700;font-size:clamp(13px,2vw,19px);margin-top:9px;letter-spacing:-.02em}
 .panel-kicker,.hardware-label,.meter-scale,footer{font:10px/1.5 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--mut)}
-.panel-kicker{margin-bottom:10px}.header-tools{display:flex;align-items:center;gap:12px}
+.panel-kicker{margin-bottom:10px}
 .pony{width:clamp(72px,13vw,120px);height:auto;display:block;flex-shrink:0}
 #pos-display{font:12px var(--mono);letter-spacing:0;vertical-align:middle}
 .transport{padding:16px 0 8px}.transport-primary,.transport-actions,.tab-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -101,7 +101,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .sound-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.sound-strip label{display:grid;gap:5px}.sound-strip select{width:100%}#harmony-info{grid-column:1/-2;overflow-wrap:anywhere;text-align:left}#root-display{justify-self:end}
 label{font-size:12px;font-weight:700;color:var(--mut)}output{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--acc);font-weight:700}
 #song-position{margin:0 0 8px}.tracks{display:grid;gap:5px}
-.track,.track-ruler{display:grid;grid-template-columns:32px 52px minmax(0,1fr);align-items:center;gap:6px;min-width:0}.track-name{font:700 10px var(--mono);text-transform:uppercase}.track-btn{padding:0;min-height:32px;min-width:32px}.track.muted{opacity:.4}
+.track,.track-ruler{display:grid;grid-template-columns:32px 52px minmax(0,1fr);align-items:center;gap:6px;min-width:0}.track-name{font:700 10px var(--mono);text-transform:uppercase}.track-btn{padding:0;min-height:38px;min-width:32px}.track.muted{opacity:.4}
 .steps-grid{display:grid;grid-template-columns:repeat(16,minmax(0,1fr));gap:3px;min-width:0}.track-ruler span{text-align:center;font:9px var(--mono);color:var(--mut)}
 .step{position:relative;min-height:38px;padding:0;background:var(--pad);border:1px solid var(--brd);border-radius:5px;overflow:hidden}
 .step:nth-child(4n+1){margin-inline-start:4px}.step:first-child{margin-inline-start:0}
@@ -111,15 +111,15 @@ label{font-size:12px;font-weight:700;color:var(--mut)}output{font-family:var(--m
 input[type=range]{width:100%;height:30px;margin:0;accent-color:var(--acc);cursor:pointer}
 #viz{display:block;width:100%;height:30px;background:var(--panel);border-radius:4px;margin:8px 0 20px}
 details{border-top:1px solid var(--brd)}summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;cursor:pointer;list-style:none;font-weight:700;color:var(--txt)}summary::-webkit-details-marker{display:none}summary::after{content:"+";color:var(--acc)}details[open]>summary::after{content:"−"}details>*:not(summary){margin-bottom:14px}
-fieldset{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:6px 12px;border:0;padding:0;margin:0}fieldset label{display:flex;justify-content:space-between;gap:5px}legend{font:11px var(--mono);color:var(--acc);margin-bottom:8px;text-transform:uppercase}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+fieldset{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:6px 12px;border:0;padding:0;margin:0}fieldset label{display:flex;justify-content:space-between;gap:5px}legend{font:11px var(--mono);color:var(--acc);margin-bottom:8px;text-transform:uppercase}
 select,input[type=text]{min-height:40px;background:var(--panel);border:1px solid var(--brd);border-radius:5px;padding:7px 9px;max-width:100%}input[type=text]{width:100%}.tab-search{flex:1;min-width:100px}.styles{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto}.style-chip{padding:7px 10px;border:1px solid var(--brd);border-radius:5px;cursor:pointer;font-size:12px}.tab-btn.active,.lock-btn.locked{color:var(--acc);border-color:var(--acc)}.lock-btn{min-height:28px;padding:2px 5px}
 #sample-drop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#sample-drop label{min-width:0}#sample-file{max-width:100%}#sample-pattern,#sample-status{grid-column:1/-1}#sample-pattern button[aria-pressed=true]{background:var(--acc);color:var(--ink)}
 #trace{max-height:160px;overflow:auto;background:var(--panel);padding:10px;font:11px/1.5 var(--mono);overflow-wrap:anywhere}.trace-line{display:block}.trace-time{color:var(--mut)}.trace-line--error,.engine-error{color:var(--dng)}.trace-line--success,.trace-line--command{color:var(--acc)}.term-input-row{display:flex;align-items:center;gap:8px;margin-top:8px}.term-prompt{color:var(--acc)}#term-input{flex:1}
 footer{margin-top:16px;padding:12px 0;border-top:1px solid var(--brd)}.ctx-menu,.tooltip{position:fixed;display:none;z-index:1001;background:var(--bg);border:1px solid var(--brd);border-radius:6px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto}.ctx-menu button{display:block;width:100%;text-align:left}.tooltip{padding:5px 8px;pointer-events:none;font-size:11px}
 #progress-wrap{display:none;margin-top:12px}#progress-bar{height:5px;background:var(--brd)}#progress-fill{height:100%;width:0;background:var(--acc)}
-.welcome-overlay{position:fixed;inset:0;background:var(--bg);z-index:1000;display:grid;place-items:center;padding:20px;overflow:auto}.welcome-dialog{width:min(100%,380px);text-align:center}.welcome-dialog .pony{width:180px;margin:0 auto 18px}.welcome-sub{margin:12px 0 24px;color:var(--mut)}#welcome-start{width:100%;min-height:48px}.is-hidden{display:none}.skip-link{position:absolute;left:-9999px}.skip-link:focus{left:12px;top:12px;background:var(--bg);padding:8px;z-index:1002}
+.is-hidden{display:none}.skip-link{position:absolute;left:-9999px}.skip-link:focus{left:12px;top:12px;background:var(--bg);padding:8px;z-index:1002}
 body[data-density=compact] .step{min-height:28px}
-@media(max-width:700px){.sound-strip,.macro-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.two-col{grid-template-columns:1fr}.steps-grid{grid-template-columns:repeat(8,minmax(0,1fr))}.step,body[data-density=compact] .step{min-height:44px}.track,.track-ruler{grid-template-columns:32px 38px minmax(0,1fr)}.track-name{font-size:9px}.meter-scale{display:none}.header-tools{gap:5px}.header-tools button{padding:7px}.machine-header{gap:8px}.brand-lockup h1{font-size:48px}.step:nth-child(4n+1){margin-inline-start:1px}input[type=text],select{font-size:16px}}
+@media(max-width:700px){.sound-strip,.macro-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.steps-grid{grid-template-columns:repeat(8,minmax(0,1fr))}.step,body[data-density=compact] .step{min-height:44px}.track,.track-ruler{grid-template-columns:32px 38px minmax(0,1fr)}.track-name{font-size:9px}.meter-scale{display:none}.machine-header{gap:8px}.brand-lockup h1{font-size:48px}.step:nth-child(4n+1){margin-inline-start:1px}input[type=text],select{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 .edit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px;align-items:start}.edit-grid fieldset{align-content:start}.edit-grid fieldset>button{grid-column:1/-1}details details{margin-top:12px}#sample-drop select{max-width:100%;width:100%}.macro-controls label{min-width:0}.macro-controls output{font-size:16px}@media(max-width:700px){.macro-controls label:last-child{grid-column:1/-1}.track,.track-ruler{grid-template-columns:28px 36px minmax(0,1fr);gap:3px}.track-btn{min-width:28px}.steps-grid{gap:2px}.machine-header .pony{width:76px}.brand-lockup h1{font-size:44px}.transport-primary{gap:6px}.ctrl-bpm{flex:1;min-width:125px}.ctrl-bpm input{width:72px}}
 </style>
@@ -127,13 +127,6 @@ body[data-density=compact] .step{min-height:28px}
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute"><symbol id="pony-art" viewBox="0 0 180 144"><path d="M12 112a73 73 0 0 1 146 0" fill="none" stroke="#e7a9cb" stroke-width="8"/><path d="M23 112a62 62 0 0 1 124 0" fill="none" stroke="#c4a7e7" stroke-width="7"/><path d="M34 112a51 51 0 0 1 102 0" fill="none" stroke="#a9d5d7" stroke-width="7"/><g stroke="#853661" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M58 92Q29 71 28 101Q30 122 50 113Q35 109 43 100L62 110" fill="#bd92e0"/><path d="M60 83Q74 70 94 82L104 65L126 73L122 94L126 124H114L109 103L88 105L85 124H73L73 105L66 124H54L58 103Q49 95 60 83Z" fill="#f9bbd9"/><path d="M95 66Q85 46 101 32L103 14L115 28Q144 23 150 47L163 57Q166 71 151 75L132 75L121 86Q103 82 95 66Z" fill="#ffd9eb"/><path d="M108 26L122 5L125 28" fill="#f8d995"/><path d="M102 31Q84 30 81 48Q76 66 92 75Q84 89 100 101Q119 98 110 80Q123 72 110 60Q99 49 118 41Q136 43 143 33Q127 19 102 31Z" fill="#c39be7"/><path d="M92 45Q98 30 114 33" fill="none" stroke="#ffe0f3" stroke-width="5"/><ellipse cx="138" cy="51" rx="8" ry="11" fill="#fff"/><ellipse cx="140" cy="53" rx="4" ry="7" fill="#50305f"/><circle cx="141" cy="49" r="2" fill="#fff" stroke="none"/><path d="M149 66q5 3 9-1" fill="none"/><path d="M78 88q-6-6-10 0q-3 5 10 12q13-7 10-12q-4-6-10 0Z" fill="#e45c9a" stroke="none"/></g><g fill="#d77eb4"><path d="M23 30l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><path d="M160 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="44" cy="20" r="3"/><circle cx="159" cy="93" r="3"/></g></symbol></svg>
 <a class="skip-link" href="#main-content">Skip to sequencer</a>
-<div id="welcome" class="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-describedby="welcome-description">
-  <div class="welcome-dialog">
-    <svg class="pony" viewBox="0 0 180 144" aria-hidden="true" focusable="false"><use href="#pony-art"/></svg><p class="welcome-title" id="welcome-title">RG-69</p>
-    <p class="welcome-sub" id="welcome-description">Ragnhild’s Dream Machine</p>
-    <button id="welcome-start" type="button">Start</button>
-  </div>
-</div>
 <header class="machine-header">
   <div class="brand-lockup">
     <h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1><p class="brand-subline">Dream Machine</p>
@@ -167,7 +160,7 @@ body[data-density=compact] .step{min-height:28px}
 </section>
 <details><summary>Sound</summary>
 <div class="edit-grid">
-<fieldset><legend>Recording chain</legend><label for="console">Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label for="phase">Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label for="sample-wear">Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label for="motion">Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><label for="duck">Ducking <output id="duck-o">20</output></label><input id="duck" type="range" min="0" max="100" value="20"><button id="clean-chain" type="button">Clean / color</button></fieldset>
+<fieldset><legend>Recording chain</legend><label for="console">Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label for="phase">Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label for="sample-wear">Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label for="motion">Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><label for="duck">Ducking <output id="duck-o">20</output></label><input id="duck" type="range" min="0" max="100" value="20"><button id="clean-chain" type="button">Clean / colored</button></fieldset>
 
 <fieldset><legend>Master</legend>
 <label for="swing">Swing <output id="swing-o">8</output></label><input id="swing" type="range" min="0" max="90" value="8" title="Swing">
@@ -215,12 +208,12 @@ body[data-density=compact] .step{min-height:28px}
 <div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div>
 </details>
 <details><summary>Session</summary>
-<div class="transport-actions"><button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button><button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
+<div class="transport-actions"><button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button><button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">Theme</button>
     
     <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
     <button id="record" data-kind="danger" title="Record">Record</button>
     <button id="shareBtn" title="Copy share link">Share</button><button id="save-session">Save</button><button id="load-session">Load</button><input id="session-file" type="file" accept="application/json,.json" hidden>
-    <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
+    <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">Compact layout</button>
     
     
   </div><details><summary>Diagnostics</summary><div id="trace-wrap">
@@ -270,12 +263,6 @@ if (!window.Tone) {
   warning.textContent = message;
   document.body.prepend(warning);
 
-  // Do not leave a full-screen welcome dialog covering a page that cannot run.
-  const welcome = document.getElementById("welcome");
-  if (welcome) {
-    welcome.style.display = "none";
-    welcome.setAttribute("aria-hidden", "true");
-  }
   const status = document.getElementById("status");
   if (status) {
     status.textContent = message;
@@ -316,20 +303,6 @@ function resizeVizCanvas(){
   if(!vizContext)vizContext=vizCanvas.getContext("2d");
 }
 window.addEventListener("resize",resizeVizCanvas,{passive:true});
-const welcomeStart=$id("welcome-start");
-if(welcomeStart){
-  welcomeStart.focus({preventScroll:true});
-  $id("welcome").addEventListener("keydown",event=>{
-    if(event.key==="Tab"){
-      event.preventDefault();
-      welcomeStart.focus({preventScroll:true});
-    }
-  });
-}
-function dismissWelcome(){
-  $id("welcome").style.display="none";
-  $id("play").focus({preventScroll:true});
-}
 const log=(message,level="i")=>{
   const entry=document.createElement("span");
   entry.classList.add("trace-line");
@@ -348,7 +321,7 @@ function mirrorConsole(entry){
 log("console "+entry.level+": "+entry.message,entry.level==="error"?"e":entry.level==="warn"?"w":"i");
 if(entry.level==="error"||entry.level==="warn")for(let panel=trace.closest("details");panel;panel=panel.parentElement.closest("details"))panel.open=true;
 }
-const st=s=>{const node=$id("status");node.textContent=`status: ${s}`;node.dataset.state=s.split(/[ —]/,1)[0].toLowerCase();};
+const st=s=>{const node=$id("status");node.textContent=s;node.dataset.state=s.split(/[ —]/,1)[0].toLowerCase();};
 const tp=(a,t)=>Array.isArray(a)?a:Array(t||16).fill(a);
 const tpP=object=>Object.fromEntries(Object.entries(object).map(([key,value])=>[key,tp(value)]));
 const debounce=(f,d)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f(...a),d)}};
@@ -990,7 +963,7 @@ function applyLayout(mode){
 const density=DENSITIES.includes(mode)?mode:"comfortable";
 document.body.dataset.density=density;
 const button=$id("layout"),next=density==="comfortable"?"compact":"comfortable";
-button.textContent=density==="comfortable"?"− dense":"＋ roomy";
+button.textContent=density==="comfortable"?"Compact layout":"Comfortable layout";
 button.setAttribute("aria-pressed",density==="compact"?"true":"false");
 button.setAttribute("aria-label",`Switch to ${next} sequencer spacing`);
 button.title=`Switch to ${next} spacing`;
@@ -1063,7 +1036,6 @@ $id('keys-pat').value=pat_.k;
 $id('pads-pat').value=pat_.p;
 $id('keys-voice').value=validPatch(pat_.keysVoice);$id('pads-voice').value=validPatch(pat_.padsVoice);
 keysN?.setPatch(pat_.keysVoice);padsN?.setPatch(pat_.padsVoice);
-updateHarmonyDisplay();
 updateRootDisplay();
 applyFX();
 highlightActiveChip();
@@ -2307,7 +2279,7 @@ muteBtn.className='track-btn';
 muteBtn.textContent='M';
 muteBtn.title=`Mute ${nm}`;
 muteBtn.setAttribute('aria-pressed','false');
-muteBtn.style.minWidth='32px';muteBtn.style.minHeight='32px';muteBtn.style.padding='2px';muteBtn.style.fontSize='10px';
+
 muteBtn.addEventListener('click',()=>toggleTrackMute(trackKey));
 const name=document.createElement('div');
 name.className='track-name';
@@ -2543,20 +2515,7 @@ const textEntry=target?.isContentEditable||tag==='TEXTAREA'||tag==='SELECT'||
 (tag==='INPUT'&&['text','search','email','url','password'].includes(target.type));
 if(textEntry)return;
 const k=e.key.toLowerCase();
-const welcome=$id('welcome');
-const welcomeOpen=welcome&&getComputedStyle(welcome).display!=='none';
-if(welcomeOpen){
-if((k===' '||k==='enter'||k==='p')&&!e.repeat){
-e.preventDefault();
-$id('welcome-start').click();
-return;
-}
-const supportedShortcut=['s','r','e','l','t','m'].includes(k)||
-((k==='z'||k==='c'||k==='v')&&(e.ctrlKey||e.metaKey));
-if(!supportedShortcut)return;
-dismissWelcome();
-}
-if(k===' '&&target?.matches?.('button,a,summary,[role="button"]'))return;
+if(k===' '&&target?.matches?.('button,a,summary,input,[role="button"]'))return;
 if(k===' '&&!e.repeat){e.preventDefault();$id('play').click();}
 else if(k==='p'&&!e.repeat){e.preventDefault();$id('play').click();}
 else if(k==='s'&&!e.repeat){e.preventDefault();$id('stop').click();}
@@ -2572,7 +2531,7 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 }
 
 // One gesture is enough: boot the engine if it is not running yet, then start
-// the transport. The welcome gate and the play button both land here, so the
+// the transport. The Play button lands here, so the
 // first click plays music instead of only arming the engine.
 let fileClockConfigured=false;
 function startToneFromGesture(){
@@ -2601,8 +2560,7 @@ st_.started=true;
 try{await st_.booting;}catch(e){st_.booting=null;throw e;}
 st_.booting=null;
 }else{
-// Called again inside a user gesture (the welcome gate after a blocked
-// autoplay): Tone.start() resumes the suspended context here.
+// Resume the suspended context inside the Play gesture.
 await (activationPromise||Tone.start());
 }
 claimOwner();if(!st_.heartbeat)st_.heartbeat=setInterval(keepOwner,1800);
@@ -2631,23 +2589,6 @@ function reportAudioStartupFailure(error) {
   st(`audio startup failed — ${detail}`);
   log(`audio startup failed: ${detail}`, "e");
 }
-
-$id('welcome-start').addEventListener('click',async()=>{
-  const playButton = $id("play");
-  try {
-    dismissWelcome();
-    playButton.disabled = true;
-    playButton.textContent = "Starting…";
-    st("starting audio — waking the browser sound engine…");
-    const activationPromise=startToneFromGesture();
-    await startPlayback(activationPromise);
-    log("engine started via welcome gate", "k");
-  } catch (error) {
-    reportAudioStartupFailure(error);
-  } finally {
-    playButton.disabled = false;
-  }
-});
 
 $id('play').addEventListener('click',async()=>{
   const playButton = $id("play");
@@ -2821,7 +2762,7 @@ log(`RG-69 ready — ${bootStyle.n} · type help in terminal`,"k");
 
 // Audio is deliberately gesture-gated. Do not call Tone.start() or touch
 // Tone.Transport during page initialization; Chrome may create/resume the
-// AudioContext only from the welcome or Play button gesture.
+// AudioContext only from the Play button gesture.
 
 // ─── terminal ───────────────────────────────────────────────────────────────
 const TERM_CMDS=[
