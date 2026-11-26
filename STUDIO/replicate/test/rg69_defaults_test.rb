@@ -28,7 +28,7 @@ class TestRg69Defaults < Minitest::Test
   # The controls whose markup default must equal the engine's boot default.
   CONTROLS = %w[bpm pocket swing drive tape comp width reverb delay filter wobble vinyl crackle].freeze
 
-  def js = @js ||= File.read(JS)
+  def js = @js ||= File.read(JS).sub(/<script id="tone-vendor">.*?<\/script>/m, "")
   def html = @html ||= File.read(HTML)
   def tone = @tone ||= File.read(TONE)
   def css = @css ||= File.read(CSS)
@@ -137,12 +137,15 @@ class TestRg69Defaults < Minitest::Test
   # — at wet. A bad roll produced a crushed, detuned master, which read as
   # "unusable and inaudible". The boot must now install one fixed chain.
   def test_html_loads_tone_before_the_inlined_engine
-    assert_match(/<script src="\.\.\/vendor\/tone\/Tone\.min\.js"><\/script>/, html)
-    tone_at = html.index('<script src="../vendor/tone/Tone.min.js"></script>')
+    embedded = html[/<script id="tone-vendor">\n\/\*.*?\*\/\n(.*?)\n<\/script>/m, 1]
+    assert_equal tone, embedded, "embedded Tone.js must match the pinned vendor exactly"
+    assert_includes html, File.read(File.join(File.dirname(TONE), "LICENSE.md")).strip
+    refute_match(/<script[^>]*\bsrc=/i, html)
+    tone_at = html.index('<script id="tone-vendor">')
     engine_at = html.index("<script>\n")
-    refute_nil engine_at, "the engine must be inlined as a script element"
-    assert_operator tone_at, :<, engine_at, "Tone.js must load and run before the engine that guards on window.Tone"
-    assert_operator engine_at, :>, html.index('id="main-content"'), "the engine runs after the markup it binds"
+    refute_nil engine_at
+    assert_operator tone_at, :<, engine_at
+    assert_operator engine_at, :>, html.index('id="main-content"')
   end
 
   def test_welcome_gate_releases_the_interface_before_audio_initialization_finishes
@@ -511,7 +514,7 @@ class TestRg69PlaybackRecovery < Minitest::Test
   JS = File.join(ROOT, "dilla", "rg69", "rg69.html")
   CSS = JS
 
-  def js = File.read(JS)
+  def js = File.read(JS).sub(/<script id="tone-vendor">.*?<\/script>/m, "")
   def css = File.read(CSS)
 
   def test_missing_tone_asset_does_not_leave_the_welcome_gate_covering_the_page
