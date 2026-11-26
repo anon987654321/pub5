@@ -1111,14 +1111,14 @@ test("stipple lifecycle is observable and reversible", () => {
 });
 
 
-test("canonical mask relief is deterministic and bounded", async () => {
+test("sculpture surfaces are distinct, deterministic and bounded", async () => {
   const { readFileSync } = await import("node:fs");
   const { runInNewContext } = await import("node:vm");
   const storage = new Map();
   const listeners = new Map();
   const window = {
     MASTER_FACE_MASK_SESSION: "test-session",
-    MASTER_FACE_MASK_PROFILE: "iatmul-river",
+    MASTER_FACE_MASK_PROFILE: "folded-seed",
     MASTER_FACE_WORLD: { setSubjectForm() {} },
     addEventListener(name, callback) { listeners.set(name, callback); },
     dispatchEvent() {}
@@ -1131,8 +1131,8 @@ test("canonical mask relief is deterministic and bounded", async () => {
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
   });
   const masks = window.MASTER_FACE_MASKS;
-  assert.equal(masks.profiles.length, 5);
-  assert.equal(masks.rotationProfiles.length, 5);
+  assert.equal(masks.profiles.length, 21);
+  assert.equal(masks.rotationProfiles.length, 21);
   const fingerprints = new Set();
   for (const profile of masks.profiles) {
     const points = Array.from({ length: 512 }, (_, index) => masks.sample(profile.id, index));
@@ -1140,13 +1140,13 @@ test("canonical mask relief is deterministic and bounded", async () => {
     assert.ok(points.every(point => point.every(value => Number.isFinite(value) && Math.abs(value) < 0.8)));
     fingerprints.add(JSON.stringify(points));
   }
-  assert.equal(fingerprints.size, 5);
+  assert.equal(fingerprints.size, 21);
   assert.equal(masks.sample("unknown", 0), null);
-  listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "iatmul-river" } });
-  assert.equal(masks.current().id, "iatmul-river");
-  assert.equal(masks.descriptor().maskProfile, "iatmul-river");
+  listeners.get("master:conversation-created")({ detail: { conversationId: "next", faceProfile: "folded-seed" } });
+  assert.equal(masks.current().id, "folded-seed");
+  assert.equal(masks.descriptor().maskProfile, "folded-seed");
   masks.next();
-  assert.equal(masks.current().id, "iatmul-concentric");
+  assert.equal(masks.current().id, "block-portal");
 });
 
 test("direct subject mouth deformation is anatomical and mask-only", () => {
@@ -1158,7 +1158,7 @@ test("direct subject mouth deformation is anatomical and mask-only", () => {
 
 test("mask geometry has enough projected coverage to read at terminal size", () => {
   const storage = new Map();
-  const window = { MASTER_FACE_MASK_SESSION: "coverage", MASTER_FACE_MASK_PROFILE: "iatmul-river",
+  const window = { MASTER_FACE_MASK_SESSION: "coverage", MASTER_FACE_MASK_PROFILE: "folded-seed",
     MASTER_FACE_WORLD: { setSubjectForm() {} }, addEventListener() {}, dispatchEvent() {} };
   const document = { readyState: "complete", documentElement: { dataset: {} },
     querySelector() { return null; }, getElementById() { return null; } };
@@ -1167,27 +1167,25 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
       setItem: (key, value) => storage.set(key, value) },
     CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } }
   });
-  for (const mask of window.MASTER_FACE_MASKS.profiles) {
-    const cells = new Set();
-    let rearCount = 0;
-    let frontCount = 0;
-    let interiorCount = 0;
-    const mouth = window.MASTER_FACE_MASKS.mouthGeometry(mask.id);
-    for (let index = 0; index < 4096; index++) {
-      const [x, y, z] = window.MASTER_FACE_MASKS.sample(mask.id, index);
-      const normal = window.MASTER_FACE_MASKS.normalAt(mask.id, x, y, z);
-      if (z < -.05) rearCount += 1;
-      if (z > .05) frontCount += 1;
-      if (Math.abs(z) <= .05) interiorCount += 1;
-      assert.ok([x, y, z, ...normal].every(Number.isFinite), mask.id + " invalid relief");
-      assert.ok((z < 0 ? normal[2] < 0 : normal[2] > 0) && Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
-      cells.add(Math.floor((x + .65) * 32) + ":" + Math.floor((y + .65) * 32));
-      const smile = .018 * Math.min(1, (x / mouth.width) ** 2);
-      const hole = (x / mouth.width) ** 2 + ((y - mouth.y - smile) / mouth.height) ** 2;
-      assert.ok(hole >= .98, mask.id + " mouth is occluded");
+  const api = window.MASTER_FACE_MASKS;
+  for (const mask of api.profiles) {
+    const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
+    const projections = [new Set(), new Set(), new Set()];
+    for (let index = 0; index < 2048; index++) {
+      const point = api.sample(mask.id, index);
+      const normal = api.normalAt(mask.id, ...point);
+      assert.ok([...point, ...normal].every(Number.isFinite), mask.id + " invalid surface");
+      assert.ok(Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
+      point.forEach((v, axis) => {
+        min[axis] = Math.min(min[axis], v);
+        max[axis] = Math.max(max[axis], v);
+        const a = point[(axis + 1) % 3], b = point[(axis + 2) % 3];
+        projections[axis].add(Math.floor(a * 32) + ":" + Math.floor(b * 32));
+      });
     }
-    assert.ok(cells.size > 300, mask.id + " has insufficient silhouette coverage");
-    assert.ok(rearCount > 400 && frontCount > 1000 && interiorCount > 200, mask.id + " lacks front, rear or interior volume");
+    assert.ok(max.every((v, i) => v - min[i] > .4), mask.id + " lacks spatial extent");
+    assert.ok(projections.every(cells => cells.size > 100), mask.id + " lacks multi-angle coverage");
+    assert.equal(api.mouthGeometry(mask.id), null, "abstract forms have no invented anatomical mouth");
   }
 });
 
@@ -1198,10 +1196,10 @@ test("mask correspondence uses bounded stable spatial ordering", () => {
   assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
 });
 
-test("mask uses depth, discrete neutral ink and fixed footprints", () => {
+test("sculptures use uniform ink and fixed footprints", () => {
   assert.match(faceSource, /attribute vec3 subjectNormal/);
-  assert.match(faceSource, /vColor=vec3\(ink\)/);
-  assert.match(faceSource, /normalMatrix \* mix/);
+  assert.match(faceSource, /vColor=vec3\(0\.9333333\)/);
+  assert.doesNotMatch(faceSource, /float reliefTone/);
   assert.match(faceSource, /transparent: false, depthWrite: true, depthTest: true/);
   assert.match(system, /active\.primary\.visible = !showPreview/);
   assert.match(system, /const showPreview = preview && subject === "face"/);
