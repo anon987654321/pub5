@@ -79,6 +79,8 @@ network_errors = []
 
 begin
   browser = Timeout.timeout(BROWSER_TIMEOUT + 5) { build_browser(chrome) }
+  width, height = VIEWPORT.split(",").map(&:to_i)
+  browser.resize(width:, height:)
 
   browser.on(:console) { |msg| console_msgs << "[#{msg.type}] #{msg.args.map(&:value).join(' ')}" rescue nil }
 
@@ -166,8 +168,11 @@ begin
       selected = browser.evaluate("window.MASTER_FACE_MASKS.select(#{profile.to_json})")
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
       settled = false
+      consecutive = 0
       until Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
-        settled = browser.evaluate("Math.abs(window.MASTER_FACE?.morphCurrent) <= 0.002 && document.documentElement.dataset.faceSubjectRenderer === 'primary-points'")
+        stable = browser.evaluate("Math.abs(window.MASTER_FACE?.morphCurrent) <= 0.002 && Math.abs(window.MASTER_FACE?.faceMat?._morphVel || 0) <= 0.002 && document.documentElement.dataset.faceSubjectRenderer === 'primary-points'")
+        consecutive = stable ? consecutive + 1 : 0
+        settled = consecutive >= 3
         break if settled
         sleep 0.1
       end
