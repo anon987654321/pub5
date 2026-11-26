@@ -31,12 +31,12 @@ module Studio
 
       def initialize(subject:, client: nil, directory: nil, scenes: nil, ledger_path: nil, engine: nil,
                      inference_profile: nil, subjects_root: nil, direction: "varied",
-                     discard_raw: true, chain_presets: Studio::Lora::Craft::HOUSE_CHAIN,
+                     discard_raw: false, chain_presets: Studio::Lora::Craft::HOUSE_CHAIN,
                      chain: Studio::Lora::Craft::STILL_CHAIN)
         @subject = subject.to_s
         raise ArgumentError, "subject must be a simple directory name" unless @subject.match?(/\A[a-zA-Z0-9_-]+\z/)
         @direction = direction.to_s
-        unless @direction == "varied" || Studio::Lora::Selfie::DIRECTIONS.key?(@direction) || %w[shoots warp best scenarios].include?(@direction)
+        unless @direction == "varied" || Studio::Lora::Selfie::DIRECTIONS.key?(@direction) || %w[shoots warp best scenarios selfies].include?(@direction)
           raise ArgumentError, "unknown photographic direction"
         end
         @scenes = scenes.nil? ? nil : Array(scenes)
@@ -75,18 +75,19 @@ module Studio
                engine: @series.engine, reference_photographs: @reference_files.length, direction: @direction)
         total.times do |index|
           sitting = index + 1
-          kept = replace ? nil : developed_sitting(sitting)
+          recipe = if @scenes
+                     { "scene" => @scenes[index % @scenes.size], "preset" => "house", "sitting" => index + 1 }
+                   else
+                     Studio::Lora::Selfie.recipe(index + 1, subject: @subject, direction: @direction)
+                   end
+          fingerprint = recipe_fingerprint(recipe)
+          kept = replace ? nil : developed_sitting(sitting, fingerprint:)
           if kept
             record("sitting_kept", series_id:, index:, sitting:, path: kept)
             rendered << kept
             next
           end
 
-          recipe = if @scenes
-                     { "scene" => @scenes[index % @scenes.size], "preset" => "house", "sitting" => index + 1 }
-                   else
-                     Studio::Lora::Selfie.recipe(index + 1, subject: @subject, direction: @direction)
-                   end
           scene = recipe.fetch("scene")
           grade_seed = Studio::Lora::Selfie.grade_seed(index + 1, @subject)
           inference_seed = Studio::Lora::Selfie.inference_seed(@subject, sitting,
@@ -102,11 +103,11 @@ module Studio
             likeness = Studio::Lora::Judge.likeness(reference: reference, candidate: path)
             quality = Studio::Lora::Judge.assess(candidate: path, original: result.dig("capture", "original"), likeness:)
             record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness,
-                   recipe: recipe, grade_seed: grade_seed, inference_seed: inference_seed,
+                   recipe: recipe, recipe_fingerprint: fingerprint, grade_seed: grade_seed, inference_seed: inference_seed,
                    review: "NOT_REVIEWED",
                    quality: quality, refinement: Studio::Lora::Judge.refinement(quality),
                    grade_sha256: result.dig("capture", "grade_sha256"))
-            rendered << path
+            rendered << path unless quality["delivery"] == "REJECTED_CANDIDATE"
           rescue StandardError => error
             record("render_attempt", series_id:, index: index, scene: scene,
                    error: "#{error.class}: #{error.message[0, 200]}")
@@ -126,26 +127,39 @@ module Studio
       def attempts_for(sitting)
         return 0 unless File.file?(@ledger_path)
 
-        File.readlines(@ledger_path, chomp: true).count do |line|
-          next false if line.strip.empty?
-
-          entry = JSON.parse(line)
-          entry["kind"] == "render" && entry["index"].to_i == sitting - 1
-        rescue JSON::ParserError
-          false
+        private_rows(@ledger_path).count do |entry|
+          %w[render render_attempt].include?(entry["kind"]) && entry["index"] == sitting - 1
         end
       end
 
       # A sitting already developed is that sitting. Rerunning a series must not
       # buy the same frame twice, so a run fills in the sittings the subject
       # does not have yet and leaves the rest alone.
-      def developed_sitting(sitting)
-        marker = "_#{@subject}_selfie_#{format("%02d", sitting)}_"
-        Dir.glob(File.join(@directory, "postpro_*_selfie_#{format("%02d", sitting)}_*.{png,jpg,jpeg,webp}"))
-           .select { |path| File.basename(path).include?(marker) }
-           .sort
-           .reverse
-           .find { |path| !Studio::Lora::Judge.rejected?(path, ledger: @ledger_path) }
+      def recipe_fingerprint(recipe)
+        references = @reference_files.map { |path| Digest::SHA256.file(path).hexdigest }
+        Digest::SHA256.hexdigest(JSON.generate([
+          recipe, @series.engine, @series.inference_profile, references,
+          @chain, @chain_presets, Digest::SHA256.file(File.join(__dir__, "lora.rb")).hexdigest,
+          Digest::SHA256.file(File.join(__dir__, "idea_picture.rb")).hexdigest
+        ]))
+      end
+
+      def developed_sitting(sitting, fingerprint: nil)
+        return nil unless fingerprint
+
+        private_rows(@ledger_path).reverse_each do |row|
+          next unless row["kind"] == "render" && row["index"] == sitting - 1
+          next unless row["subject"] == @subject && row["recipe_fingerprint"] == fingerprint
+          next if row.dig("quality", "delivery") == "REJECTED_CANDIDATE"
+
+          path = File.expand_path(row.fetch("path"))
+          next unless File.dirname(path) == @directory && File.file?(path) && !File.symlink?(path)
+          next unless row["grade_sha256"] == Digest::SHA256.file(path).hexdigest
+          next if private_rows(preference_path).reverse.find { |entry| entry["sha256"] == row["grade_sha256"] }&.fetch("decision") == "reject"
+
+          return path
+        end
+        nil
       end
 
       # Motion for the promo. One image-to-video call per clip, each starting on
