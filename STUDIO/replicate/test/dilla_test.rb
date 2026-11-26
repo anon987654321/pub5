@@ -1169,7 +1169,7 @@ class TestRG69BrowserContract < Minitest::Test
     assert_match(/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{[\s\S]*?await startPlayback\(activationPromise\);/, javascript)
     assert_match(/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{[\s\S]*?await startPlayback\(activationPromise\);/, javascript)
     assert_match(/const bootStyleCandidates=STYLES\.filter/, javascript)
-    assert_match(/let pat_=\{d:bootStyle\.d,b:bootStyle\.b,k:bootStyle\.k,p:bootStyle\.p\}/, javascript)
+    assert_match(/let pat_=\{d:bootStyle\.d,b:bootStyle\.b,k:bootStyle\.k,p:bootStyle\.p,keysVoice:'prophet_5',padsVoice:'juno_106'\}/, javascript)
     assert_match(/let mix_=\{drum:80,bass:70,keys:60,pads:55,master:75\}/, javascript)
     assert_match(/muteState:\{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0\}/, javascript)
     refute_match(/Tone\.BitCrusher/, javascript)
