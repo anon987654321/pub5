@@ -25,6 +25,11 @@ fi
 export MASTER_LLM_GATEWAY_URL="${MASTER_LLM_GATEWAY_URL:-http://127.0.0.1:8787/v1}"
 export MASTER_MODEL="${MASTER_MODEL:-gateway:glm-5.3}"
 # Chrome for Testing headless shell (installed by MASTER/tools/chrome_install.rb);
-# take the newest installed version instead of hardcoding one.
+# take the newest installed version instead of hardcoding one. The if form keeps
+# a missing Chrome from becoming the script's exit status: a sourced script
+# returns the status of its last command, and `[ -n ] && export` returns 1
+# whenever the binary is absent, which breaks every `source ... && command`.
 CHROME_BIN="$(ls -1d "$HOME"/.cache/pub5/chrome-headless-shell/*/chrome-headless-shell 2>/dev/null | sort -V | tail -1)"
-[ -n "$CHROME_BIN" ] && export CHROME_PATH="$CHROME_BIN"
+if [ -n "$CHROME_BIN" ]; then
+  export CHROME_PATH="$CHROME_BIN"
+fi

@@ -199,29 +199,3 @@ serves the reader: a specific promise, evidence and a clear next action; never
 hype or dark patterns. Update the owning document with its code or
 configuration. Review rendered Markdown and its links, tables, lists and code
 examples. Man pages use mdoc(7); Markdown adopts its precision, not its syntax.
-
-## Host tools the studio pipeline needs
-
-The renders run on the host, not in Ruby alone. A fresh container needs Ruby 3.2
-or newer, libvips with the `ruby-vips` gem, and ffmpeg on `PATH`. Install them
-before running `rake test` in `STUDIO/replicate`, or the suite reports
-`cannot load such file -- vips` and skips every clip test.
-
-```sh
-sudo apt-get update
-sudo apt-get install -y ruby ruby-vips libvips-tools ffmpeg rake
-```
-
-`STUDIO/lora/validate.rb` fails a subject whose dataset or source directory is
-world-readable, which is how a fresh clone arrives, since git stores no
-directory modes. Fix the modes once after cloning:
-
-```sh
-for s in johann merethe ragnhild; do
-  chmod 700 "STUDIO/lora/$s/dataset"
-  find "STUDIO/lora/$s/dataset" -mindepth 1 -type d -exec chmod 700 {} +
-  find "STUDIO/lora/$s/dataset" -type f -exec chmod 600 {} +
-done
-```
-
-Expected: `rake test` passes 50 of 50 files.
