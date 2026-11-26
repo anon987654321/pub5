@@ -1250,11 +1250,12 @@ process(inputs,outputs,params){
 const input=inputs[0],output=outputs[0],amount=params.amount[0],color=params.color[0];
 const rate=sampleRate/(sampleRate+(8000-sampleRate)*amount),levels=2**(15-Math.round(amount*7));
 const cutoff=Math.min(sampleRate*.45, .42*sampleRate/rate),alpha=1-Math.exp(-2*Math.PI*cutoff/sampleRate);
+const coefficient=a=>1-(1-a)**(44100/sampleRate),memory=coefficient(.008),attack=coefficient(.015),release=coefficient(.00045);
 for(let c=0;c<output.length;c++){
 const x=input[c]||input[0],y=output[c],s=this.state[c]||={memory:0,env:0,held:0,clock:0,pre:0,post:0};
 for(let i=0;i<y.length;i++){
 const v=x?.[i]||0;
-s.memory+=(v-s.memory)*.008;s.env+=(Math.abs(v)-s.env)*(Math.abs(v)>s.env?.015:.00045);
+s.memory+=(v-s.memory)*memory;s.env+=(Math.abs(v)-s.env)*(Math.abs(v)>s.env?attack:release);
 const drive=1+color*1.7/(1+3*s.env),shaped=Math.tanh((v+.13*s.memory*color)*drive)/Math.tanh(drive);
 s.pre+=(shaped-s.pre)*alpha;
 if(s.clock<=0){s.held=Math.round(s.pre*levels)/levels;s.clock+=rate;}
@@ -2167,7 +2168,7 @@ const channels=Array.from({length:channelCount},(_,channel)=>audioBuffer.getChan
 let offset=44;
 for(let frame=0;frame<frameCount;frame++){
 for(let channel=0;channel<channelCount;channel++){
-const sample=Math.max(-1,Math.min(1,channels[channel][frame]));
+const value=channels[channel][frame],sample=Number.isFinite(value)?Math.max(-1,Math.min(1,value)):0;
 view.setInt16(offset,sample<0?sample*32768:sample*32767,true);
 offset+=bytesPerSample;
 }
@@ -2215,7 +2216,7 @@ $id('progress-pct').textContent=`${pct}%`;
 $id('progress-fill').style.width=`${pct}%`;
 }
 }
-},len+leadIn+tail,2,44100);
+},len+leadIn+tail,2,context.rawContext.sampleRate);
 const wav=encodeWav16(buf.get());
 const blob=new Blob([wav],{type:'audio/wav'});
 const url=URL.createObjectURL(blob);
