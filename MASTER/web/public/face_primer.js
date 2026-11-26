@@ -186,17 +186,24 @@
       if(p){p.setAttribute('aria-hidden','true');p.tabIndex=-1;}
       setTimeout(go,0);
 
+      const gestureEvents=['pointerdown','keydown','touchend'];
+      const detachAudioGesture=function(){
+        gestureEvents.forEach(ev=>removeEventListener(ev,resumeAudio,{capture:true}));
+      };
+      let resuming=false;
       const resumeAudio=function(){
         const ctx=window.__MASTER_AUDIO_PRIME__;
-        if(ctx?.state==='suspended'){try{ctx.resume();}catch(e){report('audio resume on gesture',e);}}
         if(!ctx){primeAudio();return;}
-        if(ctx.state==='running'){
-          ['pointerdown','keydown','touchend'].forEach(function(ev){
-            removeEventListener(ev,resumeAudio,{capture:true});
-          });
-        }
+        if(ctx.state==='running'){detachAudioGesture();return;}
+        if(resuming||!['suspended','interrupted'].includes(ctx.state))return;
+        resuming=true;
+        try{
+          Promise.resolve(ctx.resume()).then(function(){
+            if(ctx.state==='running')detachAudioGesture();
+          }).catch(e=>report('audio resume on gesture',e)).finally(()=>{resuming=false;});
+        }catch(e){resuming=false;report('audio resume on gesture',e);}
       };
-      ['pointerdown','keydown','touchend'].forEach(function(ev){
+      gestureEvents.forEach(function(ev){
         addEventListener(ev,resumeAudio,{capture:true,passive:true});
       });
     }
