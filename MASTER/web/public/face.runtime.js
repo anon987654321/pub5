@@ -1412,7 +1412,8 @@ void main(){
   subjectPoint.xz = mat2(ct, -st, st, ct) * subjectPoint.xz;
   float activity = uSculpture * uSculptureMotion * travel;
   float pulse = clamp(uJaw * 0.4, 0.0, 1.0);
-  float band = exp(-pow((subjectPoint.y + 0.12) * 3.0, 2.0));
+  float bandY = (subjectPoint.y + 0.12) * 3.0;
+  float band = exp(-bandY * bandY);
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * activity * pulse * band * 0.018;
   float peripheral = smoothstep(0.28, 0.58, length(subjectPoint.xy));
   float escape = step(0.97, seed) * peripheral * activity *
@@ -6057,7 +6058,7 @@ function setSubjectScatter(positions, stages = null) {
     const t = Math.max(0, Math.min(1, (x-lo)/Math.max(0.000001, hi-lo)));
     return t*t*(3-2*t);
   };
-  const m = smooth(0, 1, morphCurrent);
+  const m = smooth(0, 1, faceMat.uniforms.uMorph.value);
   const staged = faceMat.uniforms.uSemanticStaged.value;
   const uniforms = faceMat.uniforms;
   const sculpture = uniforms.uSculpture.value * uniforms.uSculptureMotion.value;
@@ -6090,8 +6091,11 @@ function setSubjectScatter(positions, stages = null) {
     from.array[i]=x; from.array[i+1]=y; from.array[i+2]=z;
   }
   from.needsUpdate = true;
+  const match = window.MASTER_FACE_WORLD?.matchSubject?.(from.array, positions, stages);
+  if (match) { positions = match.positions; stages = match.stages; }
   direct.value = 1;
   morphCurrent = 1;
+  faceMat.uniforms.uMorph.value = 1;
   faceMat._morphVel = 0;
   faceScatter.set(positions);
   attribute.needsUpdate = true;
