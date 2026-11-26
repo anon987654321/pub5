@@ -39,7 +39,8 @@
     document.body.classList.remove('face-loading');
     if(!p)return;
     p.classList.add('gone');
-    window.setTimeout(function(){p.remove();},220);
+    // Keep the existing control until a frame is proven; it becomes the
+    // recovery control if the renderer never paints.
   }
   function revealPrompt(){
     const z=promptFormEl(),ui=uiEl();
@@ -78,6 +79,18 @@
   function fallbackUi(){
     dismissPrimer();
     revealPrompt();
+    if(p){
+      document.body.classList.remove('primer-autostart');
+      p.classList.remove('gone');
+      p.setAttribute('aria-hidden','false');
+      p.tabIndex=0;
+      const title=titleEl();
+      if(title)title.textContent=i18n('failed','face failed to load — reload');
+      const capabilities=document.getElementById('primer-capabilities');
+      const consent=document.getElementById('primer-consent');
+      if(capabilities)capabilities.textContent='';
+      if(consent)consent.textContent='';
+    }
     let ui=uiEl();
     if(ui)ui.textContent=i18n('failed','face failed to load — reload or check console');
     let errLive=document.getElementById('error-live');
@@ -91,6 +104,7 @@
   // announcement, and a screen reader must not keep the false one.
   addEventListener('master:face-ready',function(){
     clearWatch();
+    p?.remove();
     if(!failedShown)return;
     failedShown=false;
     let ui=uiEl(),errLive=document.getElementById('error-live');
@@ -130,6 +144,13 @@
     window._primerFired=true;
     window.dispatchEvent(new CustomEvent('primer:ready'));
     primeAudio();
+    // A synchronous primer can fire while the parser is still below it.
+    // The shell, state bridges and prompt must exist before runtime evaluation.
+    if(document.readyState==='loading'){
+      document.addEventListener('DOMContentLoaded',beginFaceBoot,{once:true});
+    }else{beginFaceBoot();}
+  }
+  function beginFaceBoot(){
     dismissPrimer();
     revealPrompt();
     showLoadState();
@@ -152,6 +173,7 @@
   window.__MASTER_PRIMER_GO__=go;
   window.__MASTER_PRIMER_TAP__=go;
   if(p){
+    p.addEventListener('click',function(){if(failedShown)location.reload();});
     ['pointerdown','click','touchend'].forEach(function(ev){
       p.addEventListener(ev,go,{capture:true,passive:true});
     });
