@@ -2549,6 +2549,8 @@ st('playing');
 $id('play').textContent='⏸ Pause';
 log('playback started','k');
 logAudioState();
+const epoch=st_.clockEpoch;
+setTimeout(()=>{if(st_.playing&&st_.clockEpoch===epoch)logAudioState();},1800);
 }
 
 function reportAudioStartupFailure(error) {
@@ -2625,7 +2627,7 @@ return peak>0?(20*Math.log10(peak)).toFixed(1)+" dBFS":"silent";
 }
 function logAudioState(){
 const ctx=Tone.getContext().rawContext;
-log("audio0: context="+ctx.state+" time="+ctx.currentTime.toFixed(3)+" s rate="+ctx.sampleRate+" Hz");
+log("audio0: context="+ctx.state+" time="+ctx.currentTime.toFixed(3)+" s rate="+ctx.sampleRate+" Hz protocol="+location.protocol);
 log("mix0: "+JSON.stringify(mix_)+" mute="+JSON.stringify(st_.muteState));
 log("clock0: "+(st_.playing?"running":"stopped")+" tick="+(st_.tick??-1)+" tempo="+Math.round(aud_.bpm)+" pattern="+pat_.d);
 if(liveGraph){log("signal0: drums="+peakDb(liveGraph.drumMeter)+" master="+peakDb(liveGraph.masterMeter)+" output="+peakDb(analyser)+" gate="+outputGate.gain.value);log("voices0: "+JSON.stringify(st_.playedVoices||{})+" errors="+JSON.stringify(st_.audioErrors||{}));}
