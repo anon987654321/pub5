@@ -5,12 +5,12 @@ if (!Array.isArray(FACE_MODULES) || FACE_MODULES.length === 0) {
   throw new Error("face boot manifest missing faceModulesList");
 }
 
-await Promise.all(FACE_MODULES.map(async (modulePath) => {
+for (const modulePath of FACE_MODULES) {
   const url = window.MASTER_ASSET_PATHS?.faceModules?.[modulePath]
     || window.MASTER_ASSET_PATHS?.[modulePath]
     || modulePath;
   await import(url);
-}));
+}
 
 const FACE_RUNTIME = window.MASTER_ASSET_PATHS?.faceRuntime
   || window.MASTER_ASSET_PATHS?.faceModules?.["face.runtime.js"]
