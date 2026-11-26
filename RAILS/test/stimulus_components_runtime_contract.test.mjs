@@ -227,3 +227,48 @@ test("conversation edits and duplicate replacements do not count as unread", asy
     }
   }
 })
+
+test("optimistic sends keep a token for an unchanged payload and preserve text without a log", async () => {
+  const source = await readSource("__shared/frontend/optimistic_send_controller.js")
+  const { default: OptimisticSend } = await import("data:text/javascript," +
+    encodeURIComponent(source.replace(/^import .*$/m, "class Controller {}")))
+  const controller = new OptimisticSend()
+  const field = { value: "hello" }
+  const token = { value: "" }
+  const parent = { value: "1" }
+  const handlers = new Map()
+  const originalWindow = globalThis.window
+  try {
+    globalThis.window = { addEventListener() {}, removeEventListener() {} }
+    Object.assign(controller, {
+      hasTokenTarget: true, tokenTarget: token,
+      element: {
+        closest: () => null,
+        querySelector: selector => selector.startsWith("textarea") ? field :
+          selector.includes("parent_id") ? parent : null,
+        addEventListener: (name, fn) => handlers.set(name, fn),
+        removeEventListener() {}
+      }
+    })
+    controller.connect()
+    const first = token.value
+    handlers.get("submit")()
+    handlers.get("turbo:submit-start")()
+    assert.equal(field.value, "hello")
+    handlers.get("turbo:submit-end")({ detail: { success: false } })
+    field.value = "changed"
+    field.value = "hello"
+    handlers.get("submit")()
+    assert.equal(token.value, first)
+    parent.value = "2"
+    handlers.get("submit")()
+    assert.notEqual(token.value, first)
+    const second = token.value
+    handlers.get("turbo:submit-end")({ detail: { success: true } })
+    assert.notEqual(token.value, second)
+    controller.disconnect()
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window
+    else globalThis.window = originalWindow
+  }
+})

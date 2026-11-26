@@ -25,7 +25,7 @@ import { Controller } from "@hotwired/stimulus"
 // rather than being lost or retyped. Every attempt carries a token (the form's
 // client_token field, when it has one) that the retries share, so a send whose
 // answer was lost on the way back is recognised by the server and not written
-// twice. The token changes when the text does, and after a send that landed.
+// twice. A changed payload gets a new token at submit time.
 export default class extends Controller {
   static targets = ["token"]
   static values = {
@@ -39,30 +39,31 @@ export default class extends Controller {
   connect() {
     this.pending = null
     this.failed = null
-    this.failedText = null
     this.retryOnReconnect = false
-    this.attemptText = null
+    this.attempt = null
     this.onStart = this.#start.bind(this)
     this.onEnd = this.#end.bind(this)
-    this.onInput = this.#inputChanged.bind(this)
+    this.onSubmit = this.#prepare.bind(this)
     this.onOnline = this.#reconnected.bind(this)
     this.onTap = this.#tapped.bind(this)
     this.element.addEventListener("turbo:submit-start", this.onStart)
     this.element.addEventListener("turbo:submit-end", this.onEnd)
-    this.element.addEventListener("input", this.onInput)
+    this.element.addEventListener("submit", this.onSubmit, true)
     window.addEventListener("online", this.onOnline)
-    this.#log?.addEventListener("click", this.onTap)
-    this.#log?.addEventListener("keydown", this.onTap)
+    this.log = this.element.closest(".nearby-chat-widget-panel, .messenger-pane")
+      ?.querySelector(".conversation-log")
+    this.log?.addEventListener("click", this.onTap)
+    this.log?.addEventListener("keydown", this.onTap)
     this.#rotateToken()
   }
 
   disconnect() {
     this.element.removeEventListener("turbo:submit-start", this.onStart)
     this.element.removeEventListener("turbo:submit-end", this.onEnd)
-    this.element.removeEventListener("input", this.onInput)
+    this.element.removeEventListener("submit", this.onSubmit, true)
     window.removeEventListener("online", this.onOnline)
-    this.#log?.removeEventListener("click", this.onTap)
-    this.#log?.removeEventListener("keydown", this.onTap)
+    this.log?.removeEventListener("click", this.onTap)
+    this.log?.removeEventListener("keydown", this.onTap)
     this.#clearPending()
     this.failed?.remove()
     this.failed = null
@@ -72,32 +73,38 @@ export default class extends Controller {
     return this.element.querySelector("textarea, input[type=text]")
   }
 
-  get #log() {
-    // The widget's log and the full channel log are both .conversation-log.
-    return this.element.closest(".nearby-chat-widget-panel, body")
-      ?.querySelector(".conversation-log")
+  #payload() {
+    const value = (name) => this.element.querySelector(`[name="message[${name}]"]`)?.value ?? ""
+    return [this.#field?.value ?? "", value("parent_id"), value("message_type"),
+      value("duration_seconds"), this.element.querySelector('input[type="file"]')?.files?.[0] ?? null]
+  }
+
+  #sameAttempt(payload) {
+    return this.attempt?.every((value, i) => value === payload[i]) ?? false
+  }
+
+  // Capture before Turbo builds FormData. An unchanged payload keeps its token.
+  #prepare() {
+    const payload = this.#payload()
+    if (this.attempt && !this.#sameAttempt(payload)) this.#rotateToken()
+    this.attempt = payload
   }
 
   #start() {
     const field = this.#field
-    const text = field?.value?.trim()
-    if (!text) return
-
-    // The line from an earlier failed attempt gives way to this one; the retry
-    // is the same message under the same token, not a second line.
+    const text = field?.value
     this.failed?.remove()
     this.failed = null
+    this.retryOnReconnect = false
+    if (!text?.trim() || !this.log) return
 
     this.sentText = text
-    this.attemptText = text
     // Clear immediately: the box emptying is the strongest signal that the tap
     // registered, and it is the one thing that used to take five seconds.
     field.value = ""
     field.dispatchEvent(new Event("input", { bubbles: true }))
 
-    const log = this.#log
-    if (!log) return
-
+    const log = this.log
     const li = document.createElement("li")
     li.setAttribute("role", "listitem")
     li.dataset.optimistic = "true"
@@ -114,7 +121,10 @@ export default class extends Controller {
   #end(event) {
     if (!this.pending) {
       // A send with no text to echo (a photo, a voice note) still used its token.
-      if (event.detail?.success !== false) this.#rotateToken()
+      if (event.detail?.success === true) {
+        this.attempt = null
+        this.#rotateToken()
+      }
       return
     }
 
@@ -128,38 +138,25 @@ export default class extends Controller {
       article?.removeAttribute("aria-busy")
       if (article) article.tabIndex = 0
       const note = this.pending.querySelector(".send-status")
-      const label = offline && navigator.onLine === false ? this.offlineLabelValue : this.failedLabelValue
+      this.retryOnReconnect = offline && this.hasTokenTarget && !!this.attempt && !this.attempt[4]
+      const label = this.retryOnReconnect && navigator.onLine === false ? this.offlineLabelValue : this.failedLabelValue
       if (note) note.textContent = `· ${label}`
       const field = this.#field
-      if (field && !field.value) field.value = this.sentText
+      if (field && !field.value) {
+        field.value = this.sentText
+        field.dispatchEvent(new Event("input", { bubbles: true }))
+      }
       this.failed = this.pending
-      this.failedText = this.sentText
-      this.retryOnReconnect = offline
       this.pending = null
       return
     }
 
     // Success: the real message arrives through the broadcast that renders
     // every message the same way. Drop the placeholder so there is exactly one.
-    this.failedText = null
     this.retryOnReconnect = false
-    this.attemptText = null
+    this.attempt = null
     this.#clearPending()
     this.#rotateToken()
-  }
-
-  // A new attempt needs a new name. Editing the text of a failed send makes it a
-  // different message, and under the old token the server would answer with the
-  // first one and drop the edit.
-  #inputChanged() {
-    const value = this.#field?.value?.trim() ?? ""
-    // The box emptying after a send is not an edit: #start clears it, and
-    // rotating here would give the retry a different name from the attempt.
-    if (value === "") return
-    if (this.attemptText !== null && value !== this.attemptText) {
-      this.attemptText = null
-      this.#rotateToken()
-    }
   }
 
   // A tap, or Enter/Space from the keyboard, on the failed line.
@@ -167,7 +164,7 @@ export default class extends Controller {
     if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return
 
     const line = event.target.closest?.("li[data-optimistic='true'] article[data-failed='true']")
-    if (!line) return
+    if (!line || line.closest('li') !== this.failed) return
 
     event.preventDefault()
     this.#retry()
@@ -178,13 +175,10 @@ export default class extends Controller {
   }
 
   #retry() {
-    const field = this.#field
-    if (!field || !this.failedText) return
-    // Only the failed text goes back, and only if the box is free: a retry must
-    // not overwrite something the person has since started typing.
-    if (field.value.trim() && field.value.trim() !== this.failedText) return
-
-    field.value = this.failedText
+    // Never submit a changed draft, reply target, or attachment on reconnect.
+    // A deliberately cleared composer is not permission to restore and send.
+    if (!this.failed || this.pending || !this.hasTokenTarget ||
+        !this.#sameAttempt(this.#payload())) return
     this.element.requestSubmit?.()
   }
 

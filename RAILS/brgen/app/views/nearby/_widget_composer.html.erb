@@ -26,6 +26,7 @@
         enterkeyhint: "send",
         aria: { label: t("chat.message_label") } %>
   <%= f.hidden_field :message_type, value: "text" %>
+  <%= f.hidden_field :client_token, value: nil, data: { optimistic_send_target: "token" } %>
   <%= hidden_field_tag "origin", "widget" %>
   <%= f.submit t("actions.send"), class: "button button-primary button-small" %>
 <% end %>
