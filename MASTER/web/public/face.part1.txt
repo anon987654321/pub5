@@ -676,7 +676,7 @@ document.addEventListener('visibilitychange', () => {
 
 let faceReadyMarked = false;
 function markFaceReady() {
-  if (faceReadyMarked) return;
+  if (faceReadyMarked || renderer?.getContext?.()?.isContextLost?.()) return;
   faceReadyMarked = true;
   rootBody.classList.add('face-ready');
   rootBody.classList.remove('face-loading');
