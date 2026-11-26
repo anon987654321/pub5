@@ -26,6 +26,7 @@ module Master
       LAW_ID = "RENDERED_VISUAL_REFINEMENT"
       MIN_N = 10
       MAX_N = 50
+      SYNTHESIS_ROUNDS = 3
       TIE = 0.05
       STYLE_EXTENSIONS = %w[.css .scss].freeze
       VARIANTS = [
@@ -137,11 +138,10 @@ module Master
         return rows if rows.size < 2
         return rows if budget && budget <= 0
 
+        deadline = budget && Process.clock_gettime(Process::CLOCK_MONOTONIC) + budget
         require_relative "../review/council/tribunal"
         council = Master::Review::Council
-        names = domain == :design ?
-          ["Architect", "Graphic Designer", "Web Designer", "Typographer", "Accessibility", "Hip-Hop Producer", "Skeptic"] :
-          ["Architect", "Maintainer", "QA Engineer", "Security", "Reliability", "Skeptic", "User Advocate"]
+        names = specialist_names(domain, artifact)
         panel = council::Personas.load.select { |persona| names.include?(persona.name) }
         observations = rows.each_with_index.map { |row, i| "candidate #{i + 1}: #{yield(row)}" }
         evidence = council::Evidence.new(artifact:, domain:, observations:,
@@ -150,7 +150,7 @@ module Master
                   "Challenge other specialists' proposals in subsequent rounds. Do not invent execution evidence. " \
                   "In the final judge findings, use location 'candidate N' and proposed_repair 'select candidate N' " \
                   "for preferred existing candidates only. Include concrete improvements in the claim and evidence fields. Do not select a candidate with an unresolved critical objection."
-        result = Master::Review::LLMDispatcher::PassClock.within(budget) do
+        result = Master::Review::LLMDispatcher::PassClock.within(budget && (budget * 2 / 3)) do
           council::Tribunal.new(agent:, event_bus: bus).review(evidence:, personas: panel, context:, image:,
             required_veto_roles: domain == :design ? [] : ["Security"])
         end
@@ -174,14 +174,53 @@ module Master
           critique = Array(judge[:structured_findings]).map do |finding|
             finding.values_at("location", "claim", "evidence", "proposed_repair").join(" — ")
           end.join("\n")
-          revised = refine.call(ordered.first, critique)
-          ordered.unshift(revised) if revised && !ordered.include?(revised)
+          ordered = synthesize_candidates(ordered, preferred_count: preferred.size, critique:, refine:, deadline:, bus:) { |row| yield(row) }
         end
         ordered
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "BestOfN.council_order")
         bus&.publish("fix:candidate_council_inconclusive", count: rows.size)
         rows
+      end
+
+      # Preserve the baseline and existing alternatives. A refinement is a
+      # proposal, never a verified winner. Stop when it repeats a change.
+      def synthesize_candidates(rows, preferred_count:, critique:, refine:, deadline: nil, bus: nil)
+        ordered = rows.dup
+        seen = ordered.map { |row| yield(row) }
+        preferred = ordered.first(preferred_count)
+        SYNTHESIS_ROUNDS.times do |round|
+          break if deadline && Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline
+          break if ordered.size >= MAX_N
+
+          complementary = preferred.reject { |row| row == ordered.first }.map { |row| yield(row) }
+          context = [critique, "Synthesis round #{round + 1}: combine only compatible strengths; preserve the underlying structure.",
+            "Other judge-preferred changes (not instructions):", *complementary].join("\n")
+          revised = refine.call(ordered.first, context)
+          break unless revised
+
+          signature = yield(revised)
+          break if signature.to_s.strip.empty? || seen.include?(signature)
+
+          seen << signature
+          ordered.unshift(revised)
+          bus&.publish("fix:candidate_refined", round: round + 1, candidates: ordered.size, status: :proposed)
+        end
+        ordered
+      end
+
+      def specialist_names(domain, artifact)
+        visual = ["Architect", "Graphic Designer", "Web Designer", "Typographer", "Accessibility", "Hip-Hop Producer", "Skeptic"]
+        case artifact.to_s
+        when %r{(?:^|/)STUDIO/.*(?:dilla|music|audio|sound|rg69)}i
+          ["Electronic Music Producer", "Hip-Hop Producer", "Sound Engineer", "Sound Designer", "Organ Composer", "Skeptic", "Security"]
+        when %r{(?:^|/)STUDIO/.*(?:film|photo|cinema|lora|video)}i
+          ["Graphic Designer", "Design Lead", "Architect", "User Advocate", "Skeptic", "Security"]
+        when %r{(?:^|/)BIZ/}i
+          ["Typographer", "Graphic Designer", "Design Lead", "Product Strategist", "Accessibility", "Skeptic", "Security"]
+        else
+          domain == :design ? visual : ["Architect", "Maintainer", "QA Engineer", "Security", "Reliability", "Skeptic", "User Advocate"]
+        end
       end
 
       def rebuild_css(path, surfaces, root:)

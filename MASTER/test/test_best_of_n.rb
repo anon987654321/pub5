@@ -176,6 +176,25 @@ class BestOfNTest < Minitest::Test
     assert_equal candidate, File.read(@path)
   end
 
+  def test_synthesis_retains_alternatives_and_stops_on_repeated_revision
+    calls = []
+    refine = lambda do |selected, critique|
+      calls << [selected, critique]
+      "combined"
+    end
+    rows = B.synthesize_candidates(%w[first second], preferred_count: 2, critique: "review",
+      refine:) { |row| row }
+    assert_equal %w[combined first second], rows
+    assert_equal 2, calls.size
+    assert_includes calls.first.last, "second"
+  end
+
+  def test_synthesis_does_not_exceed_candidate_ceiling
+    rows = Array.new(B::MAX_N) { |i| i.to_s }
+    assert_equal rows, B.synthesize_candidates(rows, preferred_count: 2, critique: "review",
+      refine: ->(*) { flunk "full pool must not grow" }) { |row| row }
+  end
+
   def test_diversity_compares_changed_lines_not_the_unchanged_file
     original = "a\nb\nc\n"
     variants = ["a\nnew value\nc\n", "a\nnew  value\nc\n", "a\nb\nother\n"]

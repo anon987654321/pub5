@@ -397,7 +397,7 @@ module Master
           viable = BestOfN.council_order(viable, agent: @agent, domain: :general, artifact: path, bus: @bus, budget:, refine:) do |row|
             BestOfN.change_signature(original, row.fetch(:source)).join("\n")
           end
-          viable = viable.first(BestOfN::MAX_N)
+          viable = BestOfN.distinct_changes(viable) { |row| BestOfN.change_signature(original, row[:source]) }.first(BestOfN::MAX_N)
           return if viable.empty?
 
           simulation = user_simulation

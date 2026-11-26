@@ -185,10 +185,7 @@ module Master
         @variant_cursor[id] += @plan.candidates
         generated = Array.new(@plan.candidates) { |variant| propose(sources, start + variant) }.compact
         distinct = BestOfN.distinct_changes(generated) do |candidate|
-          candidate.edits.flat_map do |edit|
-            proposal = edit.proposal
-            BestOfN.change_signature(proposal.find, proposal.replace).map { |line| [edit.file, line] }
-          end.sort
+          candidate_signature(candidate)
         end
         @say.call("candidate exploration: requested #{@plan.candidates}, generated #{generated.size}, distinct #{distinct.size}")
         return distinct unless @world.council
@@ -197,7 +194,16 @@ module Master
           context = candidate.edits.map { |edit| "#{edit.file}: #{edit.proposal.find} -> #{edit.proposal.replace}" }.join("\n")
           propose(sources, start, feedback: "Selected proposal:\n#{context}\nCouncil critique (advisory):\n#{critique}\nProduce one materially improved candidate against the unchanged source.")
         end)
-        reviewed.uniq(&:key).first(BestOfN::MAX_N)
+        BestOfN.distinct_changes(reviewed) do |candidate|
+          candidate_signature(candidate)
+        end.first(BestOfN::MAX_N)
+      end
+
+      def candidate_signature(candidate)
+        candidate.edits.flat_map do |edit|
+          proposal = edit.proposal
+          BestOfN.change_signature(proposal.find, proposal.replace).map { |line| [edit.file, line] }
+        end.sort
       end
 
       def propose(sources, variant, feedback: nil)
