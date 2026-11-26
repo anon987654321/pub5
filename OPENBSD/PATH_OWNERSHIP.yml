@@ -59,10 +59,6 @@ ownership:
     purpose: DNS, NSD, DNSSEC and certificate helpers BOOTSTRAP.sh sources
     risk: high
     check: ruby OPENBSD/checks/shell_syntax_check.rb
-  bin/deploy_all.sh:
-    purpose: legacy workstation alias to MASTER/bin/operator vps deploy all --remote
-    risk: critical
-    check: ruby OPENBSD/checks/shell_syntax_check.rb
   bin/vps_ci.sh:
     purpose: pinned deployment child; verifies the live parent lock, deploy-user Git reads and exact workstation CI/preflight proofs before syncing one app and checking the preinstalled production bundle
     risk: high

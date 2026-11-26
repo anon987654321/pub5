@@ -114,8 +114,7 @@ JSON is generated from `apps.yml` by `ruby OPENBSD/bin/sync_deploy_inventory.rb`
 and the `domain_alignment` check fails when the two disagree. Deploy
 checks (`integrity_check.rb`, `verify_deploy_identity.rb`,
 `deploy_inventory.json`) live at `OPENBSD/` top level, and so does
-Old quarantine samples were deliberately removed from the tracked tree. The
-retired `manual_master_deploy.ksh` is not a recovery route; it refuses to run.
+Old quarantine samples were deliberately removed from the tracked tree.
 `bin/dr-pull` recovers databases. There is no `archive/`; git history holds
 the old installers.
 
@@ -870,17 +869,12 @@ deliberately:
 
 | Script | CI | Scope | When |
 |--------|----|-------|------|
-| `ruby OPENBSD/bin/deploy [app]` | as `vps-deploy` | The one Ruby entrypoint over the same serial `vps-deploy` stages | The port's single deploy door; the zsh stages below remain the implementation |
 | `MASTER/bin/operator vps deploy <app|group|all> --remote` | **Yes** — workstation preflight and serial `bin/ci` for every selected Rails app; assets must be built and SHA-attested before SSH | Selected app, group or full fleet | Normal code release; vm23 only syncs, verifies, migrates and restarts |
-| `zsh OPENBSD/bin/deploy_all.sh` | **No** | Runs from a workstation: syncs the pub5 checkout to vm23 and runs `OPERATOR.sh`, so it reapplies `/etc`, relayd and the services, not just app code. `--per-app` also runs each `RAILS/<app>/<app>.sh` | The box's config has drifted or a fresh install needs redoing — not for shipping a code change |
 | `ksh OPENBSD/bin/start_all_apps.sh` as `dev` | **No** — recovery only | Starts every inventory app with native `rcctl`; checks all services and pins them against `resource_guard.sh` shedding | Recovery after a deliberate decision to keep every app running despite load |
 
-`vps_production_push.sh` and `manual_master_deploy.ksh` are retired refusal
-wrappers. They no longer offer a host-side fast path or manual precompile.
 Use the workstation operator command; it must complete local tests before SSH.
 The asset archive must also be transferred and attested for the pinned SHA;
-vm23 refuses deployment when it is missing. `deploy_all.sh` is the wider
-configuration operation, not a routine code deploy.
+vm23 refuses deployment when it is missing.
 
 ## Occasional operator tools
 
@@ -893,7 +887,6 @@ dead one until it is written down.
 | `ruby OPENBSD/sync.rb` (as `doas ruby`) | vm23 | Mirror live `/etc` config **back into** `OPENBSD/`, with secret redaction. The repo→live direction is well travelled; this is the return leg, and skipping it is how `relayd.conf` drifted for weeks (see the warning under *OpenBSD deploy*). |
 | `ruby OPENBSD/ptr_openbsd_amsterdam.rb --ipv4 … --hostname …` | anywhere | Set the PTR record via openbsd.amsterdam's `ptr4`/`ptr6` endpoints; `--ipv6` sets the v6 record. Needed only if the VM's IP changes. It prints the request as a dry run unless `APPLY_PTR=1` is set. |
 | `zsh OPENBSD/bin/vps_run_remote.sh` | workstation | Bootstrap a *fresh* VM: copies `vps_install_all.sh` up through the server4 hypervisor jump and runs it. Not for routine deploys — use `vps-deploy`. |
-| `ksh OPENBSD/bin/manual_master_deploy.ksh` | retired | Refuses; vm23 does not kill processes or compile production assets |
 | `sh OPENBSD/bin/amber_queue_sweep.sh [APP]` | vm23 | **Deletes** finished jobs, orphaned executions, unfinished Turbo broadcasts and duplicate media jobs from a Solid Queue backlog (amber by default); drain-jobs.sh runs due jobs, this removes what should never run. Named in `RAILS/amber/README.md` |
 | `zsh OPENBSD/bin/deploy-diff.sh` | workstation | Read-only: runs `config_drift_check.rb --remote`, then diffs `relayd.conf` (which the check excludes) and prints `rcctl check`. It changes nothing in either direction; `sync.rb` above is what pulls the live side back into the repo. |
 | `sh OPENBSD/bin/amber_queue_sweep.sh [APP]` | vm23 | Delete a stale Solid Queue backlog (finished jobs, orphaned executions, unfinished Turbo broadcasts, duplicate media jobs) with sqlite3, no Rails boot. `drain-jobs.sh` runs due jobs hourly; this removes what should never run. |

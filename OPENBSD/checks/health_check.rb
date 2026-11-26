@@ -453,7 +453,7 @@ if !on_box
   # /etc/relayd.conf is on vm23; the repo copy is deliberately not a substitute
   # (the relayd entries in RUNBOOK.md).
 elsif File.file?("/etc/relayd.conf")
-  # relayd.conf is root 0600 on vm23, and deploy_all.sh, start_all_apps.sh and
+  # relayd.conf is root 0600 on vm23, and vps-deploy, start_all_apps.sh and
   # check-vps run this as dev. A plain read raised EACCES there and ended the run
   # before one failure printed, so an unprivileged run reads it through doas, as
   # the rcctl and pfctl checks above already do.

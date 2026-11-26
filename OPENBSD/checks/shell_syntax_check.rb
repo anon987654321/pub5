@@ -4,9 +4,9 @@
 # Parse every shell script in this tree with the interpreter its shebang names.
 #
 # check-openbsd used to name two files by hand — vps_ci_all.sh and OPERATOR.sh —
-# out of 43. The deploy path itself was not among them: bin/vps-deploy, vps_ci.sh
-# and deploy_all.sh are what a deploy actually runs, so a syntax error in any of
-# the three waited for a deploy to find it. resource_guard.sh is ksh, which a zsh
+# out of 43. The deploy path itself was not among them: bin/vps-deploy and vps_ci.sh
+# are what a deploy actually runs, so a syntax error in either waited for a deploy
+# to find it. resource_guard.sh is ksh, which a zsh
 # list could not have covered at all.
 #
 # A hand-kept list is the wrong shape for this. A script's own shebang says which

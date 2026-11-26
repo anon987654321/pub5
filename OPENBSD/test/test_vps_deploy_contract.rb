@@ -175,14 +175,13 @@ class VpsDeployContractTest < Minitest::Test
     refute_includes source, 'doas chown -R dev:dev public'
     refute_includes source, 'doas cp "$ROOT/OPENBSD/mirror/etc/rc.d/master" /etc/rc.d/master'
   end
-  def test_legacy_deploy_all_calls_the_canonical_operator_directly
-    script = File.read(File.join(ROOT, "OPENBSD", "bin", "deploy_all.sh"), encoding: "UTF-8")
-    assert_includes script, 'exec "${REPO_ROOT}/MASTER/bin/operator" vps deploy all --remote'
-    refute_includes script, 'OPENBSD/bin/vps-deploy'
-    refute_includes script, 'doas zsh'
-    refute_includes script, 'RAILS/${app}/${app}.sh'
-    refute File.exist?(File.join(ROOT, "MASTER", "bin", "redeploy"))
-    refute File.exist?(File.join(ROOT, "OPENBSD", "bin", "redeploy"))
+  # MASTER/bin/operator vps deploy is the one deploy door. Aliases and refusal stubs
+  # around it were removed on the operator's request (2026-11-26) and stay gone.
+  def test_retired_deploy_entrypoints_stay_removed
+    %w[MASTER/bin/redeploy OPENBSD/bin/redeploy OPENBSD/bin/deploy OPENBSD/bin/deploy_all.sh
+       OPENBSD/bin/vps_production_push.sh OPENBSD/bin/manual_master_deploy.ksh].each do |path|
+      refute File.exist?(File.join(ROOT, path)), path
+    end
   end
   def test_ci_rejects_unknown_target_before_interpolating_a_path
     guard = CI_SOURCE[/^case \$app in\n.*?^esac$/m]
@@ -1124,17 +1123,6 @@ class VpsDeployContractTest < Minitest::Test
     assert_includes master, %q{head=$(/usr/bin/su -s /bin/sh "$deploy_user" -c "cd /home/dev/pub5 && git rev-parse HEAD")}
     refute_includes master, "head=$(git rev-parse HEAD)"
     assert_includes master, "workstation preflight SHA does not match"
-  end
-
-  def test_legacy_fast_deploy_entrypoints_refuse_on_vm23
-    manual = File.read(File.join(ROOT, "OPENBSD", "bin", "manual_master_deploy.ksh"), encoding: "UTF-8")
-    fast = File.read(File.join(ROOT, "OPENBSD", "bin", "vps_production_push.sh"), encoding: "UTF-8")
-    assert_includes manual, "exit 69"
-    assert_includes fast, "exit 69"
-    refute_includes manual, "pkill"
-    refute_includes manual, "assets:precompile"
-    refute_includes fast, "SKIP_CI=1"
-    refute_includes fast, "SKIP_RUNTIME_CHECK=1"
   end
 
   def disk_run(dir, free_kb:)

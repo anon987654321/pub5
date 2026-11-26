@@ -363,13 +363,6 @@ failures << "Litestream recovery must use native rcctl" unless
   restore_litestream.include?('doas /usr/sbin/rcctl check "$app"') &&
   !restore_litestream.include?("pub5-admin")
 
-manual_master = File.read(File.join(OPENBSD, "bin", "manual_master_deploy.ksh"))
-failures << "manual MASTER recovery must use native rcctl" unless
-  manual_master.include?("doas /usr/sbin/rcctl stop master") &&
-  manual_master.include?("doas /usr/sbin/rcctl restart master") &&
-  manual_master.include?("doas /usr/sbin/rcctl restart relayd") &&
-  !manual_master.include?("pub5-admin")
-
 master_deploy = File.read(File.join(OPENBSD, "bin", "vps_deploy_master.sh"))
 master_deploy_contract = master_deploy.include?("doas /usr/sbin/rcctl restart master") &&
                          master_deploy.include?("doas /bin/ksh -c") &&

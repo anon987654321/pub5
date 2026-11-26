@@ -45,8 +45,8 @@ class VpsSafetyCheckTest < Minitest::Test
                    File.join(openbsd, "lib", "deploy_records.rb"))
       %w[
         vps_deploy_master.sh deploy-smoke.sh resource_guard.sh validate_doas.ksh
-        vps_console.exp deploy_all.sh vps-deploy vps_install_all.sh
-        manual_master_deploy.ksh vps-state restore_litestream.sh start_all_apps.sh
+        vps_console.exp vps-deploy vps_install_all.sh
+        vps-state restore_litestream.sh start_all_apps.sh
       ].each do |name|
         FileUtils.cp(File.join(ROOT, "bin", name), File.join(openbsd, "bin", name))
       end
@@ -348,17 +348,6 @@ class VpsSafetyCheckTest < Minitest::Test
 
       refute status.success?
       assert_includes out, "Litestream recovery must use native rcctl"
-    end
-  end
-  def test_manual_master_recovery_must_use_native_rcctl
-    with_fixture do |dir, _|
-      path = File.join(dir, "OPENBSD", "bin", "manual_master_deploy.ksh")
-      text = File.read(path).sub("doas /usr/sbin/rcctl restart relayd", "rcctl restart relayd")
-      File.write(path, text)
-      out, status = run_check(dir)
-
-      refute status.success?
-      assert_includes out, "manual MASTER recovery must use native rcctl"
     end
   end
   def test_deploy_smoke_service_checks_use_native_rcctl
