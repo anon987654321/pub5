@@ -682,9 +682,10 @@ The original note is still true of the mistake that produced it:
 000, so a check written that way reports both ports refusing and looks
 exactly like the outage it is inventing.
 
-`httpd.conf` is now deliberately limited to one port-80 HTTP-01 challenge
-location for `acme-client`. It does not redirect ordinary HTTP requests, host
-static sites or serve the Postpro output. TLS and all app traffic are handled by
+`httpd.conf` is deliberately limited to one port-80 HTTP-01 challenge
+location for `acme-client`, followed by a single 301 to HTTPS (restored
+2026-11-26: the HSTS preload list requires it of brgen.no). It hosts no
+static sites and does not serve the Postpro output. TLS and all app traffic are handled by
 `relayd` forwarding to Falcon on loopback. Postpro remains a local image/video
 processing tool; its old unauthenticated static-photo web preview on
 `127.0.0.1:6666` has been retired rather than expanding the HTTP daemon beyond
