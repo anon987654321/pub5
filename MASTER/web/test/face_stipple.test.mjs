@@ -1110,7 +1110,6 @@ test("stipple lifecycle is observable and reversible", () => {
   assert.match(system, /installing,/);
 });
 
-
 test("sculpture surfaces are distinct, deterministic and bounded", async () => {
   const { readFileSync } = await import("node:fs");
   const { runInNewContext } = await import("node:vm");
@@ -1228,7 +1227,6 @@ test("sculptures use uniform ink and fixed footprints", () => {
   assert.doesNotMatch(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
   assert.match(faceSource, /gl_FragColor=vec4\(vColor,1\.0\)/);
 });
-
 
 test("default stipple installation does not allocate or dispose a second portrait", async () => {
   const uniforms = Object.fromEntries(["uExpressionFrom", "uExpressionTo", "uExpressionBlend", "uExpressionStrength"]

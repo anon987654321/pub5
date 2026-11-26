@@ -46,7 +46,7 @@ class TraceDmesgTest < Minitest::Test
     dmesg.stub(:status, ->(unit, body, io:) { calls << [unit, body] }) do
       dmesg.stub(:emit, nil) { dmesg.block("test0", "\n \nfirst\nsecond") }
     end
-    assert_equal [["test0", "first"]], calls
+    assert_equal [%w[test0 first]], calls
   end
 
   def test_collapse_writer_never_writes_two_consecutive_newlines

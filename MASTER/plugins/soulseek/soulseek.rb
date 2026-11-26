@@ -359,10 +359,10 @@ module Master
         {
           container: "RIFF/WAVE",
           encoding: format == 1 ? "PCM" : "IEEE_FLOAT",
-          channels: channels,
+          channels:,
           sample_rate_hz: sample_rate,
           bits_per_sample: bits,
-          data_bytes: data_bytes
+          data_bytes:
         }
       rescue Errno::ENOENT, Errno::EACCES, IOError, SystemCallError
         raise PolicyError, "soulseek: cannot read WAV metadata"

@@ -87,7 +87,7 @@ class TestCouncilTribunal < Minitest::Test
 
   def test_comparison_requires_matched_observed_evidence
     attributes = { artifact: "mix", domain: :sound, observations: ["measured"],
-                   anchors: ["mix"], provenance: { probe: "peak", conditions: { sample_rate: 48000 } } }
+                   anchors: ["mix"], provenance: { probe: "peak", conditions: { sample_rate: 48_000 } } }
     before = Evidence.new(**attributes, measurements: { peak: 0.9 })
     after = Evidence.new(**attributes, measurements: { peak: 0.8 })
     result = before.compare(after)
@@ -99,7 +99,7 @@ class TestCouncilTribunal < Minitest::Test
   end
 
   def test_comparison_receipt_requires_fingerprints_and_binds_observations
-    conditions = { sample_rate: 48000 }
+    conditions = { sample_rate: 48_000 }
     base = { artifact: "mix", domain: :sound, observations: ["measured"], anchors: ["mix"] }
     provenance = { probe: "peak", conditions: }
     before = Evidence.new(**base, measurements: { peak: 0.9 }, provenance: provenance.merge(artifact_sha256: "a" * 64))

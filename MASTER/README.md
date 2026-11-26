@@ -175,8 +175,6 @@ and movement has a reason. The face must remain readable before, during and
 after an explanation; an unknown object is not an excuse to replace it with
 decorative noise.
 
-
-
 ### ASCII controls
 
 The terminal and browser render the same perspective-correct, lit triangle mesh as
@@ -197,8 +195,6 @@ In the terminal, `MASTER_FACE_RAMP=high_contrast`, `MASTER_FACE_CHARS=MASTER`,
 `MASTER_REDUCED_MOTION=1` select the equivalent appearance options. Named ramps live in `MASTER/data/tokens.yml`; the browser and
 Ruby renderer do not carry separate copies of the ramp definitions. The ordinary
 ramp, default ink and pose remain unchanged so the existing golden frames stay valid.
-
-
 
 ### Verification
 
@@ -484,11 +480,9 @@ The near horizon is self-maintenance: `/fix` holding this repository's suites an
 - Cross-tree implementation and proof state: `convergence.yml`; product gaps: `data/gaps.yml`; operator-only evidence: `data/operator_seams.yml`; UX acceptance: `data/law/ux_refinements.yml`; RAILS-specific refinement: `../RAILS/refinements.yml`. `bin/master status --agent` is the read-only union view, not another owner.
 Use `bin/master --help` and `bin/operator --help` for the current command surface.
 
-
 ## Consolidated component references
 
 The following internal guides now live here instead of in nested directories. Their original procedures and boundaries are retained under their subject headings.
-
 
 ### Checks
 
@@ -694,7 +688,6 @@ can consume findings as data instead of parsing them back out of the log:
 ruby MASTER/checks/runner.rb --json --all > check_run.json
 ```
 
-
 ### Approved visual baselines
 
 <sub>Consolidated project reference.</sub>
@@ -757,7 +750,6 @@ silently treated as equal. Keep the browser, operating system, device scale,
 fonts, locale and viewport stable when producing a baseline; use separate
 references when the rendering environment deliberately differs.
 
-
 ### Norwegian accent evaluation fixtures
 
 <sub>Consolidated project reference.</sub>
@@ -813,7 +805,6 @@ verdict = Master::Voice::Benchmark.tonem_eval("solen.wav", accent: "bergen")
 `tonem_eval` needs `aubionotes` on PATH (the same optional dependency the
 existing f0 summary uses) and answers nil, not an exception, when it is
 missing or the audio is unreadable.
-
 
 ### Bergen high-tone LoRA data checklist
 
@@ -873,7 +864,6 @@ data-collection plan for the operator, not a wired route.
 - Clear Eastern low-tone speakers.
 - Heavy alveolar-r plus retroflex speakers.
 - Over-represented Oslo / Eastern studio speech without filtering.
-
 
 ### Norwegian TTS engine landscape (evaluation notes)
 
@@ -935,7 +925,6 @@ routes, and are corrected to what MASTER actually runs today.
   `available?` / `synth` case arm in `lib/voice/engines.rb`, one chain line,
   stubbed contract tests, and the benchmark gates - not a second stack.
 
-
 ### Air Superiority
 
 <sub>Consolidated project reference.</sub>
@@ -984,7 +973,6 @@ form with a JSON object naming the kind, network or device, and its identifiers.
 /plugin run air_superiority scan
 ```
 
-
 ### Session Browser
 
 <sub>Consolidated project reference.</sub>
@@ -1008,7 +996,6 @@ The persistent profile stores website cookies and session tokens on disk, so add
 /plugin info session_browser
 /plugin run session_browser status
 /plugin run session_browser inspect {"session":"research","url":"https://example.com"}
-
 
 ### Social Browser
 
@@ -1062,7 +1049,6 @@ Inside a MASTER session, the plugin command reaches it.
 /plugin info social_browser
 /plugin run social_browser status
 ```
-
 
 ### Soulseek
 
@@ -1138,7 +1124,6 @@ Search and result inspection do not download files. Queueing requires explicit `
 
 MASTER does not bypass peer queues, locked shares, DRM, paywalls or access controls. Verify the recording, edition, source and licence before queueing. slskd's configured download directory and transfer limits remain authoritative.
 
-
 ### tap_probes (parked)
 
 <sub>Consolidated project reference.</sub>
@@ -1150,7 +1135,6 @@ Parked focus-walk and tap-target browser probes.
 - **note:** Removed from checks.yml (hard) and check_tiers.yml (soft). lib/fix tap-target padding stays in the tree.
 
 Parked 2026-11-01 under the essentials pass; sponsor: the operator.
-
 
 ### Travel Browser
 
@@ -1204,7 +1188,6 @@ Inside a MASTER session, the plugin command reaches it.
 /plugin run travel_browser open {"session":"trip","url":"https://example.com"}
 ```
 
-
 ### tts_dsp (parked)
 
 <sub>Consolidated project reference.</sub>
@@ -1217,7 +1200,6 @@ Parked TTS benchmark/measure/quality suite and tts-e2e gate.
 
 Parked 2026-11-01 under the essentials pass; sponsor: the operator.
 
-
 ### video_recordings (parked)
 
 <sub>Consolidated project reference.</sub>
@@ -1229,7 +1211,6 @@ Parked session/face video recorders, capture probe and README media tooling.
 - **note:** Path roots resolve from the plugin owner; the plugin remains parked outside checks.yml and smoke --tts.
 
 Parked 2026-11-01 under the essentials pass; sponsor: the operator.
-
 
 ### Tools
 

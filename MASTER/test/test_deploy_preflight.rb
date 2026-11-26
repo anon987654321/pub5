@@ -471,7 +471,6 @@ class DeployPreflightTest < Minitest::Test
     assert_includes reason, "RAILS/brgen/config/boot.rb"
   end
 
-
   def test_remote_command_refuses_untracked_studio_source
     ok, reason = remote(dirty: "?? STUDIO/dilla/new_take.rb\n")
 

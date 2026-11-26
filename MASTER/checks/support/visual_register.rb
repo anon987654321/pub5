@@ -73,7 +73,7 @@ module Deploy
 
       img[:height].times do |y|
         scanline = img[:raw].byteslice(y * (a_row_bytes + 1), a_row_bytes + 1)
-        row = PngDiff.unfilter_row(scanline, previous: previous, channels: a_ch)
+        row = PngDiff.unfilter_row(scanline, previous:, channels: a_ch)
         img[:width].times do |x|
           i = x * a_ch
           line = (x % spacing).zero? || (y % spacing).zero?

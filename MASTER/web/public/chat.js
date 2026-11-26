@@ -271,7 +271,7 @@ function highlightCode(source, language = "") {
   const lang = grammar?.aliases?.[name] || name;
   const roles = grammar?.grammars?.[lang];
   if (!Array.isArray(roles) || !roles.length) return escapeHtml(source);
-  const pattern = new RegExp(roles.map(([, rule]) => "(" + rule + ")").join("|"),
+  const pattern = new RegExp(roles.map(([, rule]) => `(${rule})`).join("|"),
     grammar.insensitive.includes(lang) ? "gi" : "g");
   let output = "", cursor = 0;
   for (const match of source.matchAll(pattern)) {

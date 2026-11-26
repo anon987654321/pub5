@@ -379,13 +379,13 @@ test("server-selected sculpture drives the particle face and its source attribut
   const source = {
     id: "folded-seed", particle_profile: "folded-seed",
     title: "Folded seed", collection: "MASTER original concept studies",
-    
+
     rights: "Original procedural concept"
   };
   const nextSource = {
     id: "trefoil", particle_profile: "trefoil",
     title: "Trefoil", collection: "MASTER original concept studies",
-    
+
     rights: "Original procedural concept"
   };
   const window = {

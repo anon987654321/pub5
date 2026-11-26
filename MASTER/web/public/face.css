@@ -2255,7 +2255,7 @@ body[data-layout="face"] #battery-indicator:not([hidden]) {
   display: block;
   inline-size: 20px;
   block-size: 10px;
-  margin-inline: 4px 10px;
+  margin-inline: 4px 8px;
   border: 1px solid currentColor;
   color: var(--chrome-band-muted);
 }

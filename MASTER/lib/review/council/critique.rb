@@ -46,7 +46,7 @@ module Master
 
         private
 
-        def build_run_result(preset, payload, feedback)
+        def build_run_result(_preset, payload, feedback)
           return inconclusive_run_result(payload, feedback) if feedback_inconclusive?(feedback)
 
           issues = panel_issue_entries(feedback)

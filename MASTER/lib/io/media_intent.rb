@@ -1070,7 +1070,7 @@ module Master
         details = []
         subjects.each do |subject|
           begin
-            options = direction ? { direction: direction } : {}
+            options = direction ? { direction: } : {}
             subject_paths = Array(IdeaPicture.new.selfie_series(subject:, count:, replace: false, **options)).map(&:to_s)
             paths.concat(subject_paths)
             details << "#{subject}: #{subject_paths.size} render(s)"

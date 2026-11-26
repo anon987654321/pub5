@@ -67,7 +67,7 @@ module AttestationAudit
         next
       end
     end
-    { literals: literals, vars: vars }
+    { literals:, vars: }
   end
 
   # Every line touching the literal or one of its bound variables, classified.
@@ -103,6 +103,6 @@ end
 if __FILE__ == $PROGRAM_NAME
   root = File.expand_path(ARGV[0] || Dir.pwd)
   rows = AttestationAudit.audit(root)
-  puts JSON.pretty_generate({ root: root, writerless: rows.count { |r| r[:writerless] }, rows: rows })
+  puts JSON.pretty_generate({ root:, writerless: rows.count { |r| r[:writerless] }, rows: })
   exit(rows.any? { |r| r[:writerless] } ? 1 : 0)
 end

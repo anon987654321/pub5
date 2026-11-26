@@ -360,9 +360,9 @@ class TestPlugins < Minitest::Test
 
   def test_soulseek_discovery_submits_bounded_deduplicated_queries
     plugin = Master::Plugin.load("soulseek")
-    ids = [
-      "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55",
-      "9d7c19c9-9de7-4b87-9f79-79b1c0a7bd56"
+    ids = %w[
+      9d7c19c9-9de7-4b87-9f79-79b1c0a7bd55
+      9d7c19c9-9de7-4b87-9f79-79b1c0a7bd56
     ]
     calls = []
     plugin.define_singleton_method(:api_request) do |method, path, payload = nil|
@@ -396,7 +396,7 @@ class TestPlugins < Minitest::Test
         "files" => [{
           "filename" => "A/Break.flac", "size" => 12_000_000,
           "sampleRate" => 96_000, "bitDepth" => 24, "isLocked" => false
-        }]
+        }],
       }, {
         "username" => "peer-b",
         "hasFreeUploadSlot" => false,

@@ -188,12 +188,12 @@ class TestDmesgDetail < Minitest::Test
 
     Dmesg.with_verbosity("verbose") do
       console = Dmesg::Console.new
-      events.each { |event| assert_empty console.lines(event: event, file: "MASTER/lib/example.rb") }
+      events.each { |event| assert_empty console.lines(event:, file: "MASTER/lib/example.rb") }
     end
 
     Dmesg.with_verbosity("trace") do
       console = Dmesg::Console.new
-      events.each { |event| refute_empty console.lines(event: event, file: "MASTER/lib/example.rb"), event }
+      events.each { |event| refute_empty console.lines(event:, file: "MASTER/lib/example.rb"), event }
     end
   end
 
