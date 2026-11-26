@@ -4660,6 +4660,14 @@ law_map:
   # false name-coverage this ceiling exists to avoid. PREDICATE_SIDE_EFFECTS was closed
   # to `command_query_separation` in the same change: its own source is command-query
   # separation and its requirement is that row's ("separate actions from queries").
+  #
+  # 2026-11-26: held at 88. Four PRINT_PAGE_CANON Laws arrived without map rows and took
+  # the audit's debt to 89, which stopped `bin/operator visual review`. Each traces to
+  # a real Bringhurst principle, so each is mapped rather than counted: widow and orphan
+  # control to readability_first, a heading kept with its body and the folio in the foot
+  # to formal_legibility (until now an empty gap), tabular figures to
+  # functional_typography. The registry audit now counts 85; `rake lint:law_trace` counts
+  # 89 (it was at 93), so the ceiling stays at 88 rather than following either.
   law_trace_ceiling: 88
   version: v110.0-restored
   source: merged master.yml fossil -> MASTER runtime law_map
@@ -5230,7 +5238,9 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "remove_decoration", "law_ids": ["FORM_FOLLOWS_FUNCTION"],
       "status": "covered", "tags": ["aesthetic", "ui"]}
     formal_legibility: {"meaning": "Clear reading of structure  ", "detects": "weak_structure", "severity": "high",
-      "confidence": 0.8, "operation": "organize", "law_ids": [], "status": "gap", "tags": ["code"]}
+      "confidence": 0.8, "operation": "organize",
+      "law_ids": ["DOCUMENT_HEADING_STAYS_WITH_BODY","DOCUMENT_FOLIO_IN_THE_FOOT"],
+      "status": "covered", "tags": ["code"]}
     free_facade: {"meaning": "Exterior walls independent of structure  ", "detects": "tight_coupling",
       "severity": "high", "confidence": 0.8, "operation": "organize", "law_ids": [], "status": "gap",
       "root": "stable_contract", "tags": ["code"]}
@@ -5244,7 +5254,8 @@ law_map:
       "confidence": 0.75, "operation": "improve", "law_ids": ["NO_DECORATIVE_FX", "FORM_FOLLOWS_FUNCTION",
       "AESTHETIC_MINIMALISM"], "status": "covered", "tags": ["aesthetic"]}
     functional_typography: {"meaning": "Type as functional tool  ", "detects": "decorative_type", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": ["TYPE_HIERARCHY","TYPEFACE_PER_ROLE","MEASURE_OPTIMUM"],
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["TYPE_HIERARCHY","TYPEFACE_PER_ROLE","MEASURE_OPTIMUM",
+        "DOCUMENT_TABULAR_FIGURES"],
       "status": "covered", "root": "proportion", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     functionality_over_aesthetics: {"meaning": "Honest expression of purpose  ", "detects": "form_over_function",
       "severity": "medium", "confidence": 0.75, "operation": "improve", "law_ids": ["AESTHETIC_RAMS_SEMANTIC"],
@@ -5584,7 +5595,8 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "root": "visible_state", "tags": ["architecture"], "source": "master.yml@30dad7ead"}
     readability_first: {"meaning": "Legibility paramount  ", "detects": "poor_readability", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": ["SQUINT_TEST","MEANINGFUL_NAMES"], "status": "covered",
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["SQUINT_TEST","MEANINGFUL_NAMES",
+        "DOCUMENT_WIDOW_ORPHAN_CONTROL"], "status": "covered",
       "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     reduce_cognitive_load: {"meaning": "Don't make users think unnecessarily  ", "detects": "cognitive_overload",
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
