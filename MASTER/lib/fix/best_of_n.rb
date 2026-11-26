@@ -304,8 +304,10 @@ module Master
       end
 
       def diff_size(a, b)
-        old = a.lines
-        (b.lines - old).size + (old - b.lines).size
+        diff = UnifiedDiff.between(a, b, context: 0)
+        raise SourceChanged, "candidate diff unavailable" unless diff
+
+        UnifiedDiff.hunks(diff).sum { |hunk| hunk.old_count + hunk.new_count }
       end
 
       def log(index, total, row)
@@ -377,9 +379,6 @@ module Master
       # The RAILS tree answers for itself; a RAILS path never falls through
       # to the MASTER patterns.
 
-      # Test paths are run in a test bundle with bounded timeouts. The output
-      # is summarized to a fingerprint; candidate selection never needs to log
-      # raw test output, which may contain user data or secrets.
       # Test paths are run in a test bundle with bounded timeouts. The output
       # is summarized to a fingerprint; candidate selection never needs to log
       # raw test output, which may contain user data or secrets.
