@@ -1,12 +1,12 @@
 <% content_for :title, t("playlist.sets") %>
 
-<div class="page-header">
+<div class="page-header playlist-set-header">
   <hgroup>
     <p><%= t("playlist.sets_subtitle") %></p>
     <%= tag.h1 t("playlist.sets") %>
   </hgroup>
   <nav aria-label="<%= t("aria.playlist_set_actions") %>">
-    <%= link_to t("playlist.new_set"), new_set_path, class: "button button-primary button-small" if authenticated? %>
+    <%= link_to t("playlist.new_set"), new_set_path, class: "button button-primary" if authenticated? %>
   </nav>
 </div>
 

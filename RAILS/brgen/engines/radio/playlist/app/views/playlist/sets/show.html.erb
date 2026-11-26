@@ -1,15 +1,15 @@
 <% content_for :title, @set.name %>
 <% content_for :json_ld, json_ld_for(@set, type: :music_playlist) if @set.privacy.blank? || @set.privacy == "public" %>
 
-<div class="page-header">
+<div class="page-header playlist-set-header">
   <hgroup>
     <p><%= t("playlist.set_kicker") %></p>
     <%= tag.h1 @set.name %>
   </hgroup>
   <% if authenticated? && (Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w[owner editor])) %>
-    <div class="cluster">
-      <%= link_to t("actions.edit"), edit_set_path(@set), class: "button button-ghost button-small" %>
-      <%= button_to t("actions.delete"), set_path(@set), method: :delete, data: { turbo_confirm: t("actions.confirm_delete") }, class: "button button-danger button-small" %>
+    <div class="cluster playlist-set-actions">
+      <%= link_to t("actions.edit"), edit_set_path(@set), class: "button button-ghost" %>
+      <%= button_to t("actions.delete"), set_path(@set), method: :delete, data: { turbo_confirm: t("actions.confirm_delete") }, class: "button button-danger" %>
     </div>
   <% end %>
 </div>
@@ -26,14 +26,14 @@
     <p><%= t("playlist.collaborative") %></p>
   <% end %>
   <% if authenticated? %>
-    <div class="cluster">
+    <div class="cluster playlist-set-actions">
       <% if @set.likes.exists?(user: Current.user) %>
         <%# destructive: no-confirm-ok — reversible — the button becomes Like again in place %>
         <%= button_to t("actions.unlike"), set_like_path(@set), method: :delete,
-              class: "button button-ghost button-small" %>
+              class: "button button-ghost" %>
       <% else %>
         <%= button_to t("actions.like"), set_like_path(@set), method: :post,
-              class: "button button-primary button-small" %>
+              class: "button button-primary" %>
       <% end %>
       <%= t("playlist.likes", count: @set.likes.count) %>
     </div>
@@ -67,7 +67,7 @@
       data-controller="swipe"
       data-swipe-listen-url-value="<%= listens_path(track_id: set_track.track.id) %>"
       data-action="pointerdown->swipe#pointerDown pointermove->swipe#pointerMove pointerup->swipe#pointerUp pointercancel->swipe#pointerCancel touchstart->swipe#pointerDown touchmove->swipe#pointerMove touchend->swipe#pointerUp"
-      class="track-row"
+      class="track-row playlist-set-track"
     >
       <div> <%# scan: intentional — an anonymous text block; the flex row is the layout and a name here would have no reader %>
         <%= tag.strong set_track.track.title %>
@@ -76,7 +76,7 @@
       </div>
       <% if authenticated? && (Current.user == set_track.user || Current.user == @set.user || @set.collaborations.exists?(user: Current.user, role: %w[owner editor])) %>
         <%# destructive: no-confirm-ok — reversible — this takes the track out of the set; the track and its audio stay %>
-        <%= button_to t("actions.remove"), set_track_path(@set, set_track), method: :delete, class: "button button-ghost button-small" %>
+        <%= button_to t("actions.remove"), set_track_path(@set, set_track), method: :delete, class: "button button-ghost" %>
       <% end %>
     </article>
   <% end %>
@@ -91,28 +91,28 @@
   <div class="section-divider">
     <p class="section-heading"><%= t("playlist.add_track") %></p>
     <div class="form-wrap form-wrap--flush">
-      <%= form_with url: set_tracks_path(@set), scope: :playlist_track do |form| %>
+      <%= form_with url: set_tracks_path(@set), scope: :playlist_track, class: "playlist-set-add-track" do |form| %>
         <div class="field"><%= form.text_field :title, placeholder: t("playlist.title"), aria: { label: t("playlist.title") }, required: true %></div>
         <div class="field"><%= form.text_field :artist, placeholder: t("playlist.artist"), aria: { label: t("playlist.artist") } %></div>
         <div class="field"><%= form.url_field :source_url, placeholder: t("playlist.url_optional"), aria: { label: t("playlist.url_optional") }, inputmode: "url" %></div>
-        <div class="field"><%= form.submit t("playlist.add"), class: "button button-primary button-small" %></div>
+        <div class="field"><%= form.submit t("playlist.add"), class: "button button-primary" %></div>
       <% end %>
     </div>
   </div>
 <% end %>
 
 <% if authenticated? %>
-<section>
+<section class="playlist-set-party">
   <%= tag.h2 t("playlist.listening_party") %>
   <p><%= t("playlist.party_blurb") %></p>
   <% if @set.listening_party&.active? %>
     <%= link_to t("playlist.listening_party"), set_listening_party_path(@set),
-          class: "button button-primary button-small" %>
+          class: "button button-primary" %>
     <% if Current.user && @set.user_id == Current.user.id %>
       <%= t("playlist.join_code") %>: <%= @set.listening_party.join_code %>
     <% end %>
   <% else %>
-    <%= button_to t("playlist.start_party"), set_listening_party_path(@set), method: :post, class: "button button-primary button-small" %>
+    <%= button_to t("playlist.start_party"), set_listening_party_path(@set), method: :post, class: "button button-primary" %>
   <% end %>
 </section>
 <% end %>
