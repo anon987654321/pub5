@@ -224,6 +224,7 @@ module Studio
         when "photograph", "photo" then photograph_command(argv.drop(1))
         when "film" then film_command(argv.drop(1))
         when "frames" then frames_command(argv.drop(1))
+        when "develop-frame" then develop_frame_command(argv.drop(1))
         when "promo" then promo_command(argv.drop(1))
         when "train" then train_command(argv.drop(1))
         when "-h", "--help", nil then puts help
@@ -255,6 +256,44 @@ module Studio
           file.write(JSON.pretty_generate(result))
         end
         puts JSON.pretty_generate(result.merge("review_report" => report))
+        0
+      end
+
+      def develop_frame_command(argv)
+        require "optparse"
+        preset = "portrait"
+        OptionParser.new do |parser|
+          parser.on("--preset NAME") { |value| preset = value }
+        end.parse!(argv)
+        raise ArgumentError, "usage: lora.rb develop-frame DIRECTORY INDEX [--preset NAME]" unless argv.size == 2
+        raise ArgumentError, "unknown laboratory preset" unless Craft::LABORATORY.include?(preset)
+
+        directory = File.realpath(argv[0])
+        index = Integer(argv[1])
+        report = JSON.parse(File.read(File.join(directory, "review.json")))
+        raise ArgumentError, "invalid frame index" unless index.between?(1, report.fetch("frames").size)
+        frame = report.fetch("frames").fetch(index - 1)
+        source = File.join(directory, format("frame_%02d.png", index))
+        stat = File.lstat(source)
+        raise ArgumentError, "frame must be private and unchanged" unless stat.file? && stat.uid == Process.uid &&
+          stat.nlink == 1 && (stat.mode & 0o077).zero? && Digest::SHA256.file(source).hexdigest == frame.fetch("sha256")
+
+        output = File.join(directory, format("developed_%02d_%s.png", index, preset))
+        raise ArgumentError, "output already exists" if File.exist?(output) || File.symlink?(output)
+        script = File.expand_path("../postpro/postpro.rb", __dir__)
+        seed = frame.fetch("sha256")[0, 8].to_i(16) % 2_147_483_647
+        _, stderr, status = Studio::Subprocess.capture3(
+          { "POSTPRO_SEED" => seed.to_s }, RbConfig.ruby, script,
+          "--input", source, "--output", output, "--preset", preset, timeout: 600
+        )
+        raise "development failed: #{stderr.lines.last}" unless status.success? && File.file?(output)
+        File.chmod(0o600, output)
+        sidecar = "#{output}.json"
+        File.chmod(0o600, sidecar) if File.file?(sidecar)
+        puts JSON.pretty_generate("source_sha256" => frame.fetch("sha256"),
+                                  "output" => output, "sha256" => Digest::SHA256.file(output).hexdigest,
+                                  "preset" => preset, "seed" => seed, "review" => "NOT_REVIEWED",
+                                  "provider_calls" => 0)
         0
       end
 
@@ -306,6 +345,8 @@ module Studio
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
             ruby STUDIO/lora/lora.rb frames VIDEO NEW_DIRECTORY [--count N]
                                                        extract local photographic candidates without provider calls
+            ruby STUDIO/lora/lora.rb develop-frame DIRECTORY INDEX [--preset NAME]
+                                                       develop an explicitly chosen original frame once
             ruby STUDIO/lora/lora.rb promo SUBJECT   clips, cut and soundtrack for the promo
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
