@@ -32,7 +32,7 @@ module Master
           match: /bsdports|ports|openbsd|terminal/i,
           density: :high, warmth: :cool, formality: :high, contrast: :high,
           ornament: :minimal, motion: :quiet, materiality: :functional,
-          typographic_voice: :mono_forward, spatial_tension: :tight,
+          typographic_voice: :utility, spatial_tension: :tight,
           memorable: "dense information should remain calm, legible, and obviously actionable"
         },
         editorial_wardrobe: {
@@ -151,7 +151,7 @@ module Master
 
       TYPOGRAPHY_HINTS = {
         conversational: "a clear reading face with a distinct voice; use mono only where it clarifies system behavior",
-        utilitarian_terminal: "mono-forward hierarchy with disciplined measure and visible rhythm",
+        utilitarian_terminal: "respect the product typography; BSDPorts uses classic search typography with monospace only for code and commands",
         editorial_wardrobe: "editorial headline contrast with a quiet, highly readable text face",
         marketplace: "plainspoken numerals and labels; type hierarchy should expose price, condition, and action",
         local_social: "humanist, readable type with stronger hierarchy for fresh content and place",
@@ -205,6 +205,7 @@ module Master
           reference_lenses=#{Array(DIRECTIONS.fetch(direction)[:references]).join(",")}
           reference_mission=#{DIRECTIONS.fetch(direction)[:reference_mission]}
           external_reference_discipline=#{reference_discipline(direction)}
+          Interaction patterns are hypotheses, not permission to add features or copy branding. Inspect existing routes, controls and state before proposing a change. Measure the representative journey before and after; do not count a prompt, screenshot or unrun test as functional proof.
           surface_anatomy=#{surface_anatomy(surface)}
           #{creative_context("design")}
         TEXT
@@ -271,19 +272,25 @@ module Master
         return "generic task anatomy" unless row.is_a?(Hash)
 
         structure = Array(row["structure"]).join(" -> ")
-        "attention=#{row["attention"]}; structure=#{structure}; lenses=#{Array(row["reference_lenses"]).join(",")}"
+        patterns = Array(row["interaction_patterns"]).join("; ")
+        references = row["interaction_references"]
+        "attention=#{row["attention"]}; structure=#{structure}; lenses=#{Array(row["reference_lenses"]).join(",")}; interaction_references=#{references}; interaction_patterns=#{patterns}"
       end
 
       def surface_key_for(label, surface)
-        return "messenger" if label.include?("messenger") || label.include?("conversation") || label.include?("/messages")
-        return "marketplace" if label.include?("markedsplass") || label.include?("marketplace") || label.include?("listings") || label.include?("shops")
-        return "dating" if label.include?("dating") || label.include?("likes")
-        return "takeaway" if label.include?("takeaway") || label.include?("restaurant")
-        return "radio" if label.include?("radio") || label.include?("playlist") || label.include?("sets")
-        return "tv" if label.include?("tv_") || (label.include?("/feed") && label.include?("tv"))
-        return "maps" if label.include?("maps") || label.include?("places")
-        return "amber" if surface.app.to_s == "amber"
-        return "bsdports" if surface.app.to_s == "bsdports"
+        app = surface.app.to_s
+        return app if %w[master amber bsdports mrdamascy hjerterom mytoonz].include?(app)
+        return unless app == "brgen"
+
+        # A nested engine must win over its shared city host or commerce parent.
+        return "takeaway" if label.match?(%r{takeaway|restaurants?})
+        return "tv" if label.match?(%r{(?:^|[./_])tv(?:[./_]|$)})
+        return "radio" if label.match?(%r{radio|playlist|/sets(?:/|$)})
+        return "maps" if label.match?(%r{maps|/places(?:/|$)})
+        return "dating" if label.include?("dating")
+        return "messenger" if label.match?(%r{messenger|conversation|/messages})
+        return "marketplace" if label.match?(%r{markedsplass|marketplace|listings|shops})
+
         "brgen_social"
       end
 
@@ -451,6 +458,19 @@ module Master
 
       def direction_for(surface)
         haystack = [surface.app, surface.label, surface.host, surface.path].compact.join("/").downcase
+        direction = case surface_key_for(haystack, surface)
+                    when "master" then :conversational
+                    when "amber" then :editorial_wardrobe
+                    when "bsdports" then :utilitarian_terminal
+                    when "takeaway", "mrdamascy" then :transactional_food
+                    when "marketplace" then :marketplace
+                    when "dating" then :intimate_social
+                    when "radio", "tv" then :media_station
+                    when "maps" then :cartographic
+                    when "messenger", "brgen_social" then :local_social
+                    end
+        return direction if direction
+
         DIRECTIONS.each { |name, spec| return name if spec[:match].match?(haystack) }
         :content_first
       end

@@ -3,6 +3,27 @@
 require_relative "test_helper"
 
 class DesignDirectionTest < Minitest::Test
+  Surface = Struct.new(:id, :app, :label, :host, :path)
+
+  def test_vertical_direction_uses_product_before_shared_host
+    language = Master::Design::VisualLanguage
+    {
+      ["brgen", "marketplace.brgen.no", "/takeaway/restaurants"] => :transactional_food,
+      ["brgen", "dating.brgen.no", "/"] => :intimate_social,
+      ["brgen", "radio.brgen.no", "/sets"] => :media_station,
+      ["brgen", "tv.brgen.no", "/"] => :media_station,
+      ["brgen", "maps.brgen.no", "/"] => :cartographic,
+      ["amber", "amberapp.art", "/messages"] => :editorial_wardrobe,
+      ["master", "ai.brgen.no", "/"] => :conversational,
+      ["mrdamascy", "mrd.brgen.no", "/orders"] => :transactional_food,
+      ["bsdports", "bsdports.org", "/ports"] => :utilitarian_terminal,
+    }.each do |(app, host, path), direction|
+      surface = Surface.new("#{app}#{path}", app, path, host, path)
+      assert_equal direction, language.direction_for(surface), surface.id
+      assert_includes language.surface_anatomy(surface), "interaction_patterns="
+    end
+  end
+
   def test_authority_is_first
     contract = Master::Design::Authority.contract
     assert_equal 1, contract.fetch("priority")

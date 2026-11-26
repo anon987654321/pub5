@@ -157,49 +157,94 @@ review_questions:
   - Does the wide layout add information or only columns?
   - Does the mobile layout recompose or merely shrink?
   - Is the proposed change supported by rendered evidence?
+  - Does the complete task take fewer unnecessary actions without losing recovery or consent?
+  - Do back navigation, failed submission, reconnection and keyboard alternatives preserve meaningful state?
+  - Does a shared change improve all affected consumers without flattening their identities?
 
 vertical_anatomy:
   brgen_social:
     attention: person_place_activity
     structure: [orientation, feed, composer, context, return_path]
     reference_lenses: [x]
+    interaction_references: "X, Reddit, Nextdoor, Instagram, Meetup"
+    interaction_patterns: ["city-scoped chronological discovery; local context grounded in real activity; inline conversation and one composer; preserve scroll and return path"]
   messenger:
     attention: conversation
     structure: [rail, inbox, thread, composer, contextual_artifact]
     reference_lenses: [antigravity, x, hey]
+    interaction_references: "WhatsApp, Signal, Telegram"
+    interaction_patterns: ["conversation-first layout; reply and attachment retrieval; explicit send, delivery and read states; keyboard and gesture equivalence; privacy and recovery before decorative features"]
     preservation: keep_declared_geometry_and_existing_messenger_snapshots
   marketplace:
     attention: item_price_trust
     structure: [orientation, discovery, filters, listings, item_detail, purchase_or_contact]
     reference_lenses: [bol, x, hey]
+    interaction_references: "Bol, Kaufland, Amazon, FINN, Vinted, eBay"
+    interaction_patterns: ["decision-ready cards; compare total costs and conditions; visible purchase action; preserve filters; transparent shipping, returns and seller trust"]
   dating:
     attention: person_choice
     structure: [orientation, person_focus, evidence, decision_actions, match_handoff]
     reference_lenses: [x, hey]
+    interaction_references: "Tinder, Hinge, Bumble"
+    interaction_patterns: ["person-first photo and prompt hierarchy; contextual reactions; reversible decisions; verification and consent; approximate location and accessible actions"]
   takeaway:
     attention: food_availability_order
     structure: [restaurant_identity, menu_or_catalog, availability, cart, checkout_status]
     reference_lenses: [hey, x]
+    interaction_references: "Wolt, Foodora, DoorDash"
+    interaction_patterns: ["dish-first discovery; persistent menu categories and cart; honest availability, fees and timing; order recovery; reuse commerce ownership"]
   radio:
     attention: sound_track_artist
     structure: [station_identity, now_playing, player, queue, discovery, visualizer]
     reference_lenses: [antigravity]
+    interaction_references: "SoundCloud, Spotify, whyp.it"
+    interaction_patterns: ["waveform seeking and contextual feedback; continuous playback across navigation; queue and release identity; privacy and creator-controlled sharing"]
   tv:
     attention: video_story
     structure: [player_or_feed, title_context, engagement, next_item, sound]
     reference_lenses: [x, antigravity]
+    interaction_references: "YouTube, TikTok, Twitch"
+    interaction_patterns: ["video-first composition; responsive aspect ratios; captions and playback control; meaningful continuation and local creator discovery; no forced autoplay"]
   maps:
     attention: place_relation
     structure: [search, map, result_list_or_sheet, place_detail, route_or_action]
     reference_lenses: [x, antigravity]
+    interaction_references: "Google Maps, Apple Maps"
+    interaction_patterns: ["map and list share selection; contextual sheet and visible area search; real place and time data; privacy-preserving layers and shareable collections"]
   amber:
     attention: garment_outfit
     structure: [wardrobe_orientation, visual_inventory, item_detail, outfit_composition, next_action]
     reference_lenses: [hey, antigravity]
+    interaction_references: "TOTEME, NET-A-PORTER, Whering, Indyx, Acloset"
+    interaction_patterns: ["image-first wardrobe and quiet metadata; batch capture; outfit composition and wear history; packing and planning derive from existing garments; privacy and garment color fidelity"]
   bsdports:
     attention: port_package
     structure: [search, identity, version, install_or_use, dependencies, documentation]
     reference_lenses: [antigravity]
+    interaction_references: "Google, Repology, RubyGems"
+    interaction_patterns: ["exact search and recovery; compact result identity; copyable commands; provenance, versions, dependencies and advisory state; no terminal skin"]
+  master:
+    attention: conversation_and_verified_work
+    structure: [face, transcript, composer, artifact_or_evidence]
+    reference_lenses: [antigravity]
+    interaction_references: "ChatGPT, Claude, Perplexity"
+    interaction_patterns: ["interruptible voice and generation; history and scoped context; inspectable memory and citations; reviewable artifacts; privileged tools remain outside public web"]
+  mrdamascy:
+    attention: food_and_order
+    structure: [menu, item, cart, payment, preparation, collection_or_delivery]
+    reference_lenses: [hey, bol]
+    interaction_references: "McDonald's, Joe & The Juice, Domino's"
+    interaction_patterns: ["one-tap reorder; progressive customisation; truthful preparation and loyalty state; interrupted-cart recovery; preserve Syrian identity and direct checkout"]
+  hjerterom:
+    attention: food_rescue
+    structure: [donation, collection_window, allocation, volunteer_route]
+    interaction_references: "Too Good To Go, Olio"
+    interaction_patterns: ["dignified recipient privacy; real collection windows; clear volunteer and food-safety state; inactive source only"]
+  mytoonz:
+    attention: comic_story
+    structure: [storyboard, character, panels, edit, export]
+    interaction_references: "Pixton, ComicsMaker"
+    interaction_patterns: ["character continuity; individual panel edits; private drafts; explicit generation cost and consent; inactive source only"]
   completion_rule:
     every_surface_must_answer:
       - what_am_i_looking_at

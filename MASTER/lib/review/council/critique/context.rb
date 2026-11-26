@@ -20,6 +20,12 @@ module Master
               Respect the surface owner's current product contract and identity.
               Critique CSS, JavaScript, HTML semantics, interaction, typography,
               layout, hierarchy, accessibility, responsiveness and data-ink economy.
+              Compare representative user journeys with the surface's interaction references.
+              Extract useful mechanics, not visual skins, and check existing implementation first.
+              Prefer fewer unnecessary steps, native semantics, continuity, explicit feedback,
+              truthful state and reversible actions. Require before/after task evidence, including
+              keyboard and touch, errors and recovery; unmeasured behavior remains inconclusive.
+              Never infer authority, feature completion or market rank from a competitor reference.
             CTX
             "sound_critique" => <<~CTX,
               Review MASTER as an interactive AI agent with visual motion, chat streaming, and voice/audio affordances.
