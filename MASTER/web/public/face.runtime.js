@@ -1982,7 +1982,9 @@ function frame(t) {
   const sec = t * 0.001;
   const reducedMotion = faceReducedMotionActive();
   const stillMode = window.MASTER_FACE_STATE?.isStillMode?.(State.mode) ?? State.mode === 'idle';
-  const idleStill = stillMode && !tts.playing && !gestureStart &&
+  const morphSettled = semanticMorphTarget == null ||
+    (Math.abs(morphCurrent - semanticMorphTarget) < .002 && Math.abs(faceMat?._morphVel || 0) < .002);
+  const idleStill = stillMode && morphSettled && !tts.playing && !gestureStart &&
     (t - Number(State.lastTouch || 0)) >=
       Number(window.MASTER_FACE_STATE?.stillAfterActivityMs ?? 700) && (State.pulse || 0) <= 0.01;
   const motionFrozen = reducedMotion || idleStill;
@@ -2082,7 +2084,7 @@ function frame(t) {
     window.MASTER_FACE_AUDIO?.restorePlaybackGain?.(tts, actx, tts.playing && !State.sttActive);
   }
 
-  if (head) {
+  if (head && !faceMat?.uniforms?.uSubjectDirect?.value) {
     const openness = 0.55 + (State.confidence || 0.75) * 0.45;
     const calmStare = State.calmStareUntil && t < State.calmStareUntil;
     const nervous = State.nervousUntil && t < State.nervousUntil;
@@ -2187,10 +2189,16 @@ function frame(t) {
       const restYaw = Math.max(-.35, Math.min(.35, Number(sculpture.rest_yaw ?? .18) || 0));
       const turn = motionFrozen ? restYaw : restYaw + Math.sin(Math.PI * progress) * .30;
       const curiosity = !motionFrozen && State.mood === 'curious' && State.mode !== 'idle';
-      head.rotation.set(0, turn, curiosity ? .055 : 0);
+      const poseBlend = reducedMotion ? 1 : 1 - Math.exp(-Math.max(0, dt) / 100);
+      const settle = (value, target) => Math.abs(value-target) < .001
+        ? target : value+(target-value)*poseBlend;
+      head.rotation.set(settle(head.rotation.x,0), settle(head.rotation.y,turn),
+        settle(head.rotation.z,curiosity ? .055 : 0));
       head.scale.setScalar(1);
-      faceMat.uniforms.uSculptureMotion.value = motionFrozen ? 0 : 1;
       head.position.set(0, 0, 0);
+      nodImpulse = 0;
+      State.shake = State.lean = 0;
+      faceMat.uniforms.uSculptureMotion.value = motionFrozen ? 0 : 1;
     }
     faceMat.uniforms.uMorph.value = morphCurrent;
     faceMat.uniforms.uTime.value = motionFrozen ? 0 : sec;
