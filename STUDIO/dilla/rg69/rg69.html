@@ -1541,18 +1541,24 @@ if(kind==="pentode")return x+a*(Math.sin(Math.PI*x/2)/(Math.PI/2)-x)*.42;
 return x+a*(Math.atan(d*x)/d-x);
 });
 }
+// Match small-signal gain of the cascaded curves; do not normalize peaks.
+function masterColorTrim(tube,tape){
+const slope=(kind,amount)=>{const curve=masterColorCurve(kind,amount);return (curve[2049]-curve[2047])*1024;};
+return 1/Math.max(.8,slope("triode",tube*.55)*slope("pentode",tube*.4)*slope("magnetic",tape*.45));
+}
 function createMasterColor(ctx,source,destination,aud){
 const gain=v=>{const n=ctx.createGain();n.gain.value=v;return n;};
 const filter=(type,hz)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;return n;};
 const dry=gain(1),wet=gain(0),input=gain(1),trim=gain(1),triode=ctx.createWaveShaper(),pentode=ctx.createWaveShaper(),magnetic=ctx.createWaveShaper(),pre=filter("highshelf",3200),post=filter("highshelf",3200),dc=filter("highpass",12);
-for(const n of [triode,pentode,magnetic])n.oversample="2x";
+// Mastering has only three shapers; prioritize alias rejection here.
+for(const n of [triode,pentode,magnetic])n.oversample=ctx.sampleRate<=48000?"4x":"2x";
 source.connect(dry);dry.connect(destination);source.connect(input);input.connect(triode);triode.connect(pentode);pentode.connect(pre);pre.connect(magnetic);magnetic.connect(post);post.connect(dc);dc.connect(trim);trim.connect(wet);wet.connect(destination);
-let last=-1;
+let last=-1,compensation=1;
 function update(settings){
 const amount=Math.max(0,Math.min(1,(settings.console??100)/100)),tape=Math.max(0,Math.min(1,(settings.tape??100)/100)),tubeStep=Math.round(amount*20),tapeStep=Math.round(tape*20),key=tubeStep+21*tapeStep;
-if(key!==last){triode.curve=masterColorCurve("triode",tubeStep/20*.55);pentode.curve=masterColorCurve("pentode",tubeStep/20*.4);magnetic.curve=masterColorCurve("magnetic",tapeStep/20*.45);last=key;}
+if(key!==last){triode.curve=masterColorCurve("triode",tubeStep/20*.55);pentode.curve=masterColorCurve("pentode",tubeStep/20*.4);magnetic.curve=masterColorCurve("magnetic",tapeStep/20*.45);compensation=masterColorTrim(tubeStep/20,tapeStep/20);last=key;}
 const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.035);};
-smooth(dry.gain,1-.42*Math.max(amount,tape));smooth(wet.gain,.42*Math.max(amount,tape));smooth(input.gain,1+.12*amount);smooth(trim.gain,1/(1+.12*amount));smooth(pre.gain,3*tape);smooth(post.gain,-3*tape);
+smooth(dry.gain,1-.42*Math.max(amount,tape));smooth(wet.gain,.42*Math.max(amount,tape));smooth(input.gain,1+.12*amount);smooth(trim.gain,compensation/(1+.12*amount));smooth(pre.gain,3*tape);smooth(post.gain,-3*tape);
 }
 update(aud);return {update};
 }
