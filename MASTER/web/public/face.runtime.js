@@ -1252,9 +1252,9 @@ uniform float uExpressionStrength;
 attribute vec3 scatter;
 attribute float semanticStage;
 attribute vec3 subjectFrom;
-attribute vec3 subjectNormal;
 uniform float uSubjectDirect;
-uniform vec4 uMaskMouth;
+uniform float uSculpture;
+uniform float uSculptureMotion;
 attribute float seed;
 attribute float curvature;
 attribute float boundary;
@@ -1402,25 +1402,20 @@ void main(){
     p = mix(p, mix(scatter, position, localMorph), uSubjectActive * (1.0-localMorph));
   }
   vec3 subjectPoint = mix(scatter, subjectFrom, localMorph);
-  // A bounded travelling displacement exists only during the transition.
+  // The same carriers respond to semantic events; no added emitter or anatomy.
   float travel = 1.0 - localMorph;
-  float envelope = 4.0 * travel * (1.0 - travel);
+  float envelope = 16.0 * travel * travel * (1.0 - travel) * (1.0 - travel);
   float signal = sin(semanticStage * 6.283185 - morphProgress * 6.283185);
   subjectPoint.z += signal * envelope * 0.025;
   float turn = envelope * (0.22 + 0.12 * signal);
   float ct = cos(turn), st = sin(turn);
   subjectPoint.xz = mat2(ct, -st, st, ct) * subjectPoint.xz;
-  // The old viseme deformation above is overwritten by a direct subject.
-  // Articulate mask geometry after interpolation, never an unrelated object.
-  vec2 lip = vec2(subjectPoint.x / max(uMaskMouth.y, 0.01),
-                  (subjectPoint.y - uMaskMouth.x) / max(uMaskMouth.z, 0.01));
-  float lipWeight = (1.0 - smoothstep(1.0, 2.8, length(lip))) *
-                    uMaskMouth.w * (1.0 - localMorph);
-  subjectPoint.y += sign(lip.y) * clamp(uVowel, 0.0, 1.0) * lipWeight * 0.014;
-  subjectPoint.x += subjectPoint.x * clamp(uMouthWide, -0.4, 0.4) * lipWeight;
-  // A few of the same carriers respond to semantic pressure; no extra emitter.
+  float activity = uSculpture * uSculptureMotion * travel;
+  float pulse = clamp(uJaw * 0.4, 0.0, 1.0);
+  float band = exp(-pow((subjectPoint.y + 0.12) * 3.0, 2.0));
+  subjectPoint += normalize(subjectPoint + vec3(0.001)) * activity * pulse * band * 0.018;
   float peripheral = smoothstep(0.28, 0.58, length(subjectPoint.xy));
-  float escape = step(0.97, seed) * peripheral * uMaskMouth.w *
+  float escape = step(0.97, seed) * peripheral * activity *
     clamp(uFracture + uEarPulse * 0.15, 0.0, 1.0) * 0.045;
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * escape;
   p = mix(p, subjectPoint, uSubjectDirect);
@@ -1458,9 +1453,6 @@ if (_hasWebGL && THREE) {
   faceGeom.setAttribute('position', new THREE.BufferAttribute(faceHome, 3));
   faceGeom.setAttribute('scatter',  new THREE.BufferAttribute(faceScatter, 3));
   faceGeom.setAttribute('subjectFrom', new THREE.BufferAttribute(faceHome.slice(), 3));
-  const subjectNormals = new Float32Array(faceHome.length);
-  for (let i = 2; i < subjectNormals.length; i += 3) subjectNormals[i] = 1;
-  faceGeom.setAttribute('subjectNormal', new THREE.BufferAttribute(subjectNormals, 3));
   faceGeom.setAttribute('semanticStage', new THREE.BufferAttribute(new Float32Array(faceSeeds.length), 1));
   faceGeom.setAttribute('seed',     new THREE.BufferAttribute(faceSeeds, 1));
   faceGeom.setAttribute('curvature', new THREE.BufferAttribute(faceCurvature, 1));
@@ -1469,7 +1461,7 @@ if (_hasWebGL && THREE) {
   faceMat = new THREE.ShaderMaterial({
     vertexShader: VERT_SHADER, fragmentShader: FRAG_SHADER,
     uniforms: {
-      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uMaskMouth:{value:{x:0,y:0,z:0,w:0}}, uSemanticStaged:{value:0}, uTime:{value:0},
+      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uSculpture:{value:0}, uSculptureMotion:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
       uColor:{value:new Color(1,1,1)},
       uHc:{value: State.highContrast ? 1.0 : (State.contrastMore ? 0.9 : 0.0)},
       uCurl:{value:0}, uJaw:{value:0}, uMouse:{value:{x:0,y:0}},
@@ -2192,10 +2184,11 @@ function frame(t) {
       const progress = 1-Math.max(0, Math.min(1, morphCurrent));
       const sculpture = window.MASTER_FACE_CONTRACT?.sculpture || {};
       const restYaw = Math.max(-.35, Math.min(.35, Number(sculpture.rest_yaw ?? .18) || 0));
-      const turn = motionFrozen ? restYaw :
-        restYaw + Math.sin(Math.PI * progress) * .30 + State.mouseX * .16 + Math.sin(sec * .14) * .055;
-      head.rotation.set(0, turn, 0);
-      head.scale.setScalar(motionFrozen ? 1 : 1 + Math.sin(sec * .6) * .006);
+      const turn = motionFrozen ? restYaw : restYaw + Math.sin(Math.PI * progress) * .30;
+      const curiosity = !motionFrozen && State.mood === 'curious' && State.mode !== 'idle';
+      head.rotation.set(0, turn, curiosity ? .055 : 0);
+      head.scale.setScalar(1);
+      faceMat.uniforms.uSculptureMotion.value = motionFrozen ? 0 : 1;
       head.position.set(0, 0, 0);
     }
     faceMat.uniforms.uMorph.value = morphCurrent;
@@ -6043,11 +6036,9 @@ window._chatSpeakLast = () => {
   if (text) enqueueSpeech(text);
 };
 
-function setSubjectScatter(positions, stages = null, normals = null) {
+function setSubjectScatter(positions, stages = null) {
   const attribute = faceGeom?.getAttribute?.("scatter");
   const stageAttribute = faceGeom?.getAttribute?.("semanticStage");
-  const normalAttribute = faceGeom?.getAttribute?.("subjectNormal");
-  if (normals && (!normalAttribute || normals.length !== positions?.length || !normals.every(Number.isFinite))) return false;
   if (!faceScatter || !attribute || !stageAttribute || !positions || positions.length !== faceScatter.length) return false;
   if (stages && stages.length !== faceSeeds.length) return false;
   for (let i = 0; i < positions.length; i++) {
@@ -6068,15 +6059,35 @@ function setSubjectScatter(positions, stages = null, normals = null) {
   };
   const m = smooth(0, 1, morphCurrent);
   const staged = faceMat.uniforms.uSemanticStaged.value;
-  for (let i = 0; i < positions.length; i++) {
-    const stage = stageAttribute.array[Math.floor(i/3)];
-    const gate = staged ? smooth(stage, Math.min(1, stage+0.18), 1-m) : 1;
-    const blend = 1-(1-m)*gate;
-    const origin = direct.value ? from.array[i] : faceHome[i];
-    const travel = 1-blend;
-    const ripple = direct.value && i%3 === 2
-      ? Math.sin(stage*6.283185-(1-m)*6.283185)*4*travel*(1-travel)*0.025 : 0;
-    from.array[i] = faceScatter[i]*(1-blend)+origin*blend+ripple;
+  const uniforms = faceMat.uniforms;
+  const sculpture = uniforms.uSculpture.value * uniforms.uSculptureMotion.value;
+  const pulse = Math.max(0, Math.min(1, uniforms.uJaw.value * .4));
+  const pressure = Math.max(0, Math.min(1, uniforms.uFracture.value + uniforms.uEarPulse.value * .15));
+  for (let i = 0; i < positions.length; i += 3) {
+    const index = i/3, stage = stageAttribute.array[index];
+    const gate = staged ? smooth(stage, Math.min(1, stage+.18), 1-m) : 1;
+    const blend = 1-(1-m)*gate, travel = 1-blend;
+    let x = faceScatter[i]*travel+(direct.value ? from.array[i] : faceHome[i])*blend;
+    let y = faceScatter[i+1]*travel+(direct.value ? from.array[i+1] : faceHome[i+1])*blend;
+    let z = faceScatter[i+2]*travel+(direct.value ? from.array[i+2] : faceHome[i+2])*blend;
+    if (direct.value) {
+      const envelope = 16*travel*travel*(1-travel)*(1-travel);
+      const signal = Math.sin(stage*6.283185-(1-m)*6.283185);
+      z += signal*envelope*.025;
+      const turn = envelope*(.22+.12*signal), ct=Math.cos(turn), st=Math.sin(turn);
+      [x,z] = [ct*x+st*z,-st*x+ct*z];
+      const activity = sculpture*travel;
+      const displace = distance => {
+        const length = Math.hypot(x+.001,y+.001,z+.001) || 1;
+        x += (x+.001)/length*distance;
+        y += (y+.001)/length*distance;
+        z += (z+.001)/length*distance;
+      };
+      displace(activity*pulse*Math.exp(-Math.pow((y+.12)*3,2))*.018);
+      const peripheral = smooth(.28,.58,Math.hypot(x,y));
+      if (faceSeeds[index]>=.97) displace(peripheral*activity*pressure*.045);
+    }
+    from.array[i]=x; from.array[i+1]=y; from.array[i+2]=z;
   }
   from.needsUpdate = true;
   direct.value = 1;
@@ -6084,7 +6095,6 @@ function setSubjectScatter(positions, stages = null, normals = null) {
   faceMat._morphVel = 0;
   faceScatter.set(positions);
   attribute.needsUpdate = true;
-  if (normals) { normalAttribute.array.set(normals); normalAttribute.needsUpdate = true; }
   stageAttribute.array.fill(0);
   if (stages) stageAttribute.array.set(stages);
   stageAttribute.needsUpdate = true;
@@ -6094,6 +6104,7 @@ function setSubjectScatter(positions, stages = null, normals = null) {
   semanticMorphRestoreOnSettled = false;
   if (faceReducedMotionActive()) {
     morphCurrent = 0;
+    faceMat.uniforms.uMorph.value = 0;
     faceMat._morphVel = 0;
   }
   return true;
