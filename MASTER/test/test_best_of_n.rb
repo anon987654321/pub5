@@ -209,14 +209,21 @@ class BestOfNTest < Minitest::Test
   def test_diversity_compares_changed_lines_not_the_unchanged_file
     original = "a\nb\nc\n"
     variants = ["a\nnew value\nc\n", "a\nnew  value\nc\n", "a\nb\nother\n"]
-    distinct = B.distinct_changes(variants) { |source| B.change_signature(original, source) }
-    assert_equal [variants.first, variants.last], distinct
+    distinct = B.distinct_changes([*variants, variants.first]) { |source| B.change_signature(original, source) }
+    assert_equal variants, distinct
+  end
+
+  def test_signatures_distinguish_final_newlines_and_significant_whitespace
+    original = "old\n"
+    refute_equal B.change_signature(original, "new\n"), B.change_signature(original, "new")
+    refute_equal B.change_signature(original, "  new\n"), B.change_signature(original, "    new\n")
+    assert_empty B.change_signature(original, original)
   end
 
   def test_candidate_coverage_uses_distinct_diffs_not_generated_count
     partial = B.diversity_receipt(requested: 10, generated: 10, distinct: 3)
     assert_equal :partial, partial.fetch(:status)
-    assert_equal :normalized_diff, partial.fetch(:method)
+    assert_equal :exact_diff, partial.fetch(:method)
     assert_equal 3, partial.fetch(:distinct)
 
     complete = B.diversity_receipt(requested: 10, generated: 12, distinct: 10)
@@ -283,7 +290,7 @@ class BestOfNTest < Minitest::Test
 
     assert_equal good, B.pick(loop, { law: B::LAW_ID, file: @path },
                               ".a { margin: 12px; } /* kind-mid */\n", custody:, root: @root, measurer:, rebuild:)
-    assert_equal ["anthropic/claude-opus-5-5", "moonshotai/kimi-k2"],
+    assert_equal ["moonshotai/kimi-k2"],
                  Thread.current[:master_fix_candidate_author_models]
   ensure
     ENV.delete("MASTER_FIX_BEST_OF")

@@ -87,7 +87,7 @@ module Master
           read: -> { File.read(path, encoding: "UTF-8") },
           write: ->(src) { loop.send(:write_atomic, path, src) },
         )
-        note_candidate_authors(selected, initial_authors, extra_authors[selected])
+        note_candidate_authors(selected, selected == first ? initial_authors : [], extra_authors[selected])
         selected
       end
 
@@ -114,19 +114,14 @@ module Master
           (initial_authors + Array(selected_authors)).compact.map(&:to_s).reject(&:empty?).uniq.freeze
       end
 
-      # Compare changes rather than the unchanged majority of each file.
-      # Whitespace-equivalent edits are duplicates; token overlap is a
-      # conservative heuristic, not proof of semantic equivalence.
+      # Compare exact changed lines and locations, not the unchanged file.
+      # Whitespace and the final newline may change program behavior.
       def change_signature(original, source)
         diff = UnifiedDiff.between(original, source, context: 0)
         raise SourceChanged, "candidate diff unavailable" unless diff
         # Keep hunk locations and multiplicity: identical text changed at two
         # different call sites is not necessarily the same repair.
-        diff.lines.drop_while { |line| !line.start_with?("@@") }.filter_map do |line|
-          next unless line.start_with?("@@", "+", "-")
-
-          line.gsub(/\s+/, " ").strip
-        end
+        diff.lines.drop_while { |line| !line.start_with?("@@") }
       end
 
       def distinct_changes(rows)
@@ -144,7 +139,7 @@ module Master
       # A narrow verified repair may survive an incomplete exploration; the
       # receipt must not describe that smaller tournament as complete.
       def diversity_receipt(requested:, generated:, distinct:)
-        { requested:, generated:, distinct:, method: :normalized_diff,
+        { requested:, generated:, distinct:, method: :exact_diff,
           status: distinct >= requested ? :observed : :partial }
       end
 
@@ -314,7 +309,7 @@ module Master
       end
 
       def log(index, total, row)
-        verdict = row.problems.empty? ? "kept" : "discarded: #{row.problems.first(2).join("; ")}"
+        verdict = row.problems.empty? ? "qualified" : "discarded: #{row.problems.first(2).join("; ")}"
         Master::Trace::Dmesg.status("best0", "candidate #{index}/#{total} score #{row.score} diff #{row.diff} #{verdict}")
       rescue StandardError
         nil

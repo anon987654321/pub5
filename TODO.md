@@ -466,4 +466,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: concurrent commits migrated Playlist, Marketplace, Maps, Takeaway and sortable controls; inspected the remaining search hits against current source. Retired the shared legacy sizing rule and opt-in, updated token vocabulary and lint (including nested engines), and replaced the 75-file ceiling with a no-size-class source contract. Keep shared-010 open for rendered acceptance; tests NOT_RUN.
 
+- 2026-11-26: /fix candidate identity now preserves exact diff lines, significant whitespace and end-of-file newline markers. Visual winner attribution no longer credits the initial author for an unrelated winning proposal; trial diagnostics distinguish qualification from commitment. Regression tests authored; full suite NOT_RUN. Direct checkout still blocked by DNS.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.
