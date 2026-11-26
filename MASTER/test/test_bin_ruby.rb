@@ -68,6 +68,28 @@ class TestBinRuby < Minitest::Test
     ENV["PATH"] = old_path
   end
 
+  def test_path_shim_does_not_hide_generic_ruby
+    Dir.mktmpdir do |dir|
+      bin, host, old, alias_dir = %w[master/bin host old alias].map { |path| File.join(dir, path) }
+      [bin, host, old, alias_dir].each { |path| FileUtils.mkdir_p(path) }
+      wrapper = File.join(bin, "ruby")
+      FileUtils.cp(BIN, wrapper)
+      File.symlink(wrapper, File.join(alias_dir, "ruby"))
+      [[old, "3.1.9", "OLD"], [host, "4.1.0", "HOST"]].each do |path, version, marker|
+        File.write(File.join(path, "ruby"), <<~SH)
+          #!/bin/sh
+          case " $* " in *" print RUBY_VERSION "*) printf #{version} ;; *) echo #{marker} ;; esac
+        SH
+        File.chmod(0o755, File.join(path, "ruby"))
+      end
+      env = { "PATH" => [bin, alias_dir, old, host, "/usr/bin", "/bin"].join(File::PATH_SEPARATOR),
+              "PUB5_RUBY" => nil, "HOME" => dir, "RBENV_ROOT" => dir }
+      out, err, status = unbundled { Open3.capture3(env, wrapper, "go") }
+      assert status.success?, err
+      assert_equal "HOST\n", out
+    end
+  end
+
   def test_wrapper_rejects_failed_or_malformed_version_probes
     Dir.mktmpdir do |dir|
       fake = File.join(dir, "ruby")
