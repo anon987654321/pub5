@@ -46,7 +46,7 @@ assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
 console.log("profile origin checks: "+origins.length);
 
  // Strict graph mock: reject undefined instrument and connection endpoints.
-const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["const DRUM_MACHINES=","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createConsoleStrip(","function applyFX("]];
+const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["const DRUM_MACHINES=","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createRecordingStage(","function applyFX("]];
 const graphFixture=`
 const edges=[];
 const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
