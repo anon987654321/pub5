@@ -189,6 +189,24 @@ class DeadCssSweepTest < Minitest::Test
     assert m.routes.find { |r| r.path == "/hidden" }.constrained
   end
 
+  # bsdports draws the social routes only when BSDPORTS_SOCIAL=1; the canary probed them
+  # anyway and failed bsdports's 2026-11-26 deploy on two 404s. A text reader cannot know
+  # whether a condition holds, so routes under if/unless are conditional, like constraints.
+  def test_routes_under_a_runtime_condition_are_not_probed
+    write("RAILS/demo/config/routes.rb", <<~ROUTES)
+      Rails.application.routes.draw do
+        get "about" => "pages#about"
+        if ENV["DEMO_SOCIAL"] == "1"
+          get "notifications" => "notifications#index"
+        end
+      end
+    ROUTES
+    m = Master::Fix::RoutesManifest.new(app_root: File.join(@root, "RAILS/demo"))
+
+    assert_equal %w[/about], m.public_get_paths
+    assert m.routes.find { |r| r.path == "/notifications" }.constrained
+  end
+
   def test_dead_route_sweep_flags_missing_controllers_and_unreachable_views
     write("RAILS/demo/config/routes.rb", %(Rails.application.routes.draw do\n  get "x" => "ghosts#show"\n  get "y" => "pages#about"\nend\n))
     write("RAILS/demo/app/controllers/pages_controller.rb", "class PagesController\n  def about; end\nend\n")

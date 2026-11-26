@@ -11,8 +11,9 @@ module Master
     #
     # Anything it cannot place exactly is marked rather than guessed: a route
     # with a dynamic segment is `parametric` (no URL can be built without data),
-    # and one under a host or subdomain constraint is `constrained` (the canary
-    # cannot know which Host header reaches it).
+    # and one under a host or subdomain constraint, or inside an if/unless, is
+    # `constrained` (the canary cannot know which Host header reaches it, or
+    # whether the condition drew it at all).
     class RoutesManifest
       Route = Data.define(:verb, :path, :controller, :action, :parametric, :constrained, :file)
 
@@ -63,7 +64,7 @@ module Master
         elsif text.match?(/\A(?:#{VERBS.join("|")}|root)\b/)
           verb_line(file, text, stack)
         elsif text.match?(/\A(?:member|collection|constraints)\b/) || text.match?(BLOCK_OPEN)
-          push(stack, text, constrained: text.start_with?("constraints") || nil,
+          push(stack, text, constrained: text.match?(/\A(?:constraints|if|unless)\b/) || nil,
                             path: text.start_with?("member") ? ":id" : nil)
         end
       end
