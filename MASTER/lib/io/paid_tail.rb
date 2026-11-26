@@ -23,7 +23,14 @@ module Master
 
       def config = LaneSelection.config.fetch("paid_tail", {})
 
-      def enabled? = ENV["MASTER_PAID_TAIL"] != "0" && config["enabled"] != false && !capped?
+      def enabled?
+        return false if ENV["MASTER_PAID_TAIL"] == "0" || config["enabled"] == false || capped?
+
+        cap = run_cap_usd
+        cap.finite? && cap.positive? && spent < cap
+      rescue ArgumentError, TypeError
+        false
+      end
 
       def capped? = LOCK.synchronize { @capped }
 

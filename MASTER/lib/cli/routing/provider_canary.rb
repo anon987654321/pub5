@@ -101,9 +101,9 @@ module Master
             failover: false,
           )
           latency_ms = elapsed_ms(started)
-          ok = response.to_s.include?(token)
+          ok = response.to_s.strip == token
           status = ok ? :success : :canary_validation_failure
-          error = ok ? nil : "canary response did not contain its token"
+          error = ok ? nil : "canary response did not match its token"
           record(model:, status:, latency_ms:, error:)
           { model:, domain: provider_domain(model), ok:, latency_ms:, error: }
         rescue StandardError => e

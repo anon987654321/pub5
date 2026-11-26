@@ -94,6 +94,18 @@ class ProviderCanaryTest < Minitest::Test
     end
   end
 
+  def test_canary_rejects_a_token_embedded_in_an_unexpected_reply
+    agent = Agent.new
+    agent.define_singleton_method(:ask_once) do |prompt, **|
+      "Unexpected prefix: #{prompt.sub(/Reply with (.+) and nothing else./, '\\1')}"
+    end
+    router = RecordingRouter.new
+    canary = Master::CLI::Routing::ProviderCanary.new(agent:, router:)
+
+    refute canary.send(:probe, "grok-cli:opus").fetch(:ok)
+    assert_equal :canary_validation_failure, router.outcomes.fetch(0).fetch(:status)
+  end
+
   def test_run_uses_ask_once_without_failover_and_publishes_results
     agent = Agent.new
     bus = Bus.new

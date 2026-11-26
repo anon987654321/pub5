@@ -103,6 +103,17 @@ class TestLanePool < Minitest::Test
     assert_equal 300, door.send(:call_deadline_for, OPUS), "subscription calls retain the dispatcher deadline"
   end
 
+  def test_nonpositive_or_invalid_paid_tail_caps_prevent_selection
+    original = Tail.config
+    [0, -1, Float::INFINITY, Float::NAN, "bad", nil].each do |cap|
+      Tail.stub(:config, original.merge("run_cap_usd" => cap)) do
+        refute Tail.enabled?, cap.inspect
+        assert_empty Tail.models
+        assert_equal [OPUS, SUPER], Selection.order([OPUS, HAIKU, SUPER])
+      end
+    end
+  end
+
   def test_the_paid_tail_lists_cheap_catalog_models_only
     assert_equal [HAIKU, LUNA], Tail.models, "free, over-cap and models.yml's own models are left out"
   end
