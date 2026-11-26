@@ -27,16 +27,23 @@ module Studio
       # A deliberate sitting declares its shot design in the prompt itself:
       # framing (the crop), lens or distance (the projection), light (the one
       # thing a grade can only deepen), moment (an observed, not performed,
-      # expression) and eye-line (where the subject looks). A scene missing an
-      # axis asks the model to guess it, and the guess is always the average.
-      # The matchers are deliberately lexical: they gate the presence of the
-      # decision, not its poetry.
+      # expression), eye-line (where the subject looks) and flaw (the
+      # imperfection a real camera leaves behind). A scene missing an axis asks
+      # the model to guess it, and the guess is always the average; a scene with
+      # no flaw reads as a composite, because nothing in the world is that
+      # clean. The matchers are deliberately lexical: they gate the presence of
+      # the decision, not its poetry.
       SCENE_AXES = {
         "framing" => /crop|fram|head[ -]and[ -]shoulders|waist[ -]up|mid[ -]torso|chest[ -]up/i,
         "lens_or_distance" => /\b\d+\s?mm\b|\bdistance\b|metre|meter|arm's length/i,
         "light" => /sun|light|lamp|haze|neon|tungsten|overcast|golden|dusk|dawn|blue hour|daylight|catchlight|candle|flame|softbox|shade|backlit|window/i,
         "moment" => /laugh|grin|smile|expression|amused|unguarded|tired|breath|mid[ -]word|concentration|thoughtful|mid[ -]thought|calm|composed|contemplat|reflective|candid|composure|performed/i,
         "eye_line" => /eye|gaze|to[ -](the[ -])?lens|on the lens|past the lens/i,
+        "flaw" => /blown|clipped|smudge|spray|flare|halation|dust|motion\s+blur|
+                   rain\s+on\s+the\s+(lens|window)|strand\s+of\s+hair|hair\s+across|
+                   eye\s+in\s+shadow|a\s+degree\s+off|cutting\s+the\s+(top|bottom)\s+corner|
+                   cut\s+by\s+the\s+frame|blurred\s+across\s+the\s+foreground|
+                   soft\s+in\s+the\s+foreground|softbox\s+edge/ix,
       }.freeze
 
       class Error < StandardError; end
@@ -110,7 +117,7 @@ module Studio
       end
 
       # Every sitting in the shared and per-subject scene sets must declare all
-      # five shot-design axes. Read-only: this audits the prompt bodies, never
+      # six shot-design axes. Read-only: this audits the prompt bodies, never
       # a provider.
       def audit_scene_design(scenes: nil, subject_scenes: nil)
         scenes ||= Selfie::SCENES

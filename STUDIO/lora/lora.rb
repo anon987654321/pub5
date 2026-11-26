@@ -480,53 +480,54 @@ module Studio
       # Each scene is the body of the prompt: environment, what is happening,
       # crop, lens, light and moment. The subject's trigger, descriptor and the
       # shared Craft tail are added by IdeaPicture, which is the one place that
-      # knows them. Every sitting declares five shot-design axes - framing,
-      # lens or distance, light, moment and eye-line - and
+      # knows them. Every sitting declares six shot-design axes - framing,
+      # lens or distance, light, moment, eye-line and the flaw a real camera
+      # would leave - and
       # Quality.audit_scene_design refuses a sitting that leaves one to chance.
       SCENES = [
         # 1 — a white-sand beach with limestone islands on the horizon
         "a barefoot selfie on a white-sand beach in Langkawi looking out over the " \
         "green limestone islands of southern Thailand, warm late-afternoon sun low " \
         "across the water, salt-damp hair, chest-up crop, 50mm lens, eyes on the " \
-        "lens, the moment just after a laugh",
+        "lens, the moment just after a laugh, a strand of hair across one cheek",
         # 2 — the new tower, vertigo
         "a selfie at the foot of the new Menara Merdeka tower in Kuala Lumpur, the " \
         "camera angled up the glass and steel, pale blue midday haze, city vertigo, " \
-        "wide environmental framing, 35mm lens, eyes on the lens, a wide real grin",
+        "wide environmental framing, 35mm lens, eyes on the lens, a wide real grin, the tower's top clipped by the frame edge",
         # 3 — night market, colour
         "a night-market selfie in George Town, Penang, surrounded by hanging " \
         "lanterns and steaming food stalls, saturated neon and tungsten mixing on " \
         "the skin, the crowd softly blurred behind, chest-up framing, 50mm lens, chin lowered eyes up, " \
-        "amused and about to laugh",
+        "amused and about to laugh, a lantern blown out to white behind her shoulder",
         # 4 — rainforest canopy, dappled green
         "a selfie on a rainforest canopy walkway in Taman Negara, dappled green " \
         "light through the leaves, mist drifting between the trees, " \
         "head-and-shoulders crop, 85mm lens, eyes just past the lens, an unguarded " \
-        "expression",
+        "expression, a leaf blurred across the foreground",
         # 5 — Norwegian ferry deck, wind
         "a selfie on the deck of a Norwegian coastal ferry with a fjord wall behind, " \
         "wind pulling at her hair, flat overcast light, the arm holding the camera " \
-        "visible at the frame edge, 50mm lens, eyes on the lens, a warm half-smile",
+        "visible at the frame edge, 50mm lens, eyes on the lens, a warm half-smile, the horizon a degree off level",
         # 6 — snow cabin at dusk, blue hour
         "a selfie outside a snow-covered mountain cabin at dusk, the last blue light " \
         "in the sky and a single warm lamp behind her, a wool jumper and breath " \
-        "visible in the cold, head-and-shoulders framing, 85mm lens, eyes on the lens, cheeks lifted eyes bright",
+        "visible in the cold, head-and-shoulders framing, 85mm lens, eyes on the lens, cheeks lifted eyes bright, a cold smudge on the lens softening one corner",
         # 7 — midnight kitchen, one lamp
         "a selfie in a dim kitchen at midnight making tea, lit by one lamp under the " \
         "cabinets, steam rising from the cup, one hand resting at the jaw, waist-up framing, eyes lowered to the cup, 50mm " \
-        "lens, a tired unguarded expression, nothing arranged for the camera",
+        "lens, a tired unguarded expression, nothing arranged for the camera, one eye in shadow",
         # 8 — car window, golden hour
         "a selfie through the open window of a parked car at a coastal overlook at " \
         "golden hour, warm low sun raking across her face, chest-up framing, 35mm lens, eyes just past " \
-        "the lens, laughing at something off frame",
+        "the lens, laughing at something off frame, the window frame cutting the bottom corner",
         # 9 — rainy old town, umbrella
         "a selfie on a cobbled old-town street in the rain, holding an umbrella, wet " \
         "stone reflecting the shop lights, cool overcast light, waist-up framing, 50mm lens, eyes on " \
-        "the lens, biting back a grin",
+        "the lens, biting back a grin, rain on the lens blurring one edge",
         # 10 — rooftop pool, blue hour city
         "a selfie on a rooftop pool deck at blue hour with a lit city skyline " \
         "behind, cool ambient light on her face against warm city bokeh, chest-up framing, 35mm lens, " \
-        "eyes on the lens, a wide real grin",
+        "eyes on the lens, a wide real grin, a pool light blown out behind her",
       ].freeze
 
       # Each sitting gets its own stock, rather than inheriting one house look.
@@ -539,28 +540,28 @@ module Studio
       # identity descriptor are added once by IdeaPicture.
       SUBJECT_SCENES = {
         "johann" => [
-          "a candid mid-torso selfie beside a rain-streaked café window in central Bergen, wearing a long charcoal herringbone wool chore coat over an oatmeal Fair Isle lambswool crewneck, the coat's broad collar and knit texture clearly visible, wet cobblestones and a soft harbour blur outside, cool north daylight with the window's bright panes still holding soft grey detail, rectangular window catchlights, a quiet expression just after a laugh, portrait-distance facial proportions with intimate direct-to-lens framing, 85mm",
-          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wearing a forest-green Fair Isle wool crewneck over a clean white waffle-knit Henley, relaxed dark denim, the patterned knit visible across the chest, waist-up framing, wind moving the hair and coat collar, a broad overcast sky held at mid-grey with its cloud structure readable, soft even light on the face, relaxed half-smile, natural eye contact, 50mm",
-          "a late-night record-shop selfie between listening shelves, wearing a dark espresso suede leather blouson over a cream cashmere zip cardigan and charcoal merino crewneck, the suede nap and simple collar clearly visible, one warm tungsten practical and a cool street-window fill, waist-up framing, mixed warm and cool catchlights, amused mid-conversation expression, eyes finding the lens, 50mm",
-          "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow at mid-grey with the dark pine structure readable outside, one warm lamp behind and cold sky fill across the face, head-and-shoulders framing, visible breath, unguarded eyes, 85mm",
-          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight with the harbour highlights holding texture, chest-up framing, a real small grin, eyes on the lens, documentary colour-negative photography, 50mm",
-          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, chest-up framing, rich Tri-X silver tones, direct gaze and natural facial texture, an unhurried calm, 85mm",
+          "a candid mid-torso selfie beside a rain-streaked café window in central Bergen, wearing a long charcoal herringbone wool chore coat over an oatmeal Fair Isle lambswool crewneck, the coat's broad collar and knit texture clearly visible, wet cobblestones and a soft harbour blur outside, cool north daylight with the window's bright panes still holding soft grey detail, rectangular window catchlights, a quiet expression just after a laugh, portrait-distance facial proportions with intimate direct-to-lens framing, 85mm, the window frame cutting the top corner",
+          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wearing a forest-green Fair Isle wool crewneck over a clean white waffle-knit Henley, relaxed dark denim, the patterned knit visible across the chest, waist-up framing, wind moving the hair and coat collar, a broad overcast sky held at mid-grey with its cloud structure readable, soft even light on the face, relaxed half-smile, natural eye contact, 50mm, the horizon a degree off level",
+          "a late-night record-shop selfie between listening shelves, wearing a dark espresso suede leather blouson over a cream cashmere zip cardigan and charcoal merino crewneck, the suede nap and simple collar clearly visible, one warm tungsten practical and a cool street-window fill, waist-up framing, mixed warm and cool catchlights, amused mid-conversation expression, eyes finding the lens, 50mm, a tungsten practical blown out behind his shoulder",
+          "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow at mid-grey with the dark pine structure readable outside, one warm lamp behind and cold sky fill across the face, head-and-shoulders framing, visible breath, unguarded eyes, 85mm, one shoulder cut by the frame edge",
+          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight with the harbour highlights holding texture, chest-up framing, a real small grin, eyes on the lens, documentary colour-negative photography, 50mm, wet-stone glare blown out at the frame edge",
+          "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, chest-up framing, rich Tri-X silver tones, direct gaze and natural facial texture, an unhurried calm, 85mm, a hard highlight blown on the wet stone",
         ].freeze,
         "ragnhild" => [
-          "a painter's-studio selfie beside a large unfinished canvas, wearing a sharply tailored oxblood wool jacket with matching high-waisted trousers and an ivory silk-charmeuse blouse, the clean lapel and fluid blouse visible in a waist-up crop, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, eyes returning to the lens, soft rectangular catchlights, restrained editorial framing, 85mm",
-          "a gallery-evening selfie after the visitors have left, wearing a rich-purple velvet blazer over a dark plum satin blouse and fluid tailored black trousers, the velvet and silk textures visible under warm track lights, paintings behind and gentle cool fill from the windows, waist-up framing, thoughtful expression, eyes drifting past the lens, no retouching, visible pores, 50mm",
-          "a waterfront selfie on a windy Bergen afternoon, wearing a dark chestnut suede coat with a soft shearling collar over a pale cashmere knit, the collar and knit clearly framed against the grey sea and distant mountains, soft overcast light, hair moving naturally, the moment just after a laugh, eyes bright at the lens, 50mm",
-          "a small old-town café selfie on a rainy afternoon, wearing a structured black leather blazer over a vivid chartreuse fine-gauge merino sweater and dark tailored trousers, the clean leather shoulders and bright knit visible in the crop, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, eyes on the lens, 85mm",
-          "a monochrome studio portrait selfie in front of a charcoal drawing, head-and-shoulders framing, one soft short-side key light with a gentle shadow side and a low fill, direct calm gaze, nothing performed, tactile HP5 documentary grain, 85mm",
-          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, chest-up framing, a reflective unposed expression, eyes past the lens, muted Fuji colour, 50mm",
+          "a painter's-studio selfie beside a large unfinished canvas, wearing a sharply tailored oxblood wool jacket with matching high-waisted trousers and an ivory silk-charmeuse blouse, the clean lapel and fluid blouse visible in a waist-up crop, daylight from a tall north-facing window, paint-marked sleeve and quiet concentration, eyes returning to the lens, soft rectangular catchlights, restrained editorial framing, 85mm, the easel edge soft in the foreground",
+          "a gallery-evening selfie after the visitors have left, wearing a rich-purple velvet blazer over a dark plum satin blouse and fluid tailored black trousers, the velvet and silk textures visible under warm track lights, paintings behind and gentle cool fill from the windows, waist-up framing, thoughtful expression, eyes drifting past the lens, no retouching, visible pores, 50mm, a track light blown out behind her",
+          "a waterfront selfie on a windy Bergen afternoon, wearing a dark chestnut suede coat with a soft shearling collar over a pale cashmere knit, the collar and knit clearly framed against the grey sea and distant mountains, soft overcast light, hair moving naturally, the moment just after a laugh, eyes bright at the lens, 50mm, a strand of hair across her cheek",
+          "a small old-town café selfie on a rainy afternoon, wearing a structured black leather blazer over a vivid chartreuse fine-gauge merino sweater and dark tailored trousers, the clean leather shoulders and bright knit visible in the crop, window reflections and warm lamps behind, short-side window light shaping the cheek, a lopsided half-smile, eyes on the lens, 85mm, rain on the window blurring one corner",
+          "a monochrome studio portrait selfie in front of a charcoal drawing, head-and-shoulders framing, one soft short-side key light with a gentle shadow side and a low fill, direct calm gaze, nothing performed, tactile HP5 documentary grain, 85mm, a soft flare from the key light at the frame edge",
+          "a winter hillside selfie just after sunrise, pale sky and bare branches behind, crisp open-shade light, wool coat, chest-up framing, a reflective unposed expression, eyes past the lens, muted Fuji colour, 50mm, the horizon a degree off level",
         ].freeze,
         "merethe" => [
-          "a coastal-cliff selfie in western Norway, wearing a warm camel suede coat with a neat shearling collar over an ivory ribbed cashmere turtleneck, the soft pile and knit clearly visible in the chest-up frame, sea and pale sky behind, low warm sunlight, a genuine half-smile, eyes on the lens, 85mm",
-          "a quiet minimalist studio selfie against warm white, wearing a tailored deep-plum velvet suit with a champagne silk-charmeuse blouse, clean single-breasted lines and rich fabric texture visible in the frame, one large softbox above and to camera-left, visible natural skin texture, composed direct gaze, a settled post-laugh composure, 85mm",
-          "a candlelit kitchen selfie late in the evening, wearing a clean black leather jacket over a deep burgundy charmeuse blouse and dark straight-leg trousers, open jacket framing the blouse, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, eyes lowered in thought, 50mm",
-          "a backlit-window selfie on a grey morning, wearing a long deep-olive brushed-wool coat over an ivory cable-knit sweater with a restrained aubergine scarf, the coat's structured shoulder and knit pattern clearly visible, waist-up framing, soft daylight outlining the subject, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm",
-          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, chest-up framing, restrained amber and blue mixed light, an amused expression, eyes on the lens, 50mm",
-          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, waist-up framing, practical wool outerwear, open unguarded expression, eyes on the lens, natural colour-negative film, 50mm",
+          "a coastal-cliff selfie in western Norway, wearing a warm camel suede coat with a neat shearling collar over an ivory ribbed cashmere turtleneck, the soft pile and knit clearly visible in the chest-up frame, sea and pale sky behind, low warm sunlight, a genuine half-smile, eyes on the lens, 85mm, sea spray blurring one edge",
+          "a quiet minimalist studio selfie against warm white, wearing a tailored deep-plum velvet suit with a champagne silk-charmeuse blouse, clean single-breasted lines and rich fabric texture visible in the frame, one large softbox above and to camera-left, visible natural skin texture, composed direct gaze, a settled post-laugh composure, 85mm, the softbox edge just visible at the frame corner",
+          "a candlelit kitchen selfie late in the evening, wearing a clean black leather jacket over a deep burgundy charmeuse blouse and dark straight-leg trousers, open jacket framing the blouse, one practical flame warming one side of the face and soft darkness on the other, a candid expression mid-thought, eyes lowered in thought, 50mm, the candle flame blown out",
+          "a backlit-window selfie on a grey morning, wearing a long deep-olive brushed-wool coat over an ivory cable-knit sweater with a restrained aubergine scarf, the coat's structured shoulder and knit pattern clearly visible, waist-up framing, soft daylight outlining the subject, reflected fill preserving detail in the eyes, a small post-laugh smile, 85mm, the window light blown out at the frame edge",
+          "a rainy old-town street selfie under an umbrella, shop lights reflected on wet cobbles, chest-up framing, restrained amber and blue mixed light, an amused expression, eyes on the lens, 50mm, rain on the lens blurring one corner",
+          "a coastal ferry selfie with a deep Norwegian fjord behind, cool overcast sky light, wind in the hair, waist-up framing, practical wool outerwear, open unguarded expression, eyes on the lens, natural colour-negative film, 50mm, a strand of hair across her cheek",
         ].freeze
       }.freeze
 
