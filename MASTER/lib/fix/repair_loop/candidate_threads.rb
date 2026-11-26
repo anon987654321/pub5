@@ -14,6 +14,8 @@ module Master
       # starts with its parent's thread-locals, and a candidate still running when the caller gives up
       # (the file budget's Timeout) is killed rather than left holding a model call.
       module CandidateThreads
+        MAX_PARALLEL_CANDIDATES = 4
+
         private
 
         def candidate_threads(count, violation:, event:, &block)
@@ -22,14 +24,17 @@ module Master
 
           locals = inherited_thread_locals
           threads = []
-          count.times do |index|
-            threads << Thread.new do
-              Thread.current.report_on_exception = false
-              locals.each { |key, value| Thread.current[key] = value }
-              one_candidate(index, violation:, event:, &block)
+          (0...count).each_slice(MAX_PARALLEL_CANDIDATES).flat_map do |indices|
+            threads = []
+            indices.each do |index|
+              threads << Thread.new do
+                Thread.current.report_on_exception = false
+                locals.each { |key, value| Thread.current[key] = value }
+                one_candidate(index, violation:, event:, &block)
+              end
             end
+            threads.map(&:value)
           end
-          threads.map(&:value)
         ensure
           # Populate the list before spawning: if a later Thread.new fails,
           # earlier candidates remain reachable. Kill and join on timeout too.

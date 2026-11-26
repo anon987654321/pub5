@@ -40,12 +40,12 @@ module Operator
 
     def parse(argv, root:, now: Time.now)
       out = File.join(root, "MASTER", ".master", "design", now.strftime("%Y%m%dT%H%M%S"))
-      opts = Options.new(apps: ["brgen"], surfaces: [], rounds: 12, candidates: 2, limit: 12, out:)
+      opts = Options.new(apps: ["brgen"], surfaces: [], rounds: 12, candidates: 10, limit: 12, out:)
       OptionParser.new do |o|
         o.on("--app LIST") { |v| opts.apps = v.split(",").map(&:strip).reject(&:empty?) }
         o.on("--surface LIST") { |v| opts.surfaces = v.split(",").map(&:strip).reject(&:empty?) }
         o.on("--rounds N", Integer) { |v| opts.rounds = v }
-        o.on("--candidates N", Integer) { |v| opts.candidates = v.clamp(1, 4) }
+        o.on("--candidates N", Integer) { |v| opts.candidates = v.clamp(10, 50) }
         o.on("--limit N", Integer) { |v| opts.limit = v.clamp(1, 60) }
       end.parse!(argv.dup)
       opts

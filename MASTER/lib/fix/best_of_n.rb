@@ -19,17 +19,25 @@ module Master
     # when layout quality, a quality-check metric or chrome drift regresses.
     # The best surviving score wins; the smallest diff breaks a tie.
     #
-    # MASTER_FIX_BEST_OF sets N (default 3). At 1 the pass is inactive and
-    # RepairLoop behaves exactly as it did without it.
+    # Model-assisted exploration requests 10–50 alternatives. Deterministic repairs
+    # do not need manufactured variants.
     module BestOfN
       LAW_ID = "RENDERED_VISUAL_REFINEMENT"
-      MAX_N = 8
+      MIN_N = 10
+      MAX_N = 50
       TIE = 0.05
       STYLE_EXTENSIONS = %w[.css .scss].freeze
       VARIANTS = [
-        "Candidate approach: change as little as possible, only the property the finding names.",
-        "Candidate approach: reach the same goal through a different selector or property than the obvious one.",
-        "Candidate approach: prefer an existing design token or layout primitive over a new value.",
+        "Composition: reorganise the existing regions around the primary task.",
+        "Subtraction: remove redundant framing, grouping or decoration.",
+        "Hierarchy: change relative prominence rather than overall styling.",
+        "Flow: use intrinsic wrapping or grid instead of fixed positioning.",
+        "Density: reduce cognitive load through meaningful spacing.",
+        "Responsive: solve the narrowest viewport without degrading desktop.",
+        "Alignment: choose a different optical anchor or shared baseline.",
+        "Reading: improve measure, sequence and content priority.",
+        "Interaction: preserve every action while clarifying its placement.",
+        "Primitive: reuse the simplest existing layout primitive or token.",
       ].freeze
       Scored = Data.define(:source, :score, :problems, :diff, :floor)
 
@@ -38,7 +46,13 @@ module Master
 
       module_function
 
-      def n = Integer(ENV.fetch("MASTER_FIX_BEST_OF", "3")).clamp(1, MAX_N)
+      def count(key, env = ENV)
+        Integer(env.fetch(key, MIN_N.to_s)).clamp(MIN_N, MAX_N)
+      rescue ArgumentError, TypeError
+        MIN_N
+      end
+
+      def n = count("MASTER_FIX_BEST_OF")
 
       # A tuple the ToolBreaker has fused gets no N-way fan-out either: N more model
       # calls on a prompt that failed three times against this unchanged file.
@@ -76,7 +90,7 @@ module Master
       def extra_candidate_sources(loop, violation, original, extra_authors)
         ext = File.extname(violation[:file]).downcase
         (1...n).filter_map do |i|
-          prompt = loop.send(:build_prompt_for, violation:, src: original, path: violation[:file]) + "\n\n#{VARIANTS[(i - 1) % VARIANTS.size]}"
+          prompt = loop.send(:build_prompt_for, violation:, src: original, path: violation[:file]) + "\n\nCandidate #{i + 1}/#{n}: #{VARIANTS[(i - 1) % VARIANTS.size]} Preserve the underlying structure and identity. Seek a materially distinct solution, not a cosmetic variation."
           Thread.current[:master_llm_answer_model] = nil
           raw = loop.send(:ask_agent, prompt, image: loop.instance_variable_get(:@visual_image)).to_s
           candidate = loop.send(:extract_code, raw, ext)
@@ -196,6 +210,11 @@ module Master
           name: "structural",
           instruction: "Consider a materially different boundary or transformation from the other candidates. Keep the change reversible, retain compatibility, and reject a refactor that merely relocates complexity.",
         },
+        { name: "data_flow", instruction: "Simplify data movement and remove intermediate transformations while retaining contracts." },
+        { name: "invariants", instruction: "Enforce the existing invariant at its authoritative boundary; avoid redundant checks." },
+        { name: "lifecycle", instruction: "Improve lifecycle, resource ownership and cleanup with the existing primitives." },
+        { name: "composition", instruction: "Recompose existing components without changing public capabilities or adding layers." },
+        { name: "elimination", instruction: "Remove unnecessary machinery; prove consumers and behavior remain intact." },
       ].map(&:freeze).freeze
 
       RUNTIME_STATES = %w[NOT_RUN PASS FAIL BLOCKED SKIPPED].freeze
@@ -206,11 +225,7 @@ module Master
 
       class RestoreFailure < StandardError; end
 
-      def self.candidate_count
-        Integer(ENV.fetch("MASTER_FIX_CANDIDATES", "3")).clamp(2, APPROACHES.length)
-      rescue ArgumentError
-        3
-      end
+      def self.candidate_count = BestOfN.count("MASTER_FIX_CANDIDATES")
 
       def self.approach(index)
         APPROACHES.fetch(index % APPROACHES.length)

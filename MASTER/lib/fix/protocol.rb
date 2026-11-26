@@ -292,12 +292,16 @@ module Master
           semantic-model, structural, or rendered-surface repair as applicable.
           Keep source and its verified dependency context attached to the repair.
 
-          For each model-assisted finding, generate up to MASTER_FIX_CANDIDATES
-          materially different alternatives (default three), not repeated retries
-          of the same prompt. Distinguish a minimal local repair, a root-cause
-          repair at the natural owner, and reuse/simplification of an existing
-          abstraction. Do not pad the set with duplicate source. Apply this to
-          council, diff, ordinary source, and large-file repair routes.
+          For each model-assisted finding, explore 10–50 materially different
+          alternatives (MASTER_FIX_CANDIDATES, default ten). Keep the underlying
+          structure, public contracts, capabilities and product identity intact.
+          Explore different causal, structural, subtractive and compositional
+          approaches; reject duplicates rather than pad the set. Cherry-pick the
+          strongest evidence-backed candidate, not the first plausible answer.
+          Apply this to council, diff, ordinary source and large-file repair.
+          Report requested, distinct, verified and rejected counts separately;
+          incomplete exploration must not be reported as complete. Deterministic
+          mechanical fixes do not require invented alternatives.
 
           Read the relevant surface cases from
           RAILS/test/interaction_campaign_400.json and include their actors,

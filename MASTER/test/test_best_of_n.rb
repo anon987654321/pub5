@@ -176,17 +176,15 @@ class BestOfNTest < Minitest::Test
     assert_equal candidate, File.read(@path)
   end
 
-  def test_one_candidate_keeps_todays_behaviour
+  def test_visual_exploration_defaults_to_ten_and_clamps_to_fifty
+    ENV.delete("MASTER_FIX_BEST_OF")
+    assert_equal 10, B.n
     ENV["MASTER_FIX_BEST_OF"] = "1"
-    assert_equal 1, B.n
-    refute B.active?({ law: B::LAW_ID, file: "x.scss" }, Object.new)
+    assert_equal 10, B.n
+    ENV["MASTER_FIX_BEST_OF"] = "100"
+    assert_equal 50, B.n
   ensure
     ENV.delete("MASTER_FIX_BEST_OF")
-  end
-
-  def test_visual_exploration_is_on_by_default
-    ENV.delete("MASTER_FIX_BEST_OF")
-    assert_equal 3, B.n
   end
 
   def test_missing_surface_rejects_candidate
@@ -312,12 +310,12 @@ class TestUserSimulation < Minitest::Test
   end
 
   def test_candidate_approaches_are_materially_distinct_and_bounded
-    approaches = (0...3).map { |index| UserSimulation.approach(index) }
+    approaches = (0...10).map { |index| UserSimulation.approach(index) }
 
-    assert_equal 3, approaches.map { |row| row.fetch(:name) }.uniq.length
-    assert_equal 3, approaches.map { |row| row.fetch(:instruction) }.uniq.length
-    assert_operator UserSimulation.candidate_count, :>=, 2
-    assert_operator UserSimulation.candidate_count, :<=, 5
+    assert_equal 10, approaches.map { |row| row.fetch(:name) }.uniq.length
+    assert_equal 10, approaches.map { |row| row.fetch(:instruction) }.uniq.length
+    assert_operator UserSimulation.candidate_count, :>=, 10
+    assert_operator UserSimulation.candidate_count, :<=, 50
   end
 
   def test_candidate_telemetry_does_not_claim_scenario_execution

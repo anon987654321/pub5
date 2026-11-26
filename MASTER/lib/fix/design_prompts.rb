@@ -13,6 +13,12 @@ module Master
         "Meso: refine relationships among groups, alignment and separation.",
         "Micro: refine type size, optical alignment, rhythm or control geometry.",
         "Subtractive: remove framing or a redundant wrapper; use negative space and preserve the task.",
+        "Flow: use intrinsic wrapping or grid instead of fixed positioning.",
+        "Density: reduce cognitive load through meaningful spacing.",
+        "Responsive: solve the narrowest viewport without degrading desktop.",
+        "Alignment: choose a different optical anchor or shared baseline.",
+        "Reading: improve measure, sequence and content priority.",
+        "Interaction: preserve every action while clarifying its placement.",
       ].freeze
 
       DIRECTION = "Flat, brutalist, Swiss: one sans family, a strict 8px rhythm, tap targets of at least 44px, " \
@@ -83,6 +89,8 @@ module Master
           #{type_note}
           #{markup_note(sources)}
           #{VARIANTS[variant % VARIANTS.size]}
+          Explore a materially different arrangement of the same underlying semantic regions and functions.
+          Preserve identity, content, interactions and laws. Do not create alternatives by simply recolouring or reskinning.
           Judge the whole composition, including the relationship between its primary subject and secondary controls.
           A sparse interface is not a defect; do not add furniture merely to fill empty space.
           #{undone_note}
