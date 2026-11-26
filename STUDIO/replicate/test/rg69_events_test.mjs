@@ -10,6 +10,7 @@ const ranges=[["const DRUM_PATTERNS=","const STYLES="],["const LANES=","const tp
 const fixture="\nconst tp=(a,t)=>Array.isArray(a)?a:Array(t||16).fill(a);\nconst tpP=object=>Object.fromEntries(Object.entries(object).map(([key,value])=>[key,tp(value)]));\nconst crypto={getRandomValues:a=>(a[0]=42,a)};\nconst deepClone=x=>JSON.parse(JSON.stringify(x));\nconst syncUIFromState=()=>{};\nconst st_={started:false,stepCount:16,bank:0,laneLengths:{},muteState:{}};\nconst aud_={bpm:96,swing:35,pocket:68},mix_={master:75},pat_={d:\"basic\",b:Object.keys(BASS_PATS)[0],k:Object.keys(KEYS_PATS)[0],p:Object.keys(PAD_PATS)[0]};\nconst seq_=Object.fromEntries(LANES.map(l=>[l,Array.from({length:64},(_,i)=>({v:.9,t:i%2?25:-25,p:100,r:4,g:1,cond:1,pitch:0}))]));\nconst rg69AudioProfile={notes:{kick:60,kickSub:30,kickBody:65,snareRing:180,hat:9000,open:6000}};\n";
 const checks="\nlet cases=0,steps=0,events=0;\nfor(const bpm of [60,170])for(const count of [8,16,32,64])for(const swing of [0,100])for(const pocket of [0,100]){\nconst take=session();take.steps=count;take.aud={bpm,swing,pocket};take.lengths={h:5,s:7};\ntake.drums[take.pat.d]=Object.fromEntries(DRUM_LANES.map(l=>[l,Array(16).fill(.9)]));\nconst sixteenth=60/bpm/4,last={};\nfor(let i=0;i<256;i++){\nconst args=[i%count,.05+i*sixteenth,{session:take,tick:i,stepCount:count,muteMap:{},applyProb:true,applyRatchet:true,applyTranspose:true,addSwing:true,sixteenth}];\nconst result=compileStep(...args);\nassert(JSON.stringify(result)===JSON.stringify(compileStep(...args)),\"seed mismatch\");\nfor(let j=0;j<result.length;j++){\nconst e=result[j];\nassert(e.args.length===(NOISE_VOICES.has(e.voice)?3:4),\"argument count\");\nassert(Number.isFinite(e.time)&&e.time>=0,\"invalid time\");\nassert(j===0||e.time>=result[j-1].time,\"event order\");\nassert(e.time>=(last[e.voice]??0)-1e-9,\"voice order \"+e.voice);\nlast[e.voice]=e.time;events++;\n}\nsteps++;\n}\ncases++;\n}\nconst take=session();take.drums[take.pat.d]=Object.fromEntries(DRUM_LANES.map(l=>[l,Array(16).fill(1)]));\ntake.seq.k[0].p=0;take.seq.s[0].p=100;\nconst muted=compileStep(0,.05,{session:take,tick:0,stepCount:16,muteMap:{s:1},applyProb:true,applyRatchet:true,addSwing:true});\nassert(!muted.some(e=>[\"kick\",\"kickSub\",\"kickClk\",\"kickBody\",\"snare\",\"snareRng\"].includes(e.voice)),\"mute/probability\");\nconst midi=midiBytes(take,1),view=new DataView(midi.buffer);\nassert(String.fromCharCode(...midi.slice(0,4))===\"MThd\"&&String.fromCharCode(...midi.slice(14,18))===\"MTrk\",\"MIDI header\");\nassert(view.getUint32(18)===midi.length-22,\"MIDI length\");\nconst original=session();seq_.k[0].hit=.22;restoreSession(original);\nassert(seq_.k[0].hit===undefined,\"session override restoration\");\nconst pcm=new Float32Array(8000);for(let i=500;i<pcm.length;i+=1000)pcm.fill(.8,i,i+30);\nconst buffer={duration:1,sampleRate:8000,getChannelData:()=>pcm};\nassert(detectSlices(buffer,\"equal\").length===16,\"equal slices\");\nassert(detectSlices(buffer).length>=4,\"transient slices\");\nreturn {cases,steps,events,seed:\"deterministic\",midi:\"valid header and track length\",session:\"override restoration\",samples:\"slice detection passed\"};\n";
 const sources=ranges.map(([a,b])=>extract(a,b));
+sources[0]=extract("const DRUM_MACHINES=","function createDrumBank(")+sources[0];
 const prefix=fixture.slice(0,fixture.indexOf('const aud_='));
 const state=fixture.slice(fixture.indexOf('const aud_='));
 const run=new Function('assert',prefix+sources[0]+sources[1]+state+sources.slice(2).join('\n')+checks);
@@ -45,7 +46,7 @@ assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
 console.log("profile origin checks: "+origins.length);
 
  // Strict graph mock: reject undefined instrument and connection endpoints.
-const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createConsoleStrip(","function applyFX("]];
+const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["const DRUM_MACHINES=","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createConsoleStrip(","function applyFX("]];
 const graphFixture=`
 const edges=[];
 const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
@@ -56,8 +57,10 @@ disconnect(){}
 start(){return this;}
 stop(){return this;}
 triggerAttackRelease(){}
+setPeriodicWave(){}
+dispose(){}
 }
-const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBiquadFilter:()=>new Node(),createWaveShaper:()=>new Node(),createDelay:()=>new Node(),createOscillator:()=>new Node(),createChannelSplitter:()=>new Node(),createChannelMerger:()=>new Node(),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
+const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBiquadFilter:()=>new Node(),createWaveShaper:()=>new Node(),createDelay:()=>new Node(),createOscillator:()=>new Node(),createChannelSplitter:()=>new Node(),createChannelMerger:()=>new Node(),createConvolver:()=>new Node(),createAnalyser:()=>Object.assign(new Node(),{frequencyBinCount:4096}),createPanner:()=>Object.assign(new Node(),{positionX:param(),positionY:param(),positionZ:param()}),createPeriodicWave:()=>({}),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
 const Tone=Object.fromEntries("Gain Filter Distortion Compressor StereoWidener Limiter Reverb FeedbackDelay Noise LFO Chebyshev Chorus Tremolo Panner Synth MonoSynth FMSynth PolySynth".split(" ").map(name=>[name,Node]));
 Object.assign(Tone,{getContext:()=>({rawContext:raw}),mtof:n=>440*2**((n-69)/12),connect:(from,to)=>from.connect(to)});
 const log=()=>{};
@@ -126,11 +129,11 @@ return {bars:SONG_BARS,sections:count,midiBytes:midi.length};
 console.log(JSON.stringify(songTest(assert),null,2));
 
 const wearTest=new Function("assert",extract("function wearProcessor()","function createAnalogRig(")+`
-let Processor;
+const processors={};
 class AudioWorkletProcessor{}
-const sampleRate=44100,registerProcessor=(name,cls)=>{Processor=cls;};
+const sampleRate=44100,registerProcessor=(name,cls)=>{processors[name]=cls;};
 wearProcessor();
-const a=new Processor(),b=new Processor(),input=Float32Array.from({length:2048},(_,i)=>.7*Math.sin(i*.1));
+const Processor=processors["rg69-wear"],a=new Processor(),b=new Processor(),input=Float32Array.from({length:2048},(_,i)=>.7*Math.sin(i*.1));
 const output=new Float32Array(input.length),bypass=new Float32Array(input.length);
 a.process([[input]],[[output]],{amount:[.7],color:[.6]});
 b.process([[input]],[[bypass]],{amount:[0],color:[0]});
