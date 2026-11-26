@@ -14,6 +14,7 @@ module Master
         include CliUsage
 
         CLI_LANE_TIMEOUT_S = 60
+        CliRequest = Data.define(:name, :model, :prompt, :reply_path, :timeout_s)
 
         private
 
@@ -37,12 +38,8 @@ module Master
           return missing if missing
 
           timeout_s = cli_lane_timeout_s(lane)
-          out, err, status = with_cli_slot(name) do
-            capture3_with_timeout(timeout_s, cli_binary(lane["binary"]),
-                                  *cli_lane_args(lane, model, prompt, reply_path),
-                                  stdin_data: cli_lane_stdin(lane, prompt))
-          end
-
+          request = CliRequest.new(name:, model:, prompt:, reply_path:, timeout_s:)
+          out, err, status = execute_cli_lane(lane:, request:)
           result = cli_lane_result(name, out, err, status, reply_path)
           record_estimated_cli_usage(model: "#{name}:#{model}", prompt:, reply: result.value!) if result.ok?
           result
@@ -51,6 +48,33 @@ module Master
           Result.err("#{name}: timed out after #{waited}s", category: :timeout)
         rescue StandardError => e
           Result.err("#{name}: #{e.message}", category: :provider_error)
+        end
+
+        def execute_cli_lane(lane:, request:)
+          name, model, prompt, reply_path, timeout_s = request.deconstruct
+          @bus&.publish("llm:cli_started", lane: name, model: "#{name}:#{model}")
+          on_stdout = cli_output_handler(name, model)
+          with_cli_slot(name) do
+            capture3_with_timeout(timeout_s, cli_binary(lane["binary"]),
+                                  *cli_lane_args(lane, model, prompt, reply_path),
+                                  stdin_data: cli_lane_stdin(lane, prompt), on_stdout:)
+          end
+        end
+
+        # CLI stdout is diagnostic/protocol output until a lane explicitly
+        # declares it as reply text.  It still proves that the child is alive,
+        # so publish a concise progress event immediately rather than waiting
+        # for the reply file and pretending a silent timer is progress.
+        def cli_output_handler(name, model)
+          seen = false
+          lambda do |chunk|
+            next if chunk.to_s.empty?
+
+            unless seen
+              seen = true
+              @bus&.publish("llm:cli_output", lane: name, model: "#{name}:#{model}", bytes: chunk.bytesize)
+            end
+          end
         end
 
         # A local lane names the env var that holds its model file; nil when it is readable.

@@ -23,6 +23,8 @@ module Master
         "route:resolved" => "route",
         "llm:routed" => "model",
         "llm:send" => "waiting",
+        "llm:cli_started" => "starting",
+        "llm:cli_output" => "receiving",
         "llm:stream_started" => "streaming",
         "user:interrupt" => "stopping",
       }.freeze

@@ -67,6 +67,20 @@ class TestReachExec < Minitest::Test
     assert status.success?
   end
 
+  def test_capture_streams_output_before_the_child_exits
+    chunks = []
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    out, _err, status = E.capture3(
+      "sh", "-c", "printf ready; sleep 0.15; printf done",
+      on_stdout: ->(chunk) { chunks << [chunk, Process.clock_gettime(Process::CLOCK_MONOTONIC)] },
+    )
+
+    assert status.success?
+    assert_equal "readydone", out
+    assert_equal "ready", chunks.first.first
+    assert_operator chunks.first.last - started, :<, 0.14
+  end
+
   def test_capture2_returns_stdout
     out, status = E.capture2("sh", "-c", "printf hi")
     assert_equal "hi", out

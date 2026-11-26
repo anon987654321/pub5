@@ -916,20 +916,35 @@ class TestLLMDispatcher < Minitest::Test
   # codex takes its prompt on stdin and writes the answer to a file; a lane
   # whose model is auto passes no model flag, so the CLI keeps its own default.
   def test_a_cli_lane_asks_on_stdin_and_reads_the_reply_file
-    dispatcher, = build_dispatcher
+    dispatcher, _session, bus = build_dispatcher
     seen = {}
-    dispatcher.define_singleton_method(:capture3_with_timeout) do |_t, *args, stdin_data: nil|
-      seen[:args], seen[:stdin] = args, stdin_data
+    dispatcher.define_singleton_method(:capture3_with_timeout) do |_t, *args, stdin_data: nil, on_stdout:|
+      seen.replace(args:, stdin: stdin_data)
+      on_stdout.call("progress chatter")
       File.write(args[args.index("--output-last-message") + 1], "pong\n")
       ["progress chatter", "", Struct.new(:success?).new(true)]
     end
 
-    result = dispatcher.send(:send_cli_lane, "codex-cli:auto", [{ role: "user", content: "ping" }], sys: "LAW")
+    result = dispatcher.send(
+      :send_cli_lane, "codex-cli:auto", [{ role: "user", content: "ping" }], sys: "LAW"
+    )
 
     assert_equal "pong", result.value!
     assert seen[:stdin].start_with?("LAW\n\n---\n\n")
     assert_includes seen[:stdin], "ping"
     refute_includes seen[:args], "--model"
+  end
+
+  def test_a_cli_output_handler_emits_one_liveness_event
+    dispatcher, _session, bus = build_dispatcher
+
+    handler = dispatcher.send(:cli_output_handler, "codex-cli", "auto")
+    handler.call("first")
+    handler.call("second")
+
+    events = bus.events.to_h
+    assert_equal "codex-cli", events.fetch("llm:cli_output")[:lane]
+    assert_equal "first".bytesize, events.fetch("llm:cli_output")[:bytes]
   end
 
   # A lane declares its own cap in models.yml; one that declares none keeps the 60s

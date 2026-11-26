@@ -238,15 +238,12 @@ module Master
           # pipeline hang.
           deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout.to_f
 
-          loop do
-            return [wait_thr.value, false] unless wait_thr.alive? || readers.any?(&:alive?)
-
-            remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
-            break if remaining <= 0
-
-            wait_thr.join([remaining, 0.01].min) if wait_thr.alive?
-            sleep([remaining, 0.005].min) if !wait_thr.alive? && readers.any?(&:alive?)
-          end
+          # Thread#join wakes on the child (or an output reader) completing.
+          # Do not poll with sleep here: a CLI that produces a line or exits is
+          # the event that advances MASTER, while the deadline remains only the
+          # hard safety boundary for a genuinely silent child.
+          wait_for_completion(wait_thr:, readers:, deadline:)
+          return [wait_thr.value, false] unless wait_thr.alive? || readers.any?(&:alive?)
 
           stop_child(wait_thr, readers)
           [wait_thr.value, true]
@@ -263,6 +260,27 @@ module Master
           [status, timed_out]
         end
       end
+
+      def wait_for_completion(wait_thr:, readers:, deadline:)
+        wait_thread(wait_thr, deadline) if wait_thr.alive?
+        readers.each do |reader|
+          break if remaining_time(deadline) <= 0
+
+          reader.join(remaining_time(deadline)) if reader.alive?
+        end
+      end
+      private_class_method :wait_for_completion
+
+      def wait_thread(thread, deadline)
+        remaining = remaining_time(deadline)
+        thread.join(remaining) if remaining.positive?
+      end
+      private_class_method :wait_thread
+
+      def remaining_time(deadline)
+        [deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0.0].max
+      end
+      private_class_method :remaining_time
 
       # An outer deadline (Timeout.timeout around a model call, a file's repair budget) interrupts the
       # wait from outside, and popen's ensure then joins the child with no bound: a /fix pass sat 711s
@@ -303,6 +321,7 @@ module Master
 
         def kill = @thread.kill
         def alive? = @thread.alive?
+        def join(timeout = nil) = @thread.join(timeout)
 
         def value
           begin
