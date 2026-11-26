@@ -830,10 +830,10 @@ narration:
 # session; the factual narrator then tells the story. Voice::Storyteller lets exactly one of them speak.
 bard:
   enabled: true
-  voice: davis
+  voice: christopher
   style: neutral
-  rate: "-10%"
-  pitch: "-14Hz"
+  rate: ""
+  pitch: ""
   # Alternate dry speakers, should the operator prefer a different timbre:
   # voice: christopher
   # voice: guy
