@@ -1105,10 +1105,9 @@ let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 
-let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt;
+let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN;
 let drumG,bassG,keysG,padsG,masterG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,analyser;
-let fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,kickSat,keySat,drumSat,revSend,dlySend;
-let drumTube,kickComp,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive,hatFlt,openFlt;
+let fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt;
 
 const fxPool=['AutoWah','AutoFilter','AutoPanner','Chebyshev','Chorus','Distortion','FeedbackDelay','Phaser','PingPongDelay','Tremolo','Vibrato','StereoWidener'];
 let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
@@ -1138,13 +1137,6 @@ for(const send of sends)last.connect(send);
 function installLaneFX(routes,fx){
 for(const [lane,[input,target,...sends]] of Object.entries(routes))connectLaneFX(input,fx[lane],target,sends);
 }
-function installDefaultFX(){
-const fx=createDefaultFX(aud_.bpm);
-installLaneFX(laneRoutes,fx);
-({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=fx);masterFX=[];
-log('FX default chain (fixed)','k');
-}
-
 const DENSITIES=Object.freeze(["comfortable","compact"]);
 const LANES=["k","s","c","h","o","b","keys","p"],DRUM_LANES=LANES.slice(0,5);
 const ORIGINAL_DRUMS=JSON.stringify(DRUM_PATTERNS);
@@ -1305,122 +1297,105 @@ Tone.getContext().rawContext.addEventListener('statechange',()=>{
     st_.playing=false;Tone.Transport.pause();outputGate?.gain.rampTo(0,.015);clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
-const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
-driftLFO=new Tone.LFO(0.05,-4,4).start();
-const instruments=createToneInstruments();
-kickN=instruments.kick;kickSub=instruments.kickSub;kickClk=instruments.kickClk;kickBody=instruments.kickBody;
-snareN=instruments.snare;snareRng=instruments.snareRing;clapN=instruments.clap;hatN=instruments.hat;openN=instruments.open;
-bassN=instruments.bass;bassSub=instruments.bassSub;keysN=instruments.keys;padsN=instruments.pads;
-kickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
-kickClkBP.Q.value=toneProfile.kick.click_filter_q;kickClk.connect(kickClkBP);
-snareRngBP=new Tone.Filter(toneProfile.snare.ring_filter_base_hz+kitProfile.snare.tone*toneProfile.snare.ring_filter_tone_span_hz,'bandpass');
-snareRngBP.Q.value=toneProfile.snare.ring_filter_q;snareRng.connect(snareRngBP);
-keysChorus=new Tone.Chorus(toneProfile.keys.chorus_frequency,toneProfile.keys.chorus_delay_time,toneProfile.keys.chorus_depth).start();
-keysTrem=new Tone.Tremolo({frequency:toneProfile.keys.tremolo_frequency,depth:toneProfile.keys.tremolo_depth,wet:toneProfile.keys.tremolo_wet,spread:toneProfile.keys.tremolo_spread});keysTrem.start();
-keysDrive=new Tone.Distortion(toneProfile.keys.drive_amount);keysDrive.wet.value=toneProfile.keys.drive_wet;
-padsFlt=new Tone.Filter(toneProfile.pads.filter_base_hz+voiceProfile.brightness*toneProfile.pads.filter_brightness_span_hz,'lowpass');
-padsLFO=new Tone.LFO(0.12,600,1400);padsLFO.start();padsLFO.connect(padsFlt.frequency);
-
-kickSat=new Tone.Chebyshev(2);
-keySat=new Tone.Chebyshev(2);
-drumSat=new Tone.Chebyshev(3);
-kickComp=new Tone.Compressor(-30,8);
-kickComp.attack.value=.001;
-drumG=new Tone.Gain(Tone.dbToGain(-6));
-bassG=new Tone.Gain(Tone.dbToGain(-8));
-keysG=new Tone.Gain(Tone.dbToGain(-10));
-padsG=new Tone.Gain(Tone.dbToGain(-12));
-revSend=new Tone.Gain(0);
-dlySend=new Tone.Gain(0);
-fxRev=new Tone.Reverb(1+profileReverbDecay());
-reverbReady=typeof fxRev.generate!=="function";
-fxDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds(),rg69AudioProfile.rig.delay.feedback);
-fxFlt=new Tone.Filter(16000,'lowpass');
-tapeSat=new Tone.Distortion(0.08);
-compPar=new Tone.Compressor(-18,4);
-widener=new Tone.StereoWidener(0.4);
-limiter=new Tone.Limiter(-1);
-masterG=new Tone.Gain(0.8);
-masterG.connect(fxFlt);
-fxFlt.connect(tapeSat);
-tapeSat.connect(compPar);
-compPar.connect(widener);
-widener.connect(limiter);
-outputGate=new Tone.Gain(0);limiter.connect(outputGate);outputGate.connect(Tone.Destination);
+const graph=createAudioGraph(aud_,mix_,fxSeed);
+({masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt}=graph);
+({kick:kickN,kickSub,kickClk,kickBody,snare:snareN,snareRing:snareRng,clap:clapN,hat:hatN,open:openN,bass:bassN,bassSub,keys:keysN,pads:padsN}=graph.instruments);
+({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=graph.effects);
 outputGate.connect(analyser=new Tone.Analyser({type:'waveform',size:128,channels:2}));
-revSend.connect(fxRev);
-fxRev.connect(masterG);
-dlySend.connect(fxDly);
-fxDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
-fxDly.connect(fxDlyFlt);
-fxDlyFlt.connect(masterG);
-if (fxRev && typeof fxRev.generate === "function") {
-  // Impulse generation is an offline render of its own. Awaiting it here made
-  // the first play wait on the reverb before a single hit was scheduled, which
-  // is the stall a fresh page used to show. Start dry and let the impulse land
-  // in the background: applyFX() brings the send up when it is ready.
-  reverbReady = false;
-  fxRev.generate().then(() => {
-    reverbReady = true;
-    applyFX();
-    log("reverb impulse ready", "k");
-  }).catch((error) => {
-    reverbReady = false;
-    // Reverb is an enhancement, not a reason to leave the transport unusable.
-    if (fxRev) fxRev.wet.value = 0;
-    log(`reverb unavailable; continuing without it: ${error.message}`, "w");
-  });
+reverbReady=false;
+graph.ready.then(ok=>{reverbReady=ok;applyFX();});
+st_.randomizeFxPending=false;
+applyFX();log("audio0: shared graph ready","k");
 }
-vinylNoise=new Tone.Noise('brown').start();
-vinylNoise.volume.value=-40;
-const vinylFlt=new Tone.Filter(2000,'lowpass');
-vinylNoise.connect(vinylFlt);
-crackleNoise=new Tone.Noise('white').start();
-crackleNoise.volume.value=-45;
-const crackFlt=new Tone.Filter(380,'bandpass');
-crackFlt.Q.value=5;
-crackleNoise.connect(crackFlt);
-vinylFlt.connect(masterG);
-crackFlt.connect(masterG);
-driftLFO.connect(kickN.oscillator.detune);
-driftLFO.connect(snareRng.detune);
-const livePanners=createRG69Panners();
-hatFlt=new Tone.Filter(7600,'highpass');
-openFlt=new Tone.Filter(6200,'highpass');
-kickN.connect(livePanners.kick);livePanners.kick.connect(kickSat);
-kickSub.connect(livePanners.kickSub);livePanners.kickSub.connect(kickSat);
-kickClkBP.connect(livePanners.kickClick);livePanners.kickClick.connect(kickSat);
-kickBody.connect(livePanners.kickBody);livePanners.kickBody.connect(kickSat);
-kickSat.connect(kickComp);
-kickComp.connect(drumG);
-snareN.connect(livePanners.snare);livePanners.snare.connect(drumSat);
-snareRngBP.connect(livePanners.snareRing);livePanners.snareRing.connect(drumSat);
-clapN.connect(livePanners.clap);livePanners.clap.connect(drumSat);
-hatN.connect(hatFlt);hatFlt.connect(livePanners.hat);livePanners.hat.connect(drumSat);
-openN.connect(openFlt);openFlt.connect(livePanners.open);livePanners.open.connect(drumSat);
-drumSat.connect(drumG);
-bassN.connect(bassG);
-bassSub.connect(bassG);
-keysN.connect(keySat);
-keySat.connect(keysChorus);
-keysChorus.connect(keysTrem);
-keysTrem.connect(keysDrive);
-keysDrive.connect(keysG);
-// Warm, worklet-free saturation + 5kHz bandwidth limit on keys
+
+function createAudioGraph(aud,mix,seed,{offline=false,duration=0}={}){
+const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
+// Create isolated audio graph for offline rendering - never touch global synth variables
+const drumG=new Tone.Gain(mix.drum/100);
+const bassG=new Tone.Gain(mix.bass/100);
+const keysG=new Tone.Gain(mix.keys/100*rg69AudioProfile.voice.level);
+const padsG=new Tone.Gain(mix.pads/100*rg69AudioProfile.voice.level);
+const masterG=new Tone.Gain(mix.master/100);
+const flt=new Tone.Filter(50+aud.filter/100*15950,'lowpass');
+const tape=new Tone.Distortion(0.08);
+const comp=new Tone.Compressor(-18,1+aud.comp/100*PARAMS.COMP_RATIO_MAX);
+const widener=new Tone.StereoWidener(aud.width/100);
+const limiter=new Tone.Limiter(-1);
+const revSend=new Tone.Gain(0);
+const dlySend=new Tone.Gain((aud.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
+const rev=new Tone.Reverb(1+profileReverbDecay());
+const dly=new Tone.FeedbackDelay(30/aud.bpm,rg69AudioProfile.rig.delay.feedback+(aud.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
+const dlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
+rev.wet.value=1;
+dly.wet.value=1;
+tape.wet.value=Math.min(0.75,aud.tape/100*0.55+(100-aud.drive)/100*0.25);
+masterG.connect(flt);
+flt.connect(tape);
+tape.connect(comp);
+comp.connect(widener);
+widener.connect(limiter);
+const outputGate=new Tone.Gain(offline?1:0);limiter.connect(outputGate);outputGate.toDestination();
+revSend.connect(rev);
+dlySend.connect(dly);
+rev.connect(masterG);
+dly.connect(dlyFlt);
+dlyFlt.connect(masterG);
+const vinylNoise=new Tone.Noise('brown').start();
+vinylNoise.volume.value=rg69NoiseLevelDb(-60,aud.vinyl,rg69AudioProfile.rig.vinyl.level,.1);
+const vinylFlt=new Tone.Filter(2000,'lowpass');vinylNoise.connect(vinylFlt);vinylFlt.connect(masterG);
+const crackleNoise=new Tone.Noise('white').start().stop(len+leadIn);
+crackleNoise.volume.value=rg69NoiseLevelDb(-65,aud.crackle,rg69AudioProfile.rig.vinyl.crackle,.5);
+if(offline){vinylNoise.stop(duration);crackleNoise.stop(duration);}
+const crackleFlt=new Tone.Filter(380,'bandpass');crackleFlt.Q.value=5;crackleNoise.connect(crackleFlt);crackleFlt.connect(masterG);
+// Live and offline use the same profile-driven instrument constructor.
+const instruments=createToneInstruments();
+const kickN=instruments.kick,kickSub=instruments.kickSub,kickClk=instruments.kickClk,kickBody=instruments.kickBody;
+const snareN=instruments.snare,snareRng=instruments.snareRing,clapN=instruments.clap,hatN=instruments.hat,openN=instruments.open;
+const bassN=instruments.bass,bassSub=instruments.bassSub,keysN=instruments.keys,padsN=instruments.pads;
+const drift=new Tone.LFO(.05+aud.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();drift.connect(kickN.oscillator.detune);drift.connect(snareRng.detune);
+const kickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
+kickClkBP.Q.value=toneProfile.kick.click_filter_q;kickClk.connect(kickClkBP);
+const snareRngBP=new Tone.Filter(toneProfile.snare.ring_filter_base_hz+kitProfile.snare.tone*toneProfile.snare.ring_filter_tone_span_hz,'bandpass');
+snareRngBP.Q.value=toneProfile.snare.ring_filter_q;snareRng.connect(snareRngBP);
+const drumSat=new Tone.Chebyshev(3);
+const keySat=new Tone.Chebyshev(2);
+const kickSat=new Tone.Chebyshev(2);
+const kickComp=new Tone.Compressor(-30,8);kickComp.attack.value=.001;
+const keysChorus=new Tone.Chorus(toneProfile.keys.chorus_frequency,toneProfile.keys.chorus_delay_time,toneProfile.keys.chorus_depth).start();
+const keysTrem=new Tone.Tremolo({frequency:toneProfile.keys.tremolo_frequency,depth:toneProfile.keys.tremolo_depth,wet:toneProfile.keys.tremolo_wet,spread:toneProfile.keys.tremolo_spread});keysTrem.start();
+const keysDrive=new Tone.Distortion(toneProfile.keys.drive_amount);keysDrive.wet.value=toneProfile.keys.drive_wet;
 const keysTexture=new Tone.Distortion(toneProfile.keys.texture_amount);keysTexture.wet.value=toneProfile.keys.texture_wet;
 const keysLP=new Tone.Filter(toneProfile.keys.filter_base_hz+voiceProfile.brightness*toneProfile.keys.filter_brightness_span_hz,'lowpass');
-keysG.connect(keysTexture);keysTexture.connect(keysLP);keysLP.connect(livePanners.keys);livePanners.keys.connect(masterG);livePanners.keys.connect(revSend);livePanners.keys.connect(dlySend);
-padsN.connect(padsFlt);
-padsFlt.connect(padsG);
-// old-sampler: 3.5kHz bandwidth + warmth on pads
+const padsFlt=new Tone.Filter(toneProfile.pads.filter_base_hz+voiceProfile.brightness*toneProfile.pads.filter_brightness_span_hz,'lowpass');
+const padsLFO=new Tone.LFO(0.12,600,1400);padsLFO.start();padsLFO.connect(padsFlt.frequency);
 const padsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
 const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.value=toneProfile.pads.saturation_wet;
-padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(livePanners.pads);livePanners.pads.connect(masterG);livePanners.pads.connect(revSend);livePanners.pads.connect(dlySend);
-// route remaining tracks
-laneRoutes={drum:[drumG,masterG,revSend,dlySend],bass:[bassG,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
-if(fxSeed==null)installDefaultFX();else refreshLaneFX();
-st_.randomizeFxPending=false;applyFX();
-log("audio engine init (analog++)","k");
+const panners=createRG69Panners();
+kickN.connect(panners.kick);panners.kick.connect(kickSat);
+kickSub.connect(panners.kickSub);panners.kickSub.connect(kickSat);
+kickClkBP.connect(panners.kickClick);panners.kickClick.connect(kickSat);
+kickBody.connect(panners.kickBody);panners.kickBody.connect(kickSat);
+kickSat.connect(kickComp);kickComp.connect(drumG);
+snareN.connect(panners.snare);panners.snare.connect(drumSat);
+snareRngBP.connect(panners.snareRing);panners.snareRing.connect(drumSat);
+clapN.connect(panners.clap);panners.clap.connect(drumSat);
+const hatFlt=new Tone.Filter(7600,'highpass');
+const openFlt=new Tone.Filter(6200,'highpass');
+hatN.connect(hatFlt);hatFlt.connect(panners.hat);panners.hat.connect(drumSat);
+openN.connect(openFlt);openFlt.connect(panners.open);panners.open.connect(drumSat);
+drumSat.connect(drumG);
+bassN.connect(bassG);bassSub.connect(bassG);
+keysN.connect(keySat);keySat.connect(keysChorus);keysChorus.connect(keysTrem);keysTrem.connect(keysDrive);
+keysDrive.connect(keysG);keysG.connect(keysTexture);keysTexture.connect(keysLP);
+keysLP.connect(panners.keys);panners.keys.connect(masterG);panners.keys.connect(revSend);panners.keys.connect(dlySend);
+padsN.connect(padsFlt);padsFlt.connect(padsG);padsG.connect(padsBW);padsBW.connect(padsSat);
+padsSat.connect(panners.pads);panners.pads.connect(masterG);panners.pads.connect(revSend);panners.pads.connect(dlySend);
+const routes={drum:[drumG,masterG,revSend,dlySend],bass:[bassG,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
+const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
+installLaneFX(routes,effects);
+
+const ready=rev.ready.then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
+return {instruments,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1782,8 +1757,13 @@ return wav;
 }
 
 async function exportWAV(){
+if(st_.exporting)return;
+st_.exporting=true;
+let context=null,resume=false;
 try{
-await startToneFromGesture();
+await startToneFromGesture();context=Tone.getContext();
+resume=st_.playing;if(resume){Tone.Transport.pause();st_.playing=false;outputGate.gain.rampTo(0,.015);}
+$id('export').disabled=true;
 rg69AudioProfileLocked=true;
 const take=session(),aud_=take.aud,mix_=take.mix;
 take.drums[take.pat.d]=deepClone(DRUM_PATTERNS[take.pat.d]);
@@ -1793,116 +1773,22 @@ $id('progress-pct').textContent='0%';
 $id('progress-fill').style.width='0%';
 log("exporting WAV...","i");
 const buf=await Tone.Offline(async()=>{
-const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
-// Create isolated audio graph for offline rendering - never touch global synth variables
-const oDrumG=new Tone.Gain(mix_.drum/100);
-const oBassG=new Tone.Gain(mix_.bass/100);
-const oKeysG=new Tone.Gain(mix_.keys/100*rg69AudioProfile.voice.level);
-const oPadsG=new Tone.Gain(mix_.pads/100*rg69AudioProfile.voice.level);
-const oMaster=new Tone.Gain(mix_.master/100);
-const oFlt=new Tone.Filter(50+aud_.filter/100*15950,'lowpass');
-const oTape=new Tone.Distortion(0.08);
-const oComp=new Tone.Compressor(-18,1+aud_.comp/100*PARAMS.COMP_RATIO_MAX);
-const oWidener=new Tone.StereoWidener(aud_.width/100);
-const oLimiter=new Tone.Limiter(-1);
-const oRevSend=new Tone.Gain((aud_.reverb/100)*rg69AudioProfile.rig.reverb.level_chords);
-const oDlySend=new Tone.Gain((aud_.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
-const oRev=new Tone.Reverb(1+profileReverbDecay());
-const oDly=new Tone.FeedbackDelay(30/aud_.bpm,rg69AudioProfile.rig.delay.feedback+(aud_.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
-const oDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
-oRev.wet.value=1;
-oDly.wet.value=1;
-oTape.wet.value=Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);
-oMaster.connect(oFlt);
-oFlt.connect(oTape);
-oTape.connect(oComp);
-oComp.connect(oWidener);
-oWidener.connect(oLimiter);
-oLimiter.toDestination();
-oRevSend.connect(oRev);
-oDlySend.connect(oDly);
-oRev.connect(oMaster);
-oDly.connect(oDlyFlt);
-oDlyFlt.connect(oMaster);
-const oVinylNoise=new Tone.Noise('brown').start().stop(len+leadIn);
-oVinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,rg69AudioProfile.rig.vinyl.level,.1);
-const oVinylFlt=new Tone.Filter(2000,'lowpass');oVinylNoise.connect(oVinylFlt);oVinylFlt.connect(oMaster);
-const oCrackleNoise=new Tone.Noise('white').start().stop(len+leadIn);
-oCrackleNoise.volume.value=rg69NoiseLevelDb(-65,aud_.crackle,rg69AudioProfile.rig.vinyl.crackle,.5);
-const oCrackleFlt=new Tone.Filter(380,'bandpass');oCrackleFlt.Q.value=5;oCrackleNoise.connect(oCrackleFlt);oCrackleFlt.connect(oMaster);
-// Live and offline use the same profile-driven instrument constructor.
-const offlineSynths=createToneInstruments();
-const oKickN=offlineSynths.kick,oKickSub=offlineSynths.kickSub,oKickClk=offlineSynths.kickClk,oKickBody=offlineSynths.kickBody;
-const oSnareN=offlineSynths.snare,oSnareRng=offlineSynths.snareRing,oClapN=offlineSynths.clap,oHatN=offlineSynths.hat,oOpenN=offlineSynths.open;
-const oBassN=offlineSynths.bass,oBassSub=offlineSynths.bassSub,oKeysN=offlineSynths.keys,oPadsN=offlineSynths.pads;
-const oDrift=new Tone.LFO(.05+aud_.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();oDrift.connect(oKickN.oscillator.detune);oDrift.connect(oSnareRng.detune);
-const oKickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
-oKickClkBP.Q.value=toneProfile.kick.click_filter_q;oKickClk.connect(oKickClkBP);
-const oSnareRngBP=new Tone.Filter(toneProfile.snare.ring_filter_base_hz+kitProfile.snare.tone*toneProfile.snare.ring_filter_tone_span_hz,'bandpass');
-oSnareRngBP.Q.value=toneProfile.snare.ring_filter_q;oSnareRng.connect(oSnareRngBP);
-const oDrumSat=new Tone.Chebyshev(3);
-const oKeySat=new Tone.Chebyshev(2);
-const oKickSat=new Tone.Chebyshev(2);
-const oKickComp=new Tone.Compressor(-30,8);oKickComp.attack.value=.001;
-const oKeysChorus=new Tone.Chorus(toneProfile.keys.chorus_frequency,toneProfile.keys.chorus_delay_time,toneProfile.keys.chorus_depth).start();
-const oKeysTrem=new Tone.Tremolo({frequency:toneProfile.keys.tremolo_frequency,depth:toneProfile.keys.tremolo_depth,wet:toneProfile.keys.tremolo_wet,spread:toneProfile.keys.tremolo_spread});oKeysTrem.start();
-const oKeysDrive=new Tone.Distortion(toneProfile.keys.drive_amount);oKeysDrive.wet.value=toneProfile.keys.drive_wet;
-const oKeysTexture=new Tone.Distortion(toneProfile.keys.texture_amount);oKeysTexture.wet.value=toneProfile.keys.texture_wet;
-const oKeysLP=new Tone.Filter(toneProfile.keys.filter_base_hz+voiceProfile.brightness*toneProfile.keys.filter_brightness_span_hz,'lowpass');
-const oPadsFlt=new Tone.Filter(toneProfile.pads.filter_base_hz+voiceProfile.brightness*toneProfile.pads.filter_brightness_span_hz,'lowpass');
-const oPadsLFO=new Tone.LFO(0.12,600,1400);oPadsLFO.start();oPadsLFO.connect(oPadsFlt.frequency);
-const oPadsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
-const oPadsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);oPadsSat.wet.value=toneProfile.pads.saturation_wet;
-const offlinePanners=createRG69Panners();
-oKickN.connect(offlinePanners.kick);offlinePanners.kick.connect(oKickSat);
-oKickSub.connect(offlinePanners.kickSub);offlinePanners.kickSub.connect(oKickSat);
-oKickClkBP.connect(offlinePanners.kickClick);offlinePanners.kickClick.connect(oKickSat);
-oKickBody.connect(offlinePanners.kickBody);offlinePanners.kickBody.connect(oKickSat);
-oKickSat.connect(oKickComp);oKickComp.connect(oDrumG);
-oSnareN.connect(offlinePanners.snare);offlinePanners.snare.connect(oDrumSat);
-oSnareRngBP.connect(offlinePanners.snareRing);offlinePanners.snareRing.connect(oDrumSat);
-oClapN.connect(offlinePanners.clap);offlinePanners.clap.connect(oDrumSat);
-const oHatFlt=new Tone.Filter(7600,'highpass');
-const oOpenFlt=new Tone.Filter(6200,'highpass');
-oHatN.connect(oHatFlt);oHatFlt.connect(offlinePanners.hat);offlinePanners.hat.connect(oDrumSat);
-oOpenN.connect(oOpenFlt);oOpenFlt.connect(offlinePanners.open);offlinePanners.open.connect(oDrumSat);
-oDrumSat.connect(oDrumG);
-oBassN.connect(oBassG);oBassSub.connect(oBassG);
-oKeysN.connect(oKeySat);oKeySat.connect(oKeysChorus);oKeysChorus.connect(oKeysTrem);oKeysTrem.connect(oKeysDrive);
-oKeysDrive.connect(oKeysG);oKeysG.connect(oKeysTexture);oKeysTexture.connect(oKeysLP);
-oKeysLP.connect(offlinePanners.keys);offlinePanners.keys.connect(oMaster);offlinePanners.keys.connect(oRevSend);offlinePanners.keys.connect(oDlySend);
-oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsG);oPadsG.connect(oPadsBW);oPadsBW.connect(oPadsSat);
-oPadsSat.connect(offlinePanners.pads);offlinePanners.pads.connect(oMaster);offlinePanners.pads.connect(oRevSend);offlinePanners.pads.connect(oDlySend);
-const routes={drum:[oDrumG,oMaster,oRevSend,oDlySend],bass:[oBassG,oMaster,oRevSend,oDlySend],keys:[oKeysG,oKeysTexture],pads:[oPadsG,oPadsBW]};
-installLaneFX(routes,take.fxSeed==null?createDefaultFX(aud_.bpm):createRandomFX(take.fxSeed,aud_.bpm));
+const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn});
+await graph.ready;
 // Schedule all steps using the shared triggerNotes helper
 for(let i=0;i<bars*16;i++){
 const sixteenth=60/aud_.bpm/4;
 // MetalSynth's oscillators start at offline time zero, and a source refuses a
 // second start at the same time, so bar one at 0 threw for every export.
 const now=leadIn+i*sixteenth;
-triggerNotes(i%take.steps,now,{
-kick:oKickN,
-kickSub:oKickSub,
-kickClk:oKickClk,
-kickBody:oKickBody,
-snare:oSnareN,
-snareRng:oSnareRng,
-clap:oClapN,
-hat:oHatN,
-open:oOpenN,
-bass:oBassN,
-bassSub:oBassSub,
-keys:oKeysN,
-pads:oPadsN
-},{
+triggerNotes(i%take.steps,now,graph.instruments,{
 session:take,tick:i,stepCount:take.steps,muteMap:take.mute,
 applyProb:true,
 applyRatchet:true,
 sixteenth:sixteenth,
 addSwing:true,
 applyTranspose:true,
-metalTap:{hat:oHatFlt,open:oOpenFlt}
+metalTap:{hat:graph.hatFlt,open:graph.openFlt}
 });
 const pct=Math.round((i/(bars*16))*100);
 if(i%(bars*2)===0){
@@ -1926,6 +1812,10 @@ log("WAV exported","k");
 }catch(err){
 log("export failed: "+err.message,"e");
 $id('progress-wrap').style.display='none';
+}finally{
+if(context&&Tone.getContext()!==context)Tone.setContext(context);
+st_.exporting=false;$id("export").disabled=false;
+if(resume)await startPlayback().catch(reportAudioStartupFailure);
 }
 }
 
@@ -2320,6 +2210,7 @@ return Tone.start();
 }
 
 async function startPlayback(activationPromise){
+if(st_.exporting)return;
 if(!st_.started){
 if(!st_.booting){
 st_.booting=(async()=>{
