@@ -934,8 +934,8 @@ pub5_source_ceilings:
 # the repo's prose against the repo's code.
 # 112 -> 113 for shell_syntax_check.rb. check-openbsd named two shell scripts by
 # hand out of 43 and ran zsh -n on both. The deploy path was not among them:
-# bin/vps-deploy, vps_ci.sh and deploy_all.sh are what a deploy actually runs, so
-# a syntax error in any of the three was discovered by the deploy. resource_guard.sh
+# bin/vps-deploy and vps_ci.sh are what a deploy actually runs, so
+# a syntax error in either was discovered by the deploy. resource_guard.sh
 # is ksh and a zsh list could not have covered it at all.
 #
 # The check reads each script's shebang, which is both the complete set and the

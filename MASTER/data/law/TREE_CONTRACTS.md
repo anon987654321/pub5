@@ -871,11 +871,9 @@ file to sit on.
 - **No per-component screenshot baselines, density tests or control-distance
   rules.** `layout_snapshot` commits reviewable geometry for the surfaces, and
   how dense a screen is stays the operator's call about how it looks.
-- **Keep four hand-run scripts that nothing calls, and delete orphans that
-  nothing names.** `bin/manual_master_deploy.ksh` (the fallback when
-  `vps_deploy_master.sh` stalls), `bin/vps_production_push.sh` (the
-  acknowledged hotfix path), `ptr_openbsd_amsterdam.rb` (the only door to the
-  PTR record) and `bin/amber_queue_sweep.sh` (the backlog sweep
+- **Keep two hand-run scripts that nothing calls, and delete orphans that
+  nothing names.** `ptr_openbsd_amsterdam.rb` (the only door to the PTR
+  record) and `bin/amber_queue_sweep.sh` (the backlog sweep
   `RAILS/amber/README.md` names) have no cron or script caller because their
   caller is a person, and RUNBOOK, "Occasional operator tools", lists each. A
   zero-caller census measures the wrong thing for them. `dr-restore-check` and
@@ -888,12 +886,13 @@ file to sit on.
   door.
 - **No sweep of `|| true`.** Most are idempotence on `rcctl`, `pkill`,
   `chmod`, `install` and `rm -f`. Read the exit path before removing one.
-- **No deleting the four documented fallback scripts.**
-  `manual_master_deploy.ksh`, `vps_production_push.sh`,
+- **No deleting the two documented fallback scripts.**
   `ptr_openbsd_amsterdam.rb` and `amber_queue_sweep.sh` look unused because
   `vps-deploy` and cron cover the ordinary case. Each is the documented answer
-  to a failure that case cannot reach: a stalled MASTER deploy, a push from
-  the box, a changed IP needing a new PTR, a stale Solid Queue backlog.
+  to a failure that case cannot reach: a changed IP needing a new PTR, a stale
+  Solid Queue backlog. `manual_master_deploy.ksh` and `vps_production_push.sh`
+  were on this list until both had become stubs that only refused; the
+  operator removed them with the other deploy aliases on 2026-11-26.
   `RUNBOOK.md` lists them, so removing one removes a recovery step an operator
   reads at the worst time.
 

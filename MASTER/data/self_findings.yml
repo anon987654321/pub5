@@ -7994,8 +7994,6 @@ finding_members:
   - LONG_LINE OPENBSD/PATH_OWNERSHIP.yml:139
   - LONG_LINE OPENBSD/_net.sh:54
   - LONG_LINE OPENBSD/_net.sh:80
-  - LONG_LINE OPENBSD/mirror/bin/deploy_all.sh:41
-  - LONG_LINE OPENBSD/mirror/bin/deploy_all.sh:61
   - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:200
   - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:252
   - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:287
@@ -8003,7 +8001,6 @@ finding_members:
   - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:402
   - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:404
   - LONG_LINE OPENBSD/mirror/bin/domain_watch.rb:406
-  - LONG_LINE OPENBSD/mirror/bin/manual_master_deploy.ksh:57
   - LONG_LINE OPENBSD/mirror/bin/start_all_apps.sh:7
   - LONG_LINE OPENBSD/mirror/bin/sync_deploy_inventory.rb:14
   - LONG_LINE OPENBSD/mirror/bin/sync_deploy_inventory.rb:37
@@ -8014,7 +8011,6 @@ finding_members:
   - LONG_LINE OPENBSD/mirror/bin/vps_install_all.sh:41
   - LONG_LINE OPENBSD/mirror/bin/vps_install_all.sh:8
   - LONG_LINE OPENBSD/mirror/bin/vps_master_scan.sh:23
-  - LONG_LINE OPENBSD/mirror/bin/vps_production_push.sh:21
   - LONG_LINE OPENBSD/mirror/bin/vps_run_remote.sh:38
   - LONG_LINE OPENBSD/mirror/bin/vps_weekly_integrity.sh:43
   - LONG_LINE OPENBSD/checks/config_drift_check.rb:237
