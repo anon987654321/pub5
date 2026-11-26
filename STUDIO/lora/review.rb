@@ -39,6 +39,26 @@ module Studio
 
       class Error < StandardError; end
 
+      def self.write_contact_sheet(references, renders, path, render_label: "RENDER")
+        entries = references.map.with_index { |file, index| [file, "HOLDOUT #{index + 1}"] } +
+                  renders.map.with_index { |file, index| [file, format("%s %02d", render_label, index + 1)] }
+        cells = entries.map { |file, label| contact_cell(file, label) }
+        sheet = Vips::Image.arrayjoin(
+          cells, across: COLUMNS, shim: 10, background: BACKGROUND, valign: :low
+        )
+        sheet.write_to_file(path, Q: 92)
+        File.chmod(0o600, path)
+      end
+
+      def self.contact_cell(path, label)
+        tile = Vips::Image.thumbnail(path, TILE_WIDTH, height: TILE_HEIGHT)
+        caption = Vips::Image.text(label, dpi: 96, font: "sans 16")
+        strip = caption.embed(12, 8, tile.width, caption.height + 16)
+        tile.join(strip, :vertical, expand: true, background: BACKGROUND)
+      rescue Vips::Error => error
+        raise Error, "cannot build contact sheet for #{File.basename(path)}: #{error.message}"
+      end
+
       class Builder
         def initialize(subject:, root: IdeaPicture::SUBJECTS)
           @subject = subject.to_s
@@ -296,23 +316,7 @@ module Studio
         end
 
         def write_contact_sheet(references, renders, path, render_label: "RENDER")
-          entries = references.map.with_index { |file, index| [file, "HOLDOUT #{index + 1}"] } +
-                    renders.map.with_index { |file, index| [file, format("%s %02d", render_label, index + 1)] }
-          cells = entries.map { |file, label| contact_cell(file, label) }
-          sheet = Vips::Image.arrayjoin(
-            cells, across: COLUMNS, shim: 10, background: BACKGROUND, valign: :low
-          )
-          sheet.write_to_file(path, Q: 92)
-          File.chmod(0o600, path)
-        end
-
-        def contact_cell(path, label)
-          tile = Vips::Image.thumbnail(path, TILE_WIDTH, height: TILE_HEIGHT)
-          caption = Vips::Image.text(label, dpi: 96, font: "sans 16")
-          strip = caption.embed(12, 8, tile.width, caption.height + 16)
-          tile.join(strip, :vertical, expand: true, background: BACKGROUND)
-        rescue Vips::Error => error
-          raise Error, "cannot build contact sheet for #{File.basename(path)}: #{error.message}"
+          Review.write_contact_sheet(references, renders, path, render_label:)
         end
 
         def html_document(report)
