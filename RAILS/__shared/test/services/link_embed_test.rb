@@ -188,6 +188,31 @@ def test_the_first_recognised_link_in_prose_or_editor_html_is_found
     end
   end
 
+  def test_invalid_and_future_fetch_timestamps_are_due_for_refresh
+    now = Time.utc(2026, 11, 26, 12)
+    media = match("https://youtu.be/d_HlPboLRL8")
+    [nil, "", "nonsense", "2026-13-01", "12:00", "2099-01-01T00:00:00Z"].each do |stamp|
+      record = Shared::LinkEmbed::Record.new(match: media, status: "ok", title: "Example", fetched_at: stamp)
+      assert record.stale?(now), stamp.inspect
+    end
+  end
+
+  def test_fetch_timestamps_keep_existing_refresh_windows
+    now = Time.utc(2026, 11, 26, 12)
+    media = match("https://youtu.be/d_HlPboLRL8")
+    {
+      ["ok", "2026-11-26T11:00:00Z"] => false,
+      ["ok", "2026-11-26"] => false,
+      ["ok", "2026-10-26"] => true,
+      ["failed", "2026-11-26T11:00:00Z"] => false,
+      ["failed", "2026-11-24"] => true,
+      ["pending", "garbage"] => false,
+    }.each do |(status, stamp), stale|
+      record = Shared::LinkEmbed::Record.new(match: media, status:, title: "Example", fetched_at: stamp)
+      assert_equal stale, record.stale?(now), [status, stamp].inspect
+    end
+  end
+
   def test_a_stored_record_round_trips
     soundcloud = match("https://soundcloud.com/kygo/stars-will-align")
     record = Shared::LinkEmbed.resolve(soundcloud, fetch: ->(_) { recorded("soundcloud") })

@@ -55,8 +55,12 @@ module Shared
       def stale?(now = Time.current)
         return false if pending?
 
-        fetched = Time.zone.parse(fetched_at.to_s)
-        fetched.nil? || now - fetched > (ok? ? Record::REFRESH_OK_AFTER : Record::RETRY_FAILED_AFTER)
+        stamp = fetched_at.to_s
+        stamp = "#{stamp}T00:00:00Z" if stamp.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+        fetched = Time.iso8601(stamp)
+        fetched > now || now - fetched > (ok? ? Record::REFRESH_OK_AFTER : Record::RETRY_FAILED_AFTER)
+      rescue ArgumentError
+        true
       end
       def player_url = match.provider.player_url(match.media_id)
       def source_url = match.source_url
