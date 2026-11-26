@@ -99,7 +99,8 @@ is the shared runtime/tree contract. `BIZ/README.md` owns BIZ's document-product
 owner: `MASTER/convergence.yml`, `MASTER/data/gaps.yml`,
 `MASTER/data/operator_seams.yml`, `MASTER/data/law/ux_refinements.yml` and
 `RAILS/refinements.yml`. `bin/master status --agent` is their read-only union;
-there is no parallel Markdown checklist or generated backlog.
+[TODO.md](TODO.md) is the operator-requested human execution index, not a second
+runtime queue or a source of acceptance authority.
 
 ## First hour
 

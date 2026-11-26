@@ -54,9 +54,9 @@ seams:
     tree: MASTER
     needs: browser
     evidence: >-
-      Default 3D, explicit ASCII, WebGL-off fallback, reduced motion, console errors and frame budget at desktop
-      and mobile widths, saved screenshots and the Node suites' exit codes (face_stipple.test.mjs,
-      face_boot.test.mjs).
+      Single 3D particle renderer, real first-frame readiness, explicit WebGL failure, context recovery,
+      reduced motion, console errors and frame budget at desktop and mobile widths, saved screenshots
+      and the Node suites' exit codes (face_stipple.test.mjs, face_boot.test.mjs). No retired ASCII or 2D renderer.
   - id: voice_by_ear
     tree: MASTER
     needs: ears
