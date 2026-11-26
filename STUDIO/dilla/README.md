@@ -197,6 +197,34 @@ Open `rg69/rg69.html` directly in the browser, from any directory. Tone.js 14.8.
 
 New sessions start with Industrial, Hard Techno or HATE Style (140–165 BPM across the three presets). The original `hate-pummel` and `hate-grind` four-on-the-floor patterns, sub-bass, dissonant stabs, acid and drone patches remain available. Industrial styles use a restrained Pocket; Drive controls dedicated drum saturation independently of Tape. Saved sessions restore their own settings. Non-HTTP pages always use the embedded catalogue, even when the browser reports `file://` rather than `null` as its origin.
 
+### RG-69 design and acceptance
+
+The preferred reference is the outlined RG-69 mobile studio: left-aligned
+Swiss hierarchy, restrained berry/plum accents on paper/blush, compact transport,
+track and progress, tempo/key/generate, instrument knobs, drums, mixer/FX,
+sequencer and navigation. The monochrome and red/cobalt industrial studies offer
+alternative grouping and signal clarity, not a second default palette. Preserve
+the Unix-style terminal and every working music control; disclose advanced
+parameters without hiding playback, mute, sequencing or recovery. Reference
+instrument names and hardware-inspired effects describe design intent, not
+calibrated emulations.
+
+Use MASTER's existing `/fix` council for 10–50 materially distinct design
+alternatives on the same engine and session contracts; retain the strongest
+compatible parts after reciprocal critique. Do not fork the embedded graph,
+compiler, catalogue or control state for visual variants. See the operator's
+[/fix Design Playbook](https://chatgpt.com/space/page_da7f02e00edc81918e1403fa88c279c6)
+for the living review register; the repository remains the implementation owner.
+
+Acceptance requires actual narrow and wide browser renders, keyboard/touch and
+reduced-motion checks, an explicit user-gesture audio start, audible song playback,
+non-silent master output, transport and mixer/FX response, sampler/sequence editing,
+session restoration, recording and WAV/MIDI export. Test both file and hosted
+contexts. Compare an isolated diagnostic tone and the song at the final output
+when levels disagree; a successful event compiler or intermediate meter is not
+audibility proof. Record browser, viewport, commit and observed result; unrun
+checks remain inconclusive.
+
 ### RG-69 recording chain and song mode
 
 New sessions run a 64-bar arrangement (intro 8, build 8, first drop 12, breakdown 8, rebuild 4, second drop 16, outro 8) with section-specific instrumentation, fills, harmonic transposition and an outro fade. Song/Loop switches arrangement playback; WAV and MIDI follow the same event compiler. The default patch pair is Prophet-5 and Juno-106 inspired.
