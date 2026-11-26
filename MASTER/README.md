@@ -55,19 +55,30 @@ A benevolent, otherworldly intelligence embodied by independent particles acting
 
 ### Aesthetic
 
-- **Material:** solid neutral bitmap marks on absolute black. Both shaders use a fixed 3 × 3 raster with two opposite corner cells removed, not hollow diamonds, beads or glow. Discrete neutral relief tones and depth writing reveal the volume. The apparent CSS size depends on render scale and device. Never enlarge marks with perspective.
-- **Form:** genuinely spatial, rounded cranial volume, generous dark eye wells, relaxed brows, short nose, full cheeks, small gently smiling mouth, soft chin and restrained asymmetry. Preserve the sculptural Sepik character without ornament. Read as curious, intelligent and approachable, not cartoonish.
+- **Material:** solid neutral bitmap marks on absolute black. Both shaders use a fixed 3 × 3 raster with two opposite corner cells removed, not hollow diamonds, beads or glow. Each mark is opaque #eeeeee; spatial geometry, occlusion and projected density reveal the volume, never shading. The apparent CSS size depends on render scale and device. Never enlarge marks with perspective.
+- **Form:** continuous biomorphic volumes, folded masses and genuine spatial cavities. A face emerges from the relationships between volumes, not imposed eyes, lips, ears or a human skull. Prefer the unfamiliar but approachable to generic aliens, emojis or decorative masks.
 - **Composition:** void is structural. Prefer organic separation, curved relationships, sparse peripheral marks and the fewest anatomical cues that preserve recognition from front, profile, rear and three-quarter views. No fingerprint decoration, solid skin, wireframe, gradients, glossy surfaces or decorative glow.
 - **Motion:** organic flow, bounded rotational flow, travelling signals and staggered cohort convergence. Stable carriers retain identity through transformations; a temporary subject returns to the canonical portrait. Gesture, gaze, blinking, nods and soft settling should communicate intent, not perpetual activity. Reduced motion resolves to the same meaningful form.
 - **Acceptance:** these are design requirements, not claims that every adapter or behavior already conforms. Compare actual multi-angle browser captures against the operator-approved reference, including mobile scale; reject flat relief, excessive detail, occluded apertures, mechanical rows, noisy idle behavior and unmeasured performance claims.
 
-Five original studies rotate on new conversations and remain stable on reload. Conversational characters remain independent of their geometry. Each study uses the same carved volume, carrier population and material; temporary subjects reuse the primary field.
+Twenty-one original studies rotate on new conversations and remain stable on reload. The five conversational characters remain independent. All forms share one implicit geometry engine, area-weighted deterministic sampling and the existing carrier renderer; temporary subjects reuse the primary field.
+
+The approved concept sheet, in row order:
+
+| | | | |
+|---|---|---|---|
+| Folded seed | Block portal | Trefoil | Stacked fins |
+| Paired lobes | Yoke | Porous orb | Crescent |
+| Fragment | Twin bulb | Branching | Asymmetric pocket |
+| Layered cap | Double ring | Three-void shell | Dispersed |
+
+The five individual studies are Round knot, Oblique hollow, Open ribbon, Eroded monolith and Bifurcate. These are procedural interpretations of the approved illustrations, not recovered 3D scans. Fidelity requires multi-angle rendered comparison; sampling is area-weighted, not yet verified blue noise.
 
 ### Runtime and ownership
 
 FaceState drives FaceWorld, CLI, 2D/ASCII fallback and voice timing. `data/tokens.yml#tokens.face_interface` owns visual and semantic parameters; Ruby reads them through `lib/face.rb` and the browser receives `MASTER_FACE_CONTRACT`. Dynamic state belongs to `MASTER_FACE_STATE`. `data/face_masks.yml` owns selection and character metadata; `data/laws.yml` owns aesthetic constraints.
 
-`web/public/face_mask_profiles.js` samples deterministic front, rear and interior geometry through one implicit volume with carved apertures. `face_world.js` maps semantic subjects into the existing carrier field and orders arrival stages. `face.part2.txt` and `face_stipple_system.js` implement the primary material and an exclusive stipple preview (`?stipple=1` or `?playground=1`). Direct subjects never overlap the preview. The default path allocates no second stipple geometry and hides the spatial world and sparse overlays while native portrait geometry owns the canvas. The explicit material laboratory starts with the unmasked portrait. The six runtime sources are joined at build time and imported directly. The existing asset manifest and `FaceAssets.versioned` fingerprint public assets. Do not introduce a second state vocabulary, unbounded population, independent animation clock or product-wide particle treatment. Existing sparse/proxy adapters must be audited for material and carrier-budget conformity; their presence is not proof of single-population rendering.
+`web/public/face_mask_profiles.js` constructs smooth unions and subtractive cavities in a continuous three-dimensional superellipsoid field, builds a bounded temporary triangle area table, and samples its boundary deterministically. Only points reach the renderer; the triangle table is not displayed. `face_world.js` maps semantic subjects into the existing carrier field and orders arrival stages. `face.part2.txt` and `face_stipple_system.js` implement the primary material and an exclusive stipple preview (`?stipple=1` or `?playground=1`). Direct subjects never overlap the preview. The default path allocates no second stipple geometry and hides the spatial world and sparse overlays while native portrait geometry owns the canvas. The explicit material laboratory starts with the unmasked portrait. The six runtime sources are joined at build time and imported directly. The existing asset manifest and `FaceAssets.versioned` fingerprint public assets. Do not introduce a second state vocabulary, unbounded population, independent animation clock or product-wide particle treatment. Existing sparse/proxy adapters must be audited for material and carrier-budget conformity; their presence is not proof of single-population rendering.
 
 The web runtime is conversation-only. The independent terminal retains OpenBSD-style factual output. Operator commands, scheduling and filesystem access remain local CLI concerns.
 
@@ -157,7 +168,7 @@ pool. The bounded FaceWorld proxy is a compatibility path only when the primary
 scatter interface is unavailable; it consumes the existing world-point share.
 Normal motion stages the transition. Reduced motion resolves directly to the
 same final geometry without an animation. After the configured quiet interval,
-the subject restores to the selected conversation mask, or the carved-field portrait when no mask is available. Unknown or rejected subject descriptors restore that same identity. The canonical face persists across conversations. Subject geometry is schematic unless backed by measured data.
+the subject restores to the selected conversation mask, or the carved-field portrait when no mask is available. Unknown or rejected subject descriptors restore that same identity. The selected sculpture persists within a conversation; the next conversation advances the catalogue. Subject geometry is schematic unless backed by measured data.
 
 This separation is deliberate: identity is stable, the subject is temporary,
 and movement has a reason. The face must remain readable before, during and
@@ -167,8 +178,6 @@ decorative noise.
 
 
 ### ASCII controls
-
-## ASCII sculpt controls
 
 The terminal and browser render the same perspective-correct, lit triangle mesh as
 ASCII, with the contract's character ramps ordered by measured ink density. The
