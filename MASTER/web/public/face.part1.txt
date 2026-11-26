@@ -1118,8 +1118,13 @@ function particleScale() {
   const budgetScale = Math.sqrt(Math.max(0.25, budget / 200));
   return Math.max(0.7, Math.min(1.35, areaScale, budgetScale));
 }
-const FACE_GRID_COLS = Math.round((State.coarsePointer ? 26 : 40) * particleScale());
-const FACE_GRID_ROWS = Math.round((State.coarsePointer ? 32 : 52) * particleScale());
+// The primary field replaces the stipple population, rather than adding to it.
+const primaryCeiling = Math.max(1, Math.floor(Number(faceRenderBudget().stipple_points) ||
+  (State.coarsePointer ? 2400 : 8100)));
+const primaryScale = Math.min(particleScale(),
+  Math.sqrt(primaryCeiling / (State.coarsePointer ? 26*32 : 40*52)));
+const FACE_GRID_COLS = Math.max(1, Math.floor((State.coarsePointer ? 26 : 40) * primaryScale));
+const FACE_GRID_ROWS = Math.max(1, Math.floor((State.coarsePointer ? 32 : 52) * primaryScale));
 const FACE_N_2D = Math.round(480 * particleScale());
 let faceHome, faceScatter, faceSeeds, faceCurvature, faceBoundary, faceZone;
 ({ home: faceHome, scatter: faceScatter, seeds: faceSeeds,
