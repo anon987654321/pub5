@@ -1220,6 +1220,15 @@ test("adaptive correspondence preserves carriers and cannot increase travel", ()
   assert.equal(match(from, from, stages), null);
 });
 
+test("the peripheral response selects the same three percent of phase-seeded carriers on CPU and GPU", () => {
+  const runtime = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  const phaseSource = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  assert.match(phaseSource, /seed = \(hash - Math\.floor\(hash\)\) \* 6\.28318/);
+  assert.match(faceSource, /step\(0\.97 \* 6\.28318, seed\)/);
+  assert.match(runtime, /faceSeeds\[index\]>=\.97\*6\.28318/);
+  assert.match(phaseSource, /primaryCeiling \/ \(State\.coarsePointer \? 26\*32 : 40\*52\)/);
+});
+
 test("sculptures use uniform ink and fixed footprints", () => {
   assert.doesNotMatch(faceSource, /attribute vec3 subjectNormal/);
   assert.match(faceSource, /vColor=vec3\(0\.9333333\)/);
