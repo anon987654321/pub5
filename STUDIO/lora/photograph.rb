@@ -29,9 +29,6 @@ def studio_photograph_actions
       )
       result = picture.write_shot(shot, grade_seed: request["grade_seed"])
       quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
-      # The original is read for the grade delta above, then discarded: the
-      # studio keeps developed frames only.
-      picture.discard_raw_renders(result)
       result.merge("quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     end,
     "refinement" => ->(request) { Studio::Lora::Judge.refinement(request.fetch("quality")) },
@@ -63,7 +60,7 @@ def studio_photograph_actions
       ).write(
         prompt, film: request.fetch("film", false), duration: request.fetch("duration", 5),
         preset: request.fetch("preset", "house"), grade_seed: request["grade_seed"],
-        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true,
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: false,
         chain: Studio::Lora::Craft::STILL_CHAIN
       )
     end,
@@ -116,7 +113,6 @@ def studio_render_candidates(request)
     begin
       result = picture.write_shot(shot, grade_seed: request["grade_seed"], prediction_budget: budget)
       quality = Studio::Lora::Judge.assess(candidate: result.fetch("still"), original: result.dig("capture", "original"))
-      picture.discard_raw_renders(result)
       result.merge("index" => index, "state" => quality.fetch("delivery"),
                    "quality" => quality, "refinement" => Studio::Lora::Judge.refinement(quality))
     rescue StandardError => error
@@ -168,12 +164,12 @@ def studio_photograph_options(argv)
     parser.on("--selfie-series", "render portraits using the subject's references when present, otherwise the pinned LoRA") { options[:series] = true }
     parser.on("--all-subjects", "preflight each subject and render those with valid consent and references or a pinned LoRA") { options[:all_subjects] = true }
     parser.on("--count N", Integer, "series length, 1..24 (default 4)") { |value| options[:count] = value }
-    parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental, snapshot, shoots, warp, best or scenarios") { |value| options[:direction] = value }
+    parser.on("--direction NAME", "varied, natural, cinematic, editorial, experimental, snapshot, shoots, warp, best, scenarios or selfies") { |value| options[:direction] = value }
     parser.on("--preset NAME", "named laboratory grade for a single photograph (default house)") { |value| options[:preset] = value }
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
-    parser.on("--chain NAME", "development chain: stills (default) or native (deliver the frame as generated)") { |value| options[:chain] = value }
+    parser.on("--chain NAME", "development chain: native (default) or explicit stills development") { |value| options[:chain] = value }
     parser.on("--inference-profile NAME", "LoRA profile from training_standards.yml (identity, balanced, detail, draft)") { |value| options[:inference_profile] = value }
     parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
     parser.on("--film-resolution RES", "H3 Lite resolution: 480P (default) or 768P") { |value| options[:film_resolution] = value }
@@ -264,7 +260,7 @@ if $PROGRAM_NAME == __FILE__
     when :series
       options[:series] = true
       options[:count] = wizard.number("How many sittings", default: 4, range: 1..24)
-      # The ordinary selfie path is always this subject's trained LoRA.
+      # Use the shared reference-first capture policy.
       puts "Earlier portraits are always retained."
     when :picture
       options[:prompt] = wizard.ask("Describe the picture")
@@ -332,7 +328,7 @@ if $PROGRAM_NAME == __FILE__
       ).write(
         prompt, film: options[:film], duration: options[:duration],
         preset: options.fetch(:preset, "house"),
-        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: true,
+        chain_presets: Studio::Lora::Craft::HOUSE_CHAIN, discard_raw: false,
         chain: Studio::Lora::Craft::STILL_CHAIN
       )
     end
