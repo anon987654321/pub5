@@ -193,9 +193,20 @@ deliberately with `--overwrite`; the seed reproduces it byte for byte:
 
 `rg69/rg69.html` (one self-contained page: markup, styles and engine) reads the `tonejs_profiles.rg69` adapter in this catalogue. The adapter reuses `kit_break`, `prophet_5` and the dry `basement` rig, then maps their kit tuning, voice brightness and room sends into the browser's Tone.js instruments. The adapter is a translation layer: it does not claim that a Tone.js synth is the same instrument or circuit as Dilla's Ruby renderer.
 
-Live playback and WAV export call the same Tone.js instrument builder. The drum pitch/filter settings and kit pan/level, FM keys, voice pan, chorus/tremolo/drive chain, pad voice and its filters, the room's delay/reverb controls, and the vinyl/crackle bed come from that profile. If the catalogue cannot be fetched, a matching embedded RG-69 fallback keeps the browser page usable; the page reports which path it used.
+Open `rg69/rg69.html` directly in the browser. No server, build step or CDN is required. Local files use the embedded profile; HTTP pages can load the shared catalogue.
 
-The two renderers share instrument and voice settings, not a promise of sample-identical output. Mastering graphs and browser/runtime behaviour still differ. Run the browser, export a WAV and audition it before claiming delivery or sound-quality parity; source checks cannot substitute for listening.
+The front panel has eight lanes (kick, snare, clap, closed hat, open hat, bass, keys and pads), 8/16/32/64-step patterns, 16-step banks, per-lane lengths, and Pocket, Drive, Dust and Space macros. The step menu edits velocity, timing, probability, ratchets, gate, pitch and loop conditions. Pocket scales both swing and microtiming; its timing offsets are original engine choices, not measured Dilla transcriptions.
+
+The sampler accepts local audio, detects transients or divides the source into sixteen equal slices, and sequences slices with pitch, reverse, gate and offset controls. Session JSON, local autosave and share links retain the sample settings, not the audio bytes: reload the original sample after reopening a session. Use samples you have permission to use.
+
+Live playback and WAV export share the instrument graph and chronological event compiler. MIDI export uses the same compiled notes and timings at 480 PPQ. Session and FX seeds reproduce scheduling decisions; analogue modulation, generated reverb and browser audio implementations can still differ. Recording captures the final master output. The shared Ruby catalogue provides instrument and voice settings, not a promise of sample-identical output.
+
+Run the event regression with Node.js (standard library only, no install):
+
+    node STUDIO/replicate/test/rg69_events_test.mjs
+
+It exercises extreme tempos, all step counts, polymeter, swing, ratchets, event ordering, seeded repeatability, mute/probability, session restoration, MIDI structure and sample slicing. It does not test browser Web Audio. Open the page, play, record, export a WAV and audition the result before claiming sound-quality parity.
+
 ## Tests
 
 `cd STUDIO && rake -f replicate/Rakefile check test` — the dilla suite covers the CLI contract
