@@ -446,41 +446,12 @@ window.addEventListener('unhandledrejection', event => {
   enterDegradedTextUI(reason?.message ? `Degraded text mode: ${reason.message}` : 'Degraded text mode');
 });
 
-const STAR_FRAMES = ['|', '/', '-', '\\'];
-const STAR_INTERVAL_MS = 100;
-let _starTimer = null;
-let _starIdx = 0;
 const spinBtn = document.getElementById('pause-speech-button');
 const themeBtn = document.getElementById('theme-btn');
 const focusBtn = document.getElementById('focus-btn');
 const fontScaleInput = document.getElementById('font-scale');
 const voicePicker = document.getElementById('voice-picker');
 const voicePreviewBtn = document.getElementById('voice-preview-btn');
-const asciiStarEl = document.getElementById('ascii-star');
-function _scheduleStar() {
-  _starTimer = setTimeout(() => {
-    _starIdx = (_starIdx + 1) % STAR_FRAMES.length;
-    if (asciiStarEl) asciiStarEl.textContent = STAR_FRAMES[_starIdx];
-    _scheduleStar();
-  }, STAR_INTERVAL_MS);
-}
-function startStar() {
-  if (_starTimer) return;
-  _starIdx = 0;
-  if (asciiStarEl) asciiStarEl.textContent = STAR_FRAMES[_starIdx];
-  _scheduleStar();
-}
-function stopStar() {
-  if (_starTimer) { clearTimeout(_starTimer); _starTimer = null; }
-  if (asciiStarEl) asciiStarEl.textContent = '';
-}
-function syncThinkingStar() {
-  const queueActive = rootBody.dataset.queueActive === '1' && rootBody.dataset.queuePaused !== '1';
-  const active = State.mode === 'thinking' || (State.mode === 'speaking' && queueActive);
-  if (active && !faceReducedMotionActive() && runtimeProfile() !== 'battery') startStar();
-  else stopStar();
-}
-
 voicePicker?.addEventListener('change', () => {
   const voice = voicePicker.value.trim();
   if (voice) {
@@ -503,7 +474,6 @@ Object.defineProperty(State, 'mode', {
     if (micText) micText.textContent = v === 'listening' ? 'Microphone on' : 'Microphone off';
     const s = document.getElementById('zsh-status');
     if (s) s.textContent = '';
-    syncThinkingStar();
   },
   configurable: true
 });
@@ -665,7 +635,6 @@ function particleScale() {
 // The primary field replaces the stipple population, rather than adding to it.
 const primaryCeiling = Math.max(1, Math.floor(Number(faceRenderBudget().stipple_points) ||
   (State.coarsePointer ? 2400 : 8100)));
-const FACE_N_2D = Math.round(480 * particleScale());
 let faceHome, faceScatter, faceSeeds, faceCurvature, faceBoundary, faceZone;
 ({ home: faceHome, scatter: faceScatter, seeds: faceSeeds,
    curvature: faceCurvature, boundary: faceBoundary, zone: faceZone } =

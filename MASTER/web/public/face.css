@@ -205,7 +205,6 @@ html[data-topology-flash="1"] canvas { filter: contrast(1.05); transition: filte
 body[data-runtime-profile="full"] canvas { filter: none; }
 body[data-runtime-profile="calm"] canvas { filter: none; }
 body[data-runtime-profile="calm"] #cognition-ecology { opacity: 0.72; mix-blend-mode: normal; }
-body[data-runtime-profile="calm"] #ascii-star { display: none; }
 body[data-long-silence="1"] canvas { filter: none; }
 body[data-laughter="1"] canvas { filter: contrast(1.08) saturate(1.06); }
 body[data-face-flash="1"] canvas {
@@ -227,7 +226,6 @@ body[data-focus-mode="1"] .top-left-logo,
 body[data-focus-mode="1"] .ui-status,
 body[data-focus-mode="1"] .face-controls,
 body[data-focus-mode="1"] #chat-log,
-body[data-focus-mode="1"] #ascii-star,
 body[data-focus-mode="1"] #pause-speech-button {
   opacity: 0;
   pointer-events: none;
@@ -1222,20 +1220,6 @@ body[data-tts-loading="true"] canvas { filter: none; }
 .tool:hover, .tool:focus { opacity:1; color:var(--face-fg); }
 .tool.active { color:var(--c-accent); opacity:1; }
 
-#ascii-star { position: fixed; top: calc(48px + var(--safe-top)); left: 16px; font: 600 var(--text-title)/1 var(--font-mono); color: var(--face-fg); mix-blend-mode: difference; pointer-events: none; z-index: calc(var(--z-chrome) - 1); }
-#ascii-star:empty { display: none; }
-body[data-mode="thinking"] #ascii-star:not(:empty),
-body[data-mode="speaking"][data-queue-active="1"] #ascii-star:not(:empty) {
-  display: block;
-  top: auto;
-  left: 50%;
-  bottom: calc(84px + var(--safe-bottom) + var(--keyboard-inset, 0px));
-  width: 1ch;
-  transform: translateX(-50%);
-  text-align: center;
-  color: var(--face-fg);
-  mix-blend-mode: normal;
-}
 
 .compaction-note,
 .message.system {

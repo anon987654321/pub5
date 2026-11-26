@@ -80,15 +80,11 @@ test("web face queues follow-up turns and exposes stop/resume state", () => {
   assert.match(stopBlock, /if \(_pendingTurns\.length > 0\) _turnQueuePaused = true;/);
 });
 
-test("thinking star animates in calm mode but respects reduced motion and battery mode", () => {
+test("thinking is rendered without an ASCII spinner", () => {
   const source = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
-  // faceReducedMotionActive() folds State.reducedMotion together with the
-  // canonical FaceState, the document-root projection and the media query.
-  // The star also stays up while a queued response is being spoken (syncThinkingStar).
-  assert.match(source, /const active = State\.mode === 'thinking' \|\| \(State\.mode === 'speaking' && queueActive\);/);
-  assert.match(source, /if \(active && !faceReducedMotionActive\(\) && runtimeProfile\(\) !== 'battery'\) startStar/);
-  const reducedMotion = /function faceReducedMotionActive\(\) \{[\s\S]*?Boolean\(State\.reducedMotion\)/;
-  assert.match(source, new RegExp(`${reducedMotion.source}[\\s\\S]*?prefers-reduced-motion: reduce`));
+  assert.doesNotMatch(source, /STAR_FRAMES|syncThinkingStar|ascii-star/);
+  const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
+  assert.doesNotMatch(view, /ascii-star/);
 });
 
 test("face surface owns the full viewport", () => {
@@ -1624,26 +1620,18 @@ test("face preserves browser zoom and gives each shortcut one owner", () => {
   assert.match(runtime, /const editing = tag === 'INPUT'[\s\S]{0,200}active\?\.closest\?\.\('\[role="dialog"\]'\)/);
 });
 
-test("thinking face keeps the single composer ready beneath an ASCII spinner", () => {
+test("thinking face keeps the single composer ready", () => {
   const part1 = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
   const part5 = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
   const css = readFileSync(join(root, "styles", "face", "30_conversation.css"), "utf8");
   const cliSpinner = readFileSync(join(root, "..", "..", "MASTER", "lib", "cli", "session", "thinking_indicator.rb"), "utf8");
 
-  assert.ok(part1.includes("const STAR_FRAMES = ['|', '/', '-', '\\\\'];"));
-  assert.ok(part1.includes("const STAR_INTERVAL_MS = 100;"));
-  assert.ok(part1.includes("function syncThinkingStar()"));
-  assert.ok(part1.includes("syncThinkingStar();"));
   assert.ok(!part1.includes("STAR_COLORS"));
-  assert.ok(css.includes('body[data-mode="thinking"] #ascii-star:not(:empty)'));
-  assert.ok(css.includes('body[data-mode="speaking"][data-queue-active="1"] #ascii-star:not(:empty)'));
-  assert.ok(css.includes("bottom: calc(84px + var(--safe-bottom) + var(--keyboard-inset, 0px));"));
   assert.ok(css.includes('body[data-mode="thinking"] #prompt-input,'));
   assert.ok(css.includes('body[data-queue-active="1"] #prompt-input { opacity: 1; }'));
   assert.ok(part5.includes("queued / paused"));
   assert.ok(part5.includes("_turnQueueRunning ? 'thinking' : ''"));
   assert.ok(part5.includes("rootBody.dataset.queuePaused = _turnQueuePaused ? '1' : '0';"));
-  assert.ok(part5.includes("syncThinkingStar();"));
   assert.ok(cliSpinner.includes("TICK_SECONDS = 0.18"));
   assert.ok(cliSpinner.includes('SPINNER_FRAMES = ["*", "+", "x", "+"].freeze'));
   assert.ok(cliSpinner.includes("ResourceLoad.cpu_load"));
@@ -1751,4 +1739,14 @@ test("optional camera releases tracks and cancels pending permission on hide", (
   assert.match(source, /if \(request !== cameraRequest \|\| document\.hidden\)/);
   assert.match(source, /addEventListener\('pagehide', disableCamTracking\)/);
   assert.match(source, /'pointercancel', 'lostpointercapture'/);
+});
+
+test("face startup has one coordinator and no secondary renderer", () => {
+  const primer = readFileSync(join(publicDir, "face_primer.js"), "utf8");
+  const semantics = readFileSync(join(publicDir, "face_semantics.js"), "utf8");
+  const runtime = readFileSync(join(publicDir, "face.part5.txt"), "utf8");
+  assert.doesNotMatch(primer, /setInterval\(/);
+  assert.doesNotMatch(semantics, /start2D|startEverything|requestAnimationFrame/);
+  assert.doesNotMatch(runtime, /function firePrimer/);
+  assert.match(runtime, /function startEverything\(\) \{\s*if \(primerFired\) return;/);
 });

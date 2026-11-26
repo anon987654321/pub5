@@ -68,7 +68,6 @@ html[data-topology-flash="1"] canvas { filter: contrast(1.05); transition: filte
 body[data-runtime-profile="full"] canvas { filter: none; }
 body[data-runtime-profile="calm"] canvas { filter: none; }
 body[data-runtime-profile="calm"] #cognition-ecology { opacity: 0.72; mix-blend-mode: normal; }
-body[data-runtime-profile="calm"] #ascii-star { display: none; }
 body[data-long-silence="1"] canvas { filter: none; }
 body[data-laughter="1"] canvas { filter: contrast(1.08) saturate(1.06); }
 body[data-face-flash="1"] canvas {
@@ -90,7 +89,6 @@ body[data-focus-mode="1"] .top-left-logo,
 body[data-focus-mode="1"] .ui-status,
 body[data-focus-mode="1"] .face-controls,
 body[data-focus-mode="1"] #chat-log,
-body[data-focus-mode="1"] #ascii-star,
 body[data-focus-mode="1"] #pause-speech-button {
   opacity: 0;
   pointer-events: none;

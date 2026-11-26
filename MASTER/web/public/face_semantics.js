@@ -7,14 +7,7 @@ const State = F_FACE_SEM.State || window.State;
 const mouthPool = F_FACE_SEM.mouthPool || window.mouthPool;
 const eyePool = F_FACE_SEM.eyePool || window.eyePool;
 const renderer = F_FACE_SEM.renderer || window.renderer;
-const cv = F_FACE_SEM.cv || document.getElementById('face');
-const faceHome = F_FACE_SEM.faceHome || window.faceHome;
-const faceScatter = F_FACE_SEM.faceScatter || window.faceScatter;
-const faceSeeds = F_FACE_SEM.faceSeeds || window.faceSeeds;
-const FACE_N_2D = F_FACE_SEM.FACE_N_2D || window.FACE_N_2D;
-const markFaceReady = F_FACE_SEM.markFaceReady || window.markFaceReady;
 const resize = F_FACE_SEM.resize || window.resize;
-const frame = F_FACE_SEM.frame || window.frame;
 const _dbgEl = F_FACE_SEM.dbgEl || document.getElementById('_dbg');
 const rootBody = document.body;
 const MASTER_FACE_BLEND = window.MASTER_FACE_BLEND;
@@ -380,92 +373,4 @@ if (renderer) {
     }, 500);
     setTimeout(() => { clearInterval(_dbgTimer); _dbgEl.remove(); }, 30000);
   }
-  if (window._primerFired && !F_FACE_SEM.primerFired) { window._primerFired = true; F_FACE_SEM.startEverything?.(); }
-} else {
-  (function start2D() {
-    const cv2 = document.createElement('canvas');
-    Object.assign(cv2.style, { position:'fixed', inset:'0', width:'100vw', height:'100dvh', display:'block', zIndex:'0' });
-    document.body.insertBefore(cv2, cv);
-    cv.style.display = 'none';
-
-    const ctx2 = cv2.getContext('2d');
-    if (!ctx2) { console.error('2d ctx failed'); return; }
-
-    const N2 = FACE_N_2D;
-    const pts = new Float32Array(N2 * 7);
-    for (let i = 0; i < N2; i++) {
-      pts[i*7]   = faceHome[i*3];   pts[i*7+1] = faceHome[i*3+1];   pts[i*7+2] = faceHome[i*3+2];
-      pts[i*7+3] = faceScatter[i*3]; pts[i*7+4] = faceScatter[i*3+1]; pts[i*7+5] = faceScatter[i*3+2];
-      pts[i*7+6] = faceSeeds[i];
-    }
-
-    let cw2 = 0, ch2 = 0;
-    function resize2() {
-      cw2 = window.innerWidth; ch2 = window.innerHeight;
-      cv2.width = cw2; cv2.height = ch2;
-    }
-    resize2();
-    window.addEventListener('resize', resize2, { passive: true });
-
-    if (window._primerFired && !F_FACE_SEM.primerFired) { window._primerFired = true; F_FACE_SEM.startEverything?.(); }
-
-    let lastT2 = 0;
-    function frame2(t) {
-      if (t - lastT2 < 33) { requestAnimationFrame(frame2); return; }
-      lastT2 = t;
-      const sec = t * 0.001;
-      const mTgt = window._primerFired ? 1.0 : 0.0;
-      const mNext = (F_FACE_SEM.morphCurrent ?? 0) + (mTgt - (F_FACE_SEM.morphCurrent ?? 0)) * 0.06;
-      F_FACE_SEM.setMorphCurrent?.(mNext);
-      const m = F_FACE_SEM.morphCurrent ?? 0;
-
-      const cosY = Math.cos(State.mouseX * 0.7 + Math.sin(sec * 0.2) * 0.05);
-      const sinY = Math.sin(State.mouseX * 0.7 + Math.sin(sec * 0.2) * 0.05);
-      const cosX = Math.cos(State.mouseY * 0.4 + Math.sin(sec * 0.27) * 0.03);
-      const sinX = Math.sin(State.mouseY * 0.4 + Math.sin(sec * 0.27) * 0.03);
-      const f2 = Math.min(cw2, ch2) * 0.5 / Math.tan(38 * Math.PI / 360);
-      const camZ = 4.6;
-
-      ctx2.fillStyle = '#000';
-      ctx2.fillRect(0, 0, cw2, ch2);
-      ctx2.fillStyle = '#fff';
-      ctx2.globalAlpha = State.highContrast ? 1.0 : (State.contrastMore ? 0.9 : 0.72);
-
-      const noiseAmp = m > 0.98 ? 0 : (1 - m) * 0.28;
-      for (let i = 0; i < N2; i++) {
-        const b = i * 7;
-        const noise = noiseAmp > 0 ? noiseAmp * Math.sin(sec * 0.4 + pts[b+6]) : 0;
-        const wx = pts[b+3] + (pts[b]   - pts[b+3]) * m + noise;
-        const wy = pts[b+4] + (pts[b+1] - pts[b+4]) * m + noise * 0.5;
-        const wz = pts[b+5] + (pts[b+2] - pts[b+5]) * m;
-        const rx = wx * cosY + wz * sinY;
-        const rz0 = -wx * sinY + wz * cosY;
-        const ry = wy * cosX - rz0 * sinX;
-        const rz = wy * sinX + rz0 * cosX;
-        const dz  = camZ - rz;
-        if (dz <= 0.1) continue;
-        const px = rx / dz * f2 + cw2 * 0.5;
-        const py = -ry / dz * f2 + ch2 * 0.5;
-        const sz = Math.max(2, 2.4 * f2 / (dz * 80));
-        const _dz2 = Math.max(0, Math.min(1, (pts[b+2] * 0.78 + 0.5)));
-        const _r2 = (0.60 + _dz2 * 0.40) * 255 | 0;
-        const _g2 = (0.64 + _dz2 * 0.30) * 255 | 0;
-        const _b2 = (0.88 - _dz2 * 0.08) * 255 | 0;
-        const K2 = window.ParticleKernel;
-        const pxI = (px - sz * 0.5) | 0;
-        const pyI = (py - sz * 0.5) | 0;
-        const lum = (_r2 + _g2 + _b2) / (255 * 3);
-        if (K2?.ditherThreshold(pxI, pyI, lum)) {
-          ctx2.fillStyle = `rgb(${_r2},${_g2},${_b2})`;
-          ctx2.fillRect(pxI, pyI, Math.ceil(sz), Math.ceil(sz));
-        }
-      }
-      ctx2.globalAlpha = 1.0;
-
-      F_FACE_SEM.incrementDbgFrames?.();
-      markFaceReady();
-      requestAnimationFrame(frame2);
-    }
-    requestAnimationFrame(frame2);
-  })();
 }

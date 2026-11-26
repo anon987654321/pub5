@@ -11,7 +11,7 @@
   // document.currentScript is only set while this file first runs.
   const FACE_MODULE=document.currentScript?.dataset.faceModule||'/face.js';
   const p=document.getElementById('primer');
-  let fired=false,timer=null,fallback=null,hintT=null,retryT=null,started=false,failedShown=false;
+  let fired=false,fallback=null,hintT=null,retryT=null,started=false,failedShown=false;
   function promptFormEl(){return document.getElementById('prompt-form');}
   function uiEl(){return document.getElementById('ui-status');}
   function titleEl(){return document.getElementById('primer-title');}
@@ -60,7 +60,6 @@
   }
   function clearWatch(){
     clearTimeout(hintT);clearTimeout(retryT);clearTimeout(fallback);
-    clearInterval(timer);timer=null;
     let ui=uiEl();
     if(ui?.dataset.bootLoading){ui.textContent='';delete ui.dataset.bootLoading;}
   }
@@ -111,7 +110,7 @@
     window.MASTER?.boot?.transition?.('ASSETS', { source: 'loadFace', retried: !!retried });
     resetFaceCanvasForWebGL();
     import(FACE_MODULE).then(function(){
-      boot();
+      if(!boot())throw new Error('face runtime missing startEverything');
     }).catch(function(e){
       report('face module import',e);
       window.__MASTER_FACE_IMPORT__=false;
@@ -133,16 +132,12 @@
     primeAudio();
     dismissPrimer();
     revealPrompt();
-    loadFace();
-    boot();
     showLoadState();
+    loadFace();
     hintT=setTimeout(function(){
       const ui=uiEl();
       if(ui)ui.textContent=i18n('still-loading','still loading the face…');
     },8000);
-    timer=setInterval(function(){
-      boot();
-    },40);
     fallback=setTimeout(function(){
       const f=window.MASTER_FACE;
       // primerFired only proves startEverything() ran, not that anything
