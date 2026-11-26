@@ -49,8 +49,6 @@ module Master
 
       # The first proposal plus N-1 more, scored; returns the winning source
       # or nil when every candidate regressed.
-      # The first proposal plus N-1 more, scored; returns the winning source
-      # or nil when every candidate regressed.
       def pick(loop, violation, first, custody:, root:, measurer: LayoutScoreRender.method(:measure))
         path = violation[:file]
         root = File.basename(root) == "MASTER" ? File.dirname(root) : root
@@ -120,6 +118,7 @@ module Master
       end
 
       def score(source, original, measured, root:, anchors:, expected: [])
+        measured = LayoutScoreRender.valid_measurements(measured)
         return Scored.new(source:, score: 0.0, problems: ["not rendered"], diff: 0, floor: 0.0) if measured.empty?
 
         problems = measured.flat_map { |surface, payload| judge(surface, payload, root:, anchors:) }

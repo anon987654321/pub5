@@ -73,6 +73,39 @@ class BestOfNTest < Minitest::Test
     assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: none, read:, write:)
   end
 
+  def test_failed_navigation_is_not_a_candidate
+    bad = ->(_surfaces, root:) { [[@surface, rendering("good").merge("status" => 503)]] }
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root, measurer: bad, read:, write:)
+    assert_equal @original, File.read(@path)
+  end
+
+  def test_rescore_requires_every_requested_surface_before_and_after
+    render = Master::Fix::LayoutScoreRender
+    other = Surface.new("brgen/home/desktop", "desktop")
+    good = rendering("good")
+    complete = [[@surface, good], [other, good]]
+    [
+      [complete, complete, true],
+      [[complete.first], complete, false],
+      [complete, [complete.first], false],
+      [complete, [[@surface, good], [other, good.merge("error" => "timeout")]], false],
+    ].each do |before, after, expected|
+      samples = [before, after]
+      measure = ->(_surfaces, root:) { samples.shift }
+      hook = render.rescore_hook([@surface, other], root: @root, measurer: measure)
+      assert_equal expected, hook.call(@path)
+    end
+  end
+
+  def test_failed_and_empty_payloads_do_not_enter_the_score
+    render = Master::Fix::LayoutScoreRender
+    good = rendering("good")
+    [nil, good.merge("error" => "timeout"), good.merge("status" => 404),
+     good.merge("vw" => 0), good.merge("elements" => [])].each do |bad|
+      assert_empty render.scores([[@surface, bad]], root: @root)
+    end
+  end
+
   def test_concurrent_source_change_during_render_is_preserved
     good = ".a { margin: 16px; } /* kind-good */\n"
     concurrent = ".a { margin: 21px; } /* another writer */\n"
