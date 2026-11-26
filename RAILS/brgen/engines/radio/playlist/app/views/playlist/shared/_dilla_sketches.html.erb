@@ -55,10 +55,10 @@
           <%= f.text_field :notes, placeholder: t("playlist.notes_optional"), aria: { label: t("playlist.notes_optional") } %>
           <label><input type="checkbox" name="render_now" value="1" checked /> <%= t("playlist.render_now") %></label>
           <label><input type="checkbox" name="publish" value="1" checked /> <%= t("playlist.publish_as_track") %></label>
-          <%= f.submit t("playlist.save_sketch"), class: "button button-primary button-small" %>
+          <%= f.submit t("playlist.save_sketch"), class: "button button-primary" %>
         <% end %>
       <% else %>
-        <%= form_with url: create_url, scope: local_assigns[:form_scope] || :playlist_dilla_sketch do |f| %>
+        <%= form_with url: create_url, scope: local_assigns[:form_scope] || :playlist_dilla_sketch, class: "dilla-sketch-form" do |f| %>
           <div class="field"><%= f.text_field :name, placeholder: t("playlist.beat_name"), aria: { label: t("playlist.beat_name") }, required: true %></div>
           <div class="field" data-controller="character-counter" data-character-counter-countdown-value="true">
             <%= f.text_area :state, placeholder: t("playlist.paste_state"),
@@ -71,7 +71,7 @@
             <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
           </div>
           <div class="field"><%= f.submit t("playlist.save_sketch_collab"),
-                class: "button button-primary button-small" %></div>
+                class: "button button-primary" %></div>
         <% end %>
       <% end %>
     </div>

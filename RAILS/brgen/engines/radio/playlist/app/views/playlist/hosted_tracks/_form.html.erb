@@ -1,4 +1,4 @@
-<%= form_with model: [:playlist, track], url: track.persisted? ? hosted_track_path(track) : hosted_tracks_path do |form| %>
+<%= form_with model: [:playlist, track], url: (track.persisted? ? hosted_track_path(track) : hosted_tracks_path), class: "hosted-track-form" do |form| %>
   <%= render "shared/errors", object: track %>
 
   <div class="field">
@@ -57,5 +57,5 @@
     <%= form.file_field :artwork, accept: "image/*", direct_upload: true, data: { controller: "direct-upload" } %>
   </div>
 
-  <%= form.submit class: "button button-primary button-small" %>
+  <%= form.submit class: "button button-primary" %>
 <% end %>

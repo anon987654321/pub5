@@ -4,13 +4,13 @@
 %>
 <% collaborations = local_assigns[:collaborations] || parent.collaborations %>
 <% can_manage = local_assigns.fetch(:can_manage) { authenticated? && (Current.user == parent.user || collaborations.exists?(user: Current.user, role: %w[owner editor])) } %>
-<section role="region" aria-label="<%= t("aria.collaborators") %>">
+<section class="playlist-collaborators" role="region" aria-label="<%= t("aria.collaborators") %>">
   <h2><%= t("playlist.collaborators") %></h2>
   <% if collaborations.any? %>
     <% collaborations.includes(:user).each do |c| %>
       <%= c.user&.username || c.user&.email %> (<%= t("playlist.roles.#{c.role}") %>)
       <% if Current.user == parent.user || c.user == Current.user %>
-        <%= button_to t("actions.remove"), collaboration_path_proc.call(c), method: :delete, class: "button button-ghost button-small",
+        <%= button_to t("actions.remove"), collaboration_path_proc.call(c), method: :delete, class: "button button-ghost",
               data: { turbo_confirm: t("playlist.confirm_remove_collaborator") } %>
       <% end %>
     <% end %>
