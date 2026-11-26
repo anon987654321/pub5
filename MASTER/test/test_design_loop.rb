@@ -92,6 +92,15 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_existing_decorative_frame_can_be_neutralised_but_not_focus_or_brand
+    with_sheet(".card { border: 1px solid red; box-shadow: 0 0 4px black; outline: 2px solid blue; color: red; }") do |path|
+      assert parse(path, find: "border: 1px solid red;", replace: "border: 0;").check!
+      assert parse(path, find: "box-shadow: 0 0 4px black;", replace: "box-shadow: none;").check!
+      assert_match(/colour/, refused(parse(path, find: "outline: 2px solid blue;", replace: "outline: none;")))
+      assert_match(/rendered value/, refused(parse(path, find: "color: red;", replace: "")))
+    end
+  end
+
   def test_font_shadow_important_repeats_and_missing_text_are_refused
     with_sheet(".a {\n  gap: 4px;\n  gap: 4px;\n}\n") do |path|
       assert_match(/occurs 2 times/, refused(parse(path, find: "gap: 4px;", replace: "gap: 8px;")))

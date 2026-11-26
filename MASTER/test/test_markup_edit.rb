@@ -49,6 +49,28 @@ class TestMarkupEdit < Minitest::Test
     end
   end
 
+  def test_bare_wrapper_can_be_removed_without_touching_inner_source
+    with_view do |path|
+      inner = %(<button class="title"><%= t(".title") %></button>)
+      wrapper = "<div>#{inner}</div>"
+      File.write(path, wrapper)
+      edit = parse(path, find: wrapper, replace: inner)
+      edit.apply!
+      assert_equal inner, File.read(path)
+    end
+  end
+
+  def test_wrapper_with_identity_or_changed_content_is_refused
+    with_view do |path|
+      inner = %(<button class="title">Send</button>)
+      wrapper = %(<div id="owner">#{inner}</div>)
+      File.write(path, wrapper)
+      assert_match(/only add class names/, refused(parse(path, find: wrapper, replace: inner)))
+      File.write(path, "<div>#{inner}</div>")
+      assert_match(/only add class names/, refused(parse(path, find: "<div>#{inner}</div>", replace: "")))
+    end
+  end
+
   def test_removing_a_class_is_refused
     with_view do |path|
       assert_match(/remove/, refused(parse(path, find: 'class="card"', replace: 'class="stack"')))

@@ -4,10 +4,10 @@ require_relative "design_edit"
 
 module Master
   module Fix
-    # One proposed view edit for the design loop. The only change it allows is ADDING class
+    # One proposed view edit for the design loop. It allows unwrapping a bare div without changing its contents, or adding class
     # names to an element's static class attribute, and only names a stylesheet already
     # defines: that reaches the layout primitives without touching text (which is I18n),
-    # ERB code (strict loading), structure, or any class a script or test selects by.
+    # ERB code (strict loading), or any class a script or test selects by.
     class MarkupEdit < DesignEdit
       CLASS_ATTRIBUTE = /\bclass="([^"<>]*)"/
       NAME = /\A[A-Za-z_][\w-]*\z/
@@ -24,8 +24,10 @@ module Master
         count = text.scan(proposal.find).size
         raise Refused, "the text to replace occurs #{count} times, not once" unless count == 1
 
-        refuse_beyond_class_names!
-        refuse_unknown_names!
+        unless bare_wrapper_removal?
+          refuse_beyond_class_names!
+          refuse_unknown_names!
+        end
         reason = @rules.guard&.call(file, text.sub(proposal.find) { proposal.replace })
         raise Refused, "the laws refuse it: #{reason}" if reason
 
@@ -33,6 +35,16 @@ module Master
       end
 
       private
+
+      # Only an attribute-free div can disappear. The complete inner source,
+      # including ERB, text and controls, must remain byte-for-byte intact.
+      def bare_wrapper_removal?
+        match = proposal.find.match(/\A<div>(.*)<\/div>\z/m)
+        return false unless match && match[1] == proposal.replace
+        return false if match[1].match?(/<\/?div\b/i)
+
+        !names_in(match[1]).empty?
+      end
 
       # Everything outside the class attributes must be byte for byte the same, and each
       # attribute may only grow.

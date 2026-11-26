@@ -76,8 +76,8 @@ module Master
           Make ONE edit to ONE of the stylesheets below that improves the layout you can see: spacing, alignment,
           sizing, hierarchy, grid or flex structure, overflow, reading width. Diagnose a specific relationship
           between visible elements, not merely an isolated number. Prefer intrinsic reflow and meaningful
-          group separation over uniform gaps or enlarging every element. Use flex wrapping and gap for linear flow, grid for\n          two-dimensional alignment, minmax(0, 1fr) for shrinkable tracks, and container queries only when container\n          size is the actual constraint. Prefer repairing the shared owning rule to adding overrides. Preserve product\n          designs, keyboard order, focus, and touch behavior. Explain the intended optical gain. Change layout properties only, never
-          a colour, typeface, font weight, shadow or opacity, never a token file, and keep every spacing value on the
+          group separation over uniform gaps or enlarging every element. Use flex wrapping and gap for linear flow, grid for\n          two-dimensional alignment, minmax(0, 1fr) for shrinkable tracks, and container queries only when container\n          size is the actual constraint. Prefer repairing the shared owning rule to adding overrides. Preserve product\n          designs, keyboard order, focus, and touch behavior. Explain the intended optical gain. Change layout properties or neutralise existing decorative borders and shadows to none or 0. Never change
+          colour, typeface, font weight, opacity, focus outlines or token files. Keep every spacing value on the
           declared scale or a var(--token).
           #{type_note}
           #{markup_note(sources)}
@@ -118,8 +118,8 @@ module Master
       def markup_note(sources)
         return "" unless sources.any? { |path| path.end_with?(".erb") }
 
-        "A view (.erb) may be edited only to ADD class names, defined in the stylesheets below, to an element's " \
-          'static class="..." attribute: never its text, ERB tags, tags or existing class names.'
+        "A view (.erb) may ADD existing stylesheet classes to an element's " \
+          'static class="..." attribute, or remove one attribute-free div while retaining its exact inner source. Never change text, ERB or existing classes.'
       end
 
       def prior_design_lessons(sources)

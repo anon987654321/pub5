@@ -8,9 +8,9 @@ module Master
     # One proposed stylesheet edit for the design loop: parsed from the model's
     # reply, checked against what the loop may change, and applied or undone on
     # disk. The loop changes layout (spacing, size, alignment, structure, text size
-    # on a declared step) and never a rendered value: laws.yml RENDERED_VALUES
+    # on a declared step) and narrowly scoped removal of decorative framing. RENDERED_VALUES
     # leaves colour, typeface, weight, shadow, opacity and the named layout tokens
-    # to the operator, so those edits are refused here whatever the model asked for.
+    # to the operator; neutralising existing decoration is the only exception.
     class DesignEdit
       Refused = Class.new(StandardError)
 
@@ -29,6 +29,7 @@ module Master
       # (refuse_off_type_scale!): family, weight and the rest of the font shorthand stay the operator's.
       RENDERED_PROPERTY = /\A(?:color|background(?:-[a-z]+)*|font(?:-(?!size\z)[a-z]+)*|border(?:-[a-z]+)*-color|outline-color|
                               box-shadow|text-shadow|opacity|filter|fill|stroke|mix-blend-mode)\z/ix
+      NEUTRAL_FRAME = /\A(?:border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?|box-shadow|text-shadow)\z/
       FONT_SIZE = "font-size"
       TYPE_STEP_PX = 1.0
       COLOUR_BEARING = /\A(?:border|outline)(?:-[a-z]+)?\z/i
@@ -130,8 +131,14 @@ module Master
       def refuse_rendered_values!
         raise Refused, "!important is not a layout fix" if important_added?
 
-        bad = changed.find { |name, _| name.match?(RENDERED_PROPERTY) }
+        bad = changed.find { |name, value| name.match?(RENDERED_PROPERTY) && !neutral_frame?(name, value) }
         raise Refused, "changes a rendered value (#{bad.join(': ')}), which the loop leaves to the operator" if bad
+        removed = declarations(proposal.find) - declarations(proposal.replace)
+        lost = removed.find do |name, _|
+          name.match?(RENDERED_PROPERTY) &&
+            !changed.any? { |property, value| property == name && neutral_frame?(property, value) }
+        end
+        raise Refused, "removes a rendered value (#{lost.first})" if lost
         raise Refused, "changes a border or outline colour" if colour_changed?
       end
 
@@ -194,8 +201,15 @@ module Master
       def colour_changed?
         old = declarations(proposal.find).to_h
         changed.select { |name, _| name.match?(COLOUR_BEARING) }.any? do |name, value|
-          old[name].nil? || old[name].gsub(LENGTH, "") != value.gsub(LENGTH, "")
+          !neutral_frame?(name, value) && (old[name].nil? || old[name].gsub(LENGTH, "") != value.gsub(LENGTH, ""))
         end
+      end
+
+      # Neutralise an existing decoration without inventing a new rendered value.
+      # Never grant this exception to outlines: they may be keyboard focus cues.
+      def neutral_frame?(name, value)
+        name.match?(NEUTRAL_FRAME) && %w[none 0].include?(value) &&
+          declarations(proposal.find).any? { |property, old| property == name && !%w[none 0].include?(old) }
       end
 
       def write(text)
