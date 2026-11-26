@@ -228,12 +228,33 @@ sync_tree_stage() {
   echo "rails-sync: activated $target"
 }
 
+# __shared reads the fleet inventory from its parent directory, as RAILS/__shared
+# reads RAILS/apps.yml. Without it Shared::MobileAppRegistry raised on every
+# /.well-known/assetlinks.json and apple-app-site-association request: brgen's
+# canary saw both answer 500 after the 2026-11-26 deploy.
+sync_inventory() {
+  typeset source target stage
+  source=$rails_root/apps.yml
+  target=$app_home/apps.yml
+  stage=$app_home/.apps.yml.sync.$$
+  [[ ! -L $source && -f $source ]] || { echo "rails-sync: inventory is missing or symlinked" >&2; return 1; }
+  [[ ! -L $target && ! -e $stage ]] || {
+    echo "rails-sync: refusing symlinked or stale inventory path" >&2
+    return 1
+  }
+  cp "$source" "$stage"
+  chmod 0644 "$stage"
+  mv -f "$stage" "$target"
+  echo "rails-sync: installed $target"
+}
+
 case "$mode" in
   app)
     sync_tree_stage "$rails_root/$app" "$app_dir" yes
     ;;
   shared)
     sync_tree_stage "$rails_root/__shared" "$app_home/__shared" no
+    sync_inventory
     ;;
   verticals)
     # Compatibility mode for old deploy callers. The engines are already

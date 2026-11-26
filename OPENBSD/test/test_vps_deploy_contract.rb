@@ -1074,6 +1074,15 @@ class VpsDeployContractTest < Minitest::Test
   # An unchecked `rcctl restart relayd || true` in rc.d/master left relayd dead and every
   # site refusing HTTPS (2026-11-26). Each app restart now goes through one helper that
   # proves relayd is running and retries.
+  # Shared::MobileAppRegistry reads apps.yml beside __shared; the shared sync must put it there.
+  def test_the_shared_sync_installs_the_fleet_inventory_beside_shared
+    sync = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "rails-sync.ksh"))
+    assert_includes sync, "    sync_tree_stage \"$rails_root/__shared\" \"$app_home/__shared\" no\n    sync_inventory\n"
+    assert_includes sync, "target=$app_home/apps.yml"
+    registry = File.read(File.join(ROOT, "RAILS", "__shared", "lib", "shared", "mobile_app_registry.rb"))
+    assert_includes registry, 'CONFIG = File.join(ROOT, "apps.yml")'
+  end
+
   def test_app_restarts_kick_relayd_through_the_checking_helper
     kick = File.read(File.join(ROOT, "OPENBSD", "mirror", "usr", "local", "libexec", "relayd-kick.ksh"))
     assert_includes kick, "/usr/sbin/rcctl check relayd"
