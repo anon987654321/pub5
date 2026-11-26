@@ -161,10 +161,10 @@ class TestRg69Defaults < Minitest::Test
     assert_operator engine_at, :>, html.index('id="main-content"')
   end
 
-  def test_welcome_gate_releases_the_interface_before_audio_initialization_finishes
-    welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
-    refute_nil welcome
-    assert_operator welcome.index("dismissWelcome();"), :<, welcome.index("await startPlayback(activationPromise);")
+  def test_playback_is_available_without_an_onboarding_gate
+    assert_includes html, 'id="play"'
+    refute_includes js, "welcome-start"
+    refute_includes js, "dismissWelcome"
   end
 
   def test_panic_resets_visual_and_transport_handles_for_a_clean_restart
@@ -185,21 +185,19 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "...createDrumBank(Tone.getContext().rawContext,p,Tone.connect)"
   end
 
-  def test_keyboard_shortcuts_work_from_welcome_and_range_controls
-    # The capture must run to the end of the function body, not to its first
-    # inner closing brace: the welcome branch closes on its own line.
+  def test_keyboard_shortcuts_work_from_range_controls
     handler = js[/function handleKeys\(e\)\{(.*?)(?=\n\/\/ One gesture)/m, 1] or raise "no handleKeys"
-    assert_includes handler, "$id('welcome-start').click()"
+    assert_includes handler, "$id('play').click()"
     assert_includes handler, "toggleTrackMute"
     refute_includes handler, "if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;"
     assert_includes js, "chip.addEventListener('keydown'"
   end
 
-  def test_welcome_overlay_does_not_swallow_advertised_shortcuts
+  def test_advertised_shortcuts_dispatch_directly
     handler = js[/function handleKeys\(e\)\{(.*?)(?=\n\/\/ One gesture)/m, 1] or raise "no handleKeys"
-    assert_includes handler, "k==='p'"
-    assert_includes handler, "const supportedShortcut=['s','r','e','l','t','m'].includes(k)"
-    assert_includes handler, "dismissWelcome();"
+    { "p" => "play", "s" => "stop", "r" => "random", "e" => "export", "l" => "layout", "t" => "theme" }.each do |key, control|
+      assert_includes handler, "k==='#{key}'&&!e.repeat){e.preventDefault();$id('#{control}').click();}"
+    end
   end
 
   def test_sliders_update_without_trailing_debounce
@@ -228,11 +226,8 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_audio_context_resume_is_invoked_directly_in_trusted_click_handlers
-    welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
-    refute_nil welcome
     refute_nil play
-    assert_match(/const activationPromise=startToneFromGesture\(\);\s*await startPlayback\(activationPromise\);/, welcome)
     assert_match(/const activationPromise=startToneFromGesture\(\);\s*await startPlayback\(activationPromise\);/, play)
     assert_includes js, "async function initAudio(activationPromise)"
   end
@@ -271,11 +266,8 @@ class TestRg69Defaults < Minitest::Test
 
   def test_audio_context_is_created_before_resume_inside_the_user_gesture
     assert_includes js, 'function startToneFromGesture(){'
-    welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
-    refute_nil welcome
     refute_nil play
-    assert_includes welcome, "const activationPromise=startToneFromGesture();"
     assert_includes play, "const activationPromise=startToneFromGesture();"
     refute_includes js, "Tone.Transport.scheduleRepeat"
     assert_includes js, "startClock();"
@@ -556,10 +548,10 @@ class TestRg69PlaybackRecovery < Minitest::Test
   def js = File.read(JS).sub(/<script id="tone-vendor">.*?<\/script>/m, "")
   def css = File.read(CSS)
 
-  def test_missing_tone_asset_does_not_leave_the_welcome_gate_covering_the_page
-    assert_includes js, 'const trace=$id("trace");'
-    assert_includes js, 'welcome.style.display = "none";'
-    assert_includes js, 'welcome.setAttribute("aria-hidden", "true");'
+  def test_missing_tone_asset_reports_failure_and_disables_controls
+    assert_includes js, 'if (!window.Tone)'
+    assert_includes js, 'warning.setAttribute("role", "alert");'
+    assert_includes js, 'document.body.prepend(warning);'
     assert_includes js, 'control.disabled = true;'
     assert_includes js, 'status.dataset.state = "audio";'
   end
