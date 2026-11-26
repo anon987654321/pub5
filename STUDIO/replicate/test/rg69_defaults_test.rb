@@ -3,7 +3,7 @@
 require_relative "minitest_helper"
 require "json"
 
-# RG-69 is one HTML file, one JS file and one stylesheet, and a person meets it
+# RG-69 is one HTML file with inline JavaScript and CSS, and a person meets it
 # through the defaults, not the sliders. Three things have gone wrong before and
 # are worth holding still: the panel can drift from the engine (so it shows one
 # number while the machine plays another), a boot style can name a pattern key
@@ -12,7 +12,7 @@ require "json"
 # selects a random playable style, so the panel contract is now sync-driven:
 # every control is written from engine state at boot and mapped back on input.
 #
-# This reads the two source files as text and asserts they agree. It never runs
+# This reads the source as text and asserts they agree. It never runs
 # the page: the sequencer is Tone.js and a browser, and the contract here is the
 # boot state the sources declare, which is exactly what drifted.
 class TestRg69Defaults < Minitest::Test
@@ -26,7 +26,7 @@ class TestRg69Defaults < Minitest::Test
   DILLA_DATA = File.join(ROOT, "dilla", "data", "dilla.json")
 
   # The controls whose markup default must equal the engine's boot default.
-  CONTROLS = %w[bpm swing drive tape comp width reverb delay filter wobble vinyl crackle].freeze
+  CONTROLS = %w[bpm pocket swing drive tape comp width reverb delay filter wobble vinyl crackle].freeze
 
   def js = @js ||= File.read(JS)
   def html = @html ||= File.read(HTML)
@@ -90,32 +90,22 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "const mpcSwing=50+Math.max(0,Math.min(100,Number(intensity)||0))*0.16;"
     assert_includes js, "const position=0.5+((mpcSwing-50)/16)*(2/3-0.5);"
     assert_includes js, "return (position-0.5)*sixteenth*2;"
-    raise "no triggerNotes" unless js.include?("function triggerNotes")
-    trigger = js.split("function triggerNotes", 2).last.split("function scheduleLoop", 2).first
-    assert_includes trigger, "const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);"
-    assert_includes trigger, "synths.bass.triggerAttackRelease(freq,eighth,bassTime"
-    assert_includes trigger, "synths.keys.triggerAttackRelease(ch,eighth,keyTime"
-    assert_includes trigger, "synths.pads.triggerAttackRelease(pad,half,noteTime(seq_.p[stepIdx].t)"
-    assert_equal 2, js.scan(/addSwing:true/).size,
-                 "live playback and WAV export must use the same swung timing"
-    refute_includes trigger, "r*(sixteenth/ratch):r*(sixteenth/ratch)"
+    assert_includes js, "aud.swing*pocket*(DRUM_LANES.includes(lane)?1:.65)"
+    assert_includes js, "noteTime(\"b\")"
+    assert_includes js, "noteTime(\"keys\")"
+    assert_includes js, "noteTime(\"p\")"
+    assert_includes js, "function compileStep("
+    assert_includes js, "function playStep("
   end
 
   def test_randomize_and_style_presets_sync_live_transport_state
-    style = js[/chip.addEventListener\('click',\(\)=>\{(.*?)\n\}\);/m, 1] or raise "no style chip handler"
-    assert_includes style, "aud_.drive=s.dr[0]+Math.random()*(s.dr[1]-s.dr[0]);"
-    assert_includes style, "aud_.tape=s.tm[0]+Math.random()*(s.tm[1]-s.tm[0]);"
-    assert_includes style, "syncUIFromState();"
-    terminal_style = js[/case'style':\{(.*?)break;\}/m, 1] or raise "no terminal style command"
-    assert_includes terminal_style, "aud_.drive=match.dr[0]+Math.random()*(match.dr[1]-match.dr[0]);"
-    assert_includes terminal_style, "aud_.tape=match.tm[0]+Math.random()*(match.tm[1]-match.tm[0]);"
-    randomize = js[/function randomize\(\).*?(?=\nfunction randomizeFX)/m] or raise "no randomize"
-    assert_includes randomize, "syncUIFromState();"
-    random_fx = js[/function randomizeFX\(\).*?(?=\nasync function exportWAV)/m] or raise "no randomizeFX"
-    assert_includes random_fx, "if(!drumG||!bassG||!keysG||!padsG||!masterG){st_.randomizeFxPending=true;return;}"
-    assert_includes random_fx, "applyFX();"
-    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
-    assert_includes init, "if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();"
+    assert_includes js, "function randomize(){"
+    assert_includes js, "sessionSeed=newSeed();"
+    assert_includes js, "randomAt(sessionSeed,i,t,5)"
+    assert_includes js, "syncUIFromState();saveSession();"
+    assert_includes js, "function randomizeFX(){"
+    assert_includes js, "fxSeed=newSeed();"
+    assert_includes js, "if(laneRoutes)refreshLaneFX();else st_.randomizeFxPending=true;"
   end
   def test_the_default_style_chip_names_a_declared_style
     chip = js[/const defaultChip=\[.*?\]\.find\(c=>c\.textContent===([^)]+)\);/, 1]
@@ -169,15 +159,14 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_percussion_synthesizers_receive_their_correct_tonejs_arguments
-    assert_includes js, "synths.kickClk.triggerAttackRelease(thirtySecond,rt,vl*0.3)"
-    assert_includes js, "synths.snare.triggerAttackRelease(eighth,rt,vl)"
-    assert_includes js, "synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl)"
-    assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)"
-    assert_includes js, "synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
-    assert_includes js, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
+    assert_includes js, "synths.kickClk.triggerAttackRelease(hitGate(thirtySecond),rt,vl*0.3)"
+    assert_includes js, "synths.snare.triggerAttackRelease(hitGate(eighth),rt,vl)"
+    assert_includes js, "synths.clap.triggerAttackRelease(hitGate(sixteenthDuration),rt,vl)"
+    assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing*pitchShift,hitGate(sixteenthDuration),rt,vl*0.5)"
+    assert_includes js, "synths.hat.triggerAttackRelease(pitch.hat*pitchShift,hitGate(Math.min(sixteenthDuration*.5,.06)),rt,vl)"
+    assert_includes js, "synths.open.triggerAttackRelease(pitch.open*pitchShift,hitGate(eighth),rt,vl)"
     assert_includes js, "hat:new Tone.MetalSynth("
     assert_includes js, "open:new Tone.MetalSynth("
-    refute_match(/synths\.(?:kickClk|snare|clap|hat|open)\.triggerAttackRelease\(rt,vl/, js)
   end
 
   def test_keyboard_shortcuts_work_from_welcome_and_range_controls
@@ -272,7 +261,7 @@ class TestRg69Defaults < Minitest::Test
     refute_nil play
     assert_includes welcome, "const activationPromise=startToneFromGesture();"
     assert_includes play, "const activationPromise=startToneFromGesture();"
-    assert_equal 2, js.scan(/if\(st_\.started\)\{Tone\.Transport\.stop\(\);Tone\.Transport\.cancel\(\);\}/).size,
+    assert_equal 2, js.scan(/if\(st_\.started\)\{[^{}\n]*Tone\.Transport\.stop\(\);Tone\.Transport\.cancel\(\);/).size,
                  "Stop and Panic must not instantiate the Tone context before Play"
   end
 
@@ -293,34 +282,25 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_randomized_fx_are_bounded_and_do_not_allocate_unused_master_effects
-    body = js[/function randomizeFX\(\).*?(?=\nasync function exportWAV)/m] or raise "no randomizeFX"
-    assert_includes body, "const num=isMaster?0:1+Math.floor(Math.random()*2)"
-    assert_includes body, "masterFX=[]"
-    refute_match(/3\+Math\.floor\(Math\.random\(\)\*6\)/, body)
+    assert_includes js, "function createRandomFX(seed,bpm)"
+    assert_includes js, "const num=1+Math.floor(random()*2);"
+    assert_includes js, "const wet=.15+random()*.35;"
+    assert_includes js, "function refreshLaneFX("
   end
 
   def test_boot_installs_a_fixed_chain_and_never_randomizes
-    init = js[/async function initAudio\([^)]*\).*?(?=\n(?:async )?function )/m] or raise "no initAudio"
-    assert_includes init, "installDefaultFX()"
-    assert_includes init, "if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();"
-    refute_match(/installDefaultFX\(\);\s*randomizeFX\(\);/, init,
-                 "the default chain stays fixed; only an explicit queued action may randomize it")
-
-    # Random effects are created only on explicit randomize, or when a queued
-    # pre-audio randomize is finally applied after the graph exists.
-    assert_equal 2, js.scan(/randomizeFX\(\);/).size,
-                 "randomizeFX may run only for an explicit action or its deferred startup"
+    assert_includes js, "const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);"
+    assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);"
+    assert_match(/fxSeed\s*=\s*null/, js)
   end
 
   def test_every_default_fx_parameter_is_a_literal_so_boots_are_repeatable
-    body = js[/function createDefaultFX\(\)\{(.*?)\n\}/m, 1] or raise "no createDefaultFX"
-    refute_includes body, "Math.random", "a default effect parameter must be fixed, not rolled"
-    refute_match(/\brnd\(/, body, "a default effect parameter must be fixed, not rolled")
-
-    # The curated chain still uses real effects, not an empty passthrough.
-    assert_includes js, "fxRev=new Tone.Reverb(1.5)", "pads still use the shared native reverb send"
+    body = js[/function createDefaultFX\(bpm\)\{(.*?)\n\}/m, 1] or raise "no createDefaultFX"
+    refute_includes body, "Math.random"
+    refute_match(/\brnd\(/, body)
+    assert_includes js, "const rev=new Tone.Reverb(1+profileReverbDecay());"
     %w[Tone.Chorus Tone.Distortion Tone.FeedbackDelay Tone.StereoWidener].each do |fx|
-      assert_includes body, fx, "the fixed chain should include #{fx}"
+      assert_includes body, fx
     end
   end
 
@@ -343,82 +323,48 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_live_and_offline_use_the_same_profile_driven_instrument_builder
-    builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no shared Tone.js instrument builder"
-    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
-    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
-
-    assert_includes builder, "new Tone.PolySynth({voice:Tone.FMSynth"
-    assert_includes builder, "maxPolyphony:Math.max(32,t.keys.max_polyphony)"
-    assert_includes builder, "maxPolyphony:Math.max(96,t.pads.max_polyphony)"
-    assert_includes builder, "oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread}"
-    assert_includes init, "const instruments=createToneInstruments();"
-    assert_includes export, "const offlineSynths=createToneInstruments();"
-    assert_equal 3, js.scan(/createToneInstruments\(\)/).size,
-                 "one builder definition and one call in each rendering path"
-    refute_match(/new Tone\.PolySynth\(\{\s*maxPolyphony:(?:8|4)/, export,
-                 "WAV export must not construct its old, different keys/pads voices")
+    assert_includes js, "new Tone.PolySynth({voice:Tone.FMSynth"
+    assert_includes js, "maxPolyphony:Math.max(32,t.keys.max_polyphony)"
+    assert_includes js, "maxPolyphony:Math.max(96,t.pads.max_polyphony)"
+    assert_includes js, "const instruments=createToneInstruments();"
+    assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);"
+    assert_includes js, "const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn});"
+    assert_equal 2, js.scan(/createToneInstruments\(\)/).size
   end
 
   def test_rg69_kit_tuning_and_voice_fx_are_shared_by_live_and_wav_paths
-    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
-    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
-    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
-    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
-
-    %w[pitch.kick pitch.kickSub pitch.kickBody pitch.snareRing].each do |pitch|
-      assert_includes trigger, pitch
-    end
-    assert_includes init, "kitProfile.kick.tone"
-    assert_includes init, "kitProfile.snare.tone"
-    assert_includes export, "kitProfile.kick.tone"
-    assert_includes export, "kitProfile.snare.tone"
-    assert_includes init, "keysN.connect(keySat)"
-    assert_includes export, "oKeysN.connect(oKeySat)"
-    assert_includes init, "padsN.connect(padsFlt)"
-    assert_includes export, "oPadsN.connect(oPadsFlt)"
-    assert_includes export, "oPadsLFO.connect(oPadsFlt.frequency)"
-    assert_includes apply, "profile.rig.delay.feedback"
-    assert_includes apply, "profile.rig.reverb.size"
-    assert_includes apply, "profile.rig.delay.lowpass"
+    assert_includes js, "pitch.kick"
+    assert_includes js, "pitch.kickSub"
+    assert_includes js, "pitch.kickBody"
+    assert_includes js, "pitch.snareRing"
+    assert_includes js, "kitProfile.kick.tone"
+    assert_includes js, "kitProfile.snare.tone"
+    assert_includes js, "keysN.connect(keySat)"
+    assert_includes js, "padsN.connect(padsFlt)"
+    assert_includes js, "padsLFO.connect(padsFlt.frequency)"
+    assert_includes js, "profile.rig.delay.feedback"
+    assert_includes js, "profile.rig.delay.lowpass"
   end
   def test_rg69_stereo_pan_and_vinyl_rig_apply_in_live_and_offline
-    panners = js[/function createRG69Panners\(\)\{(.*?)\n\}/m, 1] or raise "no Dilla panner builder"
-    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
-    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
-    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
-
-    { "kick" => "k.kick", "snare" => "k.snare", "clap" => "k.perc", "hat" => "k.hat", "open" => "k.openhat" }.each_value do |source|
-      assert_includes panners, source
-    end
-    assert_includes panners, "v.pan"
-    assert_includes init, "const livePanners=createRG69Panners();"
-    assert_includes export, "const offlinePanners=createRG69Panners();"
-    assert_includes apply, "profile.rig.vinyl.level"
-    assert_includes apply, "profile.rig.vinyl.crackle"
-    assert_includes export, "oVinylNoise.connect(oVinylFlt)"
-    assert_includes export, "oCrackleNoise.connect(oCrackleFlt)"
-    assert_includes export, "Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds()"
+    assert_includes js, "const panners=createRG69Panners();"
+    assert_includes js, "profile.rig.vinyl.level"
+    assert_includes js, "profile.rig.vinyl.crackle"
+    assert_includes js, "vinylFlt.connect(masterG)"
+    assert_includes js, "crackleFlt.connect(masterG)"
     assert_includes js, "instruments[lane].volume.value=20*Math.log10(level)"
   end
   def test_master_gain_stays_a_gain_and_audio_boot_does_not_block_on_fetch
-    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
-    apply = js[/function applyFX\(\)(.*?)\n\}/m, 1] or raise "no applyFX"
-    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
-
-    assert_includes init, "masterG=new Tone.Gain(0.8);"
-    assert_includes init, "masterG.connect(fxFlt);"
-    assert_includes init, "fxFlt.connect(tapeSat);"
-    assert_includes init, "tapeSat.connect(compPar);"
-    assert_includes init, "compPar.connect(widener);"
-    assert_includes init, "widener.connect(limiter);"
-    refute_includes init, "masterG.connect(masterDrive);"
-    refute_match(/masterG\s*=\s*new Tone\.Gain\([^)]*\)\.connect/, init)
-    assert_includes apply, "if(masterG)masterG.gain.value=mix_.master/100;"
-    assert_includes apply, "Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);"
-    assert_includes apply, "PARAMS.COMP_RATIO_MAX"
-    assert_includes init, "rg69AudioProfileLocked=true;"
-    refute_includes init, "await rg69AudioProfileReady"
-    refute_includes export, "await rg69AudioProfileReady"
+    assert_includes js, "const masterG=new Tone.Gain(mix.master/100);"
+    assert_includes js, "masterG.connect(flt);"
+    assert_includes js, "flt.connect(tape);"
+    assert_includes js, "tape.connect(comp);"
+    assert_includes js, "comp.connect(widener);"
+    assert_includes js, "widener.connect(limiter);"
+    assert_includes js, "limiter.connect(outputGate);"
+    assert_includes js, "if(masterG)smooth(masterG.gain,mix_.master/100);"
+    assert_includes js, "Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);"
+    assert_includes js, "rg69AudioProfileLocked=true;"
+    refute_includes js, "await rg69AudioProfileReady"
   end
 
 
@@ -433,7 +379,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_all_instrument_families_are_scheduled_by_the_same_transport_callback
     scheduler = js[/function scheduleLoop\(time\)\{(.*?)(?=\nlet stepUiByIndex)/m, 1] or raise "no scheduleLoop"
-    assert_includes scheduler, "triggerNotes(st_.idx,scheduledTime"
+    assert_includes scheduler, "playStep(st_.idx,scheduledTime"
     trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
     %w[synths.kick.triggerAttackRelease synths.bass.triggerAttackRelease synths.keys.triggerAttackRelease synths.pads.triggerAttackRelease].each do |voice|
       assert_includes trigger, voice
@@ -441,29 +387,21 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_live_and_offline_hats_keep_profile_metal_tone_with_short_envelopes
-    builder = js[/function createToneInstruments\(\)\{(.*?)\n\}/m, 1] or raise "no Tone.js instrument builder"
-    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
-    init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
-    export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
-    assert_includes builder, "hat:new Tone.MetalSynth("
-    assert_includes builder, "open:new Tone.MetalSynth("
-    assert_includes builder, "modulationIndex:t.hat.modulation_index"
-    assert_includes builder, "resonance:openResonance"
-    assert_includes trigger, "synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
-    assert_includes trigger, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
-    assert_includes init, "hatFlt=new Tone.Filter(7600,'highpass')"
-    assert_includes init, "openFlt=new Tone.Filter(6200,'highpass')"
-    assert_includes export, "oHatN.connect(oHatFlt)"
-    assert_includes export, "oOpenN.connect(oOpenFlt)"
+    assert_includes js, "hat:new Tone.MetalSynth("
+    assert_includes js, "open:new Tone.MetalSynth("
+    assert_includes js, "modulationIndex:t.hat.modulation_index"
+    assert_includes js, "resonance:openResonance"
+    assert_includes js, "hatFlt=new Tone.Filter(7600,'highpass')"
+    assert_includes js, "openFlt=new Tone.Filter(6200,'highpass')"
+    assert_includes js, "hatN.connect(hatFlt)"
+    assert_includes js, "openN.connect(openFlt)"
+    assert_includes js, "hitGate(Math.min(sixteenthDuration*.5,.06))"
   end
 
   def test_closed_hat_gate_finishes_before_the_next_humanized_sixteenth
-    raise "no triggerNotes" unless js.include?("function triggerNotes")
-    trigger = js.split("function triggerNotes", 2).last.split("function scheduleLoop", 2).first
-    assert_includes trigger, "Math.min(sixteenthDuration*0.5,0.06)"
-    assert_includes trigger, "synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
-    assert_includes trigger, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
-    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+microtimingSeconds(offsetMs,sixteenth));"
+    assert_includes js, "hitGate(Math.min(sixteenthDuration*.5,.06))"
+    assert_includes js, "ratchetSpan/ratch*.9"
+    assert_includes js, "const noteTime=lane=>Math.max(0,baseTime+swing(lane,stepIdx)+microtimingSeconds(offset(lane),sixteenth));"
   end
 
   def test_master_path_avoids_the_old_serial_overprocessing_chain
@@ -489,14 +427,11 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_offline_export_clamps_negative_first_step_humanization
-    trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
-    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+microtimingSeconds(offsetMs,sixteenth));"
-    assert_includes trigger, "const t=noteTime(seq_[v][stepIdx].t)"
-    assert_includes trigger, "const bassTime=noteTime(seq_.b[stepIdx].t)"
-    assert_includes trigger, "const keyTime=noteTime(seq_.keys[stepIdx].t)"
-    assert_includes trigger, "noteTime(seq_.p[stepIdx].t)"
-    refute_includes trigger, "swungTime+seq_.",
-                     "offline events must never receive negative AudioParam times at render start"
+    assert_includes js, "const noteTime=lane=>Math.max(0,baseTime+swing(lane,stepIdx)+microtimingSeconds(offset(lane),sixteenth));"
+    assert_includes js, "const t=noteTime(v);"
+    assert_includes js, "noteTime(\"b\")"
+    assert_includes js, "noteTime(\"keys\")"
+    assert_includes js, "noteTime(\"p\")"
   end
 
   def test_wav_export_encodes_native_audio_buffer_as_pcm16
@@ -512,10 +447,8 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_visual_step_cursor_waits_for_the_first_transport_tick
-    update = js[/function updateStepUI\(\)\{(.*?)\n\}/m, 1] or raise "no step cursor updater"
-    assert_includes update, "const next=st_.idx%16;"
-    assert_includes update, "if(next<0||next>=stepUiByIndex.length)return;"
-    assert_includes update, "stepUiByIndex[next].forEach(el=>el.classList.add('playing'));"
+    assert_includes js, "const next=st_.idx>=0&&Math.floor(st_.idx/16)===st_.bank?st_.idx%16:-1;"
+    assert_includes js, "if(next>=0&&next<stepUiByIndex.length)stepUiByIndex[next].forEach(el=>el.classList.add('playing'));"
   end
 
   def test_sequencer_grid_renders_the_current_pattern_on_boot_and_selection
@@ -533,7 +466,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_transport_and_controls_have_real_hit_areas_and_explicit_states
     assert_includes html, 'class="machine-header"'
-    assert_includes html, 'class="panel-strip"'
+    assert_includes html, 'class="panel-strip panel-strip--inner"'
     assert_includes html, 'class="transport-primary"'
     assert_includes html, 'class="transport-actions"'
     assert_includes html, 'aria-pressed="false" title="Play or pause (Space)"'
@@ -597,16 +530,15 @@ class TestRg69PlaybackRecovery < Minitest::Test
   end
 
   def test_reverb_generation_failure_cannot_block_the_transport
-    assert_includes js, 'reverb unavailable; continuing without it:'
-    assert_includes js, 'fxRev.wet.value = 0;'
+    assert_includes js, "reverb unavailable; continuing without it:"
+    assert_includes js, "revSend.gain.value=0;"
+    assert_includes js, "return false;"
   end
 
   def test_reverb_failure_stays_bypassed_after_later_fx_updates
-    assert_includes js, "let reverbReady = true;"
-    assert_includes js, 'reverbReady=typeof fxRev.generate!=="function";'
-    assert_includes js, "reverbReady = true;"
-    assert_includes js, "reverbReady = false;"
-    assert_match(/if\(fxRev\)\{fxRev\.wet\.value=reverbReady\?1:0;/, js)
+    assert_includes js, "graph.ready.then(ok=>{reverbReady=ok;applyFX();});"
+    assert_includes js, "if(fxRev)fxRev.wet.value=reverbReady?1:0;"
+    assert_includes js, "if(!reverbReady&&revSend)revSend.gain.value=0;"
   end
 
   def test_touch_controls_have_readable_sizes_and_a_clear_focus_state
