@@ -131,7 +131,8 @@
     let lo=0,hi=mesh.cumulative.length-1;
     while(lo<hi) { const mid=(lo+hi)>>>1; if(mesh.cumulative[mid]<target) lo=mid+1; else hi=mid; }
     const [a,b,c]=mesh.triangles[lo], u=Math.sqrt(randomUnit(index,2)), v=randomUnit(index,3);
-    return a.map((p,i)=>p*(1-u)+b[i]*u*(1-v)+c[i]*u*v);
+    const wa=1-u,wb=u*(1-v),wc=u*v;
+    return [a[0]*wa+b[0]*wb+c[0]*wc,a[1]*wa+b[1]*wb+c[1]*wc,a[2]*wa+b[2]*wb+c[2]*wc];
   }
 
   // Progressive best-candidate sampling. A bounded spatial hash favours
@@ -139,21 +140,23 @@
   // Every prefix is stable, independent of the requested device point count.
   let sampleId, points=[], buckets=new Map(), cellSize=0;
   const key=(x,y,z)=>((x+512)*1024+y+512)*1024+z+512;
-  const cell=p=>p.map(v=>Math.floor(v/cellSize));
+  const cell=v=>Math.floor(v/cellSize);
   function insert(p) {
-    const k=key(...cell(p));
+    const k=key(cell(p[0]),cell(p[1]),cell(p[2]));
     if(!buckets.has(k)) buckets.set(k,[]);
     buckets.get(k).push(p);
   }
-  function separation(p) {
-    const [x,y,z]=cell(p);
+  function separation(p, threshold) {
+    const x=cell(p[0]),y=cell(p[1]),z=cell(p[2]);
     let best=cellSize*cellSize;
     for(let dz=-1;dz<=1;dz++) for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++) {
       const neighbours=buckets.get(key(x+dx,y+dy,z+dz));
       if(!neighbours) continue;
       for(const q of neighbours) {
         const a=p[0]-q[0],b=p[1]-q[1],c=p[2]-q[2];
-        best=Math.min(best,a*a+b*b+c*c);
+        const distance=a*a+b*b+c*c;
+        if(distance<=threshold) return distance;
+        best=Math.min(best,distance);
       }
     }
     return best;
@@ -173,7 +176,7 @@
       }
       let best=null, score=-1;
       for(let j=0;j<8;j++) {
-        const p=candidate(mesh,n*8+j), d=separation(p);
+        const p=candidate(mesh,n*8+j), d=separation(p,score);
         if(d>score) { best=p; score=d; }
         if(score>=cellSize*cellSize) break;
       }
