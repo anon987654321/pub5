@@ -128,15 +128,15 @@ Rails.application.configure do
   if defined?(Brgen::DomainRegistry)
     Brgen::DomainRegistry::ENTRIES.each do |entry|
       config.hosts << entry.domain
-      config.hosts << /\A([a-z0-9-]+\.)*#{Regexp.escape(entry.domain)}\z/i
+      config.hosts << /\A([a-z0-9-]+\.)*#{Regexp.escape(entry.domain)}(:\d+)?\z/i
     end
   end
-  config.hosts << /\A([a-z0-9-]+\.)*localhost\z/i
+  config.hosts << /\A([a-z0-9-]+\.)*localhost(:\d+)?\z/i
   # bsdports runs its own apex and is not a city, so no registry entry covers
   # it: probing the local server with its real Host header returned 403.
   config.hosts << "bsdports.org"
-  config.hosts << /\A([a-z0-9-]+\.)*bsdports\.org\z/i
+  config.hosts << /\A([a-z0-9-]+\.)*bsdports\.org(:\d+)?\z/i
   # amber is not a city either; its one name is amberapp.art, and the live checks probe it by that Host.
   config.hosts << "amberapp.art"
-  config.hosts << /\A([a-z0-9-]+\.)*amberapp\.art\z/i
+  config.hosts << /\A([a-z0-9-]+\.)*amberapp\.art(:\d+)?\z/i
 end
