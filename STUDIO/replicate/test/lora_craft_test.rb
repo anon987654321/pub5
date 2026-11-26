@@ -6,6 +6,20 @@ require_relative "../../lora/lora"
 class TestStudioLoraCraft < Minitest::Test
   # Black Forest Labs asks for the medium and style first, so the stock opens
   # the caption instead of trailing it as a tag.
+  # Her renders first settled too old, then too young. The descriptor keeps the
+  # age it now states, and the scenes keep a shadow side without a hard edge or
+  # a claim of flawless skin.
+  def test_ragnhild_keeps_her_age_and_a_modelled_face
+    descriptor = File.read(File.expand_path("../../lora/ragnhild/subject.env", __dir__))
+    assert_includes descriptor, "in her forties"
+    refute_includes descriptor, "smooth fair skin"
+
+    scenes = Studio::Lora::Selfie::SUBJECT_SCENES.fetch("ragnhild")
+    refute(scenes.any? { |scene| scene.include?("no hard shadow edge") }, "shadowless light reads young")
+    refute(scenes.any? { |scene| scene.include?("soft even skin") }, "flawless skin reads young")
+    assert(scenes.any? { |scene| scene.include?("shadow side") }, "the studio sitting keeps a modelled face")
+  end
+
   def test_the_scene_opens_with_the_film_stock
     scene = Studio::Lora::Selfie.scene(1, subject: "johann")
 
