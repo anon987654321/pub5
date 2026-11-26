@@ -89,14 +89,12 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     refute_includes part2, "vec3(1.0,0.98,0.94)"
   end
 
-  def test_secondary_orbital_particles_are_deterministic_and_subordinate
+  def test_face_has_no_secondary_decorative_orbit_population
     part3 = read(PUBLIC, "face.part3.txt")
 
-    assert_includes part3, "const CLI_FACE_WEB_DENSITY = 360;"
     assert_includes part3, "function faceFieldSample(index, salt = 0)"
-    assert_includes part3, "function ensureOrbitalField() {"
-    assert_includes part3, "opacity: 0.10"
-    refute_match(/Math\.random\(\)/, part3)
+    refute_includes part3, "ensureOrbitalField"
+    assert_includes part3, "frameRequest !== null"
   end
 
   def test_the_configured_face_shortcuts_control_laws_and_overlay_separately
