@@ -1148,7 +1148,9 @@ class TestRG69BrowserContract < Minitest::Test
     license_path = File.join(studio_root, "dilla", "vendor", "tone", "LICENSE.md")
     assert File.file?(tone_path), "missing vendored Tone.js 14.8.49"
     assert File.file?(license_path), "missing Tone.js license notice"
-    assert_includes html, 'src="../vendor/tone/Tone.min.js"'
+    assert_equal File.read(tone_path), html[/<script id="tone-vendor">\n\/\*.*?\*\/\n(.*?)\n<\/script>/m, 1]
+    assert_includes html, File.read(license_path).strip
+    refute_match(/<script[^>]*\bsrc=/i, html)
     refute_match(%r{https?://[^"']*Tone\.min\.js}i, html, "Tone.js must be local, not fetched from a CDN")
     assert_includes File.read(tone_path), "14.8.49"
     assert_includes File.read(license_path), "MIT License"
@@ -1156,7 +1158,7 @@ class TestRG69BrowserContract < Minitest::Test
     assert_includes html, 'id="main-content"'
     refute_match(/\sstyle=["']/i, html)
 
-    javascript = html
+    javascript = html.sub(/<script id="tone-vendor">.*?<\/script>/m, "")
     refute_match(/\.innerHTML\b|\beval\s*\(/, javascript)
     refute_match(/wobbLFO\.connect\s*\(\s*Tone\.Transport\.bpm\s*\)/, javascript)
     refute_match(/function applyWobble|applyWobble\(\)|Tone\.Transport\.bpm\.value=aud_\.bpm\*\(/, javascript)
