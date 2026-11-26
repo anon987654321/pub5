@@ -44,7 +44,7 @@ if [ -e "$storage" ] || [ -L "$storage" ]; then
 fi
 
 # The checkout parent belongs to the current deployment's group. The _pub4ci
-# group stays recognized on the box as the legacy interface (MIGRATION.md),
+# group stays recognized on the box as the legacy interface,
 # so it is still created when absent; the account and /home/dev move to the
 # current _pub5ci group.
 if ! grep -q '^_pub4ci:' /etc/group; then
