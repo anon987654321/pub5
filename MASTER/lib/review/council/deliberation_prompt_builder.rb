@@ -19,6 +19,7 @@ module Master
           prompt = format(Deliberation.prompts.fetch("judge"),
                           quality_brief: Deliberation.quality_brief(:general), rounds:)
           findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
+          prompt = [prompt, context && "Review brief and preservation constraints:\n#{context}"].compact.join("\n\n")
           InterModelContract.wrap_prompt(
             "#{prompt}\nSelect only the strongest actionable repairs after comparing all rounds. Prefer transformations that improve the whole without unintended loss; judge interactions between repairs rather than their isolated merits. Combine complementary proposals where warranted. Preserve minority objections, reject unsupported consensus, and explain why each selected repair beats its alternatives. Put the exact repository-relative file and stable line or selector in each finding location; put the selected change in proposed_repair. Return no findings when no repair is justified.", role: "judge", task: "Arbitrate the supplied council proposals and state evidence-backed concurrence or dissent.",
             success_criteria: "Return a schema-valid JSON response with an explicit position and zero or more evidence-backed findings.",
