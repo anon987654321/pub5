@@ -89,7 +89,7 @@ globalThis.fetch = async (url, options = {}) => {
 const frontend = (name) => pathToFileURL(new URL(`../__shared/frontend/${name}`, import.meta.url).pathname).href
 registerHooks({
   resolve(specifier, context, next) {
-    if (specifier === "pub4/pwa_runtime") return { url: frontend("pwa_runtime.js"), shortCircuit: true }
+    if (specifier === "pub5/pwa_runtime") return { url: frontend("pwa_runtime.js"), shortCircuit: true }
     return next(specifier, context)
   },
 })
@@ -173,12 +173,14 @@ test("install folds the retired localStorage queue in and words the status only 
 
   globalThis.navigator.onLine = false
   const status = { textContent: "" }
+  const acknowledgements = []
   const form = Object.assign(new HTMLFormElement(), {
     action: "https://brgen.no/posts",
     method: "post",
     dataset: {},
     matches: () => true,
     querySelector: () => status,
+    dispatchEvent: (event) => acknowledgements.push(event),
   })
   globalThis.FormData = class extends FormData { constructor() { super() } }
   await documentListeners.get("submit")({ target: form, preventDefault() {} })
@@ -187,5 +189,7 @@ test("install folds the retired localStorage queue in and words the status only 
   form.dataset.pwaQueuedText = "Saved for offline"
   await documentListeners.get("submit")({ target: form, preventDefault() {} })
   assert.equal(status.textContent, "Saved for offline")
+  assert.equal(acknowledgements.length, 2)
+  assert.ok(acknowledgements.every(event => event.type === "pub5:offline-queued" && rows.has(event.detail.id)))
   globalThis.navigator.onLine = true
 })

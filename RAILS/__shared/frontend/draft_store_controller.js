@@ -9,12 +9,20 @@ export default class extends Controller {
 
   connect() {
     this.saveTimer = null
+    this.revision = 0
+    this.pendingSave = Promise.resolve()
     this.onInput = this.scheduleSave.bind(this)
     this.onOnline = this.flushQueue.bind(this)
     this.onSubmit = this.handleSubmit.bind(this)
+    this.onSubmitEnd = (event) => {
+      if (event.detail?.success === true) this.clearSubmitted()
+    }
+    this.onQueued = () => this.clearSubmitted()
     this.element.addEventListener("input", this.onInput)
     this.element.addEventListener("change", this.onInput)
     this.element.addEventListener("submit", this.onSubmit)
+    this.element.addEventListener("turbo:submit-end", this.onSubmitEnd)
+    this.element.addEventListener("pub5:offline-queued", this.onQueued)
     window.addEventListener("online", this.onOnline)
     this.restore()
   }
@@ -23,34 +31,61 @@ export default class extends Controller {
     this.element.removeEventListener("input", this.onInput)
     this.element.removeEventListener("change", this.onInput)
     this.element.removeEventListener("submit", this.onSubmit)
+    this.element.removeEventListener("turbo:submit-end", this.onSubmitEnd)
+    this.element.removeEventListener("pub5:offline-queued", this.onQueued)
     window.removeEventListener("online", this.onOnline)
     if (this.saveTimer) clearTimeout(this.saveTimer)
   }
 
   async handleSubmit(event) {
-    if (navigator.onLine) {
-      await this.clear()
+    const payload = this.snapshot()
+    this.submittedRevision = this.revision
+    clearTimeout(this.saveTimer)
+    const saved = this.save(payload)
+
+    // The canonical PWA runtime owns offline submissions from marked forms.
+    // A second queued POST here would replay the same draft twice.
+    if (navigator.onLine || this.element.matches("form[data-pwa-offline]")) {
+      await saved
       return
     }
 
     event.preventDefault()
-    await this.enqueue(this.snapshot())
+    await saved
+    await this.enqueue(payload)
     await this.registerSync()
   }
 
   scheduleSave() {
-    if (this.saveTimer) clearTimeout(this.saveTimer)
+    this.revision += 1
+    clearTimeout(this.saveTimer)
     this.saveTimer = setTimeout(() => this.save(), 150)
   }
 
   async restore() {
+    const revision = this.revision
     const saved = await get(this.keyValue, STORE)
-    if (!saved) return
+    if (!saved || revision !== this.revision) return
     this.applySnapshot(saved)
   }
 
-  async save() {
-    await set(this.keyValue, this.snapshot(), STORE)
+  save(payload = this.snapshot()) {
+    this.pendingSave = this.pendingSave.then(() => set(this.keyValue, payload, STORE))
+      .catch(error => console.warn("draft-store save:", error))
+    return this.pendingSave
+  }
+
+  clearSubmitted() {
+    const revision = this.submittedRevision
+    if (revision == null || revision !== this.revision) return this.pendingSave
+
+    this.submittedRevision = null
+    clearTimeout(this.saveTimer)
+    // An earlier save must finish first; a newer edit must never be erased.
+    this.pendingSave = this.pendingSave.then(() => {
+      if (revision === this.revision) return del(this.keyValue, STORE)
+    }).catch(error => console.warn("draft-store clear:", error))
+    return this.pendingSave
   }
 
   snapshot() {
@@ -100,7 +135,7 @@ export default class extends Controller {
     const remaining = []
     for (const entry of queue) {
       try {
-        await fetch(entry.action, {
+        const response = await fetch(entry.action, {
           method: entry.method.toUpperCase(),
           credentials: "same-origin",
           headers: {
@@ -109,17 +144,15 @@ export default class extends Controller {
           },
           body: new URLSearchParams(entry.payload)
         })
+        if (!response.ok) remaining.push(entry)
       } catch (_error) {
         remaining.push(entry)
       }
     }
 
     await set(this.keyValue, remaining, QUEUE)
-    if (!remaining.length) await this.clear()
-  }
-
-  async clear() {
-    await Promise.all([del(this.keyValue, STORE), del(this.keyValue, QUEUE)])
+    // A queued submission is not necessarily the newest local draft.
+    if (!remaining.length) await del(this.keyValue, QUEUE)
   }
 
   async registerSync() {

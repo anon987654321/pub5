@@ -202,7 +202,8 @@ export const installOfflineQueue = () => {
     if (navigator.onLine) return
     event.preventDefault()
     try {
-      await enqueueForm(form)
+      const id = await enqueueForm(form)
+      form.dispatchEvent(new CustomEvent("pub5:offline-queued", { detail: { id } }))
       // The words are the form's own, in the page's language (data-pwa-queued-text);
       // a form that names none shows none rather than a Norwegian default.
       const status = form.querySelector("[data-pwa-queue-status]")
