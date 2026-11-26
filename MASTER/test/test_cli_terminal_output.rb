@@ -17,27 +17,19 @@ class TestCLITerminalOutput < Minitest::Test
     end
   end
 
-  def test_long_output_is_pageable_only_on_a_terminal
+  def test_long_output_prints_plainly_unless_a_pager_is_asked_for
     output = "row\n" * 30
 
-    $stdout.stub(:tty?, false) do
-      refute session.send(:pageable_output?, output)
-    end
+    refute paged_with(output, pager: "auto", tty: false), "a pipe never pages"
+    refute paged_with(output, pager: "0")
+    refute paged_with(output, pager: nil), "unset prints plainly; the pager is an opt-in"
+    assert paged_with(output, pager: "auto")
+  end
 
+  def paged_with(output, pager:, tty: true)
     saved = ENV["MASTER_PAGER"]
-    ENV["MASTER_PAGER"] = "0"
-    $stdout.stub(:tty?, true) do
-      TTY::Screen.stub(:height, 24) do
-        refute session.send(:pageable_output?, output)
-      end
-    end
-
-    ENV.delete("MASTER_PAGER")
-    $stdout.stub(:tty?, true) do
-      TTY::Screen.stub(:height, 24) do
-        assert session.send(:pageable_output?, output)
-      end
-    end
+    pager.nil? ? ENV.delete("MASTER_PAGER") : ENV["MASTER_PAGER"] = pager
+    $stdout.stub(:tty?, tty) { TTY::Screen.stub(:height, 24) { session.send(:pageable_output?, output) } }
   ensure
     saved.nil? ? ENV.delete("MASTER_PAGER") : ENV["MASTER_PAGER"] = saved
   end

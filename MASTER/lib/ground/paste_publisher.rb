@@ -122,11 +122,21 @@ module Master
       # Publishing to a public paste service is opt-in: set MASTER_LOG_PUBLISH=1
       # (or pass enabled: "1"). Unset, every report and deploy transcript stays
       # on this machine and callers print its local path instead of a URL.
-      def initialize(root: Master::REPO_ROOT, transport: nil, enabled: ENV.fetch("MASTER_LOG_PUBLISH", "0"))
+      #
+      # One exception: a bare /doctor ends with its link, because the operator pastes
+      # that report into other models (2026-11-26). Its host and device-location
+      # variants stay local, and MASTER_LOG_PUBLISH=0 keeps even /doctor here.
+      SHARED_BY_DEFAULT = %r{\A/doctor\s*\z}
+
+      def initialize(root: Master::REPO_ROOT, transport: nil, enabled: ENV["MASTER_LOG_PUBLISH"])
         @root = File.expand_path(root.to_s)
         @transport = transport
-        @enabled = %w[1 true yes on].include?(enabled.to_s.downcase)
+        setting = enabled.to_s.downcase
+        @enabled = %w[1 true yes on].include?(setting)
+        @refused = %w[0 false no off].include?(setting)
       end
+
+      def allowed?(operation) = @enabled || (!@refused && operation.to_s.strip.match?(SHARED_BY_DEFAULT))
 
       def self.operation_request?(input)
         text = input.to_s.strip
@@ -177,28 +187,27 @@ module Master
       end
 
       def publish(operation:, status:, output:)
-        return Outcome.new(error: :disabled) unless @enabled
+        return Outcome.new(error: :disabled) unless allowed?(operation)
         return Outcome.new(error: :visitor) if Fiber[:master_visitor] == true
 
         report = build_report(operation:, status:, output:)
         return Outcome.new(error: :empty) if report.empty?
 
-        failures = []
-        [
-          [:pste_us, method(:upload_pste_us)],
-          [:dpaste_org, method(:upload_dpaste_org)],
-        ].each do |service, upload|
-          begin
-            url = upload.call(report, safe_title(operation))
-            return Outcome.new(url:, service:, expires_in: service == :pste_us ? "1 day" : "7 days")
-          rescue StandardError => e
-            failures << "#{service}=#{e.class}"
-          end
-        end
-
-        Outcome.new(error: failures.join(","))
+        upload(report, safe_title(operation))
       rescue StandardError => e
         Outcome.new(error: e.class.name)
+      end
+
+      # pste.us first, dpaste.org when it is unavailable; the first validated URL wins.
+      def upload(report, title)
+        failures = []
+        [[:pste_us, method(:upload_pste_us)], [:dpaste_org, method(:upload_dpaste_org)]].each do |service, upload|
+          url = upload.call(report, title)
+          return Outcome.new(url:, service:, expires_in: service == :pste_us ? "1 day" : "7 days")
+        rescue StandardError => e
+          failures << "#{service}=#{e.class}"
+        end
+        Outcome.new(error: failures.join(","))
       end
 
       def build_report(operation:, status:, output:)

@@ -177,6 +177,25 @@ class PastePublisherTest < Minitest::Test
     refute called
   end
 
+  # A bare /doctor shares its report unless publishing is switched off outright;
+  # its host snapshot and device location never leave the machine by default.
+  def test_a_bare_doctor_report_is_shared_unless_publishing_is_refused
+    calls = 0
+    transport = lambda do |**|
+      calls += 1
+      response(201, JSON.generate("ok" => true, "data" => { "url" => "https://pste.us/doc123" }))
+    end
+    publisher = Master::Ground::PastePublisher.new(transport:, enabled: nil)
+
+    assert publisher.publish(operation: "/doctor", status: "success", output: "ruby ok").success?
+    assert_equal :disabled, publisher.publish(operation: "/doctor host --remote", status: "success", output: "x").error
+    located = publisher.publish(operation: "/doctor device location", status: "success", output: "x")
+    assert_equal :disabled, located.error
+    refused = Master::Ground::PastePublisher.new(transport:, enabled: "0")
+    assert_equal :disabled, refused.publish(operation: "/doctor", status: "success", output: "x").error
+    assert_equal 1, calls
+  end
+
   def test_publishing_is_opt_in_by_default
     called = false
     transport = ->(**) { called = true }

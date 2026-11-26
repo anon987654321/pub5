@@ -110,10 +110,11 @@ module Master
         Master::Result.ok(text)
       end
 
-      # Long command results are easier to inspect in a pager, but piping MASTER
-      # or running it on a phone must stay plain and non-interactive. Only the
-      # two known pager binaries are accepted; arbitrary PAGER shell commands
-      # would turn a display convenience into command execution.
+      # Output prints plainly unless MASTER_PAGER asks for a pager (auto, less or
+      # more): the operator prefers scrolling to pressing Enter through less and
+      # quitting it (2026-11-26). Piping MASTER or running it on a phone never
+      # pages. The two known pager binaries are the whole list; arbitrary
+      # PAGER shell commands would turn a display convenience into command execution.
       def print_terminal_output(text, mode: :dim)
         rendered = @refs.renderer.render(text.to_s, mode:)
         return if rendered.empty?
@@ -131,7 +132,7 @@ module Master
 
       def pageable_output?(text)
         return false unless $stdout.tty?
-        return false if %w[0 off no false].include?(ENV["MASTER_PAGER"].to_s.downcase)
+        return false if %w[0 off no false].include?(ENV.fetch("MASTER_PAGER", "0").to_s.downcase)
 
         height = TTY::Screen.height.to_i
         text.to_s.lines.count >= [height - 2, 12].max
@@ -160,7 +161,7 @@ module Master
       end
 
       def terminal_pager_command
-        selected = ENV.fetch("MASTER_PAGER", "auto").strip.downcase
+        selected = ENV.fetch("MASTER_PAGER", "0").strip.downcase
         return if %w[0 off no false].include?(selected)
 
         candidates = case selected
