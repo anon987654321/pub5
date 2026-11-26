@@ -27,6 +27,8 @@ module Master
           CATALOG_MAX_AGE_S = 86_400
           CATALOG_MODEL_LIMIT = 5_000
           CREDITS_URL = "https://openrouter.ai/api/v1/credits"
+          CREDIT_MAX_AGE_S = 300
+          CREDIT_SHOWN_MAX_AGE_S = 900
           KEY_FILES = "~/.config/master/env (or /etc/master.env on OpenBSD)"
           LANE_SOURCES = %i[dead].freeze
 
@@ -107,6 +109,25 @@ module Master
 
             { agy: "subscription", cli_lane: "subscription", ollama: "local",
               local_server: "local", hosted: "free", replicate: "paid", api: "paid" }.fetch(lane_of(id))
+          end
+
+          # The OpenRouter balance in USD that the credits probe last measured,
+          # for a paid OpenRouter model; nil for any other lane, before the
+          # probe answers, and once the reading is too old to stand for the
+          # balance now. Never waits on the network: a reading older than
+          # CREDIT_MAX_AGE_S reruns the same probe on a thread.
+          def credit_balance(model_id)
+            id = model_id.to_s
+            return unless lane_label(id) == "paid" && lane_of(id) == :api && api_provider(id) == "openrouter"
+
+            refresh_stale_credit_probe
+            reading = @openrouter_balance
+            return unless reading && monotonic_now - reading.fetch(:at) < CREDIT_SHOWN_MAX_AGE_S
+
+            reading.fetch(:usd)
+          rescue StandardError => e
+            record_pool_discovery_error("openrouter_balance", e)
+            nil
           end
 
           def cli_lane_model?(model_id) = cli_lanes.key?(model_id.to_s.split(":", 2).first)
@@ -459,27 +480,57 @@ module Master
           end
 
           # false only when OpenRouter says the balance is gone; nil when it cannot say.
+          # The measured balance rides beside the answer for the prompt's
+          # credit_balance; only a reply carrying both numbers is a measurement.
           def probe_openrouter_credits
+            @credit_probe_at = monotonic_now
             key = ENV["OPENROUTER_API_KEY"].to_s
             return if key.empty?
 
-            body = get_json(CREDITS_URL, headers: { "Authorization" => "Bearer #{key}" }).to_s
-            return if body.strip.empty? # a blank reply says nothing about credit, and is not a parse error
+            data = openrouter_credit_data(key)
+            return unless data
 
-            begin
-              data = JSON.parse(body)
-            rescue JSON::ParserError
-              return # a malformed reply is not evidence that the balance is gone
-            end
-            data = data["data"] if data.is_a?(Hash)
-            # A reply in another shape says nothing about credit; it is not a TypeError.
-            return unless data.is_a?(Hash)
-
-            data["total_credits"].to_f > data["total_usage"].to_f
+            total, used = data.values_at("total_credits", "total_usage")
+            record_openrouter_balance(total, used)
+            total.to_f > used.to_f
           rescue StandardError => e
             record_pool_discovery_error("openrouter_credits", e)
             nil
           end
+
+          def openrouter_credit_data(key)
+            body = get_json(CREDITS_URL, headers: { "Authorization" => "Bearer #{key}" }).to_s
+            return if body.strip.empty?
+
+            data = JSON.parse(body)
+            data = data["data"] if data.is_a?(Hash)
+            data if data.is_a?(Hash)
+          rescue JSON::ParserError => e
+            record_pool_discovery_error("openrouter_credits", e)
+            nil
+          end
+
+          def record_openrouter_balance(total, used)
+            return unless [total, used].all?(Numeric)
+
+            @openrouter_balance = { usd: (total - used).to_f, at: monotonic_now }
+          end
+
+          # One probe at a time, and at most once per CREDIT_MAX_AGE_S; with
+          # probes off there is no thread to replace and nothing is fetched.
+          def refresh_stale_credit_probe
+            probes = start_pool_probes
+            thread = probes["openrouter_credits"]
+            return if thread.nil? || thread.alive?
+            return if @credit_probe_at && monotonic_now - @credit_probe_at < CREDIT_MAX_AGE_S
+
+            @credit_probe_at = monotonic_now
+            probes["openrouter_credits"] = Thread.new do
+              safe_pool_discovery("openrouter_credits") { probe_openrouter_credits }
+            end
+          end
+
+          def monotonic_now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
           # OpenRouter adds and withdraws :free models every week, and a catalog
           # refreshed by hand once was a month stale, so the free lane offered

@@ -16,6 +16,7 @@ module Master
         TOKEN_KILO_THRESHOLD = 1000
         TOKEN_MEGA_THRESHOLD = 1_000_000
         PROMPT_PATH_MAX = 44
+        PROMPT_MODEL_MAX = 36
         PROMPT_GIT_CACHE_S = 0.25
         PROMPT_MAX_CHARS = Master::Face::Contract.prompt_max
         PROMPT_MEASURE_CH = Master::Face::Contract.prompt_measure
@@ -80,7 +81,7 @@ module Master
 
           [
             state_line(model, **options.merge(operator:)),
-            shell_prompt(phase, last_ok, model:, destination:, focused:, last_outcome:),
+            shell_prompt(phase, last_ok, model:, credit: options[:credit], destination:, focused:, last_outcome:),
           ]
         end
 
@@ -142,15 +143,34 @@ module Master
           "unknown"
         end
 
-        # The state line carries model and context. The editable row stays
-        # plain ASCII: checkout path, useful Git state and operator identity.
-        # No color or decoration is needed to distinguish these short fields.
-        def shell_prompt(_phase, _last_ok, **)
-          nick = bounded_prompt_segment(ENV.fetch("USER", "operator"), 12)
-          nick = "operator" if nick.empty?
+        # The ksh prompt: checkout path, Git state, the model answering and,
+        # for a paid lane whose provider reports one, the measured balance,
+        # then the dollar. "pub5/MASTER git:(main) [gpt-5.6 $4.20] $ ". Plain
+        # ASCII, no colour: a credit nobody measured is left out, never guessed.
+        def shell_prompt(_phase, _last_ok, **lane)
+          lane = prompt_model_segment(lane[:model], lane[:credit])
           git = git_prompt_segment
-          path = prompt_path(suffix_length: git.length + nick.length + 4)
-          [path, git, "<#{nick}>"].reject(&:empty?).join(" ") + " "
+          path = prompt_path(suffix_length: git.length + lane.length + 4)
+          [path, git, lane, "$"].reject(&:empty?).join(" ") + " "
+        end
+
+        # The id as the provider spells it, version and :free tag included,
+        # without the owner prefix; bounded so the path keeps its room.
+        def prompt_model_segment(model, credit)
+          name = model.to_s.scrub.gsub(ANSI_ESCAPE, "").sub(/\Aweb-chat:/, "").split("/").last.to_s
+          name = name.gsub(/[^A-Za-z0-9._:+-]/, "")
+          return "" if name.empty?
+
+          tag = name[/:[A-Za-z0-9]+\z/].to_s
+          name = name[0, PROMPT_MODEL_MAX - tag.length] + tag if name.length > PROMPT_MODEL_MAX
+
+          "[#{[name, credit_label(credit)].compact.join(" ")}]"
+        end
+
+        def credit_label(credit)
+          return unless credit.is_a?(Numeric) && credit.finite?
+
+          credit.negative? ? format("-$%.2f", -credit) : format("$%.2f", credit)
         end
 
         def operator_state(phase, last_ok, destination:, focused:, last_outcome: nil)

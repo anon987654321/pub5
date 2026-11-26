@@ -150,10 +150,20 @@ module Master
             @refs.agent.model, @refs.session.phase,
             last_ok: @last_ok, last_outcome: @last_outcome, violations: violations_count,
             tokens: @refs.session.token_est, cost: @refs.session.cost,
-            focused:
+            credit: prompt_credit, focused:
           )
           announce_state(state)
           prompt
+        end
+
+        # The router's last measured balance for a paid lane, or nil; the
+        # router never waits on the network here, so the prompt cannot block.
+        def prompt_credit
+          agent = @refs.agent
+          Master::CLI::CommandRegistry.model_router_of(agent)&.credit_balance(agent.model)
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.prompt_credit", event_bus: @refs.bus)
+          nil
         end
 
         # The state line prints only when its meaning moves, so the prompt keeps

@@ -270,9 +270,7 @@ class TestRenderer < Minitest::Test
 
     assert_match(/\bno model, /, strip_ansi(state))
     refute_match(/\n|\r/, strip_ansi(prompt))
-    nick = renderer.send(:bounded_prompt_segment, ENV.fetch("USER", "operator"), 12)
-    nick = "operator" if nick.empty?
-    assert_equal "pub5/MASTER <#{nick}> ", strip_ansi(prompt)
+    assert_equal "#{File.basename(Master.repo_root)}/MASTER $ ", strip_ansi(prompt)
   end
 
   def test_phase_prompt_uses_the_plain_openbsd_operator_words
@@ -293,18 +291,36 @@ class TestRenderer < Minitest::Test
 
   def test_shell_prompt_is_plain_ascii_without_color_segments
     renderer = FakeRenderer.new(config: {})
-    previous_user = ENV["USER"]
-    ENV["USER"] = "operator"
 
     renderer.stub(:git_prompt_segment, "main dirty") do
       renderer.stub(:prompt_path, "pub5/MASTER") do
         prompt = renderer.send(:shell_prompt, :idle, true)
-        assert_equal "pub5/MASTER main dirty <operator> ", prompt
+        assert_equal "pub5/MASTER main dirty $ ", prompt
         refute_match(/\e\[/, prompt)
       end
     end
-  ensure
-    previous_user ? ENV["USER"] = previous_user : ENV.delete("USER")
+  end
+
+  # The ksh prompt names the model with its version and :free tag, and shows
+  # a balance only when one was measured: a paid lane with no reading shows none.
+  def test_ksh_prompt_shows_model_and_only_a_measured_credit
+    renderer = FakeRenderer.new(config: {})
+    prompt = lambda do |model, credit|
+      renderer.stub(:git_prompt_segment, "git:(main)") do
+        renderer.stub(:prompt_path, "pub5/MASTER") do
+          renderer.prompt_line(model, "idle", tokens: 1, credit:).last
+        end
+      end
+    end
+
+    assert_equal "pub5/MASTER git:(main) [nemotron-3-ultra-550b-a55b:free] $ ",
+                 prompt.call("nvidia/nemotron-3-ultra-550b-a55b:free", nil)
+    assert_equal "pub5/MASTER git:(main) [gpt-5.6 $4.20] $ ", prompt.call("openai/gpt-5.6", 4.2)
+    assert_equal "pub5/MASTER git:(main) [gpt-5.6] $ ", prompt.call("openai/gpt-5.6", nil)
+    assert_equal "pub5/MASTER git:(main) [gpt-5.6 -$0.35] $ ", prompt.call("openai/gpt-5.6", -0.35)
+    assert_equal "pub5/MASTER git:(main) [gpt-5.6] $ ", prompt.call("openai/gpt-5.6", Float::NAN)
+    assert_equal "pub5/MASTER git:(main) [a-model-id-far-too-long-for-the:free] $ ",
+                 prompt.call("vendor/a-model-id-far-too-long-for-the-prompt:free", nil)
   end
 
   def test_boot_identity_shell_token_follows_zsh_and_posix_conventions
@@ -323,7 +339,7 @@ class TestRenderer < Minitest::Test
     state, prompt = FakeRenderer.new(config: {}).prompt_line("model", "idle", tokens: 45_000)
 
     assert_includes strip_ansi(state), "model, 45.0k/128.0k"
-    assert_match(/\A.+ <[^>]+> \z/, strip_ansi(prompt))
+    assert_match(/\A.+ \[model\] \$ \z/, strip_ansi(prompt))
   end
 
   def test_cli_prompt_uses_face_interface_geometry
@@ -392,9 +408,7 @@ class TestRenderer < Minitest::Test
     Dir.stub(:pwd, File.join(Dir.home, "pub5")) do
       _state, prompt = renderer.prompt_line("model", "discover", tokens: 10)
 
-      nick = renderer.send(:bounded_prompt_segment, ENV.fetch("USER", "operator"), 12)
-      nick = "operator" if nick.empty?
-      assert_equal "~/pub5 <#{nick}> ", strip_ansi(prompt)
+      assert_equal "~/pub5 [model] $ ", strip_ansi(prompt)
     end
   end
 
@@ -405,9 +419,7 @@ class TestRenderer < Minitest::Test
       Dir.stub(:pwd, File.join(Master.repo_root, "MASTER")) do
         _state, prompt = renderer.prompt_line(nil, "discover", tokens: 10)
 
-        nick = renderer.send(:bounded_prompt_segment, ENV.fetch("USER", "operator"), 12)
-        nick = "operator" if nick.empty?
-        assert_equal "pub5/MASTER <#{nick}> ", strip_ansi(prompt)
+        assert_equal "#{File.basename(Master.repo_root)}/MASTER $ ", strip_ansi(prompt)
       end
     end
   end
@@ -418,7 +430,7 @@ class TestRenderer < Minitest::Test
 
     clean = strip_ansi(prompt)
     assert_equal 1, clean.lines.size
-    assert_match(/\A.+ master\$ \z/, clean)
+    assert_match(/\A.+ \[model\] \$ \z/, clean)
     refute_match(/@[^ ]+\./, clean, "no host segment: the prompt is not a shell login")
     refute_match(/\e\[/, prompt, "the ksh-console prompt does not need ANSI segment styling")
     assert_operator clean.chomp.length, :<=, Master::Voice::Renderer::PromptComponents::PROMPT_MAX_CHARS
@@ -450,7 +462,7 @@ class TestRenderer < Minitest::Test
       refute_includes state_text, "feature"
       assert_includes clean, "git:(feature/this* +1234 -987)"
       assert_includes state_text, "a phase na"
-      assert_match(/\A.+@master\$ \z/, clean)
+      assert_match(/\A.+ \[model\] \$ \z/, clean)
     end
   end
 
@@ -691,9 +703,9 @@ class TestRenderer < Minitest::Test
     end
     renderer.instance_variable_set(:@p, pastel)
 
-    prompt = renderer.shell_prompt("ready", true)
+    prompt = renderer.send(:shell_prompt, "ready", true)
 
-    assert_equal "/repo/MASTER main <operator> ", prompt
+    assert_equal "/repo/MASTER main $ ", prompt
     refute_match(/\e\[/, prompt)
   end
 

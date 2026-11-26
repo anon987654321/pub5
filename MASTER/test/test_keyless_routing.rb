@@ -319,7 +319,8 @@ class TestKeylessRouting < Minitest::Test
   # and remotely executed :cloud models must not enter the local pool.
   def test_local_models_offer_only_what_runs_on_this_machine
     local_ollama!
-    router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
+    config = FakeConfig.new(model: Master.free_primary_model)
+    router = Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT)
     router.define_singleton_method(:ollama_installed_models) { %w[glm-5.3-flash:cloud gemma3:4b gemma4:26b llama3:latest] }
     router.instance_variable_set(:@ollama_sizes, { "glm-5.3-flash:cloud" => 317, "gemma3:4b" => 3_338_801_804,
                                                    "gemma4:26b" => 18_604_148_513, "llama3:latest" => 4_661_224_676 })
@@ -386,7 +387,8 @@ class TestKeylessRouting < Minitest::Test
   # leave the pool and name the missing key, not fail every call.
   def test_a_model_whose_key_is_unset_leaves_the_pool_naming_the_key
     ENV["OPENROUTER_API_KEY"] = "sk-or-v1-#{'a' * 64}"
-    router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
+    config = FakeConfig.new(model: Master.free_primary_model)
+    router = Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT)
     router.define_singleton_method(:ollama_installed_models) { [] }
 
     # Manual kills in data/lanes.yml are stubbed out; this test grades the missing-key reason.
@@ -400,11 +402,34 @@ class TestKeylessRouting < Minitest::Test
 
   def test_spent_openrouter_credit_keeps_the_free_models_and_drops_the_paid
     ENV["OPENROUTER_API_KEY"] = "sk-or-v1-#{'a' * 64}"
-    router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
+    config = FakeConfig.new(model: Master.free_primary_model)
+    router = Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT)
     router.define_singleton_method(:probe_value) { |name, wait:| name == "openrouter_credits" ? false : nil }
 
     assert router.reachable?("nvidia/nemotron-3-ultra-550b-a55b:free")
     assert_match(/credit is spent/, router.unreachable_reason("anthropic/claude-opus-4.1"))
+  end
+
+  # The prompt's $N is the credits probe's own measurement, for a paid
+  # OpenRouter model only; before a reading, or from a reply missing a number,
+  # there is nothing to show.
+  def test_prompt_credit_is_the_measured_openrouter_balance_for_paid_models_only
+    ENV["OPENROUTER_API_KEY"] = "sk-or-v1-#{'a' * 64}"
+    ENV["MASTER_NO_POOL_PROBES"] = "1"
+    config = FakeConfig.new(model: Master.free_primary_model)
+    router = Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT)
+    paid = "anthropic/claude-opus-4.1"
+
+    assert_nil router.credit_balance(paid)
+    router.define_singleton_method(:get_json) { |*_args, **_opts| '{"data":{"total_credits":10}}' }
+    router.send(:probe_openrouter_credits)
+    assert_nil router.credit_balance(paid)
+
+    reply = '{"data":{"total_credits":10,"total_usage":5.8}}'
+    router.define_singleton_method(:get_json) { |*_args, **_opts| reply }
+    assert router.send(:probe_openrouter_credits)
+    assert_in_delta 4.2, router.credit_balance(paid)
+    assert_nil router.credit_balance("nvidia/nemotron-3-ultra-550b-a55b:free")
   end
 
   def test_a_cli_lane_joins_when_signed_in_and_names_its_login_when_not
