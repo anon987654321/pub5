@@ -1614,11 +1614,9 @@ window._chatSpeakLast = () => {
   if (text) enqueueSpeech(text);
 };
 
-function setSubjectScatter(positions, stages = null, normals = null) {
+function setSubjectScatter(positions, stages = null) {
   const attribute = faceGeom?.getAttribute?.("scatter");
   const stageAttribute = faceGeom?.getAttribute?.("semanticStage");
-  const normalAttribute = faceGeom?.getAttribute?.("subjectNormal");
-  if (normals && (!normalAttribute || normals.length !== positions?.length || !normals.every(Number.isFinite))) return false;
   if (!faceScatter || !attribute || !stageAttribute || !positions || positions.length !== faceScatter.length) return false;
   if (stages && stages.length !== faceSeeds.length) return false;
   for (let i = 0; i < positions.length; i++) {
@@ -1639,15 +1637,35 @@ function setSubjectScatter(positions, stages = null, normals = null) {
   };
   const m = smooth(0, 1, morphCurrent);
   const staged = faceMat.uniforms.uSemanticStaged.value;
-  for (let i = 0; i < positions.length; i++) {
-    const stage = stageAttribute.array[Math.floor(i/3)];
-    const gate = staged ? smooth(stage, Math.min(1, stage+0.18), 1-m) : 1;
-    const blend = 1-(1-m)*gate;
-    const origin = direct.value ? from.array[i] : faceHome[i];
-    const travel = 1-blend;
-    const ripple = direct.value && i%3 === 2
-      ? Math.sin(stage*6.283185-(1-m)*6.283185)*4*travel*(1-travel)*0.025 : 0;
-    from.array[i] = faceScatter[i]*(1-blend)+origin*blend+ripple;
+  const uniforms = faceMat.uniforms;
+  const sculpture = uniforms.uSculpture.value * uniforms.uSculptureMotion.value;
+  const pulse = Math.max(0, Math.min(1, uniforms.uJaw.value * .4));
+  const pressure = Math.max(0, Math.min(1, uniforms.uFracture.value + uniforms.uEarPulse.value * .15));
+  for (let i = 0; i < positions.length; i += 3) {
+    const index = i/3, stage = stageAttribute.array[index];
+    const gate = staged ? smooth(stage, Math.min(1, stage+.18), 1-m) : 1;
+    const blend = 1-(1-m)*gate, travel = 1-blend;
+    let x = faceScatter[i]*travel+(direct.value ? from.array[i] : faceHome[i])*blend;
+    let y = faceScatter[i+1]*travel+(direct.value ? from.array[i+1] : faceHome[i+1])*blend;
+    let z = faceScatter[i+2]*travel+(direct.value ? from.array[i+2] : faceHome[i+2])*blend;
+    if (direct.value) {
+      const envelope = 16*travel*travel*(1-travel)*(1-travel);
+      const signal = Math.sin(stage*6.283185-(1-m)*6.283185);
+      z += signal*envelope*.025;
+      const turn = envelope*(.22+.12*signal), ct=Math.cos(turn), st=Math.sin(turn);
+      [x,z] = [ct*x+st*z,-st*x+ct*z];
+      const activity = sculpture*travel;
+      const displace = distance => {
+        const length = Math.hypot(x+.001,y+.001,z+.001) || 1;
+        x += (x+.001)/length*distance;
+        y += (y+.001)/length*distance;
+        z += (z+.001)/length*distance;
+      };
+      displace(activity*pulse*Math.exp(-Math.pow((y+.12)*3,2))*.018);
+      const peripheral = smooth(.28,.58,Math.hypot(x,y));
+      if (faceSeeds[index]>=.97) displace(peripheral*activity*pressure*.045);
+    }
+    from.array[i]=x; from.array[i+1]=y; from.array[i+2]=z;
   }
   from.needsUpdate = true;
   direct.value = 1;
@@ -1655,7 +1673,6 @@ function setSubjectScatter(positions, stages = null, normals = null) {
   faceMat._morphVel = 0;
   faceScatter.set(positions);
   attribute.needsUpdate = true;
-  if (normals) { normalAttribute.array.set(normals); normalAttribute.needsUpdate = true; }
   stageAttribute.array.fill(0);
   if (stages) stageAttribute.array.set(stages);
   stageAttribute.needsUpdate = true;
@@ -1665,6 +1682,7 @@ function setSubjectScatter(positions, stages = null, normals = null) {
   semanticMorphRestoreOnSettled = false;
   if (faceReducedMotionActive()) {
     morphCurrent = 0;
+    faceMat.uniforms.uMorph.value = 0;
     faceMat._morphVel = 0;
   }
   return true;
