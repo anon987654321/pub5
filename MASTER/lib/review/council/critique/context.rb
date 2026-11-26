@@ -23,7 +23,12 @@ module Master
               5. Behavior: exercise keyboard, touch, reflow, focus, errors and recovery.
               Locate the winning computed declaration and its source owner before proposing CSS.
               Fix the shared cause instead of layering another override; prefer deletion or reuse.
-              Compare a subtractive alternative, a structural alternative and the existing render.
+              For substantial redesign, contribute to the shared 10–50-direction exploration:
+              vary reading order, grouping, density, navigation, disclosure, typography and
+              interaction, not just color. Preserve the architecture and essential behavior.
+              Start with subtraction; Swiss alignment and hierarchy, Rams-style restraint,
+              mobile-first reflow, native controls and progressive disclosure. Keep primary
+              tasks visible and specialist controls reachable. Compare against the existing render.
               Keep the existing design when no measured or perceptual improvement is supported.
               Use product references for useful mechanics, not visual skins or universal pixel values.
               Require the affected surface/viewport, observable defect, source anchor, applicable Law,
