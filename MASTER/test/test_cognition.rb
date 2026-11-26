@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
+require "minitest/mock"
 require "tmpdir"
 require "yaml"
 
@@ -162,6 +163,39 @@ class TestCognition < Minitest::Test
     assert_equal "test:fail", model.expected(predictions, event: "repair:start", context: "task-b")
     assert_nil model.expected(predictions, event: "repair:start"), "scoped evidence must not leak into the legacy stream"
     assert_operator predictions.fetch("streams").size, :<=, Cognition::Prediction::MAX_STREAMS
+  end
+
+  def test_observed_stream_survives_same_second_eviction
+    model = Cognition::Prediction.new
+    predictions = Cognition::State.new({}).predictions
+
+    Time.stub(:now, Time.at(1_700_000_000)) do
+      model.observe!(predictions, event: "start", context: "active")
+      (Cognition::Prediction::MAX_STREAMS - 1).times do |index|
+        model.observe!(predictions, event: "start", context: "idle-#{index}")
+      end
+      model.observe!(predictions, event: "done", context: "active")
+      model.observe!(predictions, event: "start", context: "new")
+    end
+
+    assert_equal "done", model.previous_event(predictions, context: "active")
+    assert_nil model.previous_event(predictions, context: "idle-0")
+    assert_equal Cognition::Prediction::MAX_STREAMS, predictions.fetch("streams").size
+  end
+
+  def test_reading_a_prediction_does_not_promote_a_stream
+    model = Cognition::Prediction.new
+    predictions = Cognition::State.new({}).predictions
+
+    Time.stub(:now, Time.at(1_700_000_000)) do
+      Cognition::Prediction::MAX_STREAMS.times do |index|
+        model.observe!(predictions, event: "start", context: "task-#{index}")
+      end
+      assert_equal "start", model.previous_event(predictions, context: "task-0")
+      model.observe!(predictions, event: "start", context: "new")
+    end
+
+    assert_nil model.previous_event(predictions, context: "task-0")
   end
 
   def test_walk_forward_evaluation_measures_task_scope_against_shared_stream

@@ -114,6 +114,8 @@ module Master
 
           stream = nil
         end
+        # Preserve observation order when several streams share a timestamp.
+        streams[key] = streams.delete(key) if stream && create
         if stream.nil? && create
           stream = streams[key] = {
             "transitions" => {},
@@ -150,7 +152,7 @@ module Master
         return unless excess.positive?
 
         oldest = streams.keys.reject { |key| key == keep }
-                         .sort_by { |key| streams.dig(key, "last_observed_at").to_i }
+                         .sort_by.with_index { |key, index| [streams.dig(key, "last_observed_at").to_i, index] }
         oldest.first(excess).each { |key| streams.delete(key) }
       end
 
