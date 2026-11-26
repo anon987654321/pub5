@@ -48,7 +48,7 @@ module Master
       ACTION_FLOOR = 0.2
       ACTION_MIN_H = 40
       ACTION_MIN_W = 88
-      VERSION = 5
+      VERSION = 6
       Result = Data.define(:score, :subs, :facts)
 
       module_function
@@ -103,14 +103,20 @@ module Master
         values.sum { |v| rhythm(v, base) } / values.size
       end
 
-      # Vertical gaps between consecutive stacked blocks: the probe's own gaps
-      # when it reported them, else derived from the rects.
+      # Trust measured sibling gaps, including an empty result. Legacy payloads
+      # without that field use only vertically adjacent, horizontally overlapping boxes.
       def stack_gaps(els, payload)
-        reported = Array(payload["gaps"]).map { |g| g["gap"].to_f }.select(&:positive?)
-        return reported unless reported.empty?
+        if payload["gaps"].is_a?(Array)
+          return payload["gaps"].map { |g| g["gap"].to_f }.select(&:positive?)
+        end
 
-        rows = blocks(els).map { |e| (e["frect"] || e["rect"]).values_at("y", "h").map(&:to_f) }.sort
-        rows.each_cons(2).filter_map { |(y1, h1), (y2, _)| (y2 - (y1 + h1)).then { |g| g if g >= 4 && g <= 128 } }
+        rows = blocks(els).map { |e| (e["frect"] || e["rect"]).values_at("y", "h", "x", "w").map(&:to_f) }.sort
+        rows.each_cons(2).filter_map do |(y1, h1, x1, w1), (y2, _, x2, w2)|
+          next unless [x1 + w1, x2 + w2].min > [x1, x2].max
+
+          gap = y2 - (y1 + h1)
+          gap if gap.between?(4, 128)
+        end
       end
 
       def on_scale(els, gaps, tokens)

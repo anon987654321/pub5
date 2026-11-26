@@ -56,6 +56,18 @@ class LayoutScoreTest < Minitest::Test
     assert_equal 0.0, L.compute(off, tokens: @tokens).subs["grid"]
   end
 
+  def test_empty_measured_sibling_gaps_are_not_replaced_by_guesses
+    rows = [el(0, 0, 100, 30), el(0, 46, 100, 30)]
+    assert_empty L.stack_gaps(rows, { "gaps" => [] })
+    assert_equal [16.0], L.stack_gaps(rows, {})
+  end
+
+  def test_legacy_gap_fallback_does_not_mix_independent_columns
+    rows = [el(0, 0, 100, 30), el(200, 47, 100, 30)]
+    assert_empty L.stack_gaps(rows, {})
+    assert_equal [8.0], L.stack_gaps(rows, { "gaps" => [{ "gap" => 8 }] })
+  end
+
   def test_scale_ratio_counts_spacing_values_on_the_scale
     ratio = ->(gaps) { L.compute(payload([el(16, 0, 300, 24)], "gaps" => gaps.map { |g| { "gap" => g } }), tokens: @tokens).subs["scale"] }
     assert_equal 1.0, ratio.([8, 16, 24, 32])
