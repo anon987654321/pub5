@@ -72,6 +72,11 @@ rescue OptionParser::ParseError => error
   abort "fix-here: #{detail}"
 end
 
+PASSED_FLAGS = %w[
+  --apply --dry-run --read-only --no-autofix --no-critique --blockers --plan --until-checks
+  --verbose --trace --boot-status --detail --everything
+].freeze
+MODES = %w[repair audit visual elevate all].freeze
 parser = OptionParser.new do |opts|
   opts.banner = "usage: MASTER/bin/fix-here <#{TREES.join('|')}|path> [options]"
   opts.on("--dry", "Check tree, disk, model and the parse sweep; the lane probe runs on the real run") { options[:dry] = true }
@@ -80,8 +85,11 @@ parser = OptionParser.new do |opts|
   opts.on("--resume", "Resume the existing run budget") { options[:resume] = true }
   opts.on("--model ID", "Pin a model, or use none for automatic routing") { |value| options[:model] = value }
   opts.on("--lane LANE", "Select the /fix lane") { |value| options[:lane] = value }
-  opts.on("--mode MODE", %w[repair audit visual elevate all], "Select the /fix mode") { |value| options[:mode] = value }
+  opts.on("--mode #{MODES.join('|')}", MODES, "Select the /fix mode") { |value| options[:mode] = value }
   opts.on("--checks=LIST", "Limit check stages, comma-separated") { |value| options[:checks] = value }
+  opts.separator ""
+  opts.separator "Passed to /fix: --apply (writes; needs --mode=repair|elevate|all), --autofix=, --max-files=,"
+  opts.separator "  #{(PASSED_FLAGS - ['--apply']).join(', ')}"
   opts.on("-h", "--help", "Show this help") do
     puts opts
     exit 0
@@ -103,7 +111,6 @@ probe = options[:probe]
 no_publish = options[:no_publish]
 resume = options[:resume]
 model_flag = options[:model]
-PASSED_FLAGS = %w[--apply --dry-run --read-only --no-autofix --no-critique --blockers --plan --until-checks --verbose --trace --boot-status --detail --everything].freeze
 passthrough = args.select { |arg| arg.match?(/\A--(?:autofix|max-files|lane|mode)=/) || PASSED_FLAGS.include?(arg) }
 args -= passthrough
 passthrough << "--lane=#{options[:lane]}" if options[:lane]
@@ -256,7 +263,11 @@ end
 
 status = nil
 begin
-  pid = Process.spawn(env, File.join(MASTER, "bin", "master"), "/fix", tree, *passthrough, chdir: ROOT, out: [log, "w"], err: [:child, :out], pgroup: true)
+  # The run has its own process group, so the terminal is not its to use: a read of an
+  # inherited tty stdin stops it with SIGTTIN, and an unreported stop leaves this wrapper
+  # waiting forever (a /fix RAILS sat stopped 40 minutes after its run ended, 2026-11-26).
+  pid = Process.spawn(env, File.join(MASTER, "bin", "master"), "/fix", tree, *passthrough, chdir: ROOT,
+                      in: File::NULL, out: [log, "w"], err: [:child, :out], pgroup: true)
 # A TERM or INT aimed at the wrapper must reach the whole run, grandchildren and their MCP
 # servers included; otherwise it keeps the quota. A run that is still alive
 # KILL_AFTER_S seconds after TERM is killed, because a handler can be stuck inside a model call.
@@ -265,6 +276,8 @@ term_sent_at = nil
 stop_run = lambda do
   term_sent_at ||= Process.clock_gettime(Process::CLOCK_MONOTONIC)
   Process.kill("TERM", -pid) rescue nil
+  # A stopped group holds TERM until it is continued.
+  Process.kill("CONT", -pid) rescue nil
 end
 %w[TERM INT HUP].each { |sig| trap(sig) { stop_run.call } }
 # Ends the run when the pulse reports a stall past the limit, instead of waiting out hours.
@@ -280,7 +293,13 @@ watcher = Thread.new do
   end
 end
 loop do
-  status = Process.wait2(pid, Process::WNOHANG)&.last
+  status = Process.wait2(pid, Process::WNOHANG | Process::WUNTRACED)&.last
+  if status&.stopped?
+    warn "fix-here: the run was stopped by signal #{status.stopsig}; ending it"
+    stop_run.call
+    status = nil
+    next
+  end
   break if status
 
   if term_sent_at && Process.clock_gettime(Process::CLOCK_MONOTONIC) - term_sent_at > KILL_AFTER_S

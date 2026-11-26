@@ -71,7 +71,7 @@ class TestFixHere < Minitest::Test
       )
 
       assert status.success?, output
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      log = fix_log(worker)
       assert_includes log, "child-model=UNSET"
       assert_includes log, "fix-probe=0", "--no-probe must disable the in-process LaneProbe as well"
     end
@@ -81,11 +81,11 @@ class TestFixHere < Minitest::Test
     with_worktree do |_main, worker, tools_bin|
       _, held = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--no-publish")
       assert held.success?
-      assert_includes File.read(File.join(worker, "MASTER/.master/fix-MASTER.log")), "no-publish=1"
+      assert_includes fix_log(worker), "no-publish=1"
 
       _, normal = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe")
       assert normal.success?
-      assert_includes File.read(File.join(worker, "MASTER/.master/fix-MASTER.log")), "no-publish=UNSET"
+      assert_includes fix_log(worker), "no-publish=UNSET"
     end
   end
 
@@ -104,7 +104,7 @@ class TestFixHere < Minitest::Test
       output, status = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--lane", "visual")
 
       assert status.success?, output
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      log = fix_log(worker)
       assert_includes log, "args=/fix MASTER --lane=visual"
       refute_includes log, "--apply"
     end
@@ -170,40 +170,31 @@ class TestFixHere < Minitest::Test
       output, status = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--no-critique", "--checks=lexical,sprawl")
 
       assert_equal 0, status.exitstatus, output
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      log = fix_log(worker)
       assert_includes log, "args=/fix MASTER --no-critique"
       refute_includes log, "--apply"
       assert_includes log, "checks=lexical,sprawl"
     end
   end
 
+  # Extra wrapper args => [strings the forwarded command line holds, whether --apply is among them].
+  FORWARDING = {
+    [] => [["args=/fix MASTER"], false],
+    %w[--mode repair --apply] => [["--mode=repair", "--apply"], true],
+    %w[--read-only] => [["args=/fix MASTER --read-only"], false],
+    %w[--dry-run] => [["args=/fix MASTER --dry-run"], false],
+  }.freeze
+
   def test_default_fix_here_run_is_read_only_and_explicit_apply_is_forwarded
     with_worktree do |_main, worker, tools_bin|
-      _, normal = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe")
-      assert normal.success?
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER"
-      refute_includes log, "--apply"
+      FORWARDING.each do |extra, (expected, applies)|
+        output, status = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", *extra)
+        assert status.success?, output
 
-      _, authorized = run_fix_here(
-        worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--mode", "repair", "--apply"
-      )
-      assert authorized.success?
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "--mode=repair"
-      assert_includes log, "--apply"
-
-      _, readonly = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--read-only")
-      assert readonly.success?
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER --read-only"
-      refute_includes log, "--apply"
-
-      _, dry = run_fix_here(worker, tools_bin, "MASTER", "--model", "none", "--no-probe", "--dry-run")
-      assert dry.success?
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
-      assert_includes log, "args=/fix MASTER --dry-run"
-      refute_includes log, "--apply"
+        log = fix_log(worker)
+        assert_empty expected - log.scan(Regexp.union(expected)), extra.inspect
+        assert_equal applies, log.include?("--apply"), extra.inspect
+      end
     end
   end
 
@@ -264,13 +255,29 @@ class TestFixHere < Minitest::Test
     end
   end
 
+  # The run sits in its own process group; an inherited terminal stdin would stop it with
+  # SIGTTIN and hang the wrapper. A held-open pipe stands in for the terminal here.
+  def test_the_run_never_reads_the_wrappers_stdin
+    with_worktree do |_main, worker, tools_bin|
+      reader, writer = IO.pipe
+      wrapper = spawn_fix_here(worker, tools_bin, env: { "FAKE_READ_STDIN" => "1" }, in: reader)
+      reader.close
+      finished = 100.times.any? { sleep 0.1; Process.wait(wrapper, Process::WNOHANG) }
+      Process.kill("KILL", wrapper) unless finished
+      writer.close
+
+      assert finished, "the run blocked reading the wrapper's stdin"
+      assert_includes fix_log(worker), "stdin=empty"
+    end
+  end
+
   def test_lane_readiness_is_owned_by_the_single_fix_runtime
     with_worktree do |main, worker, tools_bin|
       write_main_model(main)
       output, status = run_fix_here(worker, tools_bin, "MASTER")
 
       assert status.success?, output
-      log = File.read(File.join(worker, "MASTER/.master/fix-MASTER.log"))
+      log = fix_log(worker)
       assert_includes log, "child-model=saved-model"
       assert_includes log, "fix-probe=UNSET", "the normal /fix preflight owns the request"
       assert_includes log, "args=/fix MASTER"
@@ -295,6 +302,23 @@ class TestFixHere < Minitest::Test
 
   private
 
+  # Stands in for bin/master: prints what the wrapper handed it, and can hold, exit or read stdin on cue.
+  FAKE_MASTER = <<~'FAKE'
+    #!/usr/bin/env ruby
+    trap('TERM', 'IGNORE') if ENV['FAKE_IGNORE_TERM']
+    puts ENV.fetch('FAKE_FIRST_LINE', 'fix0 fake run')
+    $stdout.flush
+    exit ENV['FAKE_EXIT'].to_i if ENV['FAKE_EXIT']
+
+    puts 'stdin=' + ($stdin.read.to_s.empty? ? 'empty' : 'data') if ENV['FAKE_READ_STDIN']
+    if ENV['FAKE_PIDFILE'] then File.write(ENV['FAKE_PIDFILE'], Process.pid.to_s); sleep 60 end
+    puts 'child-model=' + ENV.fetch('MASTER_MODEL', 'UNSET')
+    puts 'fix-probe=' + ENV.fetch('MASTER_FIX_PROBE', 'UNSET')
+    puts 'no-publish=' + ENV.fetch('MASTER_FIX_NO_PUBLISH', 'UNSET')
+    puts 'args=' + ARGV.join(' ')
+    puts 'checks=' + ENV.fetch('MASTER_FIX_CHECK_STAGES', 'UNSET')
+  FAKE
+
   def with_worktree
     Dir.mktmpdir("fix-here-test") do |directory|
       main = File.join(directory, "main")
@@ -305,11 +329,11 @@ class TestFixHere < Minitest::Test
       FileUtils.cp(SCRIPT, File.join(main, "MASTER/bin/fix-here"))
       FileUtils.cp(File.expand_path("../bin/ruby", __dir__), File.join(main, "MASTER/bin/ruby"))
       FileUtils.chmod(0o755, File.join(main, "MASTER/bin/ruby"))
-      FileUtils.mkdir_p(File.join(main, "MASTER/lib/operator"))
-      %w[parse_sweep stall_watch].each { |n| FileUtils.cp(File.expand_path("../lib/operator/#{n}.rb", __dir__), File.join(main, "MASTER/lib/operator")) }
+      # fix-here loads the paths, parse sweep, stall watch and fix kernel from lib: link the real one.
+      File.symlink(File.expand_path("../lib", __dir__), File.join(main, "MASTER/lib"))
       File.write(
         File.join(main, "MASTER/bin/master"),
-        "#!/usr/bin/env ruby\ntrap('TERM', 'IGNORE') if ENV['FAKE_IGNORE_TERM']\nputs ENV.fetch('FAKE_FIRST_LINE', 'fix0 fake run')\n$stdout.flush\nexit ENV['FAKE_EXIT'].to_i if ENV['FAKE_EXIT']\nif ENV['FAKE_PIDFILE'] then File.write(ENV['FAKE_PIDFILE'], Process.pid.to_s); sleep 60 end\nputs 'child-model=' + ENV.fetch('MASTER_MODEL', 'UNSET') + \"\n\"\nputs 'fix-probe=' + ENV.fetch('MASTER_FIX_PROBE', 'UNSET') + \"\n\"\nputs 'no-publish=' + ENV.fetch('MASTER_FIX_NO_PUBLISH', 'UNSET') + \"\n\"\nputs 'args=' + ARGV.join(' ') + \"\n\"\nputs 'checks=' + ENV.fetch('MASTER_FIX_CHECK_STAGES', 'UNSET') + \"\n\"\n",
+        FAKE_MASTER,
       )
       FileUtils.chmod(0o755, File.join(main, "MASTER/bin/fix-here"))
       FileUtils.chmod(0o755, File.join(main, "MASTER/bin/master"))
@@ -328,6 +352,14 @@ class TestFixHere < Minitest::Test
 
       yield main, worker, tools_bin
     end
+  end
+
+  def fix_log(worker) = File.read(File.join(worker, ".master/fix-MASTER.log"))
+
+  def spawn_fix_here(worker, tools_bin, env: {}, **io)
+    path = { "PATH" => "#{tools_bin}#{File::PATH_SEPARATOR}#{ENV.fetch('PATH', '')}" }
+    Process.spawn(path.merge(env), RbConfig.ruby, File.join(worker, "MASTER/bin/fix-here"),
+                  "MASTER", "--model", "none", "--no-probe", chdir: worker, out: File::NULL, err: File::NULL, **io)
   end
 
   def write_main_model(main)
