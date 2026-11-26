@@ -59,6 +59,32 @@ module Studio
         raise Error, "cannot build contact sheet for #{File.basename(path)}: #{error.message}"
       end
 
+      # Local screening only. A perceptual proxy flags similar compositions,
+      # not interchangeable expressions. Retain every frame for human review.
+      def self.screen_frames(frames)
+        seen = {}
+        frames.map do |frame|
+          path = frame.fetch("path")
+          raise Error, "frame checksum changed" unless Digest::SHA256.file(path).hexdigest == frame.fetch("sha256")
+
+          image = Vips::Image.new_from_file(path, access: :random)
+          thumbnail = image.colourspace("b-w").thumbnail_image(16, height: 16, size: :force)
+          pixels = thumbnail.cast(:uchar).write_to_memory.bytes
+          nearest = seen.min_by do |_, previous|
+            pixels.zip(previous).sum { |a, b| (a - b).abs }
+          end
+          distance = nearest && pixels.zip(nearest.last).sum { |a, b| (a - b).abs }.fdiv(pixels.length * 255)
+          seen[path] = pixels
+          frame.merge("measurements" => Postpro::Uncanny.read_image(image).to_h,
+                      "width" => image.width, "height" => image.height,
+                      "similar_to" => distance && distance < 0.015 ? File.basename(nearest.first) : nil,
+                      "similarity_distance" => distance,
+                      "technical" => "MEASURED", "review" => "NOT_REVIEWED")
+        rescue StandardError => error
+          frame.merge("technical" => "INCONCLUSIVE", "reason" => error.class.name, "review" => "NOT_REVIEWED")
+        end
+      end
+
       class Builder
         def initialize(subject:, root: IdeaPicture::SUBJECTS)
           @subject = subject.to_s
