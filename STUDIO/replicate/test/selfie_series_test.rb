@@ -29,7 +29,7 @@ class TestSelfieSeries < Minitest::Test
     end
 
     def input_names(_model_id)
-      %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale]
+      %w[prompt model aspect_ratio num_outputs guidance_scale num_inference_steps output_format output_quality go_fast lora_scale seed]
     end
 
     def download_url(url, path)
@@ -462,6 +462,17 @@ class TestSelfieSeries < Minitest::Test
 
     assert attempts.any?, "the failure lands in the ledger, not in silence"
     assert_match(/network lost/, attempts.first["error"])
+  end
+
+  # A distilled FLUX dev with a face LoRA and one fixed seed returned the same
+  # composition for every prompt. Each sitting now carries its own seed.
+  def test_each_sitting_gets_its_own_inference_seed
+    run_series(series, count: 2)
+
+    seeds = @client.predictions.map { |_model, input| input[:seed] }
+    assert_equal [Studio::Lora::Selfie.inference_seed("probe", 1),
+                  Studio::Lora::Selfie.inference_seed("probe", 2)], seeds
+    assert_equal 2, ledger_rows("render").map { |row| row.fetch("inference_seed") }.uniq.length
   end
 
   def test_renders_are_recorded_in_the_subject_ledger

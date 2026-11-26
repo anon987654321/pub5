@@ -146,6 +146,23 @@ default rather than a flag. A chain grades only its final frame, and only when
 `--postpro` names a preset; whether chains should share the house default is
 the operator's call.
 
+Video uses the same look through a different instrument. The full house chain
+costs about six seconds per 1080x1920 frame, so a 37-second promo would take two
+hours; Postpro's exported `house.cube` applies that chain in one ffmpeg pass.
+Apparatus pieces encode through the LUT with temporal grain, and `Promo` refuses
+a per-frame postpro cut above 240 frames rather than start a render it cannot
+finish. Raise the ceiling with `STUDIO_PROMO_POSTPRO_MAX_FRAMES` when a short
+piece is worth the wait.
+
+The chain models the emulsion where the literature does: grain is the Boolean
+silver-halide model (Newson, Delon and Galerne, CGF 36, 2017) with AFGS1 luma
+knots, halation is a difference-of-Gaussians ring in linear exposure with red
+widest, and the curve is a per-channel H&D toe and shoulder. Three things are
+approximations rather than measurements: `stock_matrix` is a 3x3 dye crosstalk,
+not a spectral sensitivity to CMY density model; print-stock curves are presets,
+not fitted to a published 2383 datasheet; and the halation ring and tint are
+reasoned from the physics without a scan to compare against.
+
 The apparatus rig (slit-scan, motion-drawing, envelope cutting) and the survey
 behind it are recorded in [APPARATUS.md](APPARATUS.md).
 
@@ -161,6 +178,17 @@ Expression: [Rafal Wegiel](https://www.rafalwegiel.com/rafalwegielblog/the-power
 [RMCAD](https://www.rmcad.edu/blog/the-psychology-of-portrait-photography-making-subjects-feel-at-ease/).
 The AI tell: [Imagera](https://imagera.ai/blog/fix-ai-skin-plastic-look-2026),
 [Morphic](https://morphic.com/resources/how-to/fix-ai-generated-skin-realistic).
+Model prompting: [FLUX prompting basics](https://docs.bfl.ml/guides/prompting_unified_basics),
+[technical parameters](https://docs.bfl.ml/guides/prompting_unified_technical),
+[photorealism](https://docs.bfl.ml/guides/usecases_t2i_photorealistic),
+[FLUX.1 dev API](https://docs.bfl.ml/api-reference/models/generate-an-image-with-flux1-%5Bdev%5D),
+[Gemini image generation](https://ai.google.dev/gemini-api/docs/image-generation),
+[FLUX 3 LoRA training](https://docs.bfl.ml/flux_3/flux3_image_klein_lora_guide),
+[FLUX.2 training](https://docs.bfl.ml/flux_2/flux2_klein_training).
+Film emulation: [spektrafilm/agx-emulsion](https://github.com/aaronmurniadi/agx-emulsion)
+(GPLv3; its physics informed the chain, no code copied),
+[Spektrafilm LUT generator](https://github.com/ryancara/Spektrafilm-LUT-Generator),
+[AFGS1 film grain](https://github.com/AOMediaCodec/afgs1-spec).
 
 ## MASTER's law, refitted
 
@@ -338,6 +366,41 @@ The scorer runs only with separate likeness-review consent, an eligible independ
 publishing. The house sitting keeps portrait-distance geometry with selfie
 framing (README §1); `Selfie.phone_selfie` is an explicit arm's-length
 distortion study, not the default.
+
+## Prompting the models you can reach
+
+The catalogue's default engine, `google/nano-banana-2.1`, is a reference model:
+it keeps a face from the subject's own photographs. With no reference
+photographs the series renders on the pinned LoRA instead, and the ledger
+records a `reference_photographs` count of 0. Every nano-banana output carries a
+SynthID watermark, so a generated frame is never evidence that an event
+happened.
+
+Four rules come from the vendors' own documentation:
+
+- Medium first. Open with the stock and what it does to the frame, then the
+  subject, the setting and the light. `Selfie.scene` does this.
+- No negative prompts. FLUX.1 dev, FLUX.2 and FLUX 3 Image have no negative
+  field. Name what fills the space: "highlights rolling off with retained
+  texture", not "no clipping".
+- Name the camera and the lens, and what each does. "Shot on a 35mm SLR, 50mm at
+  f/2.8, visible grain" beats "professional photo".
+- Only what is visible. No "beautiful", "iconic" or "masterpiece".
+
+Guidance is the realism knob on FLUX.1 dev. Its range is 1.5 to 5, and Black
+Forest Labs states that a high scale improves prompt adherence at the cost of
+reduced realism; the `identity` profile runs at 2.5 for that reason.
+
+Each sitting gets its own inference seed. `Selfie.inference_seed` derives it from
+the subject and the sitting, and a retry of a rejected sitting salts it, so the
+same prompt cannot buy the same frame twice. `inference.seed` in
+`training_standards.yml` remains the A/B control.
+
+A LoRA that returns one composition for every prompt is usually a caption and
+dataset problem: the trigger absorbs whatever the captions do not name. Black
+Forest Labs quotes 1500 to 3000 steps for a character LoRA; the shared standard
+here trains 1000. Treat the gap as a candidate cause to test against a holdout,
+not as a measured one.
 
 ## Consent and source rights
 

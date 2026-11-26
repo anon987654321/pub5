@@ -173,7 +173,7 @@ class TestIdeaPictureOutput < Minitest::Test
       client = Object.new
       client.define_singleton_method(:download_url) { |_url, path| File.write(path, "provider-original") }
       picture = Studio::Visual::IdeaPicture.new(client:, directory: dir, subjects_root: dir)
-      picture.define_singleton_method(:render_with_fallback) { |_words| "https://provider.example/still.jpg" }
+      picture.define_singleton_method(:render_with_fallback) { |_words, seed: nil| "https://provider.example/still.jpg" }
       picture.define_singleton_method(:first_url) { |output| output }
       picture.define_singleton_method(:grade) do |path, seed: nil|
         graded = File.join(File.dirname(path), "postpro_#{File.basename(path, ".jpg")}_test_v1.jpg")
@@ -207,7 +207,7 @@ class TestIdeaPictureOutput < Minitest::Test
       picture = Studio::Visual::IdeaPicture.new(
         client:, directory: dir, subject: "probe", subjects_root: dir, lora_only: true
       )
-      picture.define_singleton_method(:render_with_fallback) { |_words| "https://provider.example/download?id=123" }
+      picture.define_singleton_method(:render_with_fallback) { |_words, seed: nil| "https://provider.example/download?id=123" }
       picture.define_singleton_method(:grade) do |path, seed: nil|
         graded = File.join(File.dirname(path), "postpro_#{File.basename(path, ".png")}_test_v1.png")
         File.write(graded, "graded-png")

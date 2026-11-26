@@ -4,6 +4,15 @@ require_relative "minitest_helper"
 require_relative "../../lora/lora"
 
 class TestStudioLoraCraft < Minitest::Test
+  # Black Forest Labs asks for the medium and style first, so the stock opens
+  # the caption instead of trailing it as a tag.
+  def test_the_scene_opens_with_the_film_stock
+    scene = Studio::Lora::Selfie.scene(1, subject: "johann")
+
+    assert Studio::Lora::Craft::STOCK.values.any? { |stock| scene.start_with?(stock) },
+           "expected a stock clause at the start of: #{scene[0, 80]}"
+  end
+
   def test_shared_photographic_craft_carries_composition_without_forcing_one_stock
     assert_includes Studio::Lora::Craft::PHOTOGRAPHIC_CRAFT, Studio::Lora::Craft::COMPOSITION
     assert_match(/visual centre/, Studio::Lora::Craft::COMPOSITION)
