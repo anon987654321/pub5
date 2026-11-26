@@ -510,17 +510,18 @@ module Master
       # Compare eligible alternatives directly; geometry breaks only a visual tie.
       def prefer_candidate(left, right)
         verdict = JSON.parse(@world.ask.call(alternative_prompt, [left.fetch(:capture), right.fetch(:capture)])[/\{.*\}/m].to_s)
-        return left if verdict["why"].to_s.strip.empty?
+        measured = left[:gain] >= right[:gain] ? left : right
+        return measured if verdict["why"].to_s.strip.empty?
 
         case verdict["better"].to_s.upcase
         when "A" then left
         when "B" then right
-        when "SAME" then left[:gain] >= right[:gain] ? left : right
-        else left
+        when "SAME" then measured
+        else measured
         end
       rescue StandardError => e
         @say.call("alternative comparison inconclusive: #{e.class}")
-        left
+        left[:gain] >= right[:gain] ? left : right
       end
 
       def judge(before, after)

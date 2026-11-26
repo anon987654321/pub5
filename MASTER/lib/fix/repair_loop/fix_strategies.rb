@@ -432,7 +432,7 @@ module Master
               row.fetch(:author_models),
             ]
           end
-          selected = ranked.min_by { |row| row.first.first(2) + [viable.index { |item| item[:source] == row[1] }, row.first.last] }
+          selected = ranked.min_by(&:first)
           unless selected
             @bus&.publish(
               "repair_loop:candidate_selection_blocked",

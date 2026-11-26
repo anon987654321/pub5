@@ -183,6 +183,27 @@ class BestOfNTest < Minitest::Test
     assert_equal candidate, File.read(@path)
   end
 
+  def test_synthesized_candidate_requires_an_explicit_second_selection
+    require_relative "../lib/review/council/tribunal"
+    tribunal = Master::Review::Council::Tribunal
+    selection = ->(number) do
+      Master::Result.ok([{ persona: "Judge", structured_findings: [
+        { "location" => "candidate #{number}", "proposed_repair" => "select candidate #{number}" }
+      ] }])
+    end
+    [selection.call(1), Master::Result.ok([]), Master::Result.err("council: veto from Security", category: :validation)].each_with_index do |second, i|
+      replies = [selection.call(1), second]
+      fake = Object.new
+      fake.define_singleton_method(:review) { |**| replies.shift }
+      rows = tribunal.stub(:new, fake) do
+        B.council_order(%w[first second], agent: Object.new, domain: :general,
+          artifact: "sample.rb", refine: ->(*) { "combined" }) { |row| row }
+      end
+      assert_equal(i.zero? ? %w[combined first second] : %w[first second], rows)
+      assert_empty replies
+    end
+  end
+
   def test_synthesis_retains_alternatives_and_stops_on_repeated_revision
     calls = []
     refine = lambda do |selected, critique|

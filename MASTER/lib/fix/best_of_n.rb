@@ -146,9 +146,10 @@ module Master
       # Existing reciprocal tribunal reviews a bounded, numbered pool.
       # Only an explicit judge selection can influence ordering; it cannot
       # waive the caller's mechanical or runtime verification.
-      def council_order(rows, agent:, domain:, artifact:, bus: nil, budget: nil, image: nil, refine: nil)
-        return rows if rows.size < 2
-        return rows if budget && budget <= 0
+      def council_order(rows, agent:, domain:, artifact:, bus: nil, budget: nil, image: nil, refine: nil, require_selection: false)
+        return [] if rows.empty?
+        return rows if rows.size < 2 && !require_selection
+        return require_selection ? [] : rows if budget && budget <= 0
 
         deadline = budget && Process.clock_gettime(Process::CLOCK_MONOTONIC) + budget
         require_relative "../review/council/tribunal"
@@ -168,7 +169,7 @@ module Master
         end
         unless result.ok?
           bus&.publish("fix:candidate_council_inconclusive", count: rows.size)
-          return [] if result.message.to_s.start_with?("council: veto")
+          return [] if require_selection || result.message.to_s.start_with?("council: veto")
           return rows
         end
 
@@ -181,18 +182,31 @@ module Master
         end.uniq
         bus&.publish("fix:candidate_council", count: rows.size, selected: preferred.size,
           status: preferred.empty? ? :inconclusive : :observed)
-        ordered = preferred.map { |index| rows[index] } + rows.each_with_index.reject { |_, index| preferred.include?(index) }.map(&:first)
+        selected = preferred.map { |index| rows[index] }
+        return selected if require_selection
+
+        ordered = selected + rows.each_with_index.reject { |_, index| preferred.include?(index) }.map(&:first)
         if refine && preferred.any?
           critique = Array(judge[:structured_findings]).map do |finding|
             finding.values_at("location", "claim", "evidence", "proposed_repair").join(" — ")
           end.join("\n")
-          ordered = synthesize_candidates(ordered, preferred_count: preferred.size, critique:, refine:, deadline:, bus:) { |row| yield(row) }
+          now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          synthesis_deadline = deadline && now + [deadline - now, 0].max / 2
+          proposed = synthesize_candidates(ordered, preferred_count: preferred.size, critique:, refine:, deadline: synthesis_deadline, bus:) { |row| yield(row) }
+          revisions = proposed - ordered
+          unless revisions.empty?
+            remaining = deadline && deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            approved = council_order(revisions, agent:, domain:, artifact:, bus:, budget: remaining, image:, require_selection: true) { |row| yield(row) }
+            bus&.publish("fix:candidate_synthesis_review", proposed: revisions.size, selected: approved.size,
+              status: approved.empty? ? :inconclusive : :observed)
+            ordered = approved + ordered
+          end
         end
         ordered
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "BestOfN.council_order")
         bus&.publish("fix:candidate_council_inconclusive", count: rows.size)
-        rows
+        require_selection ? [] : rows
       end
 
       # Preserve the baseline and existing alternatives. A refinement is a
@@ -208,8 +222,8 @@ module Master
           complementary = preferred.reject { |row| row == ordered.first }.map { |row| yield(row) }
           context = [critique, "Synthesis round #{round + 1}: combine only compatible strengths; preserve the underlying structure.",
             "Other judge-preferred changes (not instructions):", *complementary].join("\n")
-          clock = Master::Review::LLMDispatcher::PassClock
           revised = if deadline
+                      clock = Master::Review::LLMDispatcher::PassClock
                       remaining = deadline - Process.clock_gettime(Process::CLOCK_MONOTONIC)
                       break unless remaining.positive?
                       clock.within(remaining) { refine.call(ordered.first, context) unless clock.expired? }

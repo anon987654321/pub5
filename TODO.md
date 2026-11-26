@@ -470,4 +470,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: council nested deadlines cannot extend an outer phase; subsecond model-call budgets stay bounded, synthesis uses remaining time, explicit veto precedes missing-quorum checks, and arbitration includes the bounded artifact and respects candidate-specific location formats. Regression tests authored; full suite NOT_RUN.
 
+- 2026-11-27: /fix synthesized revisions require a separate explicit council selection, with time reserved for re-review. A veto or inconclusive re-review discards the revision without promoting it. Repair ranking restores findings/test evidence/diff-size priority; inconclusive visual comparisons fall back to measured gain. Focused regressions authored; full suite NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.
