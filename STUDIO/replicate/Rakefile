@@ -66,12 +66,13 @@ task :check do
   raise "RG-69 page inlines no stylesheet" unless rg69_html.match?(/^<style>$/)
   raise "RG-69 page inlines no application script" unless rg69_html.match?(/^<script>$/)
   raise "RG-69 page loads an external stylesheet" if rg69_html.match?(/<link[^>]+stylesheet/i)
-  # The dependency is vendored (5da92e34), which is the version pin: the file
-  # must still declare 14.8.49 and the page must load it locally, so no CDN
-  # drift or silent vendor swap can slip through.
-  raise "RG-69 Tone.js dependency is not version-pinned" unless File.read(File.join(STUDIO_ROOT, "dilla", "vendor", "tone", "Tone.min.js")).include?("14.8.49")
-  raise "RG-69 does not load the vendored Tone.js" unless rg69_html.include?('src="../vendor/tone/Tone.min.js"')
-  tone_at = rg69_html.index('src="../vendor/tone/Tone.min.js"')
+  # The single-file browser instrument embeds the exact pinned vendor.
+  tone = File.read(File.join(STUDIO_ROOT, "dilla", "vendor", "tone", "Tone.min.js"))
+  raise "RG-69 Tone.js dependency is not version-pinned" unless tone.include?("14.8.49")
+  embedded = rg69_html[/<script id="tone-vendor">\n\/\*.*?\*\/\n(.*?)\n<\/script>/m, 1]
+  raise "RG-69 embedded Tone.js differs from vendor" unless embedded == tone
+  raise "RG-69 loads an external script" if rg69_html.match?(/<script[^>]*\bsrc=/i)
+  tone_at = rg69_html.index('<script id="tone-vendor">')
   engine_at = rg69_html.index("<script>\n")
   raise "RG-69 runs its engine before Tone.js" unless engine_at && tone_at < engine_at
   raise "RG-69 has no keyboard focus indicator" unless rg69_html.include?(":focus-visible")
