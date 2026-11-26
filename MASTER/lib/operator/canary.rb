@@ -35,7 +35,9 @@ module Operator
   module Canary
     HEADER_LIMIT_BYTES = 8 * 1024
     DEFAULT_BUDGET_MS = 3000
-    SKIPPED_PREFIXES = %w[/internal /rails /cable /admin].freeze
+    # WebFinger requires a ?resource= query (RFC 7033), so a bare GET is a client error by
+    # design; probing it failed brgen's 2026-11-26 canary with a correct 404.
+    SKIPPED_PREFIXES = %w[/internal /rails /cable /admin /.well-known/webfinger].freeze
     Reply = Struct.new(:status, :headers, :body, :elapsed_ms, keyword_init: true)
     Result = Struct.new(:name, :ok, :detail, :state, keyword_init: true)
 

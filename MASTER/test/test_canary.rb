@@ -239,6 +239,7 @@ FLOW_OUTPUT = <<~OUT
     assert_includes seen, "/"
     assert_includes seen, "/up"
     assert(seen.none? { |p| p.include?(":") || p.start_with?("/internal") })
+    refute_includes seen, "/.well-known/webfinger", "WebFinger needs a resource query; a bare GET is not a page"
   end
 
   def test_public_mode_skips_rcctl_and_ports
