@@ -709,7 +709,7 @@ details> *:not(summary){padding-inline:0}
 <details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><div id="sample-pattern" class="steps-grid"></div></div></details>
 <details>
 <summary>Sound / tape &amp; vinyl</summary>
-<fieldset><legend>Recording chain</legend><label>Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label>Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label>Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label>Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><button id="clean-chain" type="button">Clean / color</button></fieldset>
+<fieldset><legend>Recording chain</legend><label>Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label>Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label>Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label>Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><label>Ducking <output id="duck-o">20</output></label><input id="duck" type="range" min="0" max="100" value="20"><button id="clean-chain" type="button">Clean / color</button></fieldset>
 <div class="two-col">
 <fieldset><legend>Master</legend>
 <label for="swing">Swing <output id="swing-o">8</output></label><input id="swing" type="range" min="0" max="90" value="8" title="Swing">
@@ -1346,7 +1346,7 @@ const industrialBoot=bootStyleCandidates.filter(style=>['Industrial','Hard Techn
 const bootStylePool=industrialBoot.length?industrialBoot:bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
-let aud_={pocket:industrialBoot.includes(bootStyle)?12:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:(bootStyle.dr[0]+bootStyle.dr[1])/2,tape:(bootStyle.tm[0]+bootStyle.tm[1])/2,console:58,phase:28,sampler:24,motion:32,comp:48,width:52,reverb:industrialBoot.includes(bootStyle)?18:34,delay:26,filter:62,wobble:26,vinyl:28,crackle:22,drift:0.05};
+let aud_={pocket:industrialBoot.includes(bootStyle)?12:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:(bootStyle.dr[0]+bootStyle.dr[1])/2,tape:(bootStyle.tm[0]+bootStyle.tm[1])/2,console:58,phase:28,sampler:24,motion:32,duck:20,comp:34,width:52,reverb:industrialBoot.includes(bootStyle)?18:34,delay:26,filter:62,wobble:26,vinyl:28,crackle:22,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p,keysVoice:'prophet_5',padsVoice:'juno_106'};
 let seq_={};
@@ -1529,7 +1529,7 @@ function syncUIFromState(){
 showSongPosition(st_.tick??-1);
 $id('bank').textContent='Bank '+String.fromCharCode(65+st_.bank);$id('bank').disabled=st_.stepCount<=16;
 refreshSampler();
-for(const key of ['console','phase','sampler','motion']){const id=key==='sampler'?'sample-wear':key;$id(id).value=aud_[key];$id(key+'-o').textContent=Math.round(aud_[key]);}
+for(const key of ['console','phase','sampler','motion','duck']){const id=key==='sampler'?'sample-wear':key;$id(id).value=aud_[key];$id(key+'-o').textContent=Math.round(aud_[key]);}
 $id('pocket').value=aud_.pocket;$id('pocket-o').textContent=Math.round(aud_.pocket);
 $id('steps').textContent=st_.stepCount+' steps';
 $id('steps').setAttribute('aria-pressed',String(st_.stepCount!==16));
@@ -1723,7 +1723,7 @@ const masterG=new Tone.Gain(mix.master/100);
 const flt=new Tone.Filter(50+aud.filter/100*15950,'lowpass');
 const tape=new Tone.Distortion(0.08);
 const drumDrive=new Tone.Distortion(.65);drumDrive.wet.value=aud.drive/100*.75;
-const comp=new Tone.Compressor(-18,1+aud.comp/100*PARAMS.COMP_RATIO_MAX);
+const comp=new Tone.Compressor(-12,1+aud.comp/100*1.5);comp.attack.value=.025;comp.release.value=Math.min(.35,60/aud.bpm*.5);
 const widener=new Tone.StereoWidener(aud.width/100);
 const limiter=new Tone.Limiter(-1);
 const revSend=new Tone.Gain(0);
@@ -1746,7 +1746,7 @@ masterG.connect(dryMaster);dryMaster.connect(outputGate);
 limiter.connect(wetMaster);wetMaster.connect(outputGate);
 // Use the actual context destination, not a second Tone destination chain.
 const ctx=Tone.getContext().rawContext,finalLimiter=ctx.createDynamicsCompressor();
-finalLimiter.threshold.value=-3;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
+finalLimiter.threshold.value=-1.5;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
 outputGate.connect(finalLimiter);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
@@ -1765,6 +1765,13 @@ const instruments=createToneInstruments(patches);
 const kickN=instruments.kick,kickSub=instruments.kickSub,kickClk=instruments.kickClk,kickBody=instruments.kickBody;
 const snareN=instruments.snare,snareRng=instruments.snareRng,clapN=instruments.clap,hatN=instruments.hat,openN=instruments.open;
 const bassN=instruments.bass,bassSub=instruments.bassSub,keysN=instruments.keys,padsN=instruments.pads;
+const bassDuck=new Tone.Gain(1),keysDuck=new Tone.Gain(1),padsDuck=new Tone.Gain(1);
+function duck(at,velocity,settings){
+const depth=(settings.duck??20)/100*Math.min(1,velocity),release=Math.min(.35,60/settings.bpm*.47);
+for(const [node,weight] of [[bassDuck,.52],[keysDuck,1],[padsDuck,.85]]){
+const p=node.gain;p.cancelScheduledValues(at);p.setValueAtTime(1-depth*weight,at+.004);p.linearRampToValueAtTime(1,at+Math.max(.025,release));
+}
+}
 const drift=new Tone.LFO(.05+aud.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();drift.connect(bassN.detune);
 const kickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
 kickClkBP.Q.value=toneProfile.kick.click_filter_q;kickClk.connect(kickClkBP);
@@ -1796,11 +1803,11 @@ const hatFlt=new Tone.Filter(5500,'highpass'),openFlt=new Tone.Filter(4200,'high
 hatN.connect(hatFlt);hatFlt.connect(drumSat);
 openN.connect(openFlt);openFlt.connect(drumSat);
 drumSat.connect(drumDrive);drumDrive.connect(drumG);
-bassN.connect(bassG);bassSub.connect(bassG);
+bassN.connect(bassDuck);bassSub.connect(bassDuck);bassDuck.connect(bassG);
 keysN.connect(keySat);keySat.connect(keysChorus);keysChorus.connect(keysTrem);keysTrem.connect(keysDrive);
-keysDrive.connect(keysG);keysG.connect(keysTexture);keysTexture.connect(keysLP);
+keysDrive.connect(keysDuck);keysDuck.connect(keysG);keysG.connect(keysTexture);keysTexture.connect(keysLP);
 keysLP.connect(panners.keys);panners.keys.connect(masterG);panners.keys.connect(revSend);panners.keys.connect(dlySend);
-padsN.connect(padsFlt);padsFlt.connect(padsG);padsG.connect(padsBW);padsBW.connect(padsSat);
+padsN.connect(padsFlt);padsFlt.connect(padsDuck);padsDuck.connect(padsG);padsG.connect(padsBW);padsBW.connect(padsSat);
 padsSat.connect(panners.pads);panners.pads.connect(masterG);panners.pads.connect(revSend);panners.pads.connect(dlySend);
 const drumFXSend=new Tone.Gain(.2),bassFXSend=new Tone.Gain(.15);
 drumG.connect(masterG);drumG.connect(drumFXSend);bassG.connect(masterG);bassG.connect(bassFXSend);
@@ -1818,7 +1825,7 @@ try{analog=createAnalogRig(ctx,masterG,outputGate,dryMaster,wetMaster,rg69AudioP
 vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,analog,consoleStrips,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,analog,consoleStrips,duck,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1841,7 +1848,7 @@ if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
 if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);
 if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
-if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
+if(compPar){compPar.ratio.value=1+aud_.comp/100*1.5;compPar.release.value=Math.min(.35,60/aud_.bpm*.5);}
 if(widener)widener.width.value=aud_.width/100;
 for(const strip of liveGraph?.consoleStrips||[])strip.update(aud_);
 if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
@@ -1959,7 +1966,7 @@ const events=compileStep(index,time,opts);
 for(const event of events){
 const {voice,args}=event;
 try{
-synths[voice].triggerAttackRelease(...args);opts.onNote?.(voice);
+synths[voice].triggerAttackRelease(...args);if(voice==='kick')opts.sampleGraph?.duck?.(event.time,args.at(-1),opts.session?.aud||aud_);opts.onNote?.(voice);
 }catch(error){if(!opts.onError)throw error;opts.onError(voice,error);}
 }
 if(opts.sampleGraph){try{playSample(index,time,opts);}catch(error){if(!opts.onError)throw error;opts.onError('sample',error);}}
@@ -2941,11 +2948,11 @@ $id('play').addEventListener('click',async()=>{
     log("playback paused");
   }
 });
-for(const key of ['console','phase','sampler','motion']){
+for(const key of ['console','phase','sampler','motion','duck']){
 const id=key==='sampler'?'sample-wear':key;
 $id(id).addEventListener('input',event=>{aud_[key]=Number(event.target.value);$id(key+'-o').textContent=Math.round(aud_[key]);applyFX();saveSession();});
 }
-const textureDefaults={console:58,phase:28,sampler:24,motion:32,tape:36,wobble:26,vinyl:28,crackle:22};
+const textureDefaults={console:58,phase:28,sampler:24,motion:32,duck:20,tape:36,wobble:26,vinyl:28,crackle:22};
 $id('clean-chain').addEventListener('click',()=>{
 pushHistory();const active=Object.keys(textureDefaults).some(key=>aud_[key]>0);
 Object.assign(aud_,active?Object.fromEntries(Object.keys(textureDefaults).map(key=>[key,0])):textureDefaults);
