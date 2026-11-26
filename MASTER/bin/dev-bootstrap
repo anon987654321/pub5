@@ -34,8 +34,8 @@ PREFIX="$TOOLS/ruby"
 # path handed to it, and without any dev package from the host.
 YAML_PREFIX="$PREFIX"
 ZLIB_PREFIX="$PREFIX"
-OPENSSL_PREFIX="$PREFIX"
-OPENSSL_VER=3.0.15
+LIBRESSL_PREFIX="$PREFIX"
+LIBRESSL_VER=4.3.3
 FFI_PREFIX="$PREFIX"
 MIN_MAJOR=3
 MIN_MINOR=2
@@ -159,10 +159,9 @@ fetch() {
   fi
 }
 
-# The OpenSSL built above trusts the bundle at its own openssldir, which is
-# $PREFIX/ssl/cert.pem (Ruby reads it as OpenSSL::X509::DEFAULT_CERT_FILE). A
-# container has no such file, so every HTTPS call the Ruby makes — RubyGems, a
-# model lane — fails certificate verification even though the network is fine.
+# LibreSSL's openssldir is set to $PREFIX/ssl, where Ruby reads
+# OpenSSL::X509::DEFAULT_CERT_FILE. A container has no bundle there, so HTTPS
+# calls from RubyGems and model lanes fail verification despite working network.
 # Install the host bundle, or fetch Mozilla's with the host curl/wget.
 install_ca_bundle() {
   bundle="$PREFIX/ssl/cert.pem"
@@ -209,9 +208,9 @@ build() {
   fi
   say "libyaml ready at $YAML_PREFIX"
 
-  # zlib and OpenSSL are built from source for the same reason libyaml is: a
-  # container with no dev packages has no headers, and without OpenSSL the built
-  # Ruby's RubyGems cannot fetch a gem over HTTPS at all.
+  # zlib and LibreSSL are built from source for the same reason libyaml is: a
+  # container with no dev packages has no headers, and Ruby needs SSL support
+  # for RubyGems to fetch gems over HTTPS.
   if ! dep_ready zlib-1.3.1 "$ZLIB_PREFIX/lib/libz.a"; then
     say "fetching zlib 1.3.1"
     fetch https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz zlib.tar.gz
@@ -223,17 +222,19 @@ build() {
   fi
   say "zlib ready at $ZLIB_PREFIX"
 
-  if ! dep_ready "openssl-$OPENSSL_VER" "$OPENSSL_PREFIX/lib/libssl.a"; then
-    say "fetching openssl $OPENSSL_VER"
-    fetch "https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz" openssl.tar.gz
-    rm -rf "openssl-$OPENSSL_VER"
-    tar xzf openssl.tar.gz
-    (cd "openssl-$OPENSSL_VER" && CC=${CC:-cc} ./config --prefix="$OPENSSL_PREFIX" \
-      --libdir=lib no-shared no-tests >/dev/null \
-      && make -j2 >/dev/null && make install_sw >/dev/null)
-    touch "openssl-$OPENSSL_VER/.built"
+  if ! dep_ready "libressl-$LIBRESSL_VER" "$LIBRESSL_PREFIX/lib/libssl.so"; then
+    say "fetching LibreSSL $LIBRESSL_VER"
+    fetch "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-$LIBRESSL_VER.tar.gz" \
+      libressl.tar.gz
+    rm -rf "libressl-$LIBRESSL_VER"
+    tar xzf libressl.tar.gz
+    (cd "libressl-$LIBRESSL_VER" && CC=${CC:-cc} ./configure \
+      --prefix="$LIBRESSL_PREFIX" --with-openssldir="$LIBRESSL_PREFIX/ssl" \
+      --enable-shared --disable-static >/dev/null \
+      && make -j2 >/dev/null && make install >/dev/null)
+    touch "libressl-$LIBRESSL_VER/.built"
   fi
-  say "openssl ready at $OPENSSL_PREFIX"
+  say "LibreSSL ready at $LIBRESSL_PREFIX"
   install_ca_bundle
 
   # libffi is what the fiddle gem (a default gem Ruby rebuilds) needs to build.
@@ -268,10 +269,10 @@ build() {
       tar xzf ruby.tar.gz
     fi
     (cd ruby-$RUBY_VER \
-      && CPPFLAGS="-I$YAML_PREFIX/include -I$ZLIB_PREFIX/include -I$OPENSSL_PREFIX/include -I$FFI_PREFIX/include" \
-         LDFLAGS="-L$YAML_PREFIX/lib -L$ZLIB_PREFIX/lib -L$OPENSSL_PREFIX/lib -L$FFI_PREFIX/lib" \
+      && CPPFLAGS="-I$YAML_PREFIX/include -I$ZLIB_PREFIX/include -I$LIBRESSL_PREFIX/include -I$FFI_PREFIX/include" \
+         LDFLAGS="-L$YAML_PREFIX/lib -L$ZLIB_PREFIX/lib -L$LIBRESSL_PREFIX/lib -L$FFI_PREFIX/lib" \
          CC=${CC:-cc} ./configure --prefix="$PREFIX" --disable-install-doc \
-           --with-yaml-dir="$YAML_PREFIX" --with-openssl-dir="$OPENSSL_PREFIX" \
+           --with-yaml-dir="$YAML_PREFIX" --with-openssl-dir="$LIBRESSL_PREFIX" \
            --with-libffi-dir="$FFI_PREFIX" \
            --without-gmp --enable-shared >/dev/null \
       && make -j2 >/dev/null && make install >/dev/null)

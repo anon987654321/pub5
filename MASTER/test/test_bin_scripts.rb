@@ -269,6 +269,12 @@ class TestBinScripts < Minitest::Test
     assert status.success?, "bin/dev-bootstrap is not valid POSIX sh: #{syntax}"
     assert_includes source, "cache.ruby-lang.org/pub/ruby/$series/ruby-$RUBY_VER.tar.gz"
     assert_includes source, "--with-yaml-dir"
+    assert_includes source, "LIBRESSL_VER=4.3.3"
+    assert_includes source, "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-$LIBRESSL_VER.tar.gz"
+    assert_includes source, '--with-openssldir="$LIBRESSL_PREFIX/ssl"'
+    assert_includes source, "--enable-shared --disable-static"
+    assert_includes source, '--with-openssl-dir="$LIBRESSL_PREFIX"'
+    refute_includes source, "https://www.openssl.org/source/"
     assert_includes source, "--connect-timeout 15 --max-time 300"
     assert_includes source, "--timeout=30 --tries=2"
     code = source.lines.reject { |line| line.strip.start_with?("#") }.join
