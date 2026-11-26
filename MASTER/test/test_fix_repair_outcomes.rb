@@ -36,6 +36,14 @@ class TestFixRepairOutcomes < Minitest::Test
     assert_equal 1.0, state.fetch("classes").values.first.fetch("accepted")
   end
 
+  def test_outcome_state_is_private
+    outcomes.record("#{@root}/x/a.rb", %w[L], { applied: 1 })
+    path = File.join(@root, Outcomes::PATH)
+
+    assert_equal 0o600, File.stat(path).mode & 0o777
+    assert_equal 1.0, JSON.parse(File.read(path)).fetch("classes").values.first.fetch("accepted")
+  end
+
   def test_reverts_count_against_a_class
     3.times { outcomes.record("#{@root}/x/a.rb", %w[L], { rejected: 1 }) }
 
