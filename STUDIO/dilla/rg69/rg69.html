@@ -611,6 +611,34 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 #sample-pattern,#sample-status{grid-column:1/-1}
 #sample-drop label{min-width:0}
 #sample-pattern button[aria-pressed="true"]{background:var(--acc);color:var(--bg)}
+
+/* Primary performance surface; supporting controls remain in disclosures. */
+body{width:min(100%,1120px)}
+.machine-header{padding:8px 0;border:0}
+.machine-header h1{font-size:28px;letter-spacing:.04em}
+.transport{display:block;padding:8px 0;border-top:1px solid var(--panel-line)}
+.transport-primary{display:flex;flex-wrap:wrap;gap:6px}
+#play,#stop{min-height:36px;min-width:64px;width:auto}
+.ctrl-bpm{border:0;min-height:36px}
+#status,.level-meter-row{padding-inline:0}
+#main-content{margin-top:8px}
+.machine-panel{padding:0;border:0}
+.sound-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.sound-strip label{display:grid;gap:3px;color:var(--mut);font-size:10px}
+.sound-strip select{width:100%;min-width:0}
+#harmony-info{grid-column:1/4;min-width:0;overflow-wrap:anywhere;color:var(--mut);font-size:10px}
+#root-display{justify-self:end;color:var(--acc)}
+.track,.track-ruler{grid-template-columns:30px 52px minmax(0,1fr)}
+.step{min-height:34px}
+#viz{height:24px;border:0;margin-top:4px}
+details{border:0;border-top:1px solid var(--panel-line);margin-top:0}
+details>summary{padding-inline:0;min-height:34px}
+details>summary::after{content:"+";float:right;color:var(--mut)}
+details[open]>summary{background:transparent;border-bottom:0}
+details[open]>summary::after{content:"−"}
+details> *:not(summary){padding-inline:0}
+.transport-actions{justify-content:flex-start}
+@media(max-width:640px){.sound-strip{grid-template-columns:repeat(2,minmax(0,1fr))}#harmony-info{grid-column:1} .track,.track-ruler{grid-template-columns:26px 38px minmax(0,1fr)}.step{min-height:30px}.transport-primary{display:flex}.ctrl-bpm{flex:1;min-width:130px}.ctrl-bpm input[type=range]{width:90px}}
 </style>
 </head>
 <body>
@@ -619,25 +647,14 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
   <div class="welcome-dialog">
     <p class="welcome-title" id="welcome-title">RG-69</p>
     <p class="welcome-sub" id="welcome-description">Industrial techno beat machine</p>
-    <div class="welcome-chips">
-      <span class="welcome-chip">Space play</span>
-      <span class="welcome-chip">R randomize</span>
-      <span class="welcome-chip">E export wav</span>
-      <span class="welcome-chip">T theme</span>
-      <span class="welcome-chip">M mute track</span>
-      <span class="welcome-chip">Ctrl+Z undo</span>
-    </div>
     <button id="welcome-start" type="button">▶ play</button>
   </div>
 </div>
 <header class="machine-header">
   <div class="brand-lockup">
-    <p class="panel-kicker">DILLA / LIVE INSTRUMENT</p>
     <h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1>
-    <p class="brand-subline">RHYTHM COMPUTER <span>•</span> 16-STEP PERFORMANCE SURFACE</p>
   </div>
   <div class="header-tools">
-    <span class="hardware-label">RHYTHM COMPUTER</span>
     <button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
   </div>
 </header>
@@ -648,30 +665,27 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
     <button id="stop" type="button" aria-label="Stop" title="Stop (S)">■ Stop</button>
     <label class="ctrl-bpm">BPM <input id="bpm" type="range" min="60" max="170" value="96"> <output id="bpm-o">96</output></label>
     <button id="tap" title="Tap tempo">Tap</button>
-    <button id="steps" type="button" aria-label="Change step count" title="Cycle 8, 16, 32, 64 steps">16 steps</button><button id="bank" type="button" disabled>Bank A</button>
+    <button id="steps" type="button" aria-label="Change step count" title="Cycle 8, 16, 32, 64 steps">16 steps</button><button id="bank" type="button" disabled>Bank A</button><button id="random" title="Randomize (R)">Generate</button><button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button><button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button>
   </div>
-  <div class="transport-actions" aria-label="Other actions">
-    <button id="random" title="Randomize (R)">Randomize</button>
-    <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
-    <button id="record" data-kind="danger" title="Record">Record</button>
-    <button id="shareBtn" title="Copy share link">Share</button><button id="save-session">Save</button><button id="load-session">Load</button><input id="session-file" type="file" accept="application/json,.json" hidden>
-    <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
-    <button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
-    <button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button>
-  </div>
+
 </div>
 <p id="status" role="status" aria-live="polite">Ready · choose a style, then press Play</p>
 <div class="level-meter-row"><span class="hardware-label">OUTPUT / VU</span><div class="vu-meter" id="vu" aria-label="VU Meter"></div><span class="meter-scale">−12 · −6 · 0 dB</span></div>
 <main id="main-content" tabindex="-1">
 <article class="machine-panel" aria-label="Sequencer" role="region">
-<div class="panel-strip panel-strip--inner"><span>STEP MATRIX</span><span>DRUMS / HARMONY</span></div>
-<p id="seq-hint">Mute · right-click / hold to edit · shift-click drum ratchet · alt-drag paint</p>
+<div class="sound-strip">
+<label>Style<select id="style-select"><option value="">Custom</option></select></label>
+<label>Harmony<select id="harmony-pat"><option value="">Independent patterns</option></select></label>
+<label>Keys<select id="keys-voice"></select></label>
+<label>Pads<select id="pads-voice"></select></label>
+<output id="harmony-info" aria-live="polite"></output><output id="root-display" aria-label="Current chord"></output>
+</div>
 <div class="tracks" id="tracks"></div>
 <div class="macro-controls"><label>POCKET <output id="pocket-o">68</output><input id="pocket" type="range" min="0" max="100" value="68"></label><label>DRIVE <output id="drive-o">72</output><input id="drive" type="range" min="0" max="100" value="72"></label><label>DUST <output id="vinyl-o">12</output><input id="vinyl" type="range" min="0" max="100" value="12"></label><label>SPACE <output id="reverb-o">34</output><input id="reverb" type="range" min="0" max="100" value="34"></label></div>
 <canvas id="viz" width="400" height="28" title="Waveform" aria-label="Audio waveform visualizer" role="img"></canvas>
 </article>
-<details open>
-<summary>Styles</summary>
+<details>
+<summary>Styles &amp; moods</summary>
 <div class="tab-bar">
 <button class="tab-btn tab-sm active" id="tab-styles">Styles</button>
 <button class="tab-btn tab-sm" id="tab-moods">Moods</button>
@@ -682,7 +696,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 </details>
 <details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><div id="sample-pattern" class="steps-grid"></div></div></details>
 <details>
-<summary>Controls</summary>
+<summary>Sound / tape &amp; vinyl</summary>
 <div class="two-col">
 <fieldset><legend>Master</legend>
 <label for="swing">Swing <output id="swing-o">8</output></label><input id="swing" type="range" min="0" max="90" value="8" title="Swing">
@@ -712,15 +726,24 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 </fieldset>
 </details>
 <details>
-<summary>Patterns</summary>
+<summary>Pattern editing</summary>
 <fieldset>
-<label for="harmony-pat">Harmony catalogue</label><select id="harmony-pat" aria-label="Harmony catalogue"><option value="">Independent patterns</option></select><output id="harmony-info" aria-live="polite"></output>
-<label>Drums <button class="lock-btn" data-lock="drum" title="Lock">🔓</button> <span id="root-display"></span></label><select id="drum-pat" aria-label="Drum pattern"></select>
+
+<label>Drums <button class="lock-btn" data-lock="drum" title="Lock">🔓</button></label><select id="drum-pat" aria-label="Drum pattern"></select>
 <label>Bass <button class="lock-btn" data-lock="bass" title="Lock">🔓</button></label><select id="bass-pat" aria-label="Bass pattern"></select>
-<label>Keys <button class="lock-btn" data-lock="keys" title="Lock">🔓</button></label><select id="keys-pat" aria-label="Keys pattern"></select><label for="keys-voice">Keys voice</label><select id="keys-voice"></select>
-<label>Pads <button class="lock-btn" data-lock="pads" title="Lock">🔓</button></label><select id="pads-pat" aria-label="Pads pattern"></select><label for="pads-voice">Pads voice</label><select id="pads-voice"></select>
+<label>Keys <button class="lock-btn" data-lock="keys" title="Lock">🔓</button></label><select id="keys-pat" aria-label="Keys pattern"></select>
+<label>Pads <button class="lock-btn" data-lock="pads" title="Lock">🔓</button></label><select id="pads-pat" aria-label="Pads pattern"></select>
 </fieldset>
 </details>
+<details><summary>Session &amp; utilities</summary><div class="transport-actions">
+    
+    <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
+    <button id="record" data-kind="danger" title="Record">Record</button>
+    <button id="shareBtn" title="Copy share link">Share</button><button id="save-session">Save</button><button id="load-session">Load</button><input id="session-file" type="file" accept="application/json,.json" hidden>
+    <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
+    
+    
+  </div></details>
 <details>
 <summary>Terminal</summary>
 <div id="trace-wrap">
@@ -1454,6 +1477,7 @@ if(!st_.redo?.length)return;st_.history.push(session());restoreSession(st_.redo.
 }
 function highlightActiveChip(){
 const match=STYLES.find(s=>s.d===pat_.d&&s.b===pat_.b&&s.k===pat_.k&&s.p===pat_.p);
+$id('style-select').value=match?.n||'';
 document.querySelectorAll('#styles .style-chip').forEach(c=>c.classList.remove('active'));
 if(match){const chip=[...$id('styles').querySelectorAll('.style-chip')].find(c=>c.textContent===match.n);if(chip)chip.classList.add('active');}
 }
@@ -2343,7 +2367,9 @@ sel_d.addEventListener('change',e=>{pushHistory();pat_.d=e.target.value;refreshS
 sel_b.addEventListener('change',e=>{pushHistory();pat_.b=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`bass: ${pat_.b}`)});
 sel_k.addEventListener('change',e=>{pushHistory();pat_.k=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`keys: ${pat_.k}`)});
 sel_p.addEventListener('change',e=>{pushHistory();pat_.p=e.target.value;refreshStepGrid();updateRootDisplay();highlightActiveChip();saveSession();log(`pads: ${pat_.p}`)});
-const styles_c=$id('styles');
+const styles_c=$id('styles'),styleSelect=$id("style-select");
+for(const style of STYLES){const option=document.createElement("option");option.value=style.n;option.textContent=style.n;styleSelect.appendChild(option);}
+styleSelect.addEventListener("change",()=>[...styles_c.querySelectorAll(".style-chip")].find(chip=>chip.textContent===styleSelect.value)?.click());
 const filterStyles=q=>{
 const query=q.trim().toLowerCase();
 const source=$id('tab-moods').classList.contains('active')?$id('moods'):styles_c;
