@@ -27,6 +27,7 @@ module Master
       REACT_MAX_STEPS = 8
       MS_PER_SECOND = 1000
       AGY_CLI_TIMEOUT_S = 300
+      ProviderRequest = Data.define(:model, :messages, :system, :stream, :image, :temperature, :format, :on_text)
       CLAUDE_RE = /\Aclaude-|anthropic\/claude/i.freeze
       # Capability by id pattern, not ruby_llm's Model::Info#supports_vision? or
       # #function_calling?. The gem's registry carries none of the :free ids
@@ -591,20 +592,42 @@ module Master
           return react_tool_loop(selected_model, messages, sys:, stream:, image:, &blk)
         end
 
-        if Fiber[:master_web] == true && (agy_model?(selected_model) || web_chat_model?(selected_model) || cli_lane_model?(selected_model))
+        dispatch_provider(ProviderRequest.new(
+          model: selected_model, messages:, system: sys, stream:, image:, temperature:, format:, on_text: blk
+        ))
+      end
+
+      def dispatch_provider(request)
+        if browser_local_lane?(request)
           return Result.err("local provider lanes are unavailable to browser conversations", category: :policy)
         end
 
-        return send_agy_cli(selected_model.delete_prefix("agy:"), messages, sys:, stream:, &blk) if agy_model?(selected_model)
-        return send_web_chat(selected_model.delete_prefix("web-chat:"), messages, sys:) if web_chat_model?(selected_model)
-        return send_cli_lane(selected_model, messages, sys:) if cli_lane_model?(selected_model)
-        return send_local_server(selected_model, messages, sys:, temperature:) if local_server_model?(selected_model)
-        return send_hosted(selected_model, messages, sys:, temperature:, image:) if hosted_lane?(selected_model)
-        return send_replicate_chat(selected_model, messages, sys:) if replicate_chat_model?(selected_model)
-        return send_ollama(selected_model, messages, sys:, stream:, temperature:, format:, &blk) if ollama_model?(selected_model)
-        # A schema-bound call wants one object back, not a tool conversation.
-        # The ReAct completion sets master_no_tools while it asks for each step.
-        send_ruby_llm_with_manual_tool_fallback(selected_model, messages, sys:, stream:, image:, temperature:, format:, &blk)
+        dispatch_special_provider(request) || dispatch_general_provider(request)
+      end
+
+      def dispatch_special_provider(request)
+        model, messages, sys, stream, = request.deconstruct
+        return send_agy_cli(model.delete_prefix("agy:"), messages, sys:, stream:, &request.on_text) if agy_model?(model)
+        return send_web_chat(model.delete_prefix("web-chat:"), messages, sys:) if web_chat_model?(model)
+        return unless cli_lane_model?(model)
+
+        send_cli_lane(CliInput.new(selected_model: model, messages:, sys:, stream:, on_text: request.on_text))
+      end
+
+      def dispatch_general_provider(request)
+        model, messages, sys, stream, image, temperature, format, on_text = request.deconstruct
+        return send_local_server(model, messages, sys:, temperature:) if local_server_model?(model)
+        return send_hosted(model, messages, sys:, temperature:, image:) if hosted_lane?(model)
+        return send_replicate_chat(model, messages, sys:) if replicate_chat_model?(model)
+        return send_ollama(model, messages, sys:, stream:, temperature:, format:, &on_text) if ollama_model?(model)
+
+        send_ruby_llm_with_manual_tool_fallback(model, messages, sys:, stream:, image:, temperature:, format:, &on_text)
+      end
+
+      def browser_local_lane?(request)
+        return false unless Fiber[:master_web] == true
+
+        agy_model?(request.model) || web_chat_model?(request.model) || cli_lane_model?(request.model)
       end
 
       # Message rows are {role:, content:} hashes. Only String content is

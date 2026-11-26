@@ -601,7 +601,8 @@ cli_lanes:
   codex-cli:
     binary: codex
     signed_in: { args: [login, status], match: Logged in }
-    ask: [exec, --skip-git-repo-check, --sandbox, read-only, --ephemeral, --output-last-message, "%{reply_file}", "-"]
+    ask: [exec, --skip-git-repo-check, --sandbox, read-only, --ephemeral, --json,
+          --output-last-message, "%{reply_file}", "-"]
     model_flag: --model
     models: [auto]
     login: codex login

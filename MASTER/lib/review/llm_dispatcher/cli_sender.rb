@@ -14,7 +14,40 @@ module Master
         include CliUsage
 
         CLI_LANE_TIMEOUT_S = 60
-        CliRequest = Data.define(:name, :model, :prompt, :reply_path, :timeout_s)
+        CliRequest = Data.define(:name, :model, :prompt, :reply_path, :timeout_s, :stream, :on_text)
+        CliInput = Data.define(:selected_model, :messages, :sys, :stream, :on_text)
+
+        # Codex emits JSONL.  Its answer file remains the terminal receipt, but
+        # this parser releases an assistant message when the CLI emits it so an
+        # interactive MASTER turn need not wait for process teardown to speak.
+        class CliJsonStream
+          def initialize
+            @remainder = +""
+          end
+
+          def feed(chunk)
+            @remainder << chunk.to_s
+            lines = @remainder.split("\n", -1)
+            @remainder = lines.pop
+            lines.filter_map { |line| assistant_text(line) }
+          end
+
+          private
+
+          def assistant_text(line)
+            return unless line.lstrip.start_with?("{")
+
+            event = JSON.parse(line)
+            item = event["item"]
+            return unless event["type"] == "item.completed" && item.is_a?(Hash)
+            return unless item["type"] == "agent_message"
+
+            item["text"].to_s.then { |text| text.empty? ? nil : text }
+          rescue JSON::ParserError => e
+            Master::Ground::Swallow.log(e, context: "CliJsonStream.assistant_text")
+            nil
+          end
+        end
 
         private
 
@@ -24,21 +57,25 @@ module Master
         # file filled in, the model flag unless the model is auto, the prompt on
         # stdin when the arguments do not carry it, and the reply read from the
         # file when the CLI wrote one.
-        def send_cli_lane(selected_model, messages, sys:)
+        def send_cli_lane(input)
+          selected_model, messages, sys, stream, on_text = input.deconstruct
           name, model = selected_model.to_s.split(":", 2)
+          lane = cli_lanes.fetch(name)
           prompt = [sys.to_s, text_prompt_for(messages)].reject(&:empty?).join("\n\n---\n\n")
+          timeout_s = cli_lane_timeout_s(lane)
           Tempfile.create(["master_#{name}", ".txt"]) do |reply_file|
-            ask_cli_lane(name, model, prompt, reply_file.path)
+            request = CliRequest.new(
+              name:, model:, prompt:, reply_path: reply_file.path, timeout_s:, stream:, on_text:
+            )
+            ask_cli_lane(lane:, request:)
           end
         end
 
-        def ask_cli_lane(name, model, prompt, reply_path)
-          lane = cli_lanes.fetch(name)
+        def ask_cli_lane(lane:, request:)
+          name, model, prompt, reply_path, timeout_s = request.deconstruct
           missing = cli_lane_missing_model(name, lane)
           return missing if missing
 
-          timeout_s = cli_lane_timeout_s(lane)
-          request = CliRequest.new(name:, model:, prompt:, reply_path:, timeout_s:)
           out, err, status = execute_cli_lane(lane:, request:)
           result = cli_lane_result(name, out, err, status, reply_path)
           record_estimated_cli_usage(model: "#{name}:#{model}", prompt:, reply: result.value!) if result.ok?
@@ -53,7 +90,7 @@ module Master
         def execute_cli_lane(lane:, request:)
           name, model, prompt, reply_path, timeout_s = request.deconstruct
           @bus&.publish("llm:cli_started", lane: name, model: "#{name}:#{model}")
-          on_stdout = cli_output_handler(name, model)
+          on_stdout = cli_output_handler(request)
           with_cli_slot(name) do
             capture3_with_timeout(timeout_s, cli_binary(lane["binary"]),
                                   *cli_lane_args(lane, model, prompt, reply_path),
@@ -65,15 +102,19 @@ module Master
         # declares it as reply text.  It still proves that the child is alive,
         # so publish a concise progress event immediately rather than waiting
         # for the reply file and pretending a silent timer is progress.
-        def cli_output_handler(name, model)
+        def cli_output_handler(request)
           seen = false
+          json_stream = CliJsonStream.new
           lambda do |chunk|
             next if chunk.to_s.empty?
 
             unless seen
               seen = true
-              @bus&.publish("llm:cli_output", lane: name, model: "#{name}:#{model}", bytes: chunk.bytesize)
+              @bus&.publish(
+                "llm:cli_output", lane: request.name, model: "#{request.name}:#{request.model}", bytes: chunk.bytesize
+              )
             end
+            json_stream.feed(chunk).each { |text| request.on_text.call(text) } if request.stream && request.on_text
           end
         end
 

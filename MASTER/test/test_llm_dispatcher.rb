@@ -916,7 +916,7 @@ class TestLLMDispatcher < Minitest::Test
   # codex takes its prompt on stdin and writes the answer to a file; a lane
   # whose model is auto passes no model flag, so the CLI keeps its own default.
   def test_a_cli_lane_asks_on_stdin_and_reads_the_reply_file
-    dispatcher, _session, bus = build_dispatcher
+    dispatcher, = build_dispatcher
     seen = {}
     dispatcher.define_singleton_method(:capture3_with_timeout) do |_t, *args, stdin_data: nil, on_stdout:|
       seen.replace(args:, stdin: stdin_data)
@@ -925,26 +925,45 @@ class TestLLMDispatcher < Minitest::Test
       ["progress chatter", "", Struct.new(:success?).new(true)]
     end
 
-    result = dispatcher.send(
-      :send_cli_lane, "codex-cli:auto", [{ role: "user", content: "ping" }], sys: "LAW"
-    )
+    result = dispatcher.send(:send_cli_lane, cli_input(sys: "LAW"))
 
     assert_equal "pong", result.value!
-    assert seen[:stdin].start_with?("LAW\n\n---\n\n")
-    assert_includes seen[:stdin], "ping"
+    assert_includes seen[:stdin], "LAW\n\n---\n\nping"
     refute_includes seen[:args], "--model"
   end
 
   def test_a_cli_output_handler_emits_one_liveness_event
     dispatcher, _session, bus = build_dispatcher
 
-    handler = dispatcher.send(:cli_output_handler, "codex-cli", "auto")
+    request = cli_request
+    handler = dispatcher.send(:cli_output_handler, request)
     handler.call("first")
     handler.call("second")
 
     events = bus.events.to_h
     assert_equal "codex-cli", events.fetch("llm:cli_output")[:lane]
     assert_equal "first".bytesize, events.fetch("llm:cli_output")[:bytes]
+  end
+
+  def test_a_cli_json_stream_releases_completed_assistant_messages
+    stream = Master::Review::LLMDispatcher::CliSender::CliJsonStream.new
+    event = { "type" => "item.completed", "item" => { "type" => "agent_message", "text" => "ready" } }.to_json
+
+    assert_empty stream.feed(event[0, 20])
+    assert_equal ["ready"], stream.feed(event[20..] + "\n")
+    assert_empty stream.feed('{"type":"item.completed","item":{"type":"command_execution"}}' + "\n")
+  end
+
+  def test_a_cli_output_handler_streams_completed_codex_messages
+    dispatcher, = build_dispatcher
+    received = []
+    request = cli_request(stream: true, on_text: ->(text) { received << text })
+    handler = dispatcher.send(:cli_output_handler, request)
+    event = { "type" => "item.completed", "item" => { "type" => "agent_message", "text" => "live" } }.to_json
+
+    handler.call(event + "\n")
+
+    assert_equal ["live"], received
   end
 
   # A lane declares its own cap in models.yml; one that declares none keeps the 60s
@@ -958,7 +977,7 @@ class TestLLMDispatcher < Minitest::Test
     end
 
     %w[grok-cli:auto codex-cli:auto].each do |lane|
-      dispatcher.send(:send_cli_lane, lane, [{ role: "user", content: "ping" }], sys: nil)
+      dispatcher.send(:send_cli_lane, cli_input(model: lane))
     end
 
     assert_equal 180, seen.fetch("grok")
@@ -974,7 +993,7 @@ class TestLLMDispatcher < Minitest::Test
       ["", "ERROR: You've hit your usage limit. Upgrade to Plus to continue using Codex", failed]
     end
 
-    result = dispatcher.send(:send_cli_lane, "codex-cli:auto", [{ role: "user", content: "ping" }], sys: nil)
+    result = dispatcher.send(:send_cli_lane, cli_input)
 
     assert_equal :budget, dispatcher.send(:reclassify_provider_error, result).category
     assert_match(/usage limit/, result.message)
@@ -1091,6 +1110,18 @@ class TestLLMDispatcher < Minitest::Test
   end
 
   private
+
+  def cli_request(stream: false, on_text: nil)
+    Master::Review::LLMDispatcher::CliSender::CliRequest.new(
+      name: "codex-cli", model: "auto", prompt: "ping", reply_path: "/tmp/reply", timeout_s: 60, stream:, on_text:
+    )
+  end
+
+  def cli_input(model: "codex-cli:auto", sys: nil, stream: false, on_text: nil)
+    Master::Review::LLMDispatcher::CliSender::CliInput.new(
+      selected_model: model, messages: [{ role: "user", content: "ping" }], sys:, stream:, on_text:
+    )
+  end
 
   def build_dispatcher
     dispatcher = Master::Review::LLMDispatcher.allocate
