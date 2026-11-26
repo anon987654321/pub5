@@ -142,6 +142,15 @@ module Master
             start_pass: resumed.value!, run_id:, wishlist_proposals: [],
             resume_state: journal["resumed"] ? journal["pass_state"] : nil
           )
+          # The budget can request a graceful stop from its heartbeat while a
+          # pass is in flight. Do not enter incremental proof or structural
+          # surgery after reporting STOPPING: that turned a thirty-minute
+          # no-yield abort into another five minutes of unrelated work.
+          if RunBudget.stopping
+            stopped = RunBudget.pass_boundary(start_pass) ||
+              Result.err(RunBudget.stopping, category: :timeout)
+            return finish_run(stopped, target, run_id, mission:, requested:)
+          end
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested? ||
                                                                                          terminal_state_for(result) == :cancelled
           result = verify_incremental_scope(
