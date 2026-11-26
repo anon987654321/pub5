@@ -36,8 +36,8 @@ class Marketplace::SavedSearch < ApplicationRecord
   # actually fires. Same predicates as new_matches so a create-time alert and
   # the periodic job cannot disagree.
   def matches_listing?(listing)
-    return false if listing.blank?
-    return false unless listing.status == "active" && !listing.expired?
+    return false if listing.blank? || listing.user_id == user_id
+    return false unless Marketplace::Listing.publicly_visible.exists?(id: listing.id)
     return false if category_id.present? && listing.category_id != category_id
     return false if location.present? && listing.location != location
     return true if query.blank?
@@ -54,7 +54,8 @@ class Marketplace::SavedSearch < ApplicationRecord
   # — otherwise switching alerts on mails you the entire back catalogue.
   def new_matches(since: nil)
     cutoff = since || last_notified_at || created_at
-    scope = Marketplace::Listing.publicly_visible.where("marketplace_listings.created_at > ?", cutoff)
+    scope = Marketplace::Listing.publicly_visible.where.not(user_id: user_id)
+                       .where("marketplace_listings.created_at > ?", cutoff)
     scope = scope.where(category_id: category_id) if category_id.present?
     scope = scope.where(location: location) if location.present?
     # Same columns the listings page searches, so an alert cannot disagree with
@@ -74,7 +75,7 @@ class Marketplace::SavedSearch < ApplicationRecord
     cutoff = since || last_notified_at || created_at
     scope = Marketplace::Deal.live
               .joins(:listing)
-              .merge(Marketplace::Listing.publicly_visible)
+              .merge(Marketplace::Listing.publicly_visible.where.not(user_id: user_id))
               .where("marketplace_deals.created_at > ?", cutoff)
 
     scope = scope.where(marketplace_listings: { category_id: category_id }) if category_id.present?

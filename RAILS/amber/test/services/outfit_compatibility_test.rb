@@ -18,6 +18,16 @@ class OutfitCompatibilityTest < ActiveSupport::TestCase
     assert_equal 0.0, scorer.score_items([])
   end
 
+  test "an empty outfit has a finite explanation and zero score" do
+    scorer = OutfitCompatibility.new(user("compatibility-empty@example.com"))
+    outfit = Struct.new(:items).new([])
+    explanation = scorer.explain(outfit, occasion: "formal", weather: "rain")
+
+    assert_equal 0.0, explanation[:overall]
+    assert explanation.values.all?(&:finite?)
+    assert_equal scorer.score(outfit, occasion: "formal", weather: "rain"), explanation[:overall]
+  end
+
   test "a dress satisfies the top and bottom roles in category balance" do
     owner = user("compatibility-dress@example.com")
     scorer = OutfitCompatibility.new(owner)

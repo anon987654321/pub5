@@ -88,11 +88,15 @@ class DatingRefinementsTest < ActionDispatch::IntegrationTest
     assert_equal "Ansiktet er ikke synlig", verification.reload.review_note
   end
 
-  test "incoming likes from blocked or paused profiles are hidden" do
+  test "incoming likes from blocked, paused or mutually incompatible profiles are hidden" do
     blocked = user_with_profile("dr_blocked")
     paused = user_with_profile("dr_paused")
     visible = user_with_profile("dr_visible")
-    [ blocked, paused, visible ].each { |user| Dating::Like.create!(liker: user, likee: @me) }
+    incompatible = user_with_profile("dr_incompatible")
+    [blocked, paused, visible].each do |user|
+      profile_for(user).update!(gender: "man", looking_for: "woman")
+    end
+    [blocked, paused, visible, incompatible].each { |user| Dating::Like.create!(liker: user, likee: @me) }
     Block.create!(blocker: blocked, blocked: @me)
     profile_for(paused).update!(visible: false)
     sign_in_as(@me)

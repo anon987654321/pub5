@@ -40,8 +40,7 @@ class Dating::LikesController < Dating::BaseController
   # people who have not seen you.
   def index
     @likes = Dating::Like.waiting_on(Current.user)
-                         .where(liker_id: Dating::Profile.visible.with_photos.compatible_ages_for(current_dating_profile).select(:user_id))
-                         .where.not(liker_id: dating_blocked_users)
+                         .where(liker_id: swipe_subjects.select(:user_id))
                          .includes(:dating_prompt, photo_attachment: :blob, liker: { dating_profile: { photos_attachments: :blob } })
                          .order(created_at: :desc)
                          .limit(50)

@@ -67,6 +67,20 @@ class SavedSearchAlertJobTest < ActiveJob::TestCase
     end
   end
 
+  test "a seller never receives an alert about their own listing or deal" do
+    search = saved_search(query: "sykkel")
+    own = nil
+
+    assert_no_difference -> { @watcher.notifications.count } do
+      own = Marketplace::Listing.create!(user: @watcher, title: "Egen sykkel",
+        description: "Pent brukt", category: default_category, price_cents: 50_000, status: "active")
+      Marketplace::Deal.create!(listing: own, headline: "Sykkel -20%")
+      SavedSearchAlertJob.perform_now
+    end
+
+    assert_nil search.reload.last_notified_at
+  end
+
   test "a search with alerts off is never run" do
     saved_search(query: "sykkel", notify: false)
     listing(title: "Ny sykkel")

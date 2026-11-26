@@ -6,7 +6,7 @@ class Marketplace::SavedSearchesController < Marketplace::BaseController
   before_action :require_user_session
 
   def index
-    @pagy, @saved_searches = pagy(Current.user.marketplace_saved_searches.order(created_at: :desc))
+    @pagy, @saved_searches = pagy(Current.user.marketplace_saved_searches.includes(:category).order(created_at: :desc))
   end
 
   # An invalid name is a message, not a 500 from create!.

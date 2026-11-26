@@ -43,6 +43,14 @@ class WearsWellWithContractTest < Minitest::Test
                  WearsWellWith.tokens_for(garment).sort
   end
 
+  def test_comma_and_space_separated_occasions_have_the_same_tokens
+    load_service
+    comma = ItemStub.new(occasion_tags: "Work, travel, work")
+    space = ItemStub.new(occasion_tags: "work travel")
+    assert_equal WearsWellWith.tokens_for(space), WearsWellWith.tokens_for(comma)
+    assert_equal [1.0, %w[occasion_tags:travel occasion_tags:work]], WearsWellWith.new(comma).compare(space)
+  end
+
   def test_a_blank_garment_contributes_no_tokens_and_matches_nothing
     load_service
     blank = ItemStub.new

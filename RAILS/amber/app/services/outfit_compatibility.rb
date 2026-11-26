@@ -34,23 +34,32 @@ class OutfitCompatibility
     items = Array(items)
     return 0.0 if items.empty?
 
-    scores = [ category_balance(items), color_balance(items), occasion_fit(items, occasion), weather_fit(items, weather), preference_fit(items) ]
-    (scores.sum / scores.size).round(3)
+    average(components(items, occasion:, weather:))
   end
 
   def explain(outfit, occasion: nil, weather: nil)
     items = outfit.items.to_a
+    scores = components(items, occasion:, weather:)
+    scores.merge(overall: average(scores))
+  end
+
+  private
+
+  def components(items, occasion:, weather:)
+    return %i[category_balance color_balance occasion_fit weather_fit preference_fit].to_h { |key| [key, 0.0] } if items.empty?
+
     {
       category_balance: category_balance(items),
       color_balance: color_balance(items),
       occasion_fit: occasion_fit(items, occasion),
       weather_fit: weather_fit(items, weather),
       preference_fit: preference_fit(items),
-      overall: score(outfit, occasion:, weather:),
     }
   end
 
-  private
+  def average(scores)
+    (scores.values.sum / scores.size).round(3)
+  end
 
   def category_balance(items)
     categories = items.map(&:category).compact

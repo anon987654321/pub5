@@ -17,7 +17,7 @@
 # answer, and "expensive" is nobody's taste.
 class WearsWellWith
   # The typed fields that describe what a garment is. occasion_tags is a
-  # space-separated string column and contributes one token per tag.
+  # comma- or whitespace-separated column, with one token per tag.
   TOKEN_FIELDS = %w[category color material season mood_effect life_phase].freeze
   OCCASION_FIELD = "occasion_tags"
 
@@ -69,7 +69,7 @@ class WearsWellWith
 
       "#{field}:#{value.to_s.strip.downcase}"
     end
-    tags = record.public_send(OCCASION_FIELD).to_s.strip.downcase.split
+    tags = record.public_send(OCCASION_FIELD).to_s.downcase.split(/[\s,]+/).reject(&:empty?)
     tokens.concat(tags.map { |tag| "#{OCCASION_FIELD}:#{tag}" })
     tokens.uniq
   end
