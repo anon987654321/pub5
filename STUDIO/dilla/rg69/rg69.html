@@ -2249,14 +2249,14 @@ $id('progress-fill').style.width=`${pct}%`;
 }
 }
 },len+leadIn+tail,2,context.rawContext.sampleRate);
-const wav=encodeWav16(buf.get());
+const rendered=buf.get(),wav=encodeWav16(rendered);
+let peak=0,energy=0,count=0,clipped=0;for(let c=0;c<rendered.numberOfChannels;c++)for(const v of rendered.getChannelData(c)){if(!Number.isFinite(v))continue;peak=Math.max(peak,Math.abs(v));energy+=v*v;count++;if(Math.abs(v)>=1)clipped++;}
+const db=v=>20*Math.log10(Math.max(1e-9,v));log(`render0: peak ${db(peak).toFixed(2)} dBFS · RMS ${db(Math.sqrt(energy/Math.max(1,count))).toFixed(2)} dBFS · clipped ${clipped} · ${rendered.sampleRate} Hz`,"k");
 const blob=new Blob([wav],{type:'audio/wav'});
 const url=URL.createObjectURL(blob);
 const a=document.createElement('a');
 a.href=url;
-const activeChip=document.querySelector('#styles .style-chip.active,#moods .style-chip.active');
-const styleName=activeChip?activeChip.textContent.toLowerCase().replace(/\s+/g,'-'):'loop';
-a.download=`rg69-${styleName}-${Date.now()}.wav`;
+a.download="rg69.wav";
 a.click();
 URL.revokeObjectURL(url);
 $id('progress-wrap').style.display='none';
@@ -3203,7 +3203,7 @@ case'panic':$id('panic').click();break;
 case'undo':undo();break;
 case'redo':redo();break;
 case'random':case'rnd':randomize();break;
-case'export':case'wav':exportWAV();break;
+case'export':case'wav':case'render':exportWAV();break;
 case'record':case'rec':toggleRecord();break;
 case'theme':toggleTheme();break;
 case'tap':tapTempo();break;
