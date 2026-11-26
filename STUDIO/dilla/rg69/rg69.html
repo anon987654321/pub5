@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -266,28 +266,28 @@ body[data-density="compact"] .tracks{gap:1px}
 
 
 /* RG-69: flat hardware face, not skeuomorphic gloss. */
-:root {
-  --bg: #111210;
-  --brd: #383d35;
-  --txt: #d7d8cf;
-  --mut: #96988b;
-  --acc: #baa16a;
-  --dng: #bd6151;
-  --panel: #111210;
-  --panel-hi: #252822;
-  --panel-line: #3a4036;
+ :root {
+  --bg: #292a29;
+  --brd: #454542;
+  --txt: #e5e0d7;
+  --mut: #b1aca3;
+  --acc: #d0bba0;
+  --dng: #e17569;
+  --panel: #292a29;
+  --panel-hi: #3b3a36;
+  --panel-line: #55524d;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 :root[data-theme="light"] {
-  --bg: #d7d5c9;
-  --brd: #a4a397;
-  --txt: #21251e;
-  --mut: #5f645a;
-  --acc: #875b1b;
-  --dng: #a13c31;
-  --panel: #e3e1d5;
-  --panel-hi: #cbc9bd;
-  --panel-line: #9a998d;
+  --bg: #ded9ce;
+  --brd: #a29e95;
+  --txt: #292a29;
+  --mut: #625e57;
+  --acc: #a12c37;
+  --dng: #a12c37;
+  --panel: #ded9ce;
+  --panel-hi: #c9c4ba;
+  --panel-line: #aaa59b;
 }
 html, body { min-height: 100%; background: var(--bg); color: var(--txt); }
 body {
@@ -615,7 +615,18 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 /* Primary performance surface; supporting controls remain in disclosures. */
 body{width:min(100%,1120px)}
 .machine-header{padding:8px 0;border:0}
-.machine-header h1{font-size:28px;letter-spacing:.04em}
+.machine-header h1,.welcome-title{font-family:Helvetica,"Helvetica Neue",Arial,sans-serif;font-weight:700;letter-spacing:-.045em;color:var(--txt)}
+.machine-header h1{font-size:32px}
+.welcome-title{font-size:clamp(42px,8vw,64px)}
+#play,#welcome-start{background:#a12c37;border-color:#a12c37;color:#fff}
+#play:hover,#welcome-start:hover{background:#87232d;color:#fff}
+.step{background:#454542}
+:root[data-theme="light"] .step{background:#b8b4ad}
+:root[data-theme="light"] .track .step .vel-fill{background:#8e303a}
+#pos-display{letter-spacing:0}
+details>summary::before{content:none}
+details>summary::after{margin-left:auto}
+#harmony-info{text-align:left}
 .transport{display:block;padding:8px 0;border-top:1px solid var(--panel-line)}
 .transport-primary{display:flex;flex-wrap:wrap;gap:6px}
 #play,#stop{min-height:36px;min-width:64px;width:auto}
@@ -1332,7 +1343,7 @@ return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass
 const industrialBoot=bootStyleCandidates.filter(style=>['Industrial','Hard Techno','HATE Style'].includes(style.n));
 const bootStylePool=industrialBoot.length?industrialBoot:bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
-let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
+let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 let aud_={pocket:industrialBoot.includes(bootStyle)?12:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:(bootStyle.dr[0]+bootStyle.dr[1])/2,tape:(bootStyle.tm[0]+bootStyle.tm[1])/2,comp:78,width:52,reverb:industrialBoot.includes(bootStyle)?18:34,delay:26,filter:62,wobble:12,vinyl:22,crackle:18,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p,keysVoice:'original',padsVoice:'original'};
@@ -2940,7 +2951,7 @@ log("remote stop","e");
 });
 }
 
-const savedTheme=readStorage('rg69_theme')||'dark';
+const savedTheme=readStorage('rg69_theme')||'light';
 st_.theme=savedTheme;
 document.documentElement.setAttribute('data-theme',st_.theme);
 refreshVizColors();
