@@ -246,7 +246,15 @@ module Studio
         Studio::Lora::Review.write_contact_sheet([], result.fetch("frames").map { |frame| frame.fetch("path") },
                                                sheet, render_label: "FRAME")
         result["contact_sheet"] = sheet
-        puts JSON.pretty_generate(result)
+        result["contact_sheet_sha256"] = Digest::SHA256.file(sheet).hexdigest
+        result["frames"] = Studio::Lora::Review.screen_frames(result.fetch("frames"))
+        result["quality_rubric"] = Studio::Lora::Review::QUALITY_RUBRIC
+        result["review"] = "NOT_REVIEWED"
+        report = File.join(File.expand_path(argv[1]), "review.json")
+        File.open(report, File::WRONLY | File::CREAT | File::EXCL, 0o600) do |file|
+          file.write(JSON.pretty_generate(result))
+        end
+        puts JSON.pretty_generate(result.merge("review_report" => report))
         0
       end
 
