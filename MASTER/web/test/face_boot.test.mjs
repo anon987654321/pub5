@@ -1669,8 +1669,8 @@ test("MASTER web shares the CLI's Nerd Font Mono syntax roles", () => {
 
 test("MASTER fenced code highlighting escapes model text and emits semantic spans", () => {
   const chat = readFileSync(join(publicDir, "chat.js"), "utf8");
-  assert.match(chat, /function highlightCode\(source\)/);
-  assert.match(chat, /escapeHtml\(token\)/);
+  assert.match(chat, /function highlightCode\(source, language = ""\)/);
+  assert.match(chat, /escapeHtml\(match\[0\]\)/);
   assert.match(chat, /class="syntax-/);
   assert.match(chat, /function renderTerminalText\(source\)/);
   assert.match(chat, /_streamEl\.innerHTML = renderTerminalText\(text\)/);
@@ -1693,12 +1693,17 @@ test("MASTER web highlighter escapes source and classifies shell and Ruby tokens
     extract("renderTerminalText"),
     "this.output = renderTerminalText(" + JSON.stringify(sample) + ");"
   ].join("\n");
-  const sandbox = {};
+  const grammarPath = join(root, "..", "lib", "voice", "renderer", "text_formatting.rb");
+  const grammar = JSON.parse(execFileSync(join(root, "..", "bin", "ruby"), [
+    "-rjson", "-r", grammarPath, "-e",
+    "puts JSON.generate(Master::Voice::Renderer::TextFormatting.browser_grammar)"
+  ], { encoding: "utf8" }));
+  const sandbox = { window: { MASTER_TERMINAL_GRAMMAR: grammar } };
   runInNewContext(source, sandbox);
 
-  assert.ok(sandbox.output.includes('class="syntax-success">ok:</span>'));
-  assert.ok(sandbox.output.includes('class="syntax-warning">warn:</span>'));
-  assert.ok(sandbox.output.includes('class="syntax-error">error:</span>'));
+  assert.ok(sandbox.output.includes("ok: ready"));
+  assert.ok(sandbox.output.includes("warn: careful"));
+  assert.ok(sandbox.output.includes("error: failed"));
   assert.ok(sandbox.output.includes('class="syntax-keyword">def</span>'));
   assert.ok(sandbox.output.includes('class="syntax-command">puts</span>'));
   assert.ok(sandbox.output.includes('class="syntax-string">'));
