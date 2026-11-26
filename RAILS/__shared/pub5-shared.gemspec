@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.metadata = { "sass_load_path" => "app/assets/stylesheets" }
   spec.require_paths = ["lib"]
   spec.add_dependency "rails", ">= 8.0"
-  # SitemapBuilder's XML writer; arrived only transitively through actionview.
+  # brgen's merchant feed and bsdports's RSS view; arrived only transitively through actionview.
   spec.add_dependency "builder", ">= 3.2"
   # AccountExporter's writer. Ruby 3.4 unbundled csv, so requiring it needs a declared dependency.
   spec.add_dependency "csv", ">= 3.3"

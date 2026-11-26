@@ -10,42 +10,30 @@ class SitemapsController < ApplicationController
   # Trending is an aggregate over the whole tagging window, not a page of rows —
   # it earns a tighter cap than the per-model one.
   HASHTAG_CAP = 200
-  # The default branch alone sorts Post.hot (a julianday expression no index
-  # can serve) over up to 2,000 rows, then communities, users and listings
-  # besides - per crawler hit, on 44 domains. Half an hour of staleness is
-  # inside every changefreq below, and the host is in the key twice over:
-  # the resolved subapp differs per host and a sitemap may only carry its
-  # own host's URLs.
-  SITEMAP_TTL = 30.minutes
+  # What each subapp's sitemap lists beside its root. Personal profiles and
+  # private conversations (dating, messenger, ai) are never indexed: root only.
+  SECTIONS = {
+    tv: %i[tv_entries],
+    playlist: %i[playlist_entries],
+    takeaway: %i[food_entries],
+    marketplace: %i[marketplace_entries category_entries food_entries],
+    maps: %i[maps_entries],
+    dating: [], messenger: [], ai: [],
+  }.freeze
+  # The city site itself.
+  CITY_SECTIONS = %i[posts_entries community_entries hashtag_entries user_entries].freeze
 
   private
 
+  # The default branch sorts Post.hot (a julianday expression no index can
+  # serve) over up to 2,000 rows, then communities, users and listings, on 44
+  # domains; posts move faster than the shared hour, so half an hour here.
+  def sitemap_ttl = 30.minutes
+
   def sitemap_entries
-    Rails.cache.fetch("sitemap/entries/#{request.host}", expires_in: SITEMAP_TTL) do
-      build_sitemap_entries
-    end
-  end
-
-  def build_sitemap_entries
     subapp = Brgen::DomainRegistry.resolve(request.host).subapp
-    entries = [ Shared::SitemapBuilder::Entry.new(loc: root_url, changefreq: "daily", priority: "1.0") ]
-
-    case subapp
-    when :tv then entries.concat(tv_entries)
-    when :playlist then entries.concat(playlist_entries)
-    when :takeaway then entries.concat(food_entries)
-    when :marketplace then entries.concat(marketplace_entries, category_entries, food_entries)
-    when :maps then entries.concat(maps_entries)
-    when :dating, :messenger, :ai
-      # Personal profiles and private conversations are never indexed — root only.
-    else
-      entries.concat(posts_entries)
-      entries.concat(community_entries)
-      entries.concat(hashtag_entries)
-      entries.concat(user_entries)
-    end
-
-    entries
+    root = Shared::SitemapBuilder::Entry.new(loc: root_url, changefreq: "daily", priority: "1.0")
+    [ root, *SECTIONS.fetch(subapp, CITY_SECTIONS).flat_map { |section| send(section) } ]
   end
 
   # in_current_city is the city scoping, and it lives on the models: CityScoped
