@@ -546,6 +546,10 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 .machine-header,.transport,.machine-panel,#status,.level-meter-row,details{border-inline:0;background:var(--bg)}
 .panel-strip--inner{background:var(--bg)}
 @media(max-width:640px){.macro-controls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#sample-drop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#sample-pattern,#sample-status{grid-column:1/-1}
+#sample-drop label{min-width:0}
+#sample-pattern button[aria-pressed="true"]{background:var(--acc);color:var(--bg)}
 </style>
 </head>
 <body>
@@ -587,7 +591,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
   </div>
   <div class="transport-actions" aria-label="Other actions">
     <button id="random" title="Randomize (R)">Randomize</button>
-    <button id="export" title="Export WAV (E)">Export WAV</button>
+    <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
     <button id="record" data-kind="danger" title="Record">Record</button>
     <button id="shareBtn" title="Copy share link">Share</button><button id="save-session">Save</button><button id="load-session">Load</button><input id="session-file" type="file" accept="application/json,.json" hidden>
     <button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
@@ -615,6 +619,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 <div class="styles" id="styles"></div>
 <div class="styles is-hidden" id="moods"></div>
 </details>
+<details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><div id="sample-pattern" class="steps-grid"></div></div></details>
 <details>
 <summary>Controls</summary>
 <div class="two-col">
@@ -1105,6 +1110,7 @@ let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 
+let liveGraph;
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN;
 let drumG,bassG,keysG,padsG,masterG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,analyser;
 let fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt;
@@ -1139,18 +1145,22 @@ for(const [lane,[input,target,...sends]] of Object.entries(routes))connectLaneFX
 }
 const DENSITIES=Object.freeze(["comfortable","compact"]);
 const LANES=["k","s","c","h","o","b","keys","p"],DRUM_LANES=LANES.slice(0,5);
+const noteMidi=note=>{const m=/^([A-G])([#b]?)([0-8])$/.exec(note);if(!m)return 60;return (+m[3]+1)*12+({C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]])+(m[2]==="#"?1:m[2]==="b"?-1:0);};
+const noteHz=note=>440*2**((noteMidi(note)-69)/12);
 const ORIGINAL_DRUMS=JSON.stringify(DRUM_PATTERNS);
 const PATTERN_TABLES={d:DRUM_PATTERNS,b:BASS_PATS,k:KEYS_PATS,p:PAD_PATS};
 const clamp=(n,min,max,fallback)=>Number.isFinite(Number(n))?Math.max(min,Math.min(max,Number(n))):fallback;
 const newSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 let sessionSeed=newSeed(),fxSeed=null;
 const SESSION_KEY="rg69_session_v1";
+let sampleAudio=null;
+let sampleSettings={name:"",duration:0,slices:[],pattern:Array(16).fill(null),pitch:0,reverse:false,gate:100,offset:0};
 function drumEdits(){
 const original=JSON.parse(ORIGINAL_DRUMS);
 return Object.fromEntries(Object.entries(DRUM_PATTERNS).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(original[key])));
 }
 function session(){
-return deepClone({version:1,seed:sessionSeed,fxSeed,pat:pat_,seq:seq_,aud:aud_,mix:mix_,drums:drumEdits(),mute:st_.muteState,steps:st_.stepCount});
+return deepClone({version:1,seed:sessionSeed,fxSeed,pat:pat_,seq:seq_,aud:aud_,mix:mix_,drums:drumEdits(),sample:sampleSettings,mute:st_.muteState,steps:st_.stepCount});
 }
 function restoreSession(data){
 if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))throw Error("Unsupported session");
@@ -1169,6 +1179,7 @@ const valid=n=>typeof n==="string"&&/^[A-G][#b]?[0-8]$/.test(n);
 const note=lane==="b"&&valid(x.note)?x.note:["keys","p"].includes(lane)&&Array.isArray(x.note)&&x.note.length>0&&x.note.length<=6&&x.note.every(valid)?x.note.slice():undefined;
 seq_[lane][i]={v:clamp(x.v,0,1,1),t:clamp(x.t,-25,25,0),p:clamp(x.p,0,100,100),r:[1,2,4].includes(x.r)?x.r:1,off:!!x.off,...(note?{note}:{})};
 }
+if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:16},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&sampleAudio.name!==sampleSettings.name)sampleAudio=null;}
 if(data.mute)for(const lane of LANES)st_.muteState[lane]=data.mute[lane]?1:0;
 if([8,16].includes(data.steps))st_.stepCount=data.steps;
 if(Number.isInteger(data.seed))sessionSeed=data.seed>>>0;
@@ -1234,6 +1245,7 @@ if(match){const chip=[...$id('styles').querySelectorAll('.style-chip')].find(c=>
 }
 
 function syncUIFromState(){
+refreshSampler();
 $id('pocket').value=aud_.pocket;$id('pocket-o').textContent=Math.round(aud_.pocket);
 $id('steps').textContent=st_.stepCount+' steps';
 $id('steps').setAttribute('aria-pressed',String(st_.stepCount===8));
@@ -1297,7 +1309,7 @@ Tone.getContext().rawContext.addEventListener('statechange',()=>{
     st_.playing=false;Tone.Transport.pause();outputGate?.gain.rampTo(0,.015);clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
-const graph=createAudioGraph(aud_,mix_,fxSeed);
+const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);
 ({masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt}=graph);
 ({kick:kickN,kickSub,kickClk,kickBody,snare:snareN,snareRing:snareRng,clap:clapN,hat:hatN,open:openN,bass:bassN,bassSub,keys:keysN,pads:padsN}=graph.instruments);
 ({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=graph.effects);
@@ -1394,8 +1406,9 @@ const routes={drum:[drumG,masterG,revSend,dlySend],bass:[bassG,masterG,revSend,d
 const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
 installLaneFX(routes,effects);
 
+const sampleG=new Tone.Gain(.65);sampleG.connect(masterG);sampleG.connect(revSend);sampleG.connect(dlySend);
 const ready=rev.ready.then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1455,9 +1468,7 @@ const sixteenthDuration=sixteenth;
 const half=sixteenth*8;
 const dp=take?.drums?.[pat.d]||DRUM_PATTERNS[pat.d]||DRUM_PATTERNS.basic;
 const pitch=rg69AudioProfile.notes;
-const kitP=rg69AudioProfile.kit,toneP=rg69AudioProfile.tone;
-const hatResonance=toneP.hat.resonance_base_hz+kitP.hat.tone*toneP.hat.resonance_tone_span_hz;
-const openResonance=toneP.openhat.resonance_base_hz+kitP.hat.tone*toneP.openhat.resonance_tone_span_hz;
+
 ['k','s','c','h','o'].forEach(v=>{
 if(opts.muteMap&&opts.muteMap[v])return;
 const vel=dp[v]?dp[v][stepIdx]:0;
@@ -1486,12 +1497,10 @@ else if(v==='h'){
 // An offline MetalSynth cannot take a second start, so the export renders each
 // stroke through its own throwaway voice at the profile's tone. Live playback
 // keeps the single instrument, which is what the sliders and meters drive.
-if(opts.metalTap)oneShotMetal('hat',hatResonance,opts.metalTap.hat,1,kitP.hat.level).triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl);
-else synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl);
+synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl);
 }
 else if(v==='o'){
-if(opts.metalTap)oneShotMetal('openhat',openResonance,opts.metalTap.open,1,kitP.openhat.level).triggerAttackRelease(pitch.open,eighth,rt,vl);
-else synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
+synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
 }
 }
 }
@@ -1499,7 +1508,7 @@ else synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
 const nt=laneNote("b",stepIdx,pat,seq);
 if(nt&&!opts.muteMap?.b&&chance("b")){
 const drift=opts.applyTranspose?(randomAt(seed,tick,"b",11)-0.5)*2:0;
-const freq=Tone.Frequency(nt).toFrequency()*2**(drift/1200);
+const freq=noteHz(nt)*2**(drift/1200);
 synths.bass.triggerAttackRelease(freq,eighth,noteTime("b"),accent("b"));
 synths.bassSub.triggerAttackRelease(freq/2,eighth,noteTime("b"),accent("b")*.7);
 }
@@ -1508,6 +1517,30 @@ if(ch&&!opts.muteMap?.keys&&chance("keys"))synths.keys.triggerAttackRelease(ch,e
 const pad=laneNote("p",stepIdx,pat,seq);
 if(Array.isArray(pad)&&!opts.muteMap?.p&&chance("p"))synths.pads.triggerAttackRelease(pad,half,noteTime("p"),accent("p")*.6);
 }
+const NOISE_VOICES=new Set(["kickClk","snare","clap"]);
+const VOICES=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
+function compileStep(index,time,opts){
+const events=[];
+const sink=Object.fromEntries(VOICES.map(voice=>[voice,{triggerAttackRelease(...args){
+const noise=NOISE_VOICES.has(voice),t=args[noise?1:2];
+events.push({voice,time:t,args});
+}}]));
+triggerNotes(index,time,sink,opts);
+return events.sort((a,b)=>a.time-b.time);
+}
+function playStep(index,time,synths,opts){
+const events=compileStep(index,time,opts);
+for(const event of events){
+const {voice,args}=event;
+if(opts.metalTap&&["hat","open"].includes(voice)){
+const which=voice==="hat"?"hat":"openhat",t=rg69AudioProfile.tone[which],k=rg69AudioProfile.kit;
+const resonance=t.resonance_base_hz+k.hat.tone*t.resonance_tone_span_hz;
+oneShotMetal(which,resonance,opts.metalTap[voice],1,k[which].level).triggerAttackRelease(...args);
+}else synths[voice].triggerAttackRelease(...args);
+}
+if(opts.sampleGraph)playSample(index,time,opts);
+}
+
 
 function scheduleLoop(time){
 if(!st_.playing)return;
@@ -1526,7 +1559,7 @@ posEl?.classList.add('beat-active');
 posEl?.classList.remove('beat-active');
 }
 const sixteenth=60/aud_.bpm/4;
-triggerNotes(st_.idx,scheduledTime,{
+playStep(st_.idx,scheduledTime,{
 kick:kickN,
 kickSub:kickSub,
 kickClk:kickClk,
@@ -1541,7 +1574,7 @@ bassSub:bassSub,
 keys:keysN,
 pads:padsN
 },{
-muteMap:st_.muteState,tick:st_.tick,
+muteMap:st_.muteState,tick:st_.tick,sampleGraph:liveGraph,
 applyProb:true,
 applyRatchet:true,
 stepCount:st_.stepCount,
@@ -1765,7 +1798,7 @@ await startToneFromGesture();context=Tone.getContext();
 resume=st_.playing;if(resume){Tone.Transport.pause();st_.playing=false;outputGate.gain.rampTo(0,.015);}
 $id('export').disabled=true;
 rg69AudioProfileLocked=true;
-const take=session(),aud_=take.aud,mix_=take.mix;
+const take=session(),aud_=take.aud,mix_=take.mix,sampleTake=sampleAudio;
 take.drums[take.pat.d]=deepClone(DRUM_PATTERNS[take.pat.d]);
 const bars=8,leadIn=.05,len=bars*4*(60/aud_.bpm),tail=rg69AudioProfile.tone.pads.release+1;
 $id('progress-wrap').style.display='block';
@@ -1781,8 +1814,8 @@ const sixteenth=60/aud_.bpm/4;
 // MetalSynth's oscillators start at offline time zero, and a source refuses a
 // second start at the same time, so bar one at 0 threw for every export.
 const now=leadIn+i*sixteenth;
-triggerNotes(i%take.steps,now,graph.instruments,{
-session:take,tick:i,stepCount:take.steps,muteMap:take.mute,
+playStep(i%take.steps,now,graph.instruments,{
+session:take,tick:i,stepCount:take.steps,muteMap:take.mute,sampleGraph:graph,sample:sampleTake,
 applyProb:true,
 applyRatchet:true,
 sixteenth:sixteenth,
@@ -1847,7 +1880,114 @@ button.textContent="Stop rec";button.setAttribute("aria-pressed","true");log("re
 }catch(error){log("Record failed: "+error.message,"e");}
 }
 
+function detectSlices(buffer,mode="transient"){
+const n=16,duration=buffer.duration;
+if(mode==="equal")return Array.from({length:n},(_,i)=>i*duration/n);
+const pcm=buffer.getChannelData(0),hop=Math.max(1,Math.floor(buffer.sampleRate*.01));
+let previous=0,average=0;const candidates=[];
+for(let i=0;i+hop<pcm.length;i+=hop){
+let sum=0;for(let j=i;j<i+hop;j++)sum+=pcm[j]*pcm[j];
+const rms=Math.sqrt(sum/hop),rise=Math.max(0,rms-previous);
+average=average*.96+rise*.04;
+if(i>0&&rise>Math.max(.004,average*3))candidates.push([i/buffer.sampleRate,rise]);
+previous=rms;
+}
+const slices=[0];
+for(const [time] of candidates.sort((a,b)=>b[1]-a[1])){
+if(slices.length>=n)break;
+if(duration-time>.04&&slices.every(t=>Math.abs(t-time)>.07))slices.push(time);
+}
+return slices.length>=4?slices.sort((a,b)=>a-b):Array.from({length:n},(_,i)=>i*duration/n);
+}
+async function loadSample(file){
+if(!file)return;
+try{
+if(file.size>32*1024*1024)throw Error("Sample exceeds 32 MB");
+await startToneFromGesture();
+const context=Tone.getContext().rawContext,buffer=await context.decodeAudioData(await file.arrayBuffer());
+if(buffer.duration>180||buffer.duration<.08)throw Error("Sample must be 0.08–180 seconds");
+const reversed=context.createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);
+for(let ch=0;ch<buffer.numberOfChannels;ch++){const src=buffer.getChannelData(ch),dst=reversed.getChannelData(ch);for(let i=0;i<src.length;i++)dst[i]=src[src.length-1-i];}
+pushHistory();
+const same=sampleSettings.name===file.name&&Math.abs(sampleSettings.duration-buffer.duration)<.001;
+sampleAudio={name:file.name,buffer,reversed};
+if(!same)sampleSettings={name:file.name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:16},(_,i)=>i%4===0?Math.floor(i/4):null),pitch:0,reverse:false,gate:100,offset:0};
+refreshSampler();saveSession();log("sample loaded: "+file.name,"k");
+}catch(error){log("sample: "+error.message,"e");}
+}
+function refreshSampler(){
+const select=$id("sample-slice");if(!select)return;
+const selected=Number(select.value)||0;select.replaceChildren();
+sampleSettings.slices.forEach((t,i)=>{const option=document.createElement("option");option.value=i;option.textContent=(i+1)+" / "+t.toFixed(2)+"s";select.append(option);});
+select.value=String(Math.min(selected,Math.max(0,sampleSettings.slices.length-1)));
+$id("sample-status").textContent=sampleAudio?sampleSettings.name+" / "+sampleSettings.slices.length+" slices":sampleSettings.name?"Reload "+sampleSettings.name+" to hear the sample":"No sample loaded";
+for(const key of ["pitch","gate","offset"]){$id("sample-"+key).value=sampleSettings[key];$id("sample-"+key+"-o").textContent=sampleSettings[key];}
+$id("sample-reverse").checked=sampleSettings.reverse;
+for(const [i,button] of Array.from($id("sample-pattern").children).entries()){
+const slice=sampleSettings.pattern[i];button.textContent=slice==null?"·":String(slice+1).padStart(2,"0");
+button.setAttribute("aria-pressed",String(slice!=null));button.disabled=i>=st_.stepCount;
+}
+}
+function buildSampler(){
+const change=fn=>{pushHistory();fn();refreshSampler();saveSession();};
+$id("sample-file").addEventListener("change",e=>{loadSample(e.target.files[0]);e.target.value="";});
+const drop=$id("sample-drop");drop.addEventListener("dragover",e=>e.preventDefault());drop.addEventListener("drop",e=>{e.preventDefault();loadSample(e.dataTransfer.files[0]);});
+for(const [id,mode] of [["sample-equal","equal"],["sample-transients","transient"]])$id(id).addEventListener("click",()=>{if(sampleAudio)change(()=>{sampleSettings.slices=detectSlices(sampleAudio.buffer,mode);sampleSettings.pattern=sampleSettings.pattern.map(x=>x!=null&&x<sampleSettings.slices.length?x:null);});});
+$id("sample-clear").addEventListener("click",()=>change(()=>{sampleSettings.pattern.fill(null);}));
+for(const key of ["pitch","gate","offset"])$id("sample-"+key).addEventListener("change",e=>change(()=>{sampleSettings[key]=Number(e.target.value);}));
+$id("sample-reverse").addEventListener("change",e=>change(()=>{sampleSettings.reverse=e.target.checked;}));
+for(let i=0;i<16;i++){const button=document.createElement("button");button.type="button";button.setAttribute("aria-label","Sample step "+(i+1));button.addEventListener("click",()=>change(()=>{const slice=Number($id("sample-slice").value);if(sampleSettings.slices[slice]!==undefined)sampleSettings.pattern[i]=sampleSettings.pattern[i]===slice?null:slice;}));$id("sample-pattern").append(button);}
+refreshSampler();
+}
+function playSample(index,time,opts){
+const settings=opts.session?.sample||sampleSettings,audio=opts.sample||sampleAudio;
+const slice=settings.pattern[index];
+if(!audio||audio.name!==settings.name||slice==null||settings.slices[slice]===undefined)return;
+const begin=settings.slices[slice],end=settings.slices[slice+1]??audio.buffer.duration;
+const rate=2**(settings.pitch/12),length=(end-begin)*settings.gate/100;
+const trim=(end-begin)*settings.offset/100,offset=settings.reverse?audio.buffer.duration-end+trim:begin+trim;
+const duration=Math.min(length,end-begin-trim)/rate;
+if(duration<=.005)return;
+const at=Math.max(0,time+swingOffsetSeconds(index,opts.sixteenth,opts.session?.aud.swing??aud_.swing,true));
+const voice=new Tone.ToneBufferSource({url:settings.reverse?audio.reversed:audio.buffer,playbackRate:rate,fadeIn:.002,fadeOut:Math.min(.005,duration/4),onended:node=>{if(!opts.session)node.dispose();}});
+voice.connect(opts.sampleGraph.sampleG);voice.start(at,offset,duration,.8);
+}
+
+function downloadBytes(bytes,name,type){
+const url=URL.createObjectURL(new Blob([bytes],{type}));
+const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function midiBytes(take,bars=8){
+const ppq=480,beat=60/take.aud.bpm,sixteenth=beat/4,lead=.05;
+const events=[],drums={kick:36,snare:38,clap:39,hat:42,open:46},channels={bass:0,keys:1,pads:2};
+const add=(time,priority,bytes)=>events.push({tick:Math.max(0,Math.round((time-lead)/beat*ppq)),priority,bytes});
+for(let i=0;i<bars*16;i++){
+const index=i%take.steps,time=lead+i*sixteenth;
+for(const e of compileStep(index,time,{session:take,tick:i,stepCount:take.steps,muteMap:take.mute,applyProb:true,applyRatchet:true,applyTranspose:true,addSwing:true,sixteenth})){
+let notes,channel,duration,velocity;
+if(Object.hasOwn(drums,e.voice)){channel=9;notes=[drums[e.voice]];duration=NOISE_VOICES.has(e.voice)?e.args[0]:e.args[1];velocity=e.args.at(-1);}
+else if(Object.hasOwn(channels,e.voice)){channel=channels[e.voice];notes=[e.args[0]].flat().map(n=>typeof n==="number"?Math.round(69+12*Math.log2(n/440)):noteMidi(n));duration=e.args[1];velocity=e.args[3];}
+else continue;
+for(const note of notes){const pitch=clamp(note,0,127,60);add(e.time,1,[0x90|channel,pitch,Math.max(1,Math.round(velocity*127))]);add(e.time+duration,0,[0x80|channel,pitch,0]);}
+}
+const slice=take.sample?.pattern[index];if(slice!=null){add(time,1,[0x93,36+slice,100]);add(time+sixteenth*.8,0,[0x83,36+slice,0]);}
+}
+const track=[],vlq=n=>{const bytes=[n&127];while((n>>>=7)>0)bytes.unshift((n&127)|128);return bytes;};
+const tempo=Math.round(60000000/take.aud.bpm);
+track.push(0,0xff,0x51,3,(tempo>>16)&255,(tempo>>8)&255,tempo&255);
+let tick=0;
+for(const e of events.sort((a,b)=>a.tick-b.tick||a.priority-b.priority)){track.push(...vlq(e.tick-tick),...e.bytes);tick=e.tick;}
+track.push(0,0xff,0x2f,0);
+const length=track.length;
+return Uint8Array.from([77,84,104,100,0,0,0,6,0,0,0,1,(ppq>>8)&255,ppq&255,77,84,114,107,(length>>>24)&255,(length>>>16)&255,(length>>>8)&255,length&255,...track]);
+}
+function exportMIDI(){
+try{const take=session();take.drums[take.pat.d]=deepClone(DRUM_PATTERNS[take.pat.d]);downloadBytes(midiBytes(take),"rg69.mid","audio/midi");log("MIDI exported","k");}
+catch(error){log("MIDI export: "+error.message,"e");}
+}
+
 function buildUI(){
+buildSampler();
 const sel_d=$id('drum-pat'),sel_b=$id('bass-pat'),sel_k=$id('keys-pat'),sel_p=$id('pads-pat');
 Object.keys(DRUM_PATTERNS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_d.appendChild(o)});
 Object.keys(BASS_PATS).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;sel_b.appendChild(o)});
@@ -2309,6 +2449,7 @@ log("playback stopped");
 });
 $id('random').addEventListener('click',randomize);
 $id('export').addEventListener('click',exportWAV);
+$id('export-midi').addEventListener('click',exportMIDI);
 $id('record').addEventListener('click',toggleRecord);
 $id('layout').addEventListener('click',()=>{
 st_.density=st_.density==='comfortable'?'compact':'comfortable';
@@ -2322,7 +2463,7 @@ pushHistory();
 st_.stepCount=st_.stepCount===16?8:16;
 $id('steps').textContent=`${st_.stepCount} steps`;
 $id('steps').setAttribute('aria-pressed',st_.stepCount===8?'true':'false');
-refreshStepGrid();saveSession();
+refreshStepGrid();refreshSampler();saveSession();
 log(`steps: ${st_.stepCount}`);
 });
 $id('undobtn').addEventListener('click',undo);
