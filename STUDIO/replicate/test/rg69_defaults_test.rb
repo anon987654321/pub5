@@ -69,6 +69,21 @@ class TestRg69Defaults < Minitest::Test
     refute_match(/Blue Hour mirrors|Blue Hour, played as industrial techno/, js)
   end
 
+  def test_local_profile_and_clock_do_not_require_a_worker_or_fetch
+    assert_match(/const rg69AudioProfileReady=location\.origin==="null"\s*\?Promise\.resolve\(\)/, js)
+    assert_includes js, "kick:Tone.mtof(24+Number(kit.kick.tune))"
+    assert_includes js, 'if(location.origin==="null"&&!fileClockConfigured)'
+    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout"}));'
+  end
+
+  def test_ratchets_fit_before_the_next_humanized_step
+    assert_includes js, "const nextStep=(stepIdx+1)%(opts.stepCount||16);"
+    assert_includes js, "const ratchetSpan=Math.min(sixteenth,Math.max(0,nextTime-t));"
+    assert_includes js, "const rt=t+r*(ratchetSpan/ratch);"
+    assert_includes js, "stepCount:st_.stepCount"
+    assert_includes js, "const limit=Math.min(.025,sixteenth/4);"
+  end
+
   def test_rg69_swing_uses_the_same_mpc_curve_as_dilla
     assert_includes js, "function swingOffsetSeconds(stepIdx,sixteenth,intensity,enabled)"
     assert_includes js, "if(!enabled||stepIdx%2===0)return 0;"
@@ -158,8 +173,8 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "synths.snare.triggerAttackRelease(eighth,rt,vl)"
     assert_includes js, "synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl)"
     assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)"
-    assert_includes js, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
-    assert_includes js, "synths.open.triggerAttackRelease(eighth,rt,vl)"
+    assert_includes js, "synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
+    assert_includes js, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
     assert_includes js, "hat:new Tone.MetalSynth("
     assert_includes js, "open:new Tone.MetalSynth("
     refute_match(/synths\.(?:kickClk|snare|clap|hat|open)\.triggerAttackRelease\(rt,vl/, js)
@@ -246,11 +261,11 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_opaque_origin_uses_non_blob_transport_clock
-    assert_includes js, 'if(location.origin==="null")context.clockSource="timeout";'
+    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout"}));'
   end
 
   def test_audio_context_is_created_before_resume_inside_the_user_gesture
-    assert_includes js, 'function startToneFromGesture(){const context=Tone.getContext();if(location.origin==="null")context.clockSource="timeout";return Tone.start();}'
+    assert_includes js, 'function startToneFromGesture(){'
     welcome = js[/\$id\('welcome-start'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     play = js[/\$id\('play'\)\.addEventListener\('click',async\(\)=>\{(.*?)\n\}\);/m, 1]
     refute_nil welcome
@@ -332,9 +347,9 @@ class TestRg69Defaults < Minitest::Test
     init = js[/async function initAudio\(.*?(?=\nfunction applyFX)/m] or raise "no initAudio"
     export = js[/async function exportWAV\(.*?(?=\nlet mediaRecorder)/m] or raise "no exportWAV"
 
-    assert_includes builder, "new Tone.PolySynth(Tone.FMSynth"
-    assert_includes builder, "maxPolyphony:Math.min(6,t.keys.max_polyphony)"
-    assert_includes builder, "maxPolyphony:Math.min(4,t.pads.max_polyphony)"
+    assert_includes builder, "new Tone.PolySynth({voice:Tone.FMSynth"
+    assert_includes builder, "maxPolyphony:Math.max(32,t.keys.max_polyphony)"
+    assert_includes builder, "maxPolyphony:Math.max(96,t.pads.max_polyphony)"
     assert_includes builder, "oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread}"
     assert_includes init, "const instruments=createToneInstruments();"
     assert_includes export, "const offlineSynths=createToneInstruments();"
@@ -434,8 +449,8 @@ class TestRg69Defaults < Minitest::Test
     assert_includes builder, "open:new Tone.MetalSynth("
     assert_includes builder, "modulationIndex:t.hat.modulation_index"
     assert_includes builder, "resonance:openResonance"
-    assert_includes trigger, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
-    assert_includes trigger, "synths.open.triggerAttackRelease(eighth,rt,vl)"
+    assert_includes trigger, "synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
+    assert_includes trigger, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
     assert_includes init, "hatFlt=new Tone.Filter(7600,'highpass')"
     assert_includes init, "openFlt=new Tone.Filter(6200,'highpass')"
     assert_includes export, "oHatN.connect(oHatFlt)"
@@ -446,9 +461,9 @@ class TestRg69Defaults < Minitest::Test
     raise "no triggerNotes" unless js.include?("function triggerNotes")
     trigger = js.split("function triggerNotes", 2).last.split("function scheduleLoop", 2).first
     assert_includes trigger, "Math.min(sixteenthDuration*0.5,0.06)"
-    assert_includes trigger, "synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
-    assert_includes trigger, "synths.open.triggerAttackRelease(eighth,rt,vl)"
-    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+(Number(offsetMs)||0)/1000);"
+    assert_includes trigger, "synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl)"
+    assert_includes trigger, "synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl)"
+    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+microtimingSeconds(offsetMs,sixteenth));"
   end
 
   def test_master_path_avoids_the_old_serial_overprocessing_chain
@@ -475,7 +490,7 @@ class TestRg69Defaults < Minitest::Test
 
   def test_offline_export_clamps_negative_first_step_humanization
     trigger = js[/function triggerNotes\(.*?(?=\nfunction scheduleLoop)/m] or raise "no triggerNotes"
-    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+(Number(offsetMs)||0)/1000);"
+    assert_includes trigger, "const noteTime=offsetMs=>Math.max(0,swungTime+microtimingSeconds(offsetMs,sixteenth));"
     assert_includes trigger, "const t=noteTime(seq_[v][stepIdx].t)"
     assert_includes trigger, "const bassTime=noteTime(seq_.b[stepIdx].t)"
     assert_includes trigger, "const keyTime=noteTime(seq_.keys[stepIdx].t)"
