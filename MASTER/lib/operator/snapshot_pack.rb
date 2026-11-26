@@ -213,7 +213,8 @@ module Operator
     # leaves a reader unable to tell which are current. Only files named snapshot_<TREE>*.md at the
     # repo root match.
     def clear(host, tree, io: $stdout)
-      old = Dir.children(host::REPO).grep(SnapshotParts.stale_pattern(tree)).map { |name| File.join(host::REPO, name) }
+      out = SnapshotParts.out_dir(host)
+      old = Dir.children(out).grep(SnapshotParts.stale_pattern(tree)).map { |name| File.join(out, name) }
       FileUtils.rm_f(old)
       Master::Trace::Dmesg.status("snapshot0", "#{tree}, removed #{old.size} old snapshot file(s)", io:)
 
@@ -243,12 +244,14 @@ module Operator
       raise ArgumentError, "snapshot: generated pack exceeds budget (#{text.bytesize} > #{job.budget} bytes)" if text.bytesize > job.budget
 
       clear(host, tree, io:)
-      path = File.join(host::REPO, "snapshot_#{tree}.md")
+      path = pack_path(host, tree)
       File.write(path, text, encoding: "UTF-8")
       report(job, path, text, io:)
 
       [path]
     end
+
+    def pack_path(host, tree) = File.join(SnapshotParts.out_dir(host), "snapshot_#{tree}.md")
 
     def write_full(host, tree, io:, only: nil, variants: [:exact], part_bytes: nil, **)
       paths = paths_for(host, tree, only:)

@@ -42,7 +42,10 @@ module Operator
     end
 
     # Every snapshot file the tree has at the repo root: single, parts, either variant, and the mirror's parts.
-    def stale_pattern(tree) = /\Asnapshot_#{Regexp.escape(tree)}(\.code)?(\.part\d+(-of-\d+)?)?\.md\z/
+    # Where the host writes snapshots; a host without OUTPUT_DIR writes beside its sources.
+    def out_dir(host) = host.const_defined?(:OUTPUT_DIR) ? host::OUTPUT_DIR : host::REPO
+
+    def stale_pattern(tree) =/\Asnapshot_#{Regexp.escape(tree)}(\.code)?(\.part\d+(-of-\d+)?)?\.md\z/
 
     def block(path, body, index: 1, total: 1, first_line: 1)
       longest = body.scan(/^`{3,}/).map(&:length).max.to_i
@@ -202,11 +205,11 @@ module Operator
     def write(host, tree, paths:, variant:, part_bytes:, io: $stdout)
       rendered, = build(host, tree, paths, variant:, part_bytes:)
       rendered.each do |name, text|
-        File.write(File.join(host::REPO, name), text, encoding: "UTF-8")
+        File.write(File.join(out_dir(host), name), text, encoding: "UTF-8")
         Master::Trace::Dmesg.status("snapshot0", "#{tree}, #{name}, #{text.bytesize} bytes (~#{text.bytesize / 4000}K tokens)", io:)
       end
 
-      rendered.map { |name, _| File.join(host::REPO, name) }
+      rendered.map(&:first).map { |name| File.join(out_dir(host), name) }
     end
   end
 end

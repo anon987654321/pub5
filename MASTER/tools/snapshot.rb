@@ -31,6 +31,12 @@ module Operator
       "STUDIO" => "snapshot_STUDIO.md",
     }.freeze
     TREES = TREE_PATHS.keys.freeze
+    # Where snapshots are written: PUB5_SNAPSHOT_DIR, else ~/Downloads when it
+    # exists (operator, 2026-11-26), else the repository root (vm23 has none).
+    OUTPUT_DIR = ENV.fetch("PUB5_SNAPSHOT_DIR") do
+      downloads = File.expand_path("~/Downloads")
+      File.directory?(downloads) ? downloads : REPO
+    end
     # Six attachments are the transport contract; the current governed trees fit within this ceiling.
     MAX_BYTES = 3_500_000
     MAX_PARTS = 6
@@ -49,6 +55,8 @@ module Operator
     }.freeze
 
     module_function
+
+    def output_dir = OUTPUT_DIR
 
     def all_tracked(tree)
       path = TREE_PATHS.fetch(tree) { raise "snapshot: unknown tree #{tree.inspect}" }
@@ -257,10 +265,10 @@ module Operator
 
     def output_paths(tree, part_count)
       base = OUTPUT_NAMES.fetch(tree)
-      return [File.join(REPO, base)] if part_count == 1
+      return [File.join(output_dir, base)] if part_count == 1
 
-      [File.join(REPO, base)] +
-        (2..part_count).map { |part| File.join(REPO, "snapshot_#{tree}.part#{format('%03d', part)}.md") }
+      [File.join(output_dir, base)] +
+        (2..part_count).map { |part| File.join(output_dir, "snapshot_#{tree}.part#{format('%03d', part)}.md") }
     end
 
     def render_snapshot(tree, paths, binaries, excluded, units, sha, part_index:, part_count:, source_units:, output_paths:)
@@ -339,7 +347,7 @@ module Operator
 
     def tracked_root_outputs(tree)
       prefix = "snapshot_#{tree}"
-      Dir.children(REPO).filter_map do |name|
+      Dir.children(output_dir).filter_map do |name|
         next unless name.start_with?(prefix) && name.end_with?(".md")
         next unless name == OUTPUT_NAMES.fetch(tree) || name.match?(/\A#{Regexp.escape(prefix)}\.part\d+\.md\z/)
 
@@ -357,7 +365,7 @@ module Operator
       tracked_root_outputs(tree).each do |name|
         next if keep.include?(name) || tracked.include?(name)
 
-        File.delete(File.join(REPO, name))
+        File.delete(File.join(output_dir, name))
       end
     end
 
@@ -481,7 +489,7 @@ module Operator
     # The variants a tree has at the root, each checked against the tracked files.
     def verify(trees, only: nil, io: $stdout)
       trees.each do |tree|
-        names = Dir.children(REPO).grep(Operator::SnapshotParts.stale_pattern(tree))
+        names = Dir.children(output_dir).grep(Operator::SnapshotParts.stale_pattern(tree))
         variants = names.map { |name| name.include?(".code") ? :code : :exact }.uniq
         raise Operator::SnapshotVerify::Failed, "snapshot0: #{tree} has no snapshot files at the root" if variants.empty?
 

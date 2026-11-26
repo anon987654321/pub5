@@ -40,10 +40,12 @@ module Operator
     end
 
     def read_parts(host, tree, variant)
-      names = Dir.children(host::REPO).grep(SnapshotParts.stale_pattern(tree)).select { |n| n.include?(".code") == (variant == :code) }
+      out = SnapshotParts.out_dir(host)
+      names = Dir.children(out).grep(SnapshotParts.stale_pattern(tree))
+                 .select { |n| n.include?(".code") == (variant == :code) }
       raise Failed, "snapshot0: #{tree} #{variant} has no snapshot files to verify" if names.empty?
 
-      names.sort.map { |name| [name, File.read(File.join(host::REPO, name), encoding: "UTF-8")] }
+      names.sort.map { |name| [name, File.read(File.join(out, name), encoding: "UTF-8")] }
     end
 
     # blocks: path => [[index, total, from, to, body]]; left_out: the paths the header names as left out.
