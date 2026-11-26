@@ -73,7 +73,7 @@ class TestRg69Defaults < Minitest::Test
     assert_match(/const rg69AudioProfileReady=location\.origin==="null"\s*\?Promise\.resolve\(\)/, js)
     assert_includes js, "kick:Tone.mtof(24+Number(kit.kick.tune))"
     assert_includes js, 'if(location.origin==="null"&&!fileClockConfigured)'
-    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout"}));'
+    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
   end
 
   def test_ratchets_fit_before_the_next_humanized_step
@@ -158,7 +158,7 @@ class TestRg69Defaults < Minitest::Test
     panic = js[/\$id\('panic'\)\.addEventListener\('click',\(\)=>\{(.*?)\n\}\);/m, 1]
     refute_nil panic
     assert_includes panic, "st_.rafId=null;"
-    assert_includes panic, "st_.transportId=null;"
+    assert_includes panic, "pauseClock();"
   end
 
   def test_percussion_synthesizers_receive_their_correct_tonejs_arguments
@@ -253,7 +253,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_opaque_origin_uses_non_blob_transport_clock
-    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout"}));'
+    assert_includes js, 'Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));'
   end
 
   def test_audio_context_is_created_before_resume_inside_the_user_gesture
@@ -264,8 +264,9 @@ class TestRg69Defaults < Minitest::Test
     refute_nil play
     assert_includes welcome, "const activationPromise=startToneFromGesture();"
     assert_includes play, "const activationPromise=startToneFromGesture();"
-    assert_equal 2, js.scan(/if\(st_\.started\)\{[^{}\n]*Tone\.Transport\.stop\(\);Tone\.Transport\.cancel\(\);/).size,
-                 "Stop and Panic must not instantiate the Tone context before Play"
+    refute_includes js, "Tone.Transport.scheduleRepeat"
+    assert_includes js, "startClock();"
+    assert_includes js, "pauseClock();"
   end
 
   def test_transport_callback_uses_numeric_note_durations
@@ -327,8 +328,8 @@ class TestRg69Defaults < Minitest::Test
 
   def test_live_and_offline_use_the_same_profile_driven_instrument_builder
     assert_includes js, "new Tone.PolySynth({voice:Tone.FMSynth"
-    assert_includes js, "maxPolyphony:Math.max(32,t.keys.max_polyphony)"
-    assert_includes js, "maxPolyphony:Math.max(96,t.pads.max_polyphony)"
+    assert_includes js, "maxPolyphony:Math.max(16,t.keys.max_polyphony)"
+    assert_includes js, "maxPolyphony:Math.max(24,t.pads.max_polyphony)"
     assert_includes js, "const instruments=createToneInstruments();"
     assert_includes js, "const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);"
     assert_includes js, "const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn});"
@@ -450,7 +451,7 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_visual_step_cursor_waits_for_the_first_transport_tick
-    assert_includes js, "const next=st_.idx>=0&&Math.floor(st_.idx/16)===st_.bank?st_.idx%16:-1;"
+    assert_includes js, "const next=st_.visualIdx>=0&&Math.floor(st_.visualIdx/16)===st_.bank?st_.visualIdx%16:-1;"
     assert_includes js, "if(next>=0&&next<stepUiByIndex.length)stepUiByIndex[next].forEach(el=>el.classList.add('playing'));"
   end
 
