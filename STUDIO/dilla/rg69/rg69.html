@@ -523,6 +523,22 @@ const ratios=patch.variant===1?[1,2.76,5.4,8.93]:patch.variant===2?[1,2.002,3.00
 ratios.forEach((ratio,i)=>{const level=.65/(1+i*1.5),part=oscillator("sine",ratio,level);part.amp.gain.setValueAtTime(level,at);part.amp.gain.exponentialRampToValueAtTime(.0001,at+Math.max(.06,decay/(1+i*.7)));});
 sustain=.52;release=.7;break;
 }
+case "harp":{
+// A plucked string's harmonic amplitudes depend on the pluck position.
+const bright=patch.variant===1,position=bright?.17:.23;
+for(let i=1;i<=Math.min(18,Math.floor(ctx.sampleRate*.45/freq));i++){
+const weight=Math.sin(Math.PI*i*position)/(i*i),stretch=1+(bright?.000045:.000025)*i*i;
+const partial=oscillator("sine",i*stretch,Math.abs(weight)*.9);
+const peak=Math.max(.00011,Math.abs(weight)*.9),tail=decay/(1+i*.38);
+partial.amp.gain.setValueAtTime(peak,at);partial.amp.gain.exponentialRampToValueAtTime(.0001,at+tail);
+}
+// A short, filtered finger-contact transient and wooden soundboard.
+const length=Math.ceil(ctx.sampleRate*.035),buffer=ctx.createBuffer(1,length,ctx.sampleRate),data=buffer.getChannelData(0);
+let seed=(Math.round(freq*1000)^0x48415250)>>>0,low=0;
+for(let i=0;i<length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;low+=((seed/2147483648-1)-low)*.22;data[i]=low*Math.exp(-i/(ctx.sampleRate*.004))*.12;}
+const pluck=ctx.createBufferSource(),body=ctx.createBiquadFilter();pluck.buffer=buffer;body.type="bandpass";body.frequency.value=bright?1600:850;body.Q.value=.8;pluck.connect(body);body.connect(filter);sources.push(pluck);nodes.push(body);
+sustain=.8;release=1.8;break;
+}
 case "physical":{
 const period=Math.max(2,Math.round(ctx.sampleRate/freq)),length=Math.min(period*2,ctx.sampleRate),buffer=ctx.createBuffer(1,length,ctx.sampleRate),data=buffer.getChannelData(0);
 let seed=(Math.round(freq*1000)^0x69)>>>0;
@@ -773,6 +789,10 @@ dream_string:{name:"Dream string · plucked model",type:"physical",decay:5,brigh
 dream_plate:{name:"Dream plate · resonant metal",type:"physical",variant:1,decay:7,brightness:.65,level:.64},
 frozen_halo:{name:"Frozen halo · spectral cloud",type:"freeze",attack:.7,decay:9,brightness:.42,level:.65},
 stochastic_silk:{name:"Stochastic silk · evolving partials",type:"freeze",variant:1,attack:.4,decay:8,brightness:.5,level:.68}
+});
+Object.assign(PATCH_CATALOGUE,{
+concert_harp:{name:"Concert harp · gut strings",type:"harp",decay:5.8,brightness:.68,level:.88},
+celtic_harp:{name:"Celtic harp · bright strings",type:"harp",variant:1,decay:4.2,brightness:.82,level:.82}
 });
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
