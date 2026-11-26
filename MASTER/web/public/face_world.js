@@ -638,23 +638,12 @@
       : "face";
     const nextDescriptor = form === "object" ? normalized : null;
     if (form === semanticForm && subjectSignature(nextDescriptor) === subjectSignature(semanticDescriptor) &&
-        (splatTargetPositions || form === "face") &&
-        (nativeSubjectField || !window.MASTER_FACE?.faceScatter?.length)) return form;
+        (nativeSubjectField || (!window.MASTER_FACE?.faceScatter?.length &&
+          (splatTargetPositions || form === "face")))) return form;
 
     semanticForm = form;
     semanticDescriptor = nextDescriptor;
     semanticBlendTarget = form === "face" ? 0 : 1;
-    const proxyGeometry = form === "object" && semanticDescriptor && splatCount > 0
-      ? buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34)
-      : null;
-    splatTargetPositions = proxyGeometry?.positions || buildSubjectPositions(form);
-    splatTargetStages = proxyGeometry?.stageIndices || null;
-    const currentPositions = splatProxy?.geometry?.getAttribute?.("position")?.array;
-    splatMorphFromPositions = currentPositions
-      ? new Float32Array(currentPositions)
-      : splatBasePositions?.slice() || null;
-    semanticMorphStartedAt = nowMs();
-
     const primaryGeometry = form === "object" && semanticDescriptor && window.MASTER_FACE?.faceScatter?.length
       ? buildSemanticSubjectGeometry(semanticDescriptor, window.MASTER_FACE.faceScatter.length / 3, semanticDescriptor.maskProfile ? MASK_PRIMARY_SCALE : .52)
       : null;
@@ -665,6 +654,20 @@
       : Boolean(facePositions && window.MASTER_FACE?.setSubjectScatter?.(facePositions, faceStages) === true);
     const sculptureUniform = window.MASTER_FACE?.faceMat?.uniforms?.uSculpture;
     if (sculptureUniform) sculptureUniform.value = semanticDescriptor?.maskProfile && nativeSubjectField ? 1 : 0;
+    if (nativeSubjectField) {
+      splatTargetPositions = splatTargetStages = splatMorphFromPositions = null;
+    } else {
+      const proxyGeometry = form === "object" && semanticDescriptor && splatCount > 0
+        ? buildSemanticSubjectGeometry(semanticDescriptor, splatCount, 1.34)
+        : null;
+      splatTargetPositions = proxyGeometry?.positions || buildSubjectPositions(form);
+      splatTargetStages = proxyGeometry?.stageIndices || null;
+      const currentPositions = splatProxy?.geometry?.getAttribute?.("position")?.array;
+      splatMorphFromPositions = currentPositions
+        ? new Float32Array(currentPositions)
+        : splatBasePositions?.slice() || null;
+      semanticMorphStartedAt = nowMs();
+    }
     // The primary field uses the face renderer's existing spring. The bounded
     // FaceWorld point field is the compatibility path, never a second renderer.
     semanticMorphInProgress = !nativeSubjectField && Boolean(splatTargetPositions && splatProxy);
@@ -1108,7 +1111,7 @@
     }
 
     splatBasePositions = positions.slice();
-    splatTargetPositions = buildSubjectPositions(semanticForm);
+    splatTargetPositions = nativeSubjectField ? null : buildSubjectPositions(semanticForm);
     semanticMorphInProgress = !nativeSubjectField && semanticForm !== "face";
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
