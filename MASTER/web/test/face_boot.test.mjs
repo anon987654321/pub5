@@ -1262,11 +1262,11 @@ test("face runtime keeps named SSE reactions on the POST stream path", () => {
   assert.match(runtime, /MASTER_SSE\?\.dispatchNamed/);
 });
 
-test("web face carries the density and orbital field contract", () => {
+test("the web face owns one animation callback and no decorative orbit population", () => {
   const part3 = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
-  assert.match(part3, /CLI_FACE_WEB_DENSITY = \d+;/);
-  assert.match(part3, /orbitalField = new THREE\.Points/);
-  assert.match(part3, /size: 1/);
+  assert.match(part3, /frameRequest !== null/);
+  assert.match(part3, /cancelAnimationFrame\(frameRequest\)/);
+  assert.doesNotMatch(part3, /ensureOrbitalField|orbitalField = new THREE\.Points/);
 });
 
 test("face runtime keeps chat stream and particle worker boot paths", () => {
