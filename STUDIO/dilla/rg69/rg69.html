@@ -921,10 +921,9 @@ hat:new Tone.MetalSynth({frequency:p.notes.hat,envelope:{attack:t.hat.attack,dec
 open:new Tone.MetalSynth({frequency:p.notes.open,envelope:{attack:t.openhat.attack,decay:k.openhat.decay,release:t.openhat.release},harmonicity:t.openhat.harmonicity,modulationIndex:t.openhat.modulation_index,resonance:openResonance,octaves:t.openhat.octaves}),
 bass:new Tone.MonoSynth({oscillator:{type:t.bass.oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:t.bass.sustain,release:t.bass.release}}),
 bassSub,
-// Polyphony is a PolySynth option, not an option of its individual voice.
-// At 170 BPM, four-note pad chords every beat overlap roughly 64 voices.
-keys:new Tone.PolySynth({voice:Tone.FMSynth,maxPolyphony:Math.max(32,t.keys.max_polyphony),options:{harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}}),
-pads:new Tone.PolySynth({voice:Tone.Synth,maxPolyphony:Math.max(96,t.pads.max_polyphony),options:{oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}}})
+// Bound fat-oscillator voice count and release to avoid overwhelming browser audio threads.
+keys:new Tone.PolySynth({voice:Tone.FMSynth,maxPolyphony:Math.max(16,t.keys.max_polyphony),options:{harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}}),
+pads:new Tone.PolySynth({voice:Tone.Synth,maxPolyphony:Math.max(24,t.pads.max_polyphony),options:{oscillator:{type:t.pads.oscillator,count:Math.min(t.pads.count,2),spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:Math.min(t.pads.release,2.4)}}})
 };
 for(const [lane,source] of [["kick","kick"],["kickSub","sub"],["kickClk","kick"],["kickBody","kick"],["snare","snare"],["snareRing","snare"],["clap","perc"],["hat","hat"],["open","openhat"]]){
 const level=Math.max(0.001,Number(k[source].level)||1);
@@ -1352,7 +1351,7 @@ rg69AudioProfileLocked=true;
 await (activationPromise||Tone.start());
 Tone.getContext().rawContext.addEventListener('statechange',()=>{
   if(Tone.getContext().rawContext.state==='suspended'){
-    st_.playing=false;Tone.Transport.pause();outputGate?.gain.rampTo(0,.015);clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
+    pauseClock();outputGate?.gain.rampTo(0,.015);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
 const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);
@@ -1462,7 +1461,7 @@ function applyFX(){
 if(st_.offlineRendering)return;
 const smooth=(param,value)=>param.rampTo(value,.025);
 const profile=rg69AudioProfile;
-if(st_.started)Tone.Transport.bpm.value=aud_.bpm;
+// The live clock reads aud_.bpm directly; no transport reconfiguration on FX updates.
 if(drumG)smooth(drumG.gain,mix_.drum/100);
 if(bassG)smooth(bassG.gain,mix_.bass/100);
 if(keysG)smooth(keysG.gain,mix_.keys/100*profile.voice.level);
@@ -1586,31 +1585,23 @@ function playStep(index,time,synths,opts){
 const events=compileStep(index,time,opts);
 for(const event of events){
 const {voice,args}=event;
+try{
 if(opts.metalTap&&["hat","open"].includes(voice)){
 const which=voice==="hat"?"hat":"openhat",t=rg69AudioProfile.tone[which],k=rg69AudioProfile.kit;
 const resonance=t.resonance_base_hz+k.hat.tone*t.resonance_tone_span_hz;
 oneShotMetal(which,resonance,opts.metalTap[voice],1,k[which].level).triggerAttackRelease(...args);
 }else synths[voice].triggerAttackRelease(...args);
+}catch(error){if(!opts.onError)throw error;opts.onError(voice,error);}
 }
-if(opts.sampleGraph)playSample(index,time,opts);
+if(opts.sampleGraph){try{playSample(index,time,opts);}catch(error){if(!opts.onError)throw error;opts.onError('sample',error);}}
 }
 
 
 function scheduleLoop(time){
 if(!st_.playing)return;
-st_.idx=(st_.idx+1)%st_.stepCount;
+st_.idx=((st_.idx??-1)+1)%st_.stepCount;
 st_.tick=(st_.tick??-1)+1;
-const scheduledTime=Number.isFinite(time)?time:Tone.now();
-// Update the small transport display on beats, not every sixteenth note.
-const posEl=$id('pos-display');
-if(st_.idx%4===0){
-const beat=Math.floor((st_.tick%16)/4)+1;
-const bar=Math.floor(st_.tick/16)+1;
-if(posEl)posEl.textContent=`${bar}.${beat}`;
-posEl?.classList.add('beat-active');
-}else{
-posEl?.classList.remove('beat-active');
-}
+const scheduledTime=Number.isFinite(time)?time:audioTime();
 const sixteenth=60/aud_.bpm/4;
 playStep(st_.idx,scheduledTime,{
 kick:kickN,
@@ -1627,7 +1618,7 @@ bassSub:bassSub,
 keys:keysN,
 pads:padsN
 },{
-muteMap:st_.muteState,tick:st_.tick,sampleGraph:liveGraph,
+muteMap:st_.muteState,tick:st_.tick,sampleGraph:liveGraph,onError:reportVoiceFailure,
 applyProb:true,
 applyRatchet:true,
 stepCount:st_.stepCount,
@@ -1635,10 +1626,53 @@ sixteenth:sixteenth,
 addSwing:true,
 applyTranspose:true
 });
-st_.uiDirty=true;
-// Timing callback: no canvas work, analyser reads, or per-step DOM repaint.
+st_.visualQueue.push({time:scheduledTime,idx:st_.idx,tick:st_.tick});
 }
-
+const audioTime=()=>Tone.getContext().rawContext.currentTime;
+const CLOCK_INTERVAL=20,CLOCK_HORIZON=.065,CLOCK_LEAD=.045;
+function pauseClock(){
+st_.playing=false;clearTimeout(st_.timer);st_.timer=null;
+st_.clockEpoch=(st_.clockEpoch||0)+1;st_.visualQueue=[];
+}
+function startClock(){
+clearTimeout(st_.timer);
+st_.clockEpoch=(st_.clockEpoch||0)+1;st_.visualQueue=[];
+st_.nextStepAt=audioTime()+CLOCK_LEAD;st_.audioErrors={};st_.lastClockError=0;
+pumpClock(st_.clockEpoch);
+}
+function pumpClock(epoch){
+if(!st_.playing||epoch!==st_.clockEpoch)return;
+try{
+const now=audioTime(),step=60/aud_.bpm/4;
+if(!Number.isFinite(now)||!Number.isFinite(step)||step<=0)throw Error("Invalid clock time");
+if(st_.nextStepAt<now+.025){
+const skipped=Math.max(0,Math.floor((now+.025-st_.nextStepAt)/step));
+st_.tick=(st_.tick??-1)+skipped;st_.idx=((st_.idx??-1)+skipped)%st_.stepCount;
+st_.nextStepAt=now+CLOCK_LEAD;
+}
+for(let n=0;n<4&&st_.nextStepAt<=now+CLOCK_HORIZON;n++){
+const at=st_.nextStepAt;st_.nextStepAt+=step;
+try{scheduleLoop(at);}catch(error){reportVoiceFailure("clock",error);}
+}
+}catch(error){reportVoiceFailure("clock",error);}
+finally{if(st_.playing&&epoch===st_.clockEpoch)st_.timer=setTimeout(()=>pumpClock(epoch),CLOCK_INTERVAL);}
+}
+function reportVoiceFailure(voice,error){
+const count=(st_.audioErrors[voice]||0)+1;st_.audioErrors[voice]=count;
+if(count===1||count%64===0){
+const message=voice+": "+String(error?.message||error);
+log("audio0: "+message+" (event skipped; clock continues)","w");
+console.warn("RG-69",message,error);
+st("playing — "+message);
+}
+}
+function advanceVisualClock(){
+const now=audioTime();
+while(st_.visualQueue?.length&&st_.visualQueue[0].time<=now){
+const event=st_.visualQueue.shift();st_.visualIdx=event.idx;st_.uiDirty=true;
+const pos=$id("pos-display");if(pos&&event.tick%4===0)pos.textContent=Math.floor(event.tick/16+1)+"."+(Math.floor(event.tick%16/4)+1);
+}
+}
 let stepUiByIndex=Array.from({length:16},()=>[]);
 let activeStepUiIndex=-1;
 function refreshStepGrid(){
@@ -1665,7 +1699,7 @@ if(button){button.setAttribute('aria-pressed',muted?'true':'false');button.textC
 });
 }
 function updateStepUI(){
-const next=st_.idx>=0&&Math.floor(st_.idx/16)===st_.bank?st_.idx%16:-1;
+const next=st_.visualIdx>=0&&Math.floor(st_.visualIdx/16)===st_.bank?st_.visualIdx%16:-1;
 // The animation frame can run once before the first transport tick. At that
 // point idx is -1; leave the grid untouched until the scheduler chooses step 0.
 if(activeStepUiIndex>=0)stepUiByIndex[activeStepUiIndex].forEach(el=>el.classList.remove('playing'));
@@ -1675,6 +1709,9 @@ activeStepUiIndex=next;
 
 function updateVisuals(){
 if(!st_.playing){st_.rafId=null;return;}
+// Keep the UI loop alive even if a browser analyser throws.
+st_.rafId=requestAnimationFrame(updateVisuals);
+advanceVisualClock();
 const now=performance.now();
 if(now-(st_.visualLastUpdate||0)>=50){
 st_.visualLastUpdate=now;
@@ -1720,7 +1757,6 @@ updateStepUI();
 st_.uiDirty=false;
 }
 }
-st_.rafId=requestAnimationFrame(updateVisuals);
 }
 
 function updateRootDisplay(){
@@ -1851,7 +1887,7 @@ st_.exporting=true;
 let context=null,resume=false;
 try{
 await startToneFromGesture();context=Tone.getContext();
-resume=st_.playing;if(resume){Tone.Transport.pause();st_.playing=false;outputGate.gain.rampTo(0,.015);}
+resume=st_.playing;if(resume){pauseClock();outputGate.gain.rampTo(0,.015);}
 $id('export').disabled=true;
 rg69AudioProfileLocked=true;
 const take=session(),aud_=take.aud,mix_=take.mix,sampleTake=sampleAudio;
@@ -2409,7 +2445,7 @@ let fileClockConfigured=false;
 function startToneFromGesture(){
 if(st_.offlineRendering)return Promise.reject(Error('WAV export in progress'));
 if(location.origin==="null"&&!fileClockConfigured){
-Tone.setContext(new Tone.Context({clockSource:"timeout"}));
+Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));
 fileClockConfigured=true;
 }
 Tone.getContext();
@@ -2439,16 +2475,14 @@ st_.playing=true;
 outputGate.gain.rampTo(1,.015);
 $id('play').setAttribute('aria-pressed','true');
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
-if(st_.transportId==null){st_.idx=-1;st_.tick=-1;}
-Tone.Transport.bpm.value=aud_.bpm;
-if(st_.transportId==null)st_.transportId=Tone.Transport.scheduleRepeat(scheduleLoop,"16n");
-Tone.Transport.start();
+startClock();
 st('playing');
 $id('play').textContent='⏸ Pause';
 log('playback started','k');
 }
 
 function reportAudioStartupFailure(error) {
+  pauseClock();
   const detail = String(error?.message || error || "unknown error").slice(0, 180);
   const playButton = $id("play");
   st_.playing = false;
@@ -2491,9 +2525,8 @@ $id('play').addEventListener('click',async()=>{
       playButton.disabled = false;
     }
   } else {
-    Tone.Transport.pause();
+    pauseClock();
     outputGate.gain.rampTo(0,.015);
-    st_.playing = false;
     st("paused");
     playButton.textContent = "▶ Play";
     playButton.setAttribute("aria-pressed", "false");
@@ -2503,8 +2536,8 @@ $id('play').addEventListener('click',async()=>{
 $id('stop').addEventListener('click',()=>{
 st_.playing=false;
 clearInterval(st_.heartbeat);st_.heartbeat=null;releaseOwner();
-if(st_.started){outputGate.gain.rampTo(0,.015);Tone.Transport.stop();Tone.Transport.cancel();}st_.transportId=null;
-st_.idx=-1;
+pauseClock();if(st_.started)outputGate.gain.rampTo(0,.015);
+st_.idx=-1;st_.visualIdx=-1;
 st_.barCount=0;st_.tick=-1;
 const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
 $id('play').textContent='▶ Play';
@@ -2551,12 +2584,11 @@ clearInterval(st_.heartbeat);st_.heartbeat=null;
 cancelAnimationFrame(st_.rafId);
 st_.rafId=null;
 releaseOwner();
-if(st_.started){outputGate.gain.rampTo(0,.005);Tone.Transport.stop();Tone.Transport.cancel();}
-st_.transportId=null;
+pauseClock();if(st_.started)outputGate.gain.rampTo(0,.005);
 [kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN].forEach(s=>{
 s?.releaseAll?.(Tone.now());
 });
-st_.idx=-1;st_.tick=-1;st_.barCount=0;
+st_.idx=-1;st_.visualIdx=-1;st_.tick=-1;st_.barCount=0;
 st('killed');
 $id('play').textContent='▶ Play';
 $id('play').setAttribute('aria-pressed','false');
