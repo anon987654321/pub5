@@ -1343,7 +1343,7 @@ dlyFlt.connect(masterG);
 const vinylNoise=new Tone.Noise('brown').start();
 vinylNoise.volume.value=rg69NoiseLevelDb(-60,aud.vinyl,rg69AudioProfile.rig.vinyl.level,.1);
 const vinylFlt=new Tone.Filter(2000,'lowpass');vinylNoise.connect(vinylFlt);vinylFlt.connect(masterG);
-const crackleNoise=new Tone.Noise('white').start().stop(len+leadIn);
+const crackleNoise=new Tone.Noise('white').start();
 crackleNoise.volume.value=rg69NoiseLevelDb(-65,aud.crackle,rg69AudioProfile.rig.vinyl.crackle,.5);
 if(offline){vinylNoise.stop(duration);crackleNoise.stop(duration);}
 const crackleFlt=new Tone.Filter(380,'bandpass');crackleFlt.Q.value=5;crackleNoise.connect(crackleFlt);crackleFlt.connect(masterG);
@@ -2201,6 +2201,7 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 // first click plays music instead of only arming the engine.
 let fileClockConfigured=false;
 function startToneFromGesture(){
+if(st_.exporting&&Tone.getContext().isOffline)return Promise.reject(Error('WAV export in progress'));
 if(location.origin==="null"&&!fileClockConfigured){
 Tone.setContext(new Tone.Context({clockSource:"timeout"}));
 fileClockConfigured=true;
