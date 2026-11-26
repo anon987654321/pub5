@@ -12,6 +12,11 @@
   const FACE_MODULE=document.currentScript?.dataset.faceModule||'/face.js';
   const p=document.getElementById('primer');
   let fired=false,fallback=null,hintT=null,retryT=null,started=false,failedShown=false;
+  let shellReady=document.readyState!=='loading';
+  if(!shellReady)document.addEventListener('DOMContentLoaded',function(){
+    shellReady=true;
+    if(fired)beginFaceBoot();
+  },{once:true});
   function promptFormEl(){return document.getElementById('prompt-form');}
   function uiEl(){return document.getElementById('ui-status');}
   function titleEl(){return document.getElementById('primer-title');}
@@ -146,9 +151,7 @@
     primeAudio();
     // A synchronous primer can fire while the parser is still below it.
     // The shell, state bridges and prompt must exist before runtime evaluation.
-    if(document.readyState==='loading'){
-      document.addEventListener('DOMContentLoaded',beginFaceBoot,{once:true});
-    }else{beginFaceBoot();}
+    if(shellReady)beginFaceBoot();
   }
   function beginFaceBoot(){
     dismissPrimer();
