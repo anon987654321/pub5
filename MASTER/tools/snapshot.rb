@@ -416,8 +416,8 @@ module Operator
     end
 
     USAGE = "usage: snapshot [TREE...] [--part-bytes=N] [--code | --code-only] [--verify] " \
-            "[--only=a,b] [--budget=BYTES] [--since=REF] [--tests] [--mirror]"
-    FLAGS = %w[--mirror --tests --verify --code --code-only].freeze
+            "[--only=a,b] [--budget=BYTES] [--since=REF] [--tests] [--no-tests] [--mirror]"
+    FLAGS = %w[--mirror --tests --no-tests --verify --code --code-only].freeze
 
     # bin/operator snapshot [TREE...] [--part-bytes=N] [--code | --code-only] [--verify] [--budget=BYTES] [--only=a,b] [--tests] [--mirror]
     #
@@ -427,58 +427,79 @@ module Operator
     # selects source only from changed tracked paths; it requires --budget.
     def cli(argv)
       flags = FLAGS.to_h { |flag| [flag, argv.delete(flag)] }
-      budget_arg = argv.find { |arg| arg.start_with?("--budget=") }
-      part_bytes_arg = argv.find { |arg| arg.start_with?("--part-bytes=") }
-      only_arg = argv.find { |arg| arg.start_with?("--only=") }
-      since_arg = argv.find { |arg| arg.start_with?("--since=") }
-      return usage_error("--budget must be a positive integer") if budget_arg &&
-        (!budget_arg.match?(/\A--budget=\d+\z/) || budget_arg.split("=", 2).last.to_i <= 0)
-      return usage_error("--part-bytes must be a positive integer") if part_bytes_arg &&
-        (!part_bytes_arg.match?(/\A--part-bytes=\d+\z/) || part_bytes_arg.split("=", 2).last.to_i <= 0)
-      return usage_error("--only needs at least one non-empty path") if only_arg && only_arg.split("=", 2).last.to_s.split(",").all?(&:empty?)
-      return usage_error("--since needs a non-empty commit reference") if since_arg && since_arg.split("=", 2).last.to_s.empty?
-      budget = budget_arg&.split("=", 2)&.last&.to_i
-      part_bytes = part_bytes_arg&.split("=", 2)&.last&.to_i
-      only = only_arg&.split("=", 2)&.last&.split(",")
-      since = since_arg&.split("=", 2)&.last
-      unknown = argv.select { |arg| arg.start_with?("--") && !arg.match?(/\A--(budget|part-bytes|only|since)=/) }
-      return usage_error("unknown option #{unknown.first}") if unknown.any?
-
+      raw = valued_args(argv)
       trees = argv.reject { |arg| arg.start_with?("--") }.map(&:upcase)
       trees = TREES if trees.empty?
-      bad = trees - TREES
-      return usage_error("unknown tree #{bad.first}") if bad.any?
-      if since && budget.nil?
-        return usage_error("--since requires --budget=BYTES; incremental packs are reading copies, not full mirrors")
-      end
-      if since && (flags["--mirror"] || flags["--verify"])
-        return usage_error("--since cannot be combined with --mirror or --verify")
-      end
-      if flags["--mirror"]
-        ignored = []
-        ignored << "--budget" if budget_arg
-        ignored << "--part-bytes" if part_bytes_arg
-        ignored << "--only" if only_arg
-        ignored << "--tests" if flags["--tests"]
-        ignored << "--code" if flags["--code"]
-        ignored << "--code-only" if flags["--code-only"]
-        ignored << "--verify" if flags["--verify"]
-        return usage_error("--mirror cannot be combined with #{ignored.join(", ")}") if ignored.any?
+      problem = argument_error(argv, raw) || tree_error(trees) || combination_error(flags, raw)
+      return usage_error(problem) if problem
+      return run(trees, mirror: true) if flags["--mirror"]
+      return verify(trees, only: raw[:only]&.split(",")) if flags["--verify"]
 
-        return run(trees, mirror: true)
-      end
-      return verify(trees, only:) if flags["--verify"]
-
-      options = { tests: !flags["--tests"].nil?, full: budget.nil?, only:, part_bytes:, since:,
-                  variants: flags["--code-only"] ? [:code] : (flags["--code"] ? %i[exact code] : [:exact]) }
-      options[:budget] = budget if budget
-      run(trees, **options.compact)
+      run(trees, **full_options(flags, raw))
     rescue Operator::SnapshotVerify::Failed => e
       warn e.message
       1
     rescue ArgumentError => e
       warn e.message
       2
+    end
+
+    VALUED = { budget: "--budget=", part_bytes: "--part-bytes=", only: "--only=", since: "--since=" }.freeze
+
+    # The raw text after each "--name=", or nil when the option is absent.
+    def valued_args(argv)
+      VALUED.transform_values { |prefix| argv.find { |arg| arg.start_with?(prefix) }&.split("=", 2)&.last }
+    end
+
+    def positive?(value) = value.match?(/\A\d+\z/) && value.to_i.positive?
+
+    def argument_error(argv, raw) = value_error(raw) || unknown_option(argv)
+
+    def value_error(raw)
+      return "--budget must be a positive integer" if raw[:budget] && !positive?(raw[:budget])
+      return "--part-bytes must be a positive integer" if raw[:part_bytes] && !positive?(raw[:part_bytes])
+      return "--only needs at least one non-empty path" if raw[:only]&.split(",")&.all?(&:empty?)
+
+      "--since needs a non-empty commit reference" if raw[:since]&.empty?
+    end
+
+    def unknown_option(argv)
+      unknown = argv.find { |arg| arg.start_with?("--") && !arg.match?(/\A--(budget|part-bytes|only|since)=/) }
+      "unknown option #{unknown}" if unknown
+    end
+
+    def tree_error(trees)
+      bad = trees - TREES
+      "unknown tree #{bad.first}" if bad.any?
+    end
+
+    def combination_error(flags, raw)
+      if raw[:since] && raw[:budget].nil?
+        return "--since requires --budget=BYTES; incremental packs are reading copies, not full mirrors"
+      end
+      if raw[:since] && (flags["--mirror"] || flags["--verify"])
+        return "--since cannot be combined with --mirror or --verify"
+      end
+
+      mirror_conflict(flags, raw)
+    end
+
+    def mirror_conflict(flags, raw)
+      return unless flags["--mirror"]
+
+      valued = { "--budget" => raw[:budget], "--part-bytes" => raw[:part_bytes], "--only" => raw[:only] }
+      ignored = valued.compact.keys + (FLAGS - ["--mirror"]).select { |flag| flags[flag] }
+      "--mirror cannot be combined with #{ignored.join(', ')}" if ignored.any?
+    end
+
+    def full_options(flags, raw)
+      variants = if flags["--code-only"] then [:code]
+                 elsif flags["--code"] then %i[exact code]
+                 else [:exact]
+                 end
+      { tests: !flags["--tests"].nil?, no_tests: !flags["--no-tests"].nil?, full: raw[:budget].nil?,
+        only: raw[:only]&.split(","), part_bytes: raw[:part_bytes]&.to_i, since: raw[:since],
+        budget: raw[:budget]&.to_i, variants: }.compact
     end
 
     def usage_error(message)

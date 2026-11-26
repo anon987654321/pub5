@@ -41,6 +41,11 @@ module Operator
       [/\.map\z/, "source map"],
       [%r{/checks/data/layout_snapshots/}, "stored layout snapshots"],
       [/\.(ipynb|jsonl)\z/, "notebook or log data"],
+      # Regenerated from other tracked files; an external reader gains nothing from them.
+      [%r{\AMASTER/data/self_findings\.yml\z}, "generated scan baseline"],
+      [%r{\AMASTER/data/laws_index\.json\z}, "generated from laws.yml"],
+      [%r{\AMASTER/web/public/face\.runtime\.js\z}, "generated from the face.part sources"],
+      [%r{\AMASTER/data/receipts/}, "session receipt"],
     ].freeze
 
     TEST_PATH = %r{(\A|/)(test|spec)/|_test\.(rb|mjs|js)\z|\.test\.(mjs|js)\z}
@@ -258,7 +263,7 @@ module Operator
       return nothing_matched(tree, io) if paths.empty?
 
       size = part_bytes || ENV.fetch("MASTER_SNAPSHOT_PART_BYTES", SnapshotParts::DEFAULT_PART_BYTES).to_i
-      variants.flat_map { |variant| write_verified(host, tree, variant:, paths:, size:, only:, io:) }
+      variants.flat_map { |variant| write_verified(host, tree, variant:, paths:, size:, only:, io:, **) }
     end
 
     # The pack is read from the working tree and then checked against it. In a
@@ -275,8 +280,7 @@ module Operator
         # Listed again each time: a file added after the first listing is in the
         # tree the check reads, so a stale list fails every attempt the same way.
         paths = index.zero? ? options[:paths] : paths_for(host, tree, only: options[:only])
-        written = SnapshotParts.write(host, tree, paths:, variant:,
-                                                  part_bytes: options[:size], io: options[:io])
+        written = SnapshotParts.write(parts_job(host, tree, variant:, options:), paths:, io: options[:io])
         begin
           SnapshotVerify.call(host, tree, variant:, only: options[:only], io: options[:io])
           return written
@@ -288,6 +292,11 @@ module Operator
           sleep(VERIFY_BACKOFF * (2**index))
         end
       end
+    end
+
+    # --no-tests (options[:no_tests]) drops tests from the full source; --tests is the budget copy's own switch.
+    def parts_job(host, tree, variant:, options:)
+      SnapshotParts::Job.new(host:, tree:, variant:, part_bytes: options[:size], tests: !options[:no_tests])
     end
 
     # The whole file: header, map, then the chosen files whole. The room for source is what the

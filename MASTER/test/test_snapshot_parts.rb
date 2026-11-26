@@ -105,13 +105,55 @@ class TestSnapshotParts < Minitest::Test
       assert_operator count, :>, 2
       assert_equal (1..count).map { |k| format("snapshot_DEMO.part%02d-of-%02d.md", k, count) }, names
       texts = names.map { |n| File.read(File.join(repo, n)) }
-      maps = texts.map { |t| t[/## Map\n.*?\n## Source/m] }
-      assert_equal 1, maps.uniq.size, "every part holds the same complete Map"
-      assert_includes maps.first, "f5.rb [801L] p0"
+      assert_tree_in_every_part(texts)
       assert(texts.each_with_index.all? { |t, i| t.include?("part=#{i + 1}/#{count}") && t.include?("git=abc1234") })
       assert(texts.all? { |t| t.bytesize <= 12_000 }, "a part stays within the size")
       assert_includes texts.first, "Reading guide:"
     end
+  end
+
+# A body is framed by its byte count, so a file that itself contains the close
+# tag (as the snapshot writer does) is read back whole.
+def test_a_body_containing_the_close_tag_rejoins_byte_for_byte
+  with_repo do |repo|
+    put(repo, "DEMO/lib/tags.rb", %(TEXT = "</file>\n"\n</file>\n<file path="x" bytes="1">\n))
+    put(repo, "DEMO/lib/open.rb", "puts 1")
+    Operator::SnapshotPack.write(Host, "DEMO", io: StringIO.new, full: true)
+
+    text = File.read(File.join(repo, "snapshot_DEMO.md"))
+    assert_includes text, %(<file path="DEMO/lib/open.rb" eol="none" bytes="6">)
+    assert_equal 2, Verify.call(Host, "DEMO", variant: :exact, io: StringIO.new)
+  end
+end
+
+def test_no_tests_names_tests_as_left_out_and_still_verifies
+  with_repo do |repo|
+    FileUtils.mkdir_p(File.join(repo, "DEMO/test"))
+    put(repo, "DEMO/lib/a.rb", "puts 1\n")
+    put(repo, "DEMO/test/a_test.rb", "assert true\n")
+    Operator::SnapshotPack.write(Host, "DEMO", io: StringIO.new, full: true, no_tests: true)
+
+    text = File.read(File.join(repo, "snapshot_DEMO.md"))
+    assert_includes text, "tests=no"
+    refute_includes text, %(<file path="DEMO/test/a_test.rb")
+    assert_includes text, "left out (test, --no-tests): DEMO/test/a_test.rb"
+    assert_equal 1, Verify.call(Host, "DEMO", variant: :exact, io: StringIO.new)
+  end
+end
+
+def test_generated_files_are_left_out_by_name
+  pack = Operator::SnapshotPack
+  assert_equal "generated scan baseline", pack.omit_reason("MASTER/data/self_findings.yml")
+  assert_equal "generated from laws.yml", pack.omit_reason("MASTER/data/laws_index.json")
+  assert_equal "generated from the face.part sources", pack.omit_reason("MASTER/web/public/face.runtime.js")
+  assert_nil pack.omit_reason("MASTER/data/laws.yml")
+end
+
+  def assert_tree_in_every_part(texts)
+    maps = texts.map { |t| t[/## Tree\n.*?\n## Source/m] }
+    assert_equal 1, maps.uniq.size, "every part holds the same complete Tree"
+    assert_match(%r{^  lib/ \[p01-\d+\]$}, maps.first, "a subsystem names the parts that hold it")
+    assert_match(/^    f5\.rb$/, maps.first, "files sit indented under their directory")
   end
 
   def test_a_tree_that_fits_one_part_keeps_the_plain_file_name
@@ -131,9 +173,8 @@ class TestSnapshotParts < Minitest::Test
       Operator::SnapshotPack.write(Host, "DEMO", io: StringIO.new, full: true, part_bytes: 6_000)
 
       text = Dir.children(repo).grep(/snapshot_DEMO/).sort.map { |n| File.read(File.join(repo, n)) }.join
-      assert_match(/^### DEMO\/lib\/big\.rb \(part 1 of \d+, lines 1-\d+\)$/, text)
-      assert_includes text, "[continued in the next block]"
-      assert_includes text, "[continues from the previous block]"
+      assert_match(%r{^<file path="DEMO/lib/big\.rb" part="1/\d+" lines="1-\d+" bytes="\d+">$}, text)
+      assert_match(%r{^<file path="DEMO/lib/big\.rb" part="2/\d+" lines="\d+-\d+" bytes="\d+">$}, text)
       assert_equal 2, Verify.call(Host, "DEMO", variant: :exact, io: StringIO.new)
     end
   end

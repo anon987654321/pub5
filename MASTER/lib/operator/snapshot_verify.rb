@@ -13,10 +13,10 @@ module Operator
   module SnapshotVerify
     class Failed < StandardError; end
 
-    HEADING = /\A### (.+?)(?: \(part (\d+) of (\d+), lines (\d+)-(\d+)\))?\n\z/
-    FENCE_OPEN = /\A(`{3,})\S*\n\z/
-    LEFT_OUT = /\Aleft out \([^)]*\): (.+)\n\z/
-    PACK_LINE = /^Pack: tree=(\S+) git=(\S+) part=(\d+)\/(\d+) variant=(\S+)/
+    OPEN_TAG = %r{<file path="([^"]*)"(?: part="(\d+)/(\d+)" lines="(\d+)-(\d+)")?( eol="none")? bytes="(\d+)">\n}n
+    CLOSE_TAG = "</file>\n".b
+    LEFT_OUT = /\Aleft out \(([^)]*)\): (.+)\n\z/
+    PACK_LINE = %r{^Pack: tree=(\S+) git=(\S+) part=(\d+)/(\d+) variant=(\S+)}
     SHOWN = 8
     NOISE = %i[on_comment on_sp on_nl on_ignored_nl on_embdoc_beg on_embdoc on_embdoc_end].freeze
 
@@ -48,10 +48,10 @@ module Operator
       names.sort.map { |name| [name, File.read(File.join(out, name), encoding: "UTF-8")] }
     end
 
-    # blocks: path => [[index, total, from, to, body]]; left_out: the paths the header names as left out.
+    # blocks: path => [[index, total, from, to, body]]; left_out: path => the reason the header gives.
     def parse(parts, tree, variant, problems)
       blocks = Hash.new { |hash, key| hash[key] = [] }
-      left_out = []
+      left_out = {}
       seen = []
 
       parts.each do |name, text|
@@ -66,41 +66,33 @@ module Operator
       end
 
       problems << "parts present #{seen.sort.inspect}, expected 1..#{parts.size}" unless seen.sort == (1..parts.size).to_a
-      [blocks, left_out.to_set]
+      [blocks, left_out]
     end
 
+    # Blocks are read by their byte count, never by searching for the close tag, so a body that
+    # contains "</file>" is read whole. eol="none" adds one framing newline after the body.
     def read_blocks(name, text, blocks, left_out, problems)
-      lines = text.each_line.to_a
-      i = lines.index { |l| l.start_with?("## Source") } || lines.size
-      left_out.concat(lines[0...i].filter_map { |l| l[LEFT_OUT, 1] })
+      src = text.b
+      pos = src.index("## Source") || src.bytesize
+      preamble = src.byteslice(0, pos).force_encoding(Encoding::UTF_8)
+      preamble.each_line { |l| (m = l.match(LEFT_OUT)) && left_out[m[2]] = m[1] }
 
-      while i < lines.size
-        heading = lines[i].match(HEADING)
-        i += 1
-        next unless heading
-
-        markers = []
-        until i >= lines.size || lines[i].match?(FENCE_OPEN)
-          markers << lines[i]
-          i += 1
+      while (tag = OPEN_TAG.match(src, pos))
+        path = unescape(tag[1])
+        size = tag[7].to_i
+        body = src.byteslice(tag.end(0), size).force_encoding(Encoding::UTF_8)
+        after = tag.end(0) + size + (tag[6] ? 1 : 0)
+        unless body.bytesize == size && src.byteslice(after, CLOSE_TAG.bytesize) == CLOSE_TAG
+          problems << "#{name}: block #{path} is not closed after #{size} bytes"
+          break
         end
-        fence = lines[i].to_s[FENCE_OPEN, 1]
-        (problems << "#{name}: heading #{heading[1]} has no fence") && break unless fence
 
-        i += 1
-        body = +""
-        until i >= lines.size || lines[i] == "#{fence}\n"
-          body << lines[i]
-          i += 1
-        end
-        (problems << "#{name}: block #{heading[1]} is not closed") && break if i >= lines.size
-
-        # Remove only the framing LF; chomp also consumes a source-ending CR in CRLF.
-        body.delete_suffix!("\n") if markers.include?("#{SnapshotParts::NO_NEWLINE}\n")
-        blocks[heading[1]] << [(heading[2] || 1).to_i, (heading[3] || 1).to_i, heading[4].to_i, heading[5].to_i, body]
-        i += 1
+        blocks[path] << [(tag[2] || 1).to_i, (tag[3] || 1).to_i, tag[4].to_i, tag[5].to_i, body]
+        pos = after + CLOSE_TAG.bytesize
       end
     end
+
+    def unescape(value) = value.dup.force_encoding(Encoding::UTF_8).gsub("&quot;", '"').gsub("&amp;", "&")
 
     # Tracked text files the pack should hold: the tree's own record, not the writer's. A file the
     # header names as left out must be one the policy leaves out, or not text.
@@ -111,14 +103,20 @@ module Operator
         next unless File.file?(absolute) && !host.binary?(absolute)
 
         text = File.binread(absolute).force_encoding(Encoding::UTF_8)
-        if left_out.include?(path)
-          problems << "left out without a reason: #{path}" if SnapshotPack.omit_reason(path).nil? && text.valid_encoding?
+        if left_out.key?(path)
+          explained = allowed_out?(path, left_out[path]) || !text.valid_encoding?
+          problems << "left out without a reason: #{path}" unless explained
         elsif text.valid_encoding?
           files[path] = text
         end
       end
 
       files
+    end
+
+    # The policy leaves the path out, or the header left it out as a test under --no-tests.
+    def allowed_out?(path, reason)
+      SnapshotPack.omit_reason(path) || (reason == SnapshotParts::TESTS_LEFT_OUT && SnapshotPack.test_path?(path))
     end
 
     def compare(path, original, pieces, variant, problems)

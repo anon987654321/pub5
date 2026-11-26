@@ -470,9 +470,9 @@ end
       Pack.write(Host, "DEMO", io: StringIO.new, full: true)
       text = File.read(File.join(repo, "snapshot_DEMO.md"))
 
-      assert_includes text, "### DEMO/.rubocop.yml"
-      refute_includes text, "### DEMO/.master/state.json"
-      refute_includes text, "### DEMO/storage/blob.txt"
+      assert_includes text, %(<file path="DEMO/.rubocop.yml")
+      refute_includes text, %(<file path="DEMO/.master/state.json")
+      refute_includes text, %(<file path="DEMO/storage/blob.txt")
       assert_includes text, "tool state (1)"
       assert_includes text, "generated or dependency directory (1)"
     ensure
