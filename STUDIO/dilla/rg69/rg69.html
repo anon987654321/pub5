@@ -1221,11 +1221,14 @@ const pre=gain(1),wet=gain(1),hi=filter("highpass",hp),lo=filter("lowpass",lp),p
 shape.curve=Float32Array.from({length:2049},(_,i)=>{const x=i/1024-1;return Math.tanh(drive*(x+.10*x*x))/drive;});
 shape.oversample="2x";
 comp.threshold.value=-15;comp.knee.value=16;comp.ratio.value=1.35;comp.attack.value=lane==="drum"?.03:.018;eq.Q.value=.75;
-Tone.connect(source,pre);pre.connect(hi);hi.connect(eq);eq.connect(phase);phase.connect(phaseHigh);phaseHigh.connect(shape);shape.connect(dc);dc.connect(lo);lo.connect(comp);comp.connect(wet);Tone.connect(wet,destination);Tone.connect(source,dry);Tone.connect(dry,destination);
+const combined=gain(1),phaseDry=gain(1),phaseWet=gain(0);
+Tone.connect(source,pre);pre.connect(hi);hi.connect(eq);eq.connect(shape);shape.connect(dc);dc.connect(lo);lo.connect(comp);comp.connect(wet);wet.connect(combined);Tone.connect(source,dry);dry.connect(combined);combined.connect(phaseDry);combined.connect(phase);phase.connect(phaseHigh);phaseHigh.connect(phaseWet);Tone.connect(phaseDry,destination);Tone.connect(phaseWet,destination);
 const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.035);};
 return {update(aud){
 const color=(aud.console??58)/100,rotation=(aud.phase??28)/100;
-const blend=Math.max(color,rotation);smooth(wet.gain,blend);smooth(dry.gain,1-blend);smooth(pre.gain,1+.35*color);smooth(eq.gain,(lane==="bass"?2:lane==="drum"?1.4:-1.2)*color);
+const blend=color;smooth(dry.gain,1-blend);smooth(pre.gain,1+.35*color);smooth(eq.gain,(lane==="bass"?2:lane==="drum"?1.4:-1.2)*color);
+// Keep phase rotation independent of console drive; avoid equal dry/wet cancellation.
+smooth(phaseDry.gain,1-.25*rotation);smooth(phaseWet.gain,.25*rotation);
 smooth(phase.frequency,frequency*(.5+rotation*2));smooth(phase.Q,.5+rotation*.7);smooth(phaseHigh.frequency,frequency*(2.5+rotation*3));smooth(phaseHigh.Q,.55+rotation*.4);
 smooth(comp.release,Math.min(.5,60/aud.bpm*.5));smooth(comp.ratio,1+.35*color);smooth(comp.threshold,-15-3*color);smooth(wet.gain,blend/(1+.18*color));
 }};
