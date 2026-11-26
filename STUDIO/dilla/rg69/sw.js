@@ -1,0 +1,5 @@
+const CACHE="rg69-release-1";
+const ASSETS=["./rg69.html","./manifest.webmanifest","./icon.svg","./icon-maskable.svg"];
+self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
+self.addEventListener("activate",event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith("rg69-")&&key!==CACHE)await caches.delete(key);await self.clients.claim();})()));
+self.addEventListener("fetch",event=>{const url=new URL(event.request.url);if(event.request.method!=="GET"||url.origin!==location.origin)return;if(event.request.mode==="navigate"){event.respondWith((async()=>{try{const response=await fetch(event.request);if(response.ok&&url.pathname.endsWith("/rg69.html")){const cache=await caches.open(CACHE);await cache.put("./rg69.html",response.clone());}return response;}catch{return await caches.match("./rg69.html")||Response.error();}})());return;}if(ASSETS.some(asset=>new URL(asset,self.registration.scope).pathname===url.pathname))event.respondWith(caches.match(event.request).then(response=>response||fetch(event.request)));});
