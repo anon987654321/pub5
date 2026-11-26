@@ -1287,6 +1287,23 @@ return true;
 }
 }
 registerProcessor("rg69-tape-memory",TapeMemory);
+class ProgrammeGlue extends AudioWorkletProcessor {
+static get parameterDescriptors(){return [{name:"amount",defaultValue:0,minValue:0,maxValue:1,automationRate:"k-rate"}];}
+constructor(){super();this.reduction=0;this.history=0;}
+process(inputs,outputs,params){
+const input=inputs[0],output=outputs[0],a=params.amount[0],threshold=-8-4*a,knee=12+12*a,slope=1-1/(1+.65*a),attack=1-Math.exp(-1/(sampleRate*(.025+.015*a))),memory=1-Math.exp(-1/(sampleRate*.4));
+for(let i=0;i<(output[0]?.length||0);i++){
+let peak=0;for(const channel of input)peak=Math.max(peak,Math.abs(channel[i]||0));
+const over=20*Math.log10(Math.max(1e-8,peak))-threshold;
+const target=slope*(over<=-knee/2?0:over>=knee/2?over:(over+knee/2)**2/(2*knee));
+this.history+=(target-this.history)*memory;
+const release=.08+.52*Math.min(1,this.history/4),coefficient=target>this.reduction?attack:1-Math.exp(-1/(sampleRate*release));
+this.reduction+=(target-this.reduction)*coefficient;
+const gain=a===0?1:10**(-this.reduction/20);
+for(let c=0;c<output.length;c++)output[c][i]=(input[c]?.[i]||0)*gain;
+}return true;
+}}
+registerProcessor("rg69-programme-glue",ProgrammeGlue);
 }
 
 const wearModules=new WeakMap();
@@ -1529,6 +1546,13 @@ smooth(dry.gain,1-.42*Math.max(amount,tape));smooth(wet.gain,.42*Math.max(amount
 update(aud);return {update};
 }
 // Soft-knee, transient-preserving stereo bus compression; not a measured STC-8 model.
+function createProgrammeGlue(ctx,source,destination,native,aud){
+const dry=ctx.createGain(),wet=ctx.createGain();wet.gain.value=0;source.connect(native);native.connect(dry);dry.connect(destination);wet.connect(destination);
+let node=null,latest=aud;
+const update=settings=>{latest=settings;updateMasterGlue(native,settings);if(node)node.parameters.get("amount").setTargetAtTime(Math.max(0,Math.min(1,settings.comp/100)),ctx.currentTime,.035);};
+const ready=loadWearModule(ctx).then(ok=>{if(!ok)return false;try{node=new AudioWorkletNode(ctx,"rg69-programme-glue",{outputChannelCount:[2]});source.connect(node);node.connect(wet);update(latest);dry.gain.setTargetAtTime(0,ctx.currentTime,.035);wet.gain.setTargetAtTime(1,ctx.currentTime,.035);return true;}catch(error){log("glue0: "+error.message,"w");return false;}});
+update(aud);return {update,ready};
+}
 function updateMasterGlue(node,aud){
 const c=Math.max(0,Math.min(1,aud.comp/100)),beat=60/Math.max(40,aud.bpm);
 node.threshold.value=-8-4*c;node.knee.value=12+12*c;node.ratio.value=1+.65*c;node.attack.value=.025+.015*c;node.release.value=Math.max(.08,Math.min(.5,beat*(.25+.25*c)));
@@ -1580,7 +1604,7 @@ harsh.type="peaking";harsh.frequency.value=4100;harsh.Q.value=1.25;harsh.gain.va
 warm.type="lowshelf";warm.frequency.value=125;warm.gain.value=.8;
 matte.type="highshelf";matte.frequency.value=7800;matte.gain.value=-1.6;
 updateMasterGlue(glue,aud);
-const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);hfRestore.connect(glue);const masterColor=createMasterColor(ctx,glue,finalLimiter,aud);finalLimiter.connect(ctx.destination);
+const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);const glueOut=ctx.createGain(),programmeGlue=createProgrammeGlue(ctx,hfRestore,glueOut,glue,aud);const masterColor=createMasterColor(ctx,glueOut,finalLimiter,aud);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
 rev.connect(masterG);
@@ -1660,8 +1684,8 @@ try{analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfi
 tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
-const ready=Promise.all([rev.ready,analog?.ready,...recordingStages.map(stage=>stage.ready)]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+const ready=Promise.all([rev.ready,analog?.ready,programmeGlue.ready,...recordingStages.map(stage=>stage.ready)]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
+return {instruments,sampleG,drumDrive,finalLimiter,glue,programmeGlue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1685,7 +1709,7 @@ if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTE
 if(tapeSat)smooth(tapeSat.wet,liveGraph?.analog?0:aud_.tape/100*.65);
 if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar){compPar.ratio.value=1+aud_.comp/100*2;compPar.release.value=Math.min(.5,60/aud_.bpm*.5);}
-if(liveGraph?.glue)updateMasterGlue(liveGraph.glue,aud_);
+liveGraph?.programmeGlue?.update(aud_);
 liveGraph?.masterColor?.update(aud_);
 if(widener)widener.width.value=aud_.width/100;
 liveGraph?.experimental?.update(aud_);liveGraph?.drumColor?.update(aud_);liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
