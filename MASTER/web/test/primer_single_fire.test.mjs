@@ -42,6 +42,7 @@ function loadPrimer({ search = "" } = {}) {
   const primer = element("primer");
   const nodes = { primer, "prompt-form": element("prompt-form"), "ui-status": element("ui-status"), "primer-title": element("primer-title") };
   const windowListeners = {};
+  const warnings = [];
   const sandbox = {
     document: {
       currentScript: { dataset: { faceModule: "/face.js?v=test" } },
@@ -56,7 +57,8 @@ function loadPrimer({ search = "" } = {}) {
     setInterval: () => 0,
     clearInterval() {},
     addEventListener(type, fn) { (windowListeners[type] ||= []).push(fn); },
-    removeEventListener() {},
+    removeEventListener(type, fn) { windowListeners[type] = (windowListeners[type] || []).filter(listener => listener !== fn); },
+    console: { warn: (...args) => warnings.push(args) },
     dispatchEvent() { return true; },
     MASTER: { boot: { transition: (phase) => transitions.push(phase) } },
   };
@@ -65,7 +67,7 @@ function loadPrimer({ search = "" } = {}) {
   // Only the autostart timer: the rest are the 8s hint and the 35s watchdog,
   // whose fallback dismisses the primer on purpose when the face never paints.
   const runAutostart = () => timers.shift()();
-  return { primer, transitions, runAutostart, sandbox };
+  return { primer, transitions, runAutostart, sandbox, windowListeners, warnings };
 }
 
 test("autostart plus every tap event dismisses the primer once", () => {
@@ -86,4 +88,31 @@ test("with ?primer=1 the first tap fires and a second tap does nothing", () => {
 
   assert.equal(transitions.filter((p) => p === "PRIMER").length, 1);
   assert.equal(primer.added.filter((c) => c === "gone").length, 1);
+});
+
+test("audio gesture rejection is reported and a later gesture can recover", async () => {
+  const { sandbox, windowListeners, warnings } = loadPrimer();
+  let attempts = 0;
+  let release;
+  const ctx = {
+    state: "suspended",
+    resume() {
+      attempts += 1;
+      if (attempts === 1) return Promise.reject(new Error("gesture denied"));
+      return new Promise(resolve => { release = () => { this.state = "running"; resolve(); }; });
+    }
+  };
+  sandbox.__MASTER_AUDIO_PRIME__ = ctx;
+  const settle = () => new Promise(resolve => setImmediate(resolve));
+  windowListeners.pointerdown[0]();
+  await settle();
+  assert.equal(warnings.length, 1);
+  assert.equal(windowListeners.pointerdown.length, 1);
+  windowListeners.pointerdown[0]();
+  windowListeners.touchend[0]();
+  assert.equal(attempts, 2);
+  release();
+  await settle();
+  assert.equal(windowListeners.pointerdown.length, 0);
+  assert.equal(windowListeners.touchend.length, 0);
 });
