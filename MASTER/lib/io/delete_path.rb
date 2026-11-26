@@ -73,21 +73,6 @@ module Master
       rescue StandardError => e
         Result.err("delete_path: #{e.message}", category: :unknown)
       end
-
-      private
-
-      def sacred?(rel)
-        return true if Master::Soul.preserved_asset?(rel, root: @root)
-
-        master_relative = @root == Master::REPO_ROOT ? rel.delete_prefix("MASTER/") : rel
-        # The root's own policy governs, not MASTER's by default — same
-        # contract as PathGuard#sacred?.
-        Master::Ground::Immutability.blocked?(master_relative, root: @root) ||
-          SACRED_PATHS.any? do |path|
-            sacred = path.chomp("/")
-            master_relative == sacred || master_relative.start_with?("#{sacred}/")
-          end
-      end
     end
   end
 end

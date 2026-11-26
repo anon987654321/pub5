@@ -141,8 +141,7 @@ class TestAxioms < Minitest::Test
         "SACRED_AUTHORSHIP" => { "root" => "least_authority", "statement" => "protect paths" },
       }.to_yaml)
       soul = File.join(data, "soul.yml")
-      # Protected paths live in soul.yml; laws.yml carries no path list.
-      sacred = "absolute:\n  sacred_paths:\n    - data/laws.yml\n"
+      sacred = "absolute: {}\n"
       File.write(soul, "references:\n  golden_law: PRESERVE_FIRST\n#{sacred}")
 
       laws = Master::Ground::Laws.new(root:)

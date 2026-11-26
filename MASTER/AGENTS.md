@@ -4,8 +4,8 @@ Task-scoped entry for coding agents (Cursor, Codex, Grok, Claude Code). This fil
 
 **Start at the repo-root `AGENTS.md` (or your harness pointer, which routes there).**
 That is the shared entrypoint; this file is the detailed MASTER contract.
-Read `MASTER/data/soul.yml` first. It owns global identity, preservation,
-source precedence and `absolute.sacred_paths`. Then read
+Read `MASTER/data/soul.yml` first. It owns global identity, preservation
+and source precedence. Then read
 `MASTER/data/laws.yml`, the canonical catalogue of individual Law identities,
 statements, parentage and the nine invariant nodes' internal order.
 `MASTER/law/` and `MASTER/checks/` implement
@@ -211,8 +211,8 @@ commits; never force-push.
 Before planning or acting, load MASTER's canonical context:
 
 1. `MASTER/data/soul.yml` is the highest source of global authority. It owns
-   system identity, preservation principles, source precedence and
-   `absolute.sacred_paths`. It cannot create individual Law identities or
+   system identity, preservation principles and source precedence. It
+   cannot create individual Law identities or
    restate their requirement statements.
 2. `MASTER/data/laws.yml` is the one catalogue of individual Law records and
    their execution policy. It owns Law identities and statements, parent and
@@ -250,8 +250,8 @@ source order and protected paths. The Law catalogue is authoritative for
 individual Law identities and statements; its nine invariant nodes order Laws
 internally. Git history is provenance, never an override of a live source.
 
-`MASTER/lib/soul.rb` reads the source hierarchy and protected-path list from
-`soul.yml`, and derives the nine-node Law order from `laws.yml`; it does not
+`MASTER/lib/soul.rb` reads the source hierarchy from `soul.yml`, names the
+preserved assets no automated writer may change, and derives the nine-node Law order from `laws.yml`; it does not
 author a competing graph. The executable Law Ruby in `MASTER/law/*.rb` holds
 the definitions and adapters. `MASTER/data/laws.yml#law_catalogue` owns per-Law execution
 policy and also holds scanner, veto, plugin and `/fix` runtime configuration
@@ -720,7 +720,7 @@ improvement lane; `all` selects the existing all-work lane. Both require
 a direct named request or separately admitted task to write. `--dry-run` and `--read-only` always mean no writes
 and override `--apply`. Audit and visual cannot be made write-enabled by
 `--apply`. Elevate and all retain the existing resource, file and stall
-budgets and every sacred-path, visual-custody, transaction and restructuring
+budgets and every preserved-asset, visual-custody, transaction and restructuring
 proof gate.
 
 The existing compatibility spellings rewrite to `/fix --mode=...`:
@@ -742,12 +742,11 @@ a direct `/fix <target>` authorizes the scoped repair. `--no-autofix`, `--read-o
 and never commit rewrites of generated caches: the scanner descends into them.
 
 The deterministic autofix stage, which runs before any model is asked, answers
-to `Fix::AutofixGuard`. It never opens a protected path: Soul declares
-`data/laws.yml`, `data/soul.yml`, `data/project_context.yml`,
-`lib/soul.rb`, `lib/ground/pledge.rb` and `bin/master`. Other
-`lib/cli/face/`, voice/TTS, `STUDIO/dilla/`, `STUDIO/postpro/` and golden
-fixture paths have their own tree or artifact contracts; they are not silently
-added to the constitutional sacred-path list. It parses every
+to `Fix::AutofixGuard`. It never opens a preserved asset
+(`Soul.preserved_asset?`), whatever `MASTER_SACRED_WRITES` says. Its own
+patterns for `data/tokens.yml`, `lib/cli/face/`, voice/TTS, `STUDIO/dilla/`,
+`STUDIO/postpro/` and golden fixture paths hold unless a run sets
+`MASTER_SACRED_WRITES=allowed`. It parses every
 candidate (Ruby, YAML, JSON) and never applies an edit to a data file that only
 moves whitespace. After a write it runs the file's own `test_<name>.rb` when one
 exists and puts the original bytes back if that test goes red. RuboCop's

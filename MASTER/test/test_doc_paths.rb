@@ -25,7 +25,6 @@ class TestDocPaths < Minitest::Test
   # This is deliberately broader than live path validation: archaeology must be
   # able to name a deleted path without requiring that path to reappear.
   DOCS = %w[
-    README.md
     CLAUDE.md
     AGENTS.md
     GEMINI.md
@@ -133,14 +132,7 @@ class TestDocPaths < Minitest::Test
 
   def test_design_authority_is_laws_yml_without_a_parallel_architecture_document
     refute File.exist?(File.join(REPO, "ARCHITECTURE.md"))
-
-    root_readme = File.read(File.join(REPO, "README.md"))
-    assert_includes root_readme, "`MASTER/data/laws.yml`"
-    assert_includes root_readme, "`RAILS/CLAUDE.md`"
-    assert_includes root_readme, "`OPENBSD/CLAUDE.md`"
-    assert_includes root_readme, "`STUDIO/README.md`"
-    refute_includes root_readme, "target tree's `AGENTS.md`"
-    refute_match(/\]\(ARCHITECTURE\.md\)/, root_readme)
+    refute File.exist?(File.join(REPO, "README.md")), "the root front door retired; AGENTS.md routes"
   end
 
   def test_source_authority_places_soul_before_laws_and_execution
@@ -173,7 +165,6 @@ class TestDocPaths < Minitest::Test
   HARNESS_FILES = %w[AGENTS.md GEMINI.md GLM.md .cursorlaws].freeze
 
   PROJECT_READMES = %w[
-    README.md
     BIZ/README.md
     MASTER/README.md
     OPENBSD/README.md
@@ -224,7 +215,6 @@ class TestDocPaths < Minitest::Test
     MASTER/data/receipts/fix-session-2026-11-22-glm.md
     MASTER/data/receipts/fix-session-2026-11-22-qoder.md
     MASTER/lib/cli/face/contract.md
-    MIGRATION.md
     SECURITY.md
     STUDIO/dilla/vendor/tone/LICENSE.md
     STUDIO/lora/APPARATUS.md

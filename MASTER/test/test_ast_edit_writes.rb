@@ -30,10 +30,6 @@ class TestAstEditWrites < Minitest::Test
       # root as given. On macOS /var is a symlink to /private/var, so a bare
       # mktmpdir root makes every path under it look like an escape.
       root = File.realpath(raw)
-      # Immutability refuses every edit in a root with no sacred manifest, so
-      # the fixture root carries the smallest one MASTER's own root has.
-      FileUtils.mkdir_p(File.join(root, "data"))
-      File.write(File.join(root, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
       path = File.join(root, "subject.rb")
       File.write(path, "# frozen_string_literal: true\n\ndef old_name\n  :value\nend\n")
       yield root, path

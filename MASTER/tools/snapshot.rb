@@ -178,8 +178,8 @@ module Operator
         This repository is governed by MASTER. Read the live sources in their
         declared authority order before judging or changing a governed tree:
 
-        1. `MASTER/data/soul.yml` - global identity, preservation principles,
-           source precedence and `absolute.sacred_paths`.
+        1. `MASTER/data/soul.yml` - global identity, preservation principles
+           and source precedence.
         2. `MASTER/data/laws.yml` - individual Law identities, statements,
            parentage and the nine invariant nodes' internal order.
         3. `MASTER/data/laws.yml#law_catalogue` - per-Law severity, mode, lifecycle,

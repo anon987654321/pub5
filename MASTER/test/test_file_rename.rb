@@ -26,7 +26,7 @@ class TestFileRename < Minitest::Test
     write(DOC, "The thing lives in _zen_thing.scss, loaded by amber.\n")
     # The commit guard reads the sacred paths from soul.yml and refuses every
     # commit in a repo that has none.
-    write("MASTER/data/soul.yml", "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
+    write("MASTER/data/soul.yml", "absolute: {}\n")
     git("init", "-q", "--initial-branch=main")
     git("add", ".")
     git("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "seed")

@@ -673,18 +673,17 @@ class WorldTest < Minitest::Test
     end
   end
 
-  # A World driven without a Constitution still refuses a sacred path, as GitOperations#git! does.
-  def test_commit_of_a_sacred_path_is_refused
+  # A World driven without a Constitution still refuses a preserved asset, as GitOperations#git! does.
+  def test_commit_of_a_preserved_asset_is_refused
     with_git_world do |world, root|
-      FileUtils.mkdir_p(File.join(root, "data"))
-      File.write(File.join(root, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/laws.yml\n")
-      File.write(File.join(root, "data", "laws.yml"), "a: 1\n")
+      FileUtils.mkdir_p(File.join(root, "RAILS"))
+      File.write(File.join(root, "RAILS", "screenshot_review.png"), "a: 1\n")
       obs = world.perform(
-        E.git(:commit, paths: ["data/laws.yml"], message: "laws",
-              expected_hashes: { "data/laws.yml" => Digest::SHA256.hexdigest("a: 1\n") })
+        E.git(:commit, paths: ["RAILS/screenshot_review.png"], message: "shot",
+              expected_hashes: { "RAILS/screenshot_review.png" => Digest::SHA256.hexdigest("a: 1\n") })
       )
       refute obs.ok?
-      assert_match(/data\/laws\.yml is sacred: no automated writer may change it/, obs.message)
+      assert_match(/screenshot_review\.png is a preserved project asset/, obs.message)
       assert_equal ["seed.txt"], committed_paths(root)
     end
   end

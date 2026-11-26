@@ -670,11 +670,11 @@ def stage_commit_mode?
           values.freeze
         end
 
-        # A pass that left a sacred path changed (laws.yml, soul.yml, ...) delivers nothing:
+        # A pass that left a preserved asset changed delivers nothing:
         # no automated writer may change one, and git! would refuse the commit anyway.
-        def scope_ok?(paths) = sacred_paths_untouched?(paths) && boundary_scope_ok?(paths)
+        def scope_ok?(paths) = preserved_assets_untouched?(paths) && boundary_scope_ok?(paths)
 
-        def sacred_paths_untouched?(paths)
+        def preserved_assets_untouched?(paths)
           refused = Array(paths).filter_map do |path|
             reason = Master::Core::Constitution::Paths.write_refusal(path, root: @root)
             [path, reason] if reason

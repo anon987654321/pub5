@@ -59,7 +59,7 @@ class TestFixConvergence < Minitest::Test
     # Sacred paths fail closed without a soul.yml, so every fixture file would
     # read as immutable and the corpus would collect nothing.
     Dir.mkdir(File.join(@root, "data"))
-    File.write(File.join(@root, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
+    File.write(File.join(@root, "data", "soul.yml"), "absolute: {}\n")
     # The collector fails closed without a Git inventory, so the fixture is a checkout.
     system("git", "-C", @root, "init", "-q", "--initial-branch=main", out: File::NULL, err: File::NULL) || raise("git init failed")
     # Ignored as the real checkout ignores them, in .git/info/exclude so no file joins the

@@ -31,12 +31,12 @@ module Master
 
       # Deterministic-autofix exclusions for rendered or irreplaceable output,
       # matched against the absolute path. These patterns are this guard's
-      # local scope, not Soul-sacred paths. Explicit Soul declarations are
-      # checked separately through Constitution::Paths; configuration files
-      # are also subject to ConfigurationGuard's content validation.
+      # local scope. Preserved assets are checked separately through
+      # Constitution::Paths and always refuse; configuration files are also
+      # subject to ConfigurationGuard's content validation.
       #
-      # Operator decree 2026-11-09 (MASTER_SACRED_WRITES=allowed) lifts this
-      # boundary per run; see Master::Ground::Immutability.writes_allowed?.
+      # MASTER_SACRED_WRITES=allowed lifts these local patterns per run (see
+      # Master::Ground::Immutability.writes_allowed?), never a preserved asset.
       PROTECTED = [
         %r{/MASTER/data/tokens\.yml\z},
         %r{/MASTER/lib/cli/face/},
@@ -103,19 +103,17 @@ module Master
           end
         end
 
-        # The reason a path may not be opened, or nil. Read-only: the sacred
-        # paths come from soul.yml and are never written through here.
+        # The reason a path may not be opened, or nil. A preserved asset is
+        # refused first and whatever the environment says.
         def protected_reason(path, root: nil)
+          absolute = File.expand_path(path.to_s)
+          if (preserved = Master::Core::Constitution::Paths.write_refusal(absolute, root:))
+            return "protected path (#{preserved})"
+          end
           return if Master::Ground::Immutability.writes_allowed?
 
-          absolute = File.expand_path(path.to_s)
           hit = PROTECTED.find { |pattern| absolute.match?(pattern) }
-          return "protected path (#{pattern_name(hit)})" if hit
-          if (sacred = Master::Core::Constitution::Paths.write_refusal(absolute, root:))
-            return "protected path (#{sacred})"
-          end
-
-          nil
+          "protected path (#{pattern_name(hit)})" if hit
         end
 
         # nil when the file may be opened for an autofix, else the reason.

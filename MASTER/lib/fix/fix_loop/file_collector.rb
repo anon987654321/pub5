@@ -179,11 +179,10 @@ module Master
           nil
         end
 
-        # soul.yml is the constitutional source for sacred paths. The catalogue in
-        # laws.yml describes laws; it does not own write protection.
+        # A preserved asset (Soul.preserved_asset?) is never collected for
+        # repair; laws.yml describes laws and does not own write protection.
         def immutable?(path)
-          @sacred_paths ||= Master::Core::Constitution::Paths.new(root: git_root || @root)
-          @sacred_paths.sacred?(path)
+          Master::Core::Constitution::Paths.sacred?(path, root: git_root || @root)
         end
 
         # Rails migrations are historical record, not repairable source. They

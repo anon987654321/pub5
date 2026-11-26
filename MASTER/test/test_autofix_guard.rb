@@ -57,21 +57,19 @@ class TestAutofixGuard < Minitest::Test
     assert_equal 2, calls
   end
 
-  # Operator decree 2026-11-09: nothing is sacred, so the live laws and soul
-  # are admitted like any other path; the guard's irreplaceable list above
-  # still holds.
+  # Operator decree 2026-11-09 retired the sacred-path list, so the live laws
+  # and soul are admitted like any other path; the guard's irreplaceable list
+  # above still holds.
   def test_the_live_laws_and_soul_are_admitted_after_the_2026_11_09_decree
     %w[laws.yml soul.yml].each do |name|
       assert_nil Guard.protected_reason(File.join(Master::ROOT, "data", name), root: Master::ROOT)
     end
   end
 
-  # Sacred is what the tree's own soul declares, not a path pattern.
-  def test_a_path_the_soul_does_not_declare_is_admitted
+  def test_the_laws_of_a_scratch_tree_are_admitted
     Dir.mktmpdir do |root|
       FileUtils.mkdir_p(File.join(root, "MASTER", "data"))
-      File.write(File.join(root, "MASTER", "data", "soul.yml"),
-                 "absolute:\n  sacred_paths:\n    - lib/ground/pledge.rb\n")
+      File.write(File.join(root, "MASTER", "data", "soul.yml"), "absolute: {}\n")
       laws = File.join(root, "MASTER", "data", "laws.yml")
       File.write(laws, "law_catalogue: {}\n")
 
@@ -81,14 +79,14 @@ class TestAutofixGuard < Minitest::Test
     end
   end
 
-  def test_a_sibling_tree_is_not_sacred_when_the_run_is_rooted_at_master
-    Dir.mktmpdir do |repo|
-      master = File.join(repo, "MASTER")
-      FileUtils.mkdir_p(File.join(master, "data"))
-      File.write(File.join(master, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/\n")
-
-      assert_nil Guard.protected_reason(File.join(repo, "RAILS", "brgen", "engines", "dating", "app", "controllers", "dating", "base_controller.rb"), root: master)
-      refute_nil Guard.protected_reason(File.join(master, "data", "laws.yml"), root: master)
+  # MASTER_SACRED_WRITES=allowed lifts the guard's own patterns, never a preserved asset.
+  def test_the_write_switch_lifts_local_patterns_but_not_preserved_assets
+    shot = File.join(Master::REPO_ROOT, "RAILS", "screenshot_brgen_review.png")
+    tokens = File.join(Master::ROOT, "data", "tokens.yml")
+    refute_nil Guard.protected_reason(tokens, root: Master::ROOT)
+    Master::Ground::Immutability.stub(:writes_allowed?, true) do
+      assert_nil Guard.protected_reason(tokens, root: Master::ROOT)
+      assert_match(/preserved project asset/, Guard.protected_reason(shot, root: Master::REPO_ROOT))
     end
   end
 

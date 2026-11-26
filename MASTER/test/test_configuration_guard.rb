@@ -102,11 +102,12 @@ class TestConfigurationGuard < Minitest::Test
     assert_match(/cannot narrow the catalogue's modalities/, reason)
   end
 
-  def test_soul_cannot_freeze_the_whole_data_directory
+  # The sacred-path list retired on 2026-11-09; a soul that brings it back is refused.
+  def test_soul_cannot_reintroduce_the_retired_sacred_path_list
     data = YAML.safe_load_file(soul_path, aliases: true)
-    data.fetch("absolute").fetch("sacred_paths").push("data/")
+    data.fetch("absolute")["sacred_paths"] = %w[data/laws.yml]
     reason = Guard.validate(path: soul_path, content: YAML.dump(data))
-    assert_match(/runtime-written data and retired scanner paths cannot be sacred: data\//, reason)
+    assert_match(/absolute has unknown field\(s\): sacred_paths/, reason)
   end
 
   def test_soul_rejects_an_empty_anti_simulation_word
@@ -122,41 +123,5 @@ class TestConfigurationGuard < Minitest::Test
     data = YAML.safe_load_file(soul_path, aliases: true)
 
     assert_equal %w[will would could might], data.dig("absolute", "anti_simulation", "forbidden")
-  end
-
-  # Operator decree 2026-11-09: nothing is sacred. The live soul declares an
-  # empty list and every reader treats that as the law of the land, not a
-  # failure.
-  def test_the_live_soul_declares_nothing_sacred_per_the_2026_11_09_decree
-    sacred = YAML.safe_load_file(soul_path, aliases: true).dig("absolute", "sacred_paths")
-    assert_empty sacred
-  end
-
-  # The floor still binds a non-empty declaration: once any path is declared
-  # sacred, dropping a required one is refused.
-  def test_soul_cannot_drop_a_required_path_once_anything_is_declared
-    data = YAML.safe_load_file(soul_path, aliases: true)
-    spine = %w[data/laws.yml data/soul.yml data/project_context.yml lib/soul.rb lib/ground/pledge.rb bin/master]
-    data.fetch("absolute")["sacred_paths"] = spine - %w[data/laws.yml]
-    reason = Guard.validate(path: soul_path, content: YAML.dump(data))
-    assert_match(/critical path protections missing: data\/laws\.yml/, reason)
-  end
-
-  def test_a_new_soul_is_held_to_this_masters_list
-    Dir.mktmpdir do |dir|
-      path = File.join(dir, "MASTER", "data", "soul.yml")
-      data = YAML.safe_load_file(soul_path, aliases: true)
-      data.fetch("absolute")["sacred_paths"] = %w[bin/master]
-      reason = Guard.validate(path:, content: YAML.dump(data))
-      assert_match(/critical path protections missing/, reason)
-    end
-  end
-
-  def test_soul_must_keep_the_critical_spine_guarded
-    data = YAML.safe_load_file(soul_path, aliases: true)
-    spine = %w[data/laws.yml data/soul.yml data/project_context.yml lib/soul.rb lib/ground/pledge.rb bin/master]
-    data.fetch("absolute")["sacred_paths"] = spine - %w[lib/ground/pledge.rb]
-    reason = Guard.validate(path: soul_path, content: YAML.dump(data))
-    assert_match(/critical path protections missing/, reason)
   end
 end

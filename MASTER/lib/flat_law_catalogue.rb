@@ -184,7 +184,7 @@ module Master
         entry = rows.find { |row| row.fetch("id") == "SACRED_AUTHORSHIP" }
         raise Invalid, "SACRED_AUTHORSHIP is required" unless entry
         if entry.key?("protected_paths")
-          raise Invalid, "protected paths belong to soul.yml#absolute.sacred_paths, not laws.yml"
+          raise Invalid, "laws.yml carries no protected paths; preserved assets belong to Master::Soul"
         end
       end
 

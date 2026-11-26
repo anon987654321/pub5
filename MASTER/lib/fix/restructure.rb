@@ -184,10 +184,9 @@ module Master
           !path.match?(OFF_LIMITS)
       end
 
-      # soul.yml's sacred paths, as a runtime commit judges them; laws.yml has no paths.immutable.
+      # A preserved asset, as a runtime commit judges it; laws.yml has no paths.immutable.
       def immutable?(path)
-        @sacred ||= Master::Core::Constitution::Paths.new(root: @root)
-        !@sacred.commit_refusal(File.join(@root, path)).nil?
+        !Master::Core::Constitution::Paths.write_refusal(File.join(@root, path), root: @root).nil?
       end
 
       def changed_paths

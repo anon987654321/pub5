@@ -3,13 +3,6 @@
 module Master
   module Io
     module PathGuard
-      SACRED_PATHS = begin
-        Master::Soul.sacred_paths
-      rescue StandardError => e
-        Master::Ground::Swallow.log(e, context: "path_guard.sacred_paths")
-        raise "path guard: sacred-path policy unreadable: #{e.class}: #{e.message}"
-      end
-
       def self.inside_root?(full, root)
         full == root || full.start_with?(root + File::SEPARATOR)
       end
@@ -42,13 +35,13 @@ module Master
         Master::Core::World.secret?(path)
       end
 
-      # Sacred paths are read-yes, write-never: soul.yml and laws.yml are the
-      # law MASTER must read before it acts. Only a caller that writes asks.
+      # Preserved assets are read-yes, write-never. Only a caller that writes asks.
       def resolve(path, write: true)
         full = File.expand_path(path, @root)
         unless PathGuard.inside_real_root?(full, @root)
           return Result.err("path escapes project root: #{path}", category: :validation)
         end
+
         if File.exist?(full)
           canonical = File.realpath(full)
           unless PathGuard.inside_root?(canonical, @root)
@@ -61,7 +54,7 @@ module Master
 
         rel = full.delete_prefix(@root + "/")
         if write && sacred?(rel)
-          return Result.err("sacred path - writes forbidden: #{rel}", category: :validation)
+          return Result.err("preserved asset - writes forbidden: #{rel}", category: :validation)
         end
 
         Result.ok(full)
@@ -69,19 +62,10 @@ module Master
 
       private
 
+      # A preserved asset is write-never; nothing else is refused for being
+      # protected since the sacred-path list retired.
       def sacred?(rel_path)
-        return true if Master::Soul.preserved_asset?(rel_path, root: @root)
-        return false if Master::Ground::Immutability.writes_allowed?
-
-        master_relative = @root == Master::REPO_ROOT ? rel_path.delete_prefix("MASTER/") : rel_path
-        # The root's own policy governs, not MASTER's by default: Immutability
-        # falls back to MASTER's manifest only when this root has none of its
-        # own, so a declared scratch tree keeps its declared boundary.
-        Master::Ground::Immutability.blocked?(master_relative, root: @root) ||
-          SACRED_PATHS.any? do |path|
-            sacred = path.chomp("/")
-            master_relative == sacred || master_relative.start_with?("#{sacred}/")
-          end
+        Master::Ground::Immutability.blocked?(rel_path, root: @root)
       end
     end
   end

@@ -119,13 +119,9 @@ class WriteGuardTest < Minitest::Test
     end
   end
 
-  # Operator decree 2026-11-09: nothing is sacred - the manifest declares an
-  # empty protected-path list, so the boundary refuses nothing and the guard
-  # judges the content alone. A future operator may declare paths again; when
-  # one is declared, the refusal must come back with it.
-  def test_the_retired_boundary_refuses_nothing_while_the_declaration_is_empty
-    assert_empty Master::Soul.sacred_paths, "the decree lives in soul.yml; this test guards its edges"
-
+  # Operator decree 2026-11-09 retired the sacred-path list, so the laws and
+  # the soul are refused only for their content, never for their path.
+  def test_the_retired_boundary_refuses_the_laws_and_soul_nothing_for_their_path
     %w[laws.yml soul.yml].each do |name|
       file = File.join(Master::ROOT, "data", name)
       verdict = @guard.verdict(path: file, content: File.read(file, encoding: "UTF-8"))

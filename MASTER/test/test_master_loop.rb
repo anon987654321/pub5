@@ -285,7 +285,7 @@ class TestMasterLoop < Minitest::Test
     assert_kind_of Hash, Master.models_config
     assert_kind_of Hash, Master.patterns_config
     assert_kind_of Hash, Master.soul_config
-    assert_kind_of Array, Master.soul_config.dig("absolute", "sacred_paths")
+    assert_kind_of Array, Master.soul_config.dig("absolute", "anti_simulation", "forbidden")
   end
 
   def test_models_config_is_the_single_models_registry_reader

@@ -108,14 +108,19 @@ class TestSoul < Minitest::Test
     assert_equal %w[will would could might], data.dig("absolute", "anti_simulation", "forbidden")
   end
 
-  # Operator decree 2026-11-09: nothing is sacred, so the write guard refuses
-  # nothing for sacredness — including the Ruby authority itself.
-  def test_soul_write_guard_honours_the_operator_decree
-    assert_empty Master::Soul.sacred_paths
+  # Operator decree 2026-11-09 retired the sacred-path list: the write guard
+  # refuses only a preserved asset, never the Ruby authority itself.
+  def test_soul_write_guard_refuses_only_preserved_assets
+    assert_raises(NoMethodError) { Master::Soul.sacred_paths }
+    refute Master::Soul.sacred?("data/laws.yml")
     refute Master::Soul.sacred?("lib/soul.rb")
     refute Master::Soul.sacred?("lib/fix/fix_loop.rb")
     assert_nil Master::Soul.refuse_write!("lib/soul.rb")
     assert_nil Master::Soul.refuse_write!("lib/fix/fix_loop.rb")
+
+    shot = "RAILS/screenshot_brgen_review.png"
+    assert Master::Soul.sacred?(shot, root: Master::REPO_ROOT)
+    assert_raises(Master::Soul::ProtectedWrite) { Master::Soul.refuse_write!(shot, root: Master::REPO_ROOT) }
   end
 
   def test_soul_yaml_contains_only_the_manifest_and_compatibility_settings

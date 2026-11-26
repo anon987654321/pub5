@@ -21,7 +21,6 @@ no_new_markdown:
     - MASTER/README.md
     - MASTER/AGENTS.md
     - AGENTS.md
-    - README.md
     - CLAUDE.md
     - GEMINI.md
     - GLM.md

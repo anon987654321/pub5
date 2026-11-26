@@ -915,9 +915,8 @@ INTER_MODEL_CONTRACT_simulated_concurrence:
 SACRED_AUTHORSHIP:
   root: least_authority
   statement: >
-    No autonomous write to a path explicitly declared in
-    soul.yml#absolute.sacred_paths. An empty declaration is valid and means
-    that no paths are sacred.
+    No autonomous write to a preserved asset (Soul.preserved_asset?). The
+    soul.yml sacred-path list is retired.
   severity: error
   resolution: never
   mechanical: Soul.refuse_write!
@@ -925,7 +924,7 @@ SACRED_AUTHORSHIP:
 
 SACRED_AUTHORSHIP_autonomous_sacred_write:
   parent: SACRED_AUTHORSHIP
-  statement: "An automated writer touching a path declared sacred by soul.yml."
+  statement: "An automated writer touching a preserved asset."
   resolution: never
 
 SACRED_AUTHORSHIP_soul_hash_mismatch:
@@ -936,9 +935,8 @@ SACRED_AUTHORSHIP_soul_hash_mismatch:
 SACRED_AUTHORSHIP_soul_paths_are_soul_owned:
   parent: SACRED_AUTHORSHIP
   statement: >
-    Protected paths, when any are declared, are owned only by
-    soul.yml#absolute.sacred_paths; an empty list protects none and no
-    declaration may be shadowed by laws.yml, runtime metadata or Ruby constants.
+    Preserved assets are owned only by Soul.preserved_asset?; no
+    declaration may be shadowed by laws.yml, runtime metadata or other Ruby constants.
   resolution: never
 
 # ---

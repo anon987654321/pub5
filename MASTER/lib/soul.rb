@@ -7,9 +7,10 @@ require "yaml"
 module Master
   # The canonical identity implementation.
   #
-  # soul.yml owns global identity, source authority, preservation priorities and
-  # the protected-path boundary. laws.yml owns individual Law identities,
-  # statements and the internal order of its nine invariant nodes. This class
+  # soul.yml owns global identity, source authority and preservation
+  # priorities; PRESERVED_ASSET_GLOBS here name the preserved assets. laws.yml
+  # owns individual Law identities, statements and the internal order of its
+  # nine invariant nodes. This class
   # implements Soul and exposes derived views of both contracts; it creates
   # neither a parallel Law catalogue nor a competing source hierarchy.
   class Soul
@@ -69,13 +70,6 @@ module Master
 
     AUTHORITY_ORDER_IDS = %w[
       soul laws executable_laws_and_gates tree_contracts git_history
-    ].freeze
-    REQUIRED_SACRED_PATHS = %w[
-      data/laws.yml data/soul.yml data/project_context.yml
-      lib/soul.rb lib/ground/pledge.rb bin/master
-    ].freeze
-    FORBIDDEN_SACRED_PATHS = %w[
-      data/ data lib/review/scan/ lib/review/scan/laws lib/review/scan/laws/
     ].freeze
 
     IDENTITY = "MASTER is not a mascot, oracle, or corporate assistant. MASTER is a system devoted to mastery: it preserves a coherent working identity across sessions, studies the system as it is, and improves what it can justify. MASTER pursues mastery through research, judgment, experimentation, correction and verified craft. It is authoritative for its own identity, constitutional precedence and shared coordination; each governed subsystem remains the capable owner of its implementation and evidence.".freeze
@@ -274,35 +268,6 @@ module Master
         true
       end
 
-      def validate_sacred_paths!(paths, enforce_master_floor: true)
-        # Operator decree 2026-11-09: an empty declaration retires the
-        # protected-path boundary — nothing is sacred. A declared list is
-        # still held to the same safety rules, and the master floor still
-        # applies whenever a non-empty list is declared.
-        return paths.freeze if paths.is_a?(Array) && paths.empty?
-
-        unless paths.is_a?(Array) && !paths.empty? &&
-               paths.all? do |path|
-                 path.is_a?(String) && !path.strip.empty? &&
-                   !path.start_with?("/") && !path.match?(/\A[A-Za-z]:/) &&
-                   !path.tr("\\", "/").split("/").include?("..")
-               end && paths.uniq == paths
-          raise IntegrityError, "soul.yml absolute.sacred_paths must be unique safe relative paths"
-        end
-
-        if enforce_master_floor
-          broad = paths & FORBIDDEN_SACRED_PATHS
-          unless broad.empty?
-            raise IntegrityError, "runtime-written data and retired scanner paths cannot be sacred: #{broad.join(', ')}"
-          end
-
-          missing = REQUIRED_SACRED_PATHS - paths
-          raise IntegrityError, "critical path protections missing: #{missing.join(', ')}" unless missing.empty?
-        end
-
-        paths
-      end
-
       def validate_anti_simulation!(block)
         unless block.is_a?(Hash) && block.keys.map(&:to_s) == ["forbidden"]
           raise IntegrityError, "soul.yml absolute.anti_simulation must contain only forbidden"
@@ -318,24 +283,10 @@ module Master
         words
       end
 
-      def sacred_paths(root: ROOT)
-        master_root = resolve_master_root(root)
-        document = YAML.safe_load_file(File.join(master_root, "data", "soul.yml"), aliases: true)
-        enforce_master_floor = File.expand_path(master_root) == File.expand_path(ROOT)
-        paths = validate_sacred_paths!(
-          document.dig("absolute", "sacred_paths"),
-          enforce_master_floor:
-        )
-        paths.map(&:dup).freeze
-      rescue IntegrityError
-        raise
-      rescue StandardError => e
-        raise IntegrityError, "protected paths could not be read from soul.yml#absolute.sacred_paths: #{e.class}: #{e.message}"
-      end
-
-      # Private media and visual evidence are preserved independently of the
-      # general sacred-path switch. A tree-local root resolves to its checkout;
-      # absolute paths are accepted for the shell and filesystem adapters.
+      # Private media and visual evidence are the one automated write refusal
+      # left since the sacred-path list retired. A tree-local root resolves to
+      # its checkout; absolute paths are accepted for the shell and filesystem
+      # adapters. A path that cannot be judged is treated as preserved.
       def preserved_asset?(path, root: REPOSITORY_ROOT)
         workspace = File.expand_path(root)
         repository = preserved_repository_root(workspace)
@@ -350,7 +301,7 @@ module Master
           File.fnmatch?(pattern, relative, File::FNM_PATHNAME | File::FNM_DOTMATCH)
         end
       rescue StandardError
-        false
+        true
       end
 
       # Directory operations must check descendants as well as the directory
@@ -373,20 +324,14 @@ module Master
         false
       end
 
+      # The sacred-path list is retired (operator decree 2026-11-09). What
+      # remains refused is a preserved asset or a path escaping the workspace;
+      # a path that cannot be judged is refused.
       def sacred?(path, root: ROOT)
         workspace = File.expand_path(root)
         return true if preserved_asset?(path, root: workspace)
 
-        master_root = resolve_master_root(root)
-        target = File.expand_path(path.to_s, workspace)
-        return true unless inside?(target, workspace)
-        return false unless inside?(target, master_root)
-
-        relative = target.delete_prefix("#{master_root}/")
-        sacred_paths(root:).any? do |entry|
-          protected = entry.delete_suffix("/")
-          relative == protected || relative.start_with?("#{protected}/")
-        end
+        !inside?(File.expand_path(path.to_s, workspace), workspace)
       rescue StandardError
         true
       end
@@ -396,7 +341,7 @@ module Master
         return unless sacred?(path, root:)
 
         raise ProtectedWrite,
-              "#{path} is sacred: no automated writer may change it (soul.yml#absolute.sacred_paths)"
+              "#{path} is a preserved project asset: automated modification is refused"
       end
 
       private
@@ -416,10 +361,6 @@ module Master
         end
 
         validate_authority_order!(manifest["authority_order"])
-        validate_sacred_paths!(
-          manifest.dig("absolute", "sacred_paths"),
-          enforce_master_floor: File.expand_path(master_root) == File.expand_path(ROOT)
-        )
         validate_anti_simulation!(manifest.dig("absolute", "anti_simulation"))
         validate_references!(manifest, master_root:)
         validate_temperament!(manifest["temperament"])

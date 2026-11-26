@@ -13,7 +13,7 @@ class TestPolishApply < Minitest::Test
     FileUtils.mkdir_p("#{@root}/MASTER/lib")
     FileUtils.mkdir_p("#{@root}/MASTER/bin")
     FileUtils.mkdir_p("#{@root}/MASTER/data")
-    File.write("#{@root}/MASTER/data/soul.yml", YAML.dump("absolute" => { "sacred_paths" => ["MASTER/data/soul.yml"] }))
+    File.write("#{@root}/MASTER/data/soul.yml", YAML.dump("absolute" => {}))
     FileUtils.touch("#{@root}/MASTER/lib/.keep")
     FileUtils.touch("#{@root}/MASTER/lib/real.rb")
     File.write("#{@root}/MASTER/bin/tool", "#!/bin/sh\necho\n")
@@ -40,8 +40,9 @@ class TestPolishApply < Minitest::Test
     refute_empty Dir["#{@root}/.master/polish/receipts/*.yml"]
   end
 
-  def test_sacred_path_is_refused
-    assert Operator::PolishLens.sacred?(@root, "MASTER/data/soul.yml")
+  def test_preserved_asset_is_refused_and_the_soul_is_not
+    assert Operator::PolishLens.sacred?(@root, "RAILS/screenshot_review.png")
+    refute Operator::PolishLens.sacred?(@root, "MASTER/data/soul.yml")
   end
 
   def test_antigen_is_consulted

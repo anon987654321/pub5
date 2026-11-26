@@ -4,13 +4,14 @@ require "yaml"
 require "digest"
 require "fileutils"
 require "time"
+require_relative "../soul"
 
 module Operator
   module PolishLens
     # Bounded implementation half. Discovery stays read-only by default; this
     # adds an operator-gated --apply for the strictly mechanical, reversible
     # subset, suitable as an argv-allowlisted /fix implementer. It writes
-    # nothing without --apply, refuses sacred paths and rendered values,
+    # nothing without --apply, refuses preserved assets and rendered values,
     # consults antigen memory, and emits a receipt per edit. Taste, rendered
     # and live-host decisions are never applied; they remain operator-owned.
     APPLY_KINDS = %w[keep_hygiene exec_bit shebang_portability].freeze
@@ -21,20 +22,9 @@ module Operator
       CHECKS.flat_map { |c| send(c, root) }.sort_by { |f| [f.path, f.line.to_i, f.id] }
     end
 
-    def sacred_paths(root)
-      soul = File.join(root, "MASTER/data/soul.yml")
-      return [] unless File.exist?(soul)
-      d = YAML.safe_load(File.read(soul), aliases: true) || {}
-      Array(d.dig("absolute", "sacred_paths")).map { |p| p.to_s.sub(%r{^\./}, "") }
-    rescue StandardError
-      :unreadable
-    end
-
-    def sacred?(root, path)
-      sp = sacred_paths(root)
-      return true if sp == :unreadable # fail closed: never edit what we cannot verify
-      sp.any? { |s| path == s || path.start_with?(s.chomp("/") + "/") }
-    end
+    # A preserved asset is never edited; Soul.preserved_asset? refuses a path
+    # it cannot judge.
+    def sacred?(root, path) = Master::Soul.preserved_asset?(path, root:)
 
     def memory_dir(root) = File.join(root, ".master", "polish")
 

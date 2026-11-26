@@ -18,6 +18,7 @@
 # catalogue on every turn. The projection carries governing conduct, the
 # checks that can block the task and the gaps that remain unmeasured.
 
+require "digest"
 require "yaml"
 require_relative "../lib/fix/protocol"
 require_relative "../lib/operator/capability_manifest"
@@ -202,20 +203,51 @@ module Operator
       Master::Soul.authority_order(root: REPO_ROOT)
     end
 
+    # The Laws every task carries and how their proof aggregates, from
+    # data/core_spine.yml. laws.yml stays the owner of each Law's statement.
+    def core_spine
+      source = "MASTER/data/core_spine.yml"
+      path = File.join(MASTER_DIR, "data", "core_spine.yml")
+      raise "core spine missing: #{source}" unless File.file?(path)
+
+      load_master
+      spine = Master.load_yaml(path)
+      ids = Array(spine.fetch("law_ids")).map(&:to_s)
+      {
+        "source" => source, "law_ids" => ids, "sha256" => Digest::SHA256.hexdigest(ids.join("\n")),
+        "proof_policy" => spine.fetch("proof_policy"),
+      }
+    rescue StandardError => e
+      { "source" => source, "status" => "unavailable", "error" => "#{e.class}: #{e.message}" }
+    end
+
+    def core_spine_line
+      spine = core_spine
+      "Core spine (#{spine["source"]}): #{spine.fetch("law_ids") { [spine["error"]] }.join(", ")}"
+    end
+
     def render(query = nil)
-      authority = source_authority.map { |row| row.fetch("id") }.join(" > ")
-      out = ["Source authority (highest first): #{authority}", "MASTER conduct in force (law/practice.rb):"]
-      conduct.each { |name, text| out << "  #{name}: #{text.to_s.split(/(?<=\.)\s/).first}" }
-      out << ""
-      out << "Rules that can refuse a write (#{blocking_rules.size}): #{blocking_rules.join(', ')}"
-      out << "Coverage: #{coverage}"
-      capability_rows = Operator::CapabilityManifest.new(root: REPO_ROOT).call.fetch("capabilities")
-      out << "Execution capabilities: #{capability_rows.map { |name, row| "#{name}=#{row.fetch("status")}" }.join(", ")}"
-      out << ""
+      out = authority_lines + conduct_lines + capability_lines
       out.concat(shell_contract)
       matched = lessons(query)
       out << "Lessons matching this prompt: #{matched.map { |p| File.basename(p, '.yml') }.join(', ')}" if matched.any?
       out.join("\n")
+    end
+
+    def authority_lines
+      authority = source_authority.map { |row| row.fetch("id") }.join(" > ")
+      ["Source authority (highest first): #{authority}", "MASTER conduct in force (law/practice.rb):"]
+    end
+
+    def conduct_lines
+      conduct.map { |name, text| "  #{name}: #{text.to_s.split(/(?<=\.)\s/).first}" } + ["",
+        "Rules that can refuse a write (#{blocking_rules.size}): #{blocking_rules.join(', ')}",
+        "Coverage: #{coverage}", core_spine_line]
+    end
+
+    def capability_lines
+      rows = Operator::CapabilityManifest.new(root: REPO_ROOT).call.fetch("capabilities")
+      ["Execution capabilities: #{rows.map { |name, row| "#{name}=#{row.fetch("status")}" }.join(", ")}", ""]
     end
 
     # Project the operational check registry for agents that need to connect a
@@ -280,6 +312,7 @@ module Operator
         "conduct" => conduct,
         "blocking_rules" => blocking_rules,
         "coverage" => coverage,
+        "core_spine" => core_spine,
         "shell_contract" => shell_contract.join("\n"),
         "task_contract_schema" => Master::Fix::TaskContract.agent_schema,
         "capabilities" => Operator::CapabilityManifest.new(root: REPO_ROOT).call,

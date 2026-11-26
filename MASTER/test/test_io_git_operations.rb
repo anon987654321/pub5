@@ -66,7 +66,7 @@ class GitOperationsTest < Minitest::Test
     sh("git", "config", "commit.gpgsign", "false", chdir: path)
     write("README.md", "first\n")
     # Commits refuse sacred paths and fail closed without a constitution to name them.
-    write("MASTER/data/soul.yml", "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
+    write("MASTER/data/soul.yml", "absolute: {}\n")
     sh("git", "add", "-A", chdir: path)
     sh("git", "commit", "-m", "first", chdir: path)
     sh("git", "push", "-u", "origin", "main", chdir: path)
@@ -290,43 +290,46 @@ class GitOperationsTest < Minitest::Test
   end
 
   def declare_sacred
-    write("MASTER/data/soul.yml", "absolute:\n  sacred_paths:\n    - data/laws.yml\n    - data/soul.yml\n")
+    write("MASTER/data/soul.yml", "absolute: {}\n")
     write("MASTER/data/laws.yml", "a: 1\n")
+    write("RAILS/screenshot_review.png", "png\n")
+    write("MASTER/checks/data/route_screenshots/home.png", "png\n")
     write("MASTER/data/spine.yml", "spine: 1\n")
   end
 
-  # Every runtime commit goes through git!, so a sacred path is refused there whichever
+  # Every runtime commit goes through git!, so a preserved asset is refused there whichever
   # writer changed it: named, listed in a pathspec file, or only staged.
-  def test_a_commit_naming_a_sacred_path_is_refused
+  def test_a_commit_naming_a_preserved_asset_is_refused
     declare_sacred
+    shot = "RAILS/screenshot_review.png"
 
-    error = assert_raises(RuntimeError) { @git.commit("laws", paths: ["MASTER/data/laws.yml"]) }
-    assert_includes error.message, "data/laws.yml is sacred: no automated writer may change it"
+    error = assert_raises(RuntimeError) { @git.commit("shot", paths: [shot]) }
+    assert_includes error.message, "screenshot_review.png is a preserved project asset"
     assert_empty sh("git", "diff", "--cached", "--name-only", chdir: @repo), "a refusal stages nothing"
-    assert_raises(RuntimeError) { @git.commit("soul", paths: ["MASTER/data/soul.yml"]) }
-    assert_raises(RuntimeError) { @git.git!("commit", "-m", "laws", "--", "MASTER/data/laws.yml") }
-    sh("git", "add", "MASTER/data/laws.yml", chdir: @repo)
-    assert_raises(RuntimeError) { @git.git!("commit", "-m", "staged laws") }
+    assert_raises(RuntimeError) { @git.commit("route", paths: ["MASTER/checks/data/route_screenshots/home.png"]) }
+    assert_raises(RuntimeError) { @git.git!("commit", "-m", "shot", "--", shot) }
+    sh("git", "add", shot, chdir: @repo)
+    assert_raises(RuntimeError) { @git.git!("commit", "-m", "staged shot") }
     assert_equal "first", sh("git", "log", "-1", "--format=%s", chdir: @repo).strip
   end
 
-  # The ratchet ceiling is runtime-written data, not sacred, so it commits beside the change it sponsors.
-  def test_the_ratchet_ceiling_and_ordinary_paths_still_commit
+  # The laws and the ratchet ceiling are not preserved assets, so they commit beside the change.
+  def test_the_laws_the_ratchet_ceiling_and_ordinary_paths_still_commit
     declare_sacred
     write("MASTER/lib/grown.rb", "# grown\n")
 
-    @git.commit("grow", paths: ["MASTER/data/spine.yml", "MASTER/lib/grown.rb"])
+    @git.commit("grow", paths: ["MASTER/data/spine.yml", "MASTER/data/laws.yml", "MASTER/lib/grown.rb"])
 
     assert_equal "Grow", sh("git", "log", "-1", "--format=%s", chdir: @repo).strip
   end
 
-  # Only runtime commits pass through git!; a person's own commit of the laws is untouched.
-  def test_a_person_still_commits_a_sacred_path_with_plain_git
+  # Only runtime commits pass through git!; a person's own commit of an asset is untouched.
+  def test_a_person_still_commits_a_preserved_asset_with_plain_git
     declare_sacred
-    sh("git", "add", "MASTER/data/laws.yml", chdir: @repo)
-    sh("git", "commit", "-m", "Amend the laws", "--", "MASTER/data/laws.yml", chdir: @repo)
+    sh("git", "add", "RAILS/screenshot_review.png", chdir: @repo)
+    sh("git", "commit", "-m", "Retake the shot", "--", "RAILS/screenshot_review.png", chdir: @repo)
 
-    assert_equal "Amend the laws", sh("git", "log", "-1", "--format=%s", chdir: @repo).strip
+    assert_equal "Retake the shot", sh("git", "log", "-1", "--format=%s", chdir: @repo).strip
   end
 
   def test_push_updates_the_remote

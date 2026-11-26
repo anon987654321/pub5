@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "yaml"
-# TOO_BROAD_SACRED_PATHS reads Master::Soul at load time; this file is also
+# validate_soul calls Master::Soul; this file is also
 # required below the boot floor (write_guard -> mechanical_autofix), where soul
 # is not loaded yet.
 require_relative "soul"
@@ -13,9 +13,8 @@ require_relative "review/baymard_law"
 
 module Master
   # Validates the governing YAML by its invariants. Who may write it is a
-  # separate question soul.yml's sacred_paths answer: no automated writer may,
-  # and a person commits it with ordinary git. These invariants judge every
-  # candidate either way, so a write that is let through is still a valid one.
+  # separate question (Constitution::Paths.write_refusal); these invariants
+  # judge every candidate, so a write that is let through is still a valid one.
   module ConfigurationGuard
     module_function
 
@@ -24,10 +23,6 @@ module Master
     REQUIRED_RUNTIME_CONFIG_SECTIONS = %w[
       veto_pattern_config law_map transformation_policy
     ].freeze
-    # The Soul manifest owns the protected-path boundary. Broad data/ or
-    # retired scanner paths would freeze runtime-written configuration or code
-    # that must evolve, so the shared Soul validator refuses those entries.
-    TOO_BROAD_SACRED_PATHS = Master::Soul::FORBIDDEN_SACRED_PATHS
     LIVE_SOUL = File.expand_path("../data/soul.yml", __dir__)
     REQUIRED_TOKEN_MAPS = %w[
       visual_identity viewport shared_chrome system storefront_art radio luxury promotional_art
@@ -191,46 +186,74 @@ module Master
         data["constitution"] == "MASTER/data/laws.yml"
 
       Master::Soul.validate_authority_order!(data["authority_order"])
-      absolute = data.fetch("absolute") { raise KeyError, "absolute.sacred_paths is required" }
-      raise ArgumentError, "absolute must be a mapping" unless absolute.is_a?(Hash)
-      unknown_absolute = absolute.keys.map(&:to_s) - %w[sacred_paths anti_simulation]
-      raise ArgumentError, "absolute has unknown field(s): #{unknown_absolute.join(', ')}" unless unknown_absolute.empty?
-      Master::Soul.validate_sacred_paths!(absolute["sacred_paths"])
-      Master::Soul.validate_anti_simulation!(absolute["anti_simulation"])
+      validate_soul_absolute(data)
+      validate_soul_references(data, path:)
+      validate_soul_shadowing(data)
+      validate_soul_temperament(data.fetch("temperament") { raise KeyError, "temperament profile is required" })
+    end
 
+    def validate_soul_absolute(data)
+      absolute = data.fetch("absolute") { raise KeyError, "absolute.anti_simulation is required" }
+      raise ArgumentError, "absolute must be a mapping" unless absolute.is_a?(Hash)
+
+      unknown = absolute.keys.map(&:to_s) - %w[anti_simulation]
+      raise ArgumentError, "absolute has unknown field(s): #{unknown.join(', ')}" unless unknown.empty?
+
+      Master::Soul.validate_anti_simulation!(absolute["anti_simulation"])
+    end
+
+    def validate_soul_references(data, path:)
       references = data.fetch("references") { raise KeyError, "references.golden_law is required" }
       raise ArgumentError, "references must be a mapping" unless references.is_a?(Hash)
       raise ArgumentError, "references may only identify laws, not define them" unless
         references.keys.map(&:to_s) == ["golden_law"]
 
+      golden = soul_laws(path)[references["golden_law"].to_s]
+      return if golden.is_a?(Hash) && golden["statement"].to_s.match?(/preserve/i)
+
+      raise ArgumentError, "references.golden_law must resolve to an existing preservation Law in laws.yml"
+    end
+
+    # The laws.yml beside the soul being validated, else this MASTER's own.
+    def soul_laws(path)
       master_root = File.dirname(File.dirname(path))
       laws_root = File.file?(File.join(master_root, "data", "laws.yml")) ? master_root : Master::ROOT
-      laws = Master.laws_document(root: laws_root)
-      golden_id = references["golden_law"].to_s
-      golden = laws[golden_id]
-      unless golden.is_a?(Hash) && golden["statement"].to_s.match?(/preserve/i)
-        raise ArgumentError, "references.golden_law must resolve to an existing preservation Law in laws.yml"
-      end
+      Master.laws_document(root: laws_root)
+    end
 
+    def validate_soul_shadowing(data)
       forbidden = %w[precedence precedence_graph priority severity severity_rank
-                     severity_vocabulary roots_vocabulary sacred_paths protected_paths
+                     severity_vocabulary roots_vocabulary protected_paths
                      enforcement law_catalogue law_map]
       shadowed = forbidden.select { |key| data.key?(key) }
       raise ArgumentError, "soul.yml cannot shadow law-owned field(s): #{shadowed.join(', ')}" unless shadowed.empty?
+    end
 
-      temperament = data.fetch("temperament") { raise KeyError, "temperament profile is required" }
-      raise ArgumentError, "temperament.profile must be non-empty text" unless temperament.is_a?(Hash) && temperament["profile"].is_a?(String) && !temperament["profile"].strip.empty?
+    def validate_soul_temperament(temperament)
+      profile = temperament.is_a?(Hash) ? temperament["profile"] : nil
+      raise ArgumentError, "temperament.profile must be non-empty text" unless non_blank?(profile)
+
+      validate_temperament_lists(temperament)
+      validate_temperament_mappings(temperament)
+    end
+
+    def validate_temperament_lists(temperament)
       %w[method guardrails].each do |key|
         values = temperament[key]
-        unless values.is_a?(Array) && !values.empty? && values.all? { |value| value.is_a?(String) && !value.strip.empty? }
-          raise ArgumentError, "temperament.#{key} must be a non-empty list of statements"
-        end
+        next if values.is_a?(Array) && !values.empty? && values.all? { |value| non_blank?(value) }
+
+        raise ArgumentError, "temperament.#{key} must be a non-empty list of statements"
       end
+    end
+
+    def validate_temperament_mappings(temperament)
       %w[delivery contexts].each do |key|
         value = temperament[key]
         raise ArgumentError, "temperament.#{key} must be a non-empty mapping" unless value.is_a?(Hash) && !value.empty?
       end
     end
+
+    def non_blank?(value) = value.is_a?(String) && !value.strip.empty?
 
     def validate_laws(data, path:, text:)
       Master::FlatLawCatalogue.validate!(data)
@@ -304,15 +327,6 @@ module Master
       end
       expected = ids.map { |id| id.to_s.downcase }.sort
       raise ArgumentError, "Law catalogue keys are duplicated or malformed in YAML source" unless declared.sort == expected
-    end
-
-    def normalize_path(value)
-      path = value.to_s.tr("\\", "/").strip
-      raise ArgumentError, "sacred path must be non-empty" if path.empty?
-      raise ArgumentError, "sacred path must be relative: #{path}" if path.start_with?("/") || path.match?(/\A[A-Za-z]:/)
-      raise ArgumentError, "sacred path escapes its root: #{path}" if path.split("/").include?("..")
-
-      path
     end
 
     def repository_root(path)

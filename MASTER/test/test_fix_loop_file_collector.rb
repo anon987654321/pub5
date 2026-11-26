@@ -19,12 +19,11 @@ class TestFixLoopFileCollector < Minitest::Test
 
   def collector(root, bus: nil) = Master::Fix::FixLoop::FileCollector.new(root:, bus:)
 
-  # The sacred-path policy fails closed without a soul.yml, so every fixture tree
-  # carries one that protects only itself.
+  # Every fixture tree carries a data/soul.yml, as MASTER's own root does.
   def write(root, rel, body = "x = 1\n")
     soul = File.join(root, "data", "soul.yml")
     FileUtils.mkdir_p(File.dirname(soul))
-    File.write(soul, "absolute:\n  sacred_paths:\n    - data/soul.yml\n") unless File.exist?(soul)
+    File.write(soul, "absolute: {}\n") unless File.exist?(soul)
 
     path = File.join(root, rel)
     FileUtils.mkdir_p(File.dirname(path))
@@ -186,17 +185,12 @@ class TestFixLoopFileCollector < Minitest::Test
     end
   end
 
-  # The collector honours whatever soul.yml declares. Under the operator
-  # decree of 2026-11-09 nothing is declared, so pledge.rb collects like any
-  # other file; a future declaration pulls its paths back out again.
-  def test_sacred_paths_are_never_collected
+  # The sacred-path list retired (operator decree 2026-11-09): the pledge and
+  # the constitution collect like any other file.
+  def test_formerly_sacred_paths_are_collected
     files = collector(Master::ROOT).collect(Master::ROOT).map { |f| f.delete_prefix("#{Master::ROOT}/") }
 
-    sacred = Master::Core::Constitution::Paths.sacred_paths(root: Master::ROOT)
-    sacred.each { |entry| refute_includes files, entry.delete_suffix("/") }
-
-    assert_equal sacred.empty?, files.include?("lib/ground/pledge.rb"),
-                 "a declared sacred path is not collected; an undeclared one is"
+    assert_includes files, "lib/ground/pledge.rb"
     assert_includes files, "lib/core/constitution.rb"
     assert_includes files, "lib/fix/fix_loop.rb"
   end

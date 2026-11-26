@@ -45,7 +45,6 @@ module Master
             "golden_law" => [golden_id, golden["statement"]].compact.join(": "),
             "protection" => {
               "principle" => authorship["statement"],
-              "protected_paths" => Master::Soul.sacred_paths(root: @root),
             }.freeze,
             "banned_output" => voice["banned_output"],
             "anti_simulation" => anti_simulation,

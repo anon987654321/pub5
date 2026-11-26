@@ -47,8 +47,7 @@ module Master::Core
       # scanner roots quiet when they carry no constitution of their own.
       rules_data = Master.load_laws(root: master_root)
       workspace_root = File.expand_path(workspace_root || master_root)
-      sacred_paths = Paths.sacred_paths(root: master_root)
-      rules = default_rules(rules_data, sacred_paths:, master_root:, workspace_root:, probe:)
+      rules = default_rules(rules_data, workspace_root:, probe:)
       rules += [scan_clean_rule(verify)] if verify
       rules += [sandboxed_exec_rule(sandbox)] if sandbox
       new(laws: rules, capabilities:)
@@ -155,13 +154,11 @@ module Master::Core
 
     # The rules. Each is a few lines because the dangerous thing is expressed as
     # a predicate, not prose. Safety rules Block; hygiene rules Revise.
-    def self.default_rules(data, sacred_paths: [], master_root: nil, workspace_root: nil, probe: nil)
+    def self.default_rules(data, workspace_root: nil, probe: nil)
       veto = (data["veto_pattern_config"] || {}).to_h { |n, s| [n, safe_rx(n, s["detect"])] }
-      immutable = Array(sacred_paths).map(&:to_s).freeze
 
       [
         no_secret_rule(veto),
-        immutable_paths_rule(immutable, master_root:, workspace_root:),
         configuration_invariant_rule(workspace_root:),
         ruby_parses_rule,
         structured_exec_rule,
@@ -184,9 +181,8 @@ module Master::Core
     end
 
     # Configuration content is judged by its schema and constitutional invariants
-    # on every Fold write. Whether the Fold may write a path at all is the
-    # separate immutable_paths_rule question; only paths explicitly declared in
-    # soul.yml#absolute.sacred_paths enter that list, and an empty list is valid.
+    # on every Fold write. Whether the Fold may write a path at all is World's
+    # separate question, answered by Constitution::Paths.write_refusal.
     # The guard is shared with lib/fix/write_guard.rb and sits outside the
     # fold's seven-file concept budget (data/spine.yml core_files), so it is
     # resolved through the shared loader rather than required from lib/.
@@ -201,36 +197,6 @@ module Master::Core
 
         Verdict::Block.new(reason:, by: :configuration_invariant)
       })
-    end
-
-    # SACRED_AUTHORSHIP is the Law; soul.yml#absolute.sacred_paths is the
-    # declaration it governs. laws.yml defines the rule, not the protected paths.
-    # This predicate blocks only explicitly declared paths. Configuration
-    # validation is a separate check and does not make a path "sacred".
-    def self.immutable_paths_rule(immutable, master_root: nil, workspace_root: nil)
-      Law.new(id: :immutable_paths, verbs: %i[write git], judge: lambda { |effect, _memory|
-        targets = effect.verb == :write ? [effect.args[:path]] : Array(effect.args[:paths])
-        hit = targets.compact.map(&:to_s).find do |path|
-          immutable_hit?(path, immutable, master_root:, workspace_root:)
-        end
-        next nil unless hit
-
-        Verdict::Block.new(reason: "immutable path: #{hit}", by: :immutable_paths)
-      })
-    end
-
-    # Resolve the target exactly as World does: relative to the one workspace
-    # whose boundary the effect will use. Resolve declarations relative to the
-    # MASTER root that owns laws.yml. Never interpret one relative target against
-    # two roots: that both overblocked unrelated paths and obscured which file
-    # was actually being judged.
-    def self.immutable_hit?(path, immutable, master_root: nil, workspace_root: nil)
-      target = File.expand_path(path.to_s, File.expand_path(workspace_root || "/"))
-      immutable.any? do |guard|
-        subtree = guard.to_s.end_with?("/")
-        protected_path = File.expand_path(guard.to_s.delete_suffix("/"), File.expand_path(master_root || "/"))
-        subtree ? target == protected_path || target.start_with?("#{protected_path}/") : target == protected_path
-      end
     end
 
     # No credential ever reaches disk, a transcript, a command or commit history.
@@ -666,8 +632,7 @@ module Master::Core
       raise ArgumentError, "veto pattern #{name} is invalid: #{e.message}"
     end
 
-    # The surface is load, admit, and immutable_paths_rule — which
-    # test/test_core_immutable_paths.rb builds directly. The rest are rule
+    # The surface is load and admit. The rest are rule
     # factories `default_rules` calls and nothing else does, verified against
     # lib/, test/, tools/, bin/ and web/.
     #
@@ -678,7 +643,8 @@ module Master::Core
     # finding was a scanner-coverage defect, not a request to split this class.
     # Unlike Memory, this class did not need splitting:
     # its count was the idiom, and Memory's was the design.
-    private_class_method :default_rules, :immutable_hit?, :configuration_invariant_rule, :no_secret_rule, :ruby_parses_rule, :scan_clean_rule, :reason_rule,
+    private_class_method :default_rules, :configuration_invariant_rule, :no_secret_rule, :ruby_parses_rule,
+                         :scan_clean_rule, :reason_rule,
                          :safe_exec_rule, :sandboxed_exec_rule, :read_only_probe_rule, :structured_exec_rule, :batch_delete_rule, :delete_operands,
                          :operands_after_flags, :git_command_parts, :git_clean_dry_run?, :git_clean_all?,
                          :preserved_asset_delete_reason, :forbidden_file_rule, :scope_creep_rule,
@@ -686,130 +652,26 @@ module Master::Core
                          :git_commit_evidence_rule, :git_commit_scope_rule, :council_for_done_rule,
                          :ideation_before_write_rule, :new_path_rule, :openbsd_manual_preflight_rule, :effect_reversibility_rule, :ruby_syntax_error, :safe_rx
 
-    # One source for paths that are constitutionally protected.
+    # One answer to "may an automated writer write or commit this path?".
     #
-    # soul.yml owns the protected-path boundary: the files no automated writer —
-    # the Fold, /fix and its autofix, a tool write, a runtime commit — may change.
-    # A person changes them with an ordinary git commit. This class is deliberately
-    # small: readers can ask for the declarations or whether one path is protected
-    # without knowing how soul.yml is laid out.
+    # The sacred-path list retired (operator decree 2026-11-09). The Fold,
+    # /fix and its autofix, a tool write and a runtime commit are refused only
+    # a preserved asset (Soul.preserved_asset?), whatever MASTER_SACRED_WRITES
+    # says. A person changes such a file with an ordinary git commit.
     class Paths
-      MANIFEST = "data/soul.yml"
-
-      def self.sacred_paths(root:)
-        new(root:).sacred_paths
-      end
+      REFUSAL = "is a preserved project asset: automated modification is refused"
 
       def self.sacred?(path, root:)
-        new(root:).sacred?(path)
+        Master::Ground::Immutability.preserved?(path, root: File.expand_path(root.to_s))
       end
 
-      # Why no automated writer may write or commit this path, or nil. root is the
-      # tree the caller works in: MASTER, the checkout above it, or a scratch tree.
-      # The constitution judged is the one that tree holds, else this MASTER's own,
-      # so a tree without a manifest never makes a sacred file writable. A path
-      # outside the MASTER that constitution governs is not its to guard: every
-      # sacred path is MASTER-relative, so RAILS/ or a test's tmpdir stays writable.
+      # Why no automated writer may write or commit this path, or nil. root is
+      # the tree the caller works in; nil means the repository checkout.
       def self.write_refusal(path, root: nil)
         workspace = root ? File.expand_path(root.to_s) : Master::REPO_ROOT
-        if Master::Soul.preserved_asset?(path, root: workspace)
-          return "#{path} is a preserved project asset: automated modification is refused"
-        end
+        return unless sacred?(path, root: workspace)
 
-        # Operator decree 2026-11-09 still applies to ordinary Soul-declared
-        # paths, but never disables the preserved-media boundary above.
-        return if Master::Ground::Immutability.writes_allowed?
-
-        master = governing_root(root)
-
-        full = File.expand_path(path.to_s, root ? File.expand_path(root.to_s) : master)
-        return unless full == master || full.start_with?("#{master}/")
-
-        new(root: master).commit_refusal(full)
-      end
-
-      def self.governing_root(root)
-        dir = root && File.expand_path(root.to_s)
-        found = [dir, dir && File.join(dir, "MASTER")].compact.find do |candidate|
-          File.file?(File.join(candidate, MANIFEST))
-        end
-        found || File.expand_path("../..", __dir__)
-      end
-      private_class_method :governing_root
-
-      def initialize(root:)
-        @root = File.expand_path(root)
-      end
-
-      def sacred_paths
-        @sacred_paths ||= if [Master::ROOT, Master::REPO_ROOT].include?(@root)
-                            prefix = @root == Master::REPO_ROOT ? "MASTER/" : ""
-                            Master::Soul.sacred_paths.map { |path| "#{prefix}#{path}" }.freeze
-                          else
-                            legacy_sacred_paths
-                          end
-      end
-
-      def sacred?(path)
-        return true if Master::Soul.preserved_asset?(path, root: @root)
-        return false if Master::Ground::Immutability.writes_allowed?
-
-        relative = normalize(path)
-        sacred_paths.any? do |entry|
-          relative == entry || relative.start_with?("#{entry.delete_suffix("/")}/")
-        end
-      rescue StandardError
-        # An uncertain path or unreadable constitution is protected until proven otherwise.
-        true
-      end
-
-      # nil when a runtime commit may carry this path, else why not. A broken
-      # manifest refuses every path.
-      def commit_refusal(path)
-        relative = normalize(path)
-        sacred_paths
-        return unless sacred?(path)
-
-        "#{relative} is sacred: no automated writer may change it (soul.yml absolute.sacred_paths)"
-      rescue ArgumentError
-        "#{path} is outside #{@root}"
-      rescue StandardError => e
-        "#{path} refused: constitution unreadable (#{e.class}: #{e.message.to_s[0, 80]})"
-      end
-
-      private
-
-      def legacy_sacred_paths
-        begin
-          # Fail closed when the manifest is missing, unreadable or invalid.
-          # An explicitly empty sacred_paths list is valid and deliberately means
-          # that this workspace has no Soul-declared protected paths.
-          root = manifest_root
-          raise Errno::ENOENT, "#{MANIFEST} not found under #{@root}" unless root
-
-          declared = Master::Soul.sacred_paths(root:)
-          declared.map(&:to_s).map do |path|
-            entry = normalize("#{manifest_prefix}#{path}")
-            # normalize resolves the path and drops the slash that marks a subtree;
-            # Constitution.immutable_hit? reads that slash to guard everything below.
-            path.end_with?("/") ? "#{entry}/" : entry
-          end.uniq.freeze
-        end
-      end
-
-      def manifest_root
-        @manifest_root ||= [@root, File.join(@root, "MASTER")].find do |candidate|
-          File.file?(File.join(candidate, MANIFEST))
-        end
-      end
-
-      def manifest_prefix = manifest_root == @root ? "" : "MASTER/"
-
-      def normalize(path)
-        full = File.expand_path(path.to_s, @root)
-        raise ArgumentError, "path escapes root: #{path}" unless full == @root || full.start_with?("#{@root}/")
-
-        full == @root ? "" : full.delete_prefix("#{@root}/")
+        "#{path} #{REFUSAL}"
       end
     end
   end

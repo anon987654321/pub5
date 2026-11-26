@@ -29,7 +29,7 @@ class TestRestructure < Minitest::Test
     write("MASTER/lib/big.rb", "class Big\n  def a = 1\n  def b = 2\nend\n")
     write("MASTER/lib/tiny.rb", "TINY = 1\n")
     # The sacred-path policy fails closed without a soul.yml.
-    write("MASTER/data/soul.yml", "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
+    write("MASTER/data/soul.yml", "absolute: {}\n")
     # RailsProof proves the apps RAILS/apps.yml registers.
     write("RAILS/apps.yml", "apps:\n  brgen: {}\n  amber: {}\n  bsdports: {}\n")
     sh("git", "add", "-A", chdir: @repo)
@@ -762,16 +762,13 @@ class TestRestructure < Minitest::Test
                                .call(migration, message: "x", review: ->(_d) {}).message, "off limits"
   end
 
-  # What soul.yml declares sacred is refused; laws.yml carries no list of its own.
-  def test_the_kernel_and_other_trees_are_refused
-    write("MASTER/data/soul.yml", "absolute:\n  sacred_paths:\n    - data/\n    - lib/review/scan/\n")
-    kernel = Restructure::Plan.parse("OPERATIONS: relocate\n=== WRITE MASTER/data/soul.yml\nx\n=== END\n")
-    scanner = Restructure::Plan.parse("OPERATIONS: split\n=== WRITE MASTER/lib/review/scan/law.rb\nx\n=== END\n")
-
-    assert_includes restructure.call(scanner, message: "x", review: ->(_d) {}).message, "immutable"
+  # A preserved asset is refused; paths outside the tree are refused for scope.
+  def test_preserved_assets_and_other_trees_are_refused
+    shot = Restructure::Plan.parse("OPERATIONS: relocate\n=== WRITE MASTER/checks/data/route_screenshots/x.png\n" \
+                                   "x\n=== END\n")
     outside = Restructure::Plan.parse("OPERATIONS: relocate\n=== WRITE RAILS/app.rb\nx\n=== END\n")
 
-    assert_includes restructure.call(kernel, message: "x", review: ->(_d) {}).message, "immutable"
+    assert_includes restructure.call(shot, message: "x", review: ->(_d) {}).message, "immutable"
     assert_includes restructure.call(outside, message: "x", review: ->(_d) {}).message, "outside MASTER/"
   end
 end

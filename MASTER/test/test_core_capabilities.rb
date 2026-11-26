@@ -87,4 +87,56 @@ class CoreCapabilitiesTest < Minitest::Test
       assert_raises(SecurityError) { world.perform(E.write("x", "x")) }
     end
   end
+
+  def test_non_boolean_capability_result_fails_closed
+    capabilities = Object.new
+    capabilities.define_singleton_method(:allow?) { |_capability| :yes }
+    constitution = Master::Core::Constitution.new(laws: [], capabilities:)
+    verdict = constitution.admit(Master::Core::Effect.write("lib/app/thing.rb", "A = 1\n"), nil)
+
+    assert_instance_of Master::Core::Verdict::Block, verdict
+    assert_equal :capability, verdict.by
+  end
+
+  def test_law_applicability_exception_fails_closed
+    law = Object.new
+    law.define_singleton_method(:id) { :broken }
+    law.define_singleton_method(:watches?) { |_verb| raise "sensitive applicability details" }
+    verdict = Master::Core::Constitution.new(laws: [law]).admit(
+      Master::Core::Effect.write("lib/app/thing.rb", "A = 1\n"), nil
+    )
+
+    assert_instance_of Master::Core::Verdict::Block, verdict
+    assert_equal :law_evaluator_error, verdict.by
+    refute_includes verdict.reason, "sensitive applicability details"
+  end
+
+  def test_law_evaluator_exception_fails_closed
+    law = Master::Core::Constitution::Law.new(
+      id: :broken,
+      verbs: %i[write],
+      judge: ->(_effect, _memory) { raise "sensitive evaluator details" },
+    )
+    verdict = Master::Core::Constitution.new(laws: [law]).admit(
+      Master::Core::Effect.write("lib/app/thing.rb", "A = 1\n"), nil
+    )
+
+    assert_instance_of Master::Core::Verdict::Block, verdict
+    assert_equal :law_evaluator_error, verdict.by
+    refute_includes verdict.reason, "sensitive evaluator details"
+  end
+
+  def test_invalid_non_nil_law_result_fails_closed
+    law = Master::Core::Constitution::Law.new(
+      id: :broken,
+      verbs: %i[write],
+      judge: ->(_effect, _memory) { :allow },
+    )
+    verdict = Master::Core::Constitution.new(laws: [law]).admit(
+      Master::Core::Effect.write("lib/app/thing.rb", "A = 1\n"), nil
+    )
+
+    assert_instance_of Master::Core::Verdict::Block, verdict
+    assert_equal :law_evaluator_error, verdict.by
+  end
 end

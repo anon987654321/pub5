@@ -109,7 +109,7 @@ def publish_pending! = :nothing_to_publish
     # Sacred paths fail closed without a soul.yml, so every fixture file would
     # read as immutable and the corpus would collect nothing.
     Dir.mkdir(File.join(@root, "data"))
-    File.write(File.join(@root, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
+    File.write(File.join(@root, "data", "soul.yml"), "absolute: {}\n")
     system("git", "-C", @root, "init", "-q", "--initial-branch=main", out: File::NULL, err: File::NULL) || raise("git init failed")
     # Every checkout ignores MASTER's own state; unignored, the run's .master/ files joined the
     # plan's exclusions after pass one and reset its stagnation counters.

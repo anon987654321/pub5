@@ -34,11 +34,8 @@ module Operator
       soul = load_yaml("MASTER/data/soul.yml")
       issues.concat(authority_source_issues(soul))
       laws = load_yaml("MASTER/data/laws.yml")
-      issues << "soul: golden Law reference missing or changed" unless soul.dig("references", "golden_law") == "PRESERVE_FIRST"
-      # The 2026-11-09 decree made an empty declaration the valid state -
-      # nothing is sacred - so the contract holds the declaration to exist,
-      # not to be non-empty.
-      issues << "soul: sacred paths declaration missing" unless Master::Soul.sacred_paths(root: File.join(@root, "MASTER")).is_a?(Array)
+      golden = soul.dig("references", "golden_law")
+      issues << "soul: golden Law reference missing or changed" unless golden == "PRESERVE_FIRST"
       begin
         Master::Soul.load!(root: File.join(@root, "MASTER"))
       rescue StandardError => e

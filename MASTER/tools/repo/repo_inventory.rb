@@ -23,9 +23,6 @@ INVENTORY_ROOT = File.expand_path("../../..", __dir__)
 # Copilot reads root AGENTS.md, so no generated .github directory is needed.
 # test/test_lifecycle_tools.rb holds both lists to the tree in both directions.
 ALLOWED_ROOT_FILES = %w[
-  .aider.conf.yml
-  .aider.model.metadata.json
-  .aider.model.settings.yml
   .claude
   .cursorlaws
   .gitattributes
@@ -34,8 +31,6 @@ ALLOWED_ROOT_FILES = %w[
   CLAUDE.md
   GEMINI.md
   GLM.md
-  MIGRATION.md
-  README.md
   VERSION
 ].freeze
 GENERATED_ROOT_FILES = %w[

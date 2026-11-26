@@ -73,8 +73,7 @@ module Master
         lines = [
           "receipt: commit #{receipt[:commit]} constitution=#{receipt[:constitution][:digest]}",
           "receipt: soul #{receipt[:constitution][:soul_version]} " \
-          "persona=#{receipt[:constitution][:persona]} " \
-          "sacred_paths=#{receipt[:constitution][:sacred_paths]}",
+          "persona=#{receipt[:constitution][:persona]}",
           "receipt: law normative=#{law_counts[:normative]}, catalogue=#{law_counts[:catalogue]}, " \
           "scan=#{law_counts[:registry]}, executable=#{law_counts[:domain]}",
           "receipt: providers #{availability(receipt[:providers])}",
@@ -119,7 +118,6 @@ module Master
         {
           soul_version: soul["version"] || "unreadable",
           persona: soul["persona"],
-          sacred_paths: Master::Soul.sacred_paths(root:).size,
           digest: digest(root:),
         }
       end

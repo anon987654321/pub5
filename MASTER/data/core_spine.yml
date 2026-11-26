@@ -1,0 +1,37 @@
+# core_spine.yml — the Laws every agent carries into every task, and how their
+# proof is aggregated. laws.yml owns each Law's identity and statement; this
+# file only selects ids. Master::Proof::Aggregator implements proof_policy.
+
+schema: 1
+
+law_ids:
+  - APPLICATION_IS_UNIFORM
+  - TRUTHFUL_STATUS
+  - FINDING_HYGIENE
+  - DUAL_MODALITY
+  - ROBUSTNESS
+  - POLA
+  - KISS
+  - DRY
+  - SOLID
+  - SRP
+  - STRUNK_WHITE
+  - STRUNK_WHITE_omit_needless_words
+  - BRINGHURST
+
+proof_policy:
+  modes:
+    - lexical
+    - semantic
+    - visual
+    - runtime
+    - abstract
+  statuses:
+    - pass
+    - fail
+    - inconclusive
+  rules:
+    fail: Any mode reports FAIL with valid evidence.
+    inconclusive: Any required mode is not PASS, or its evidence is not the right class.
+    pass: Every required mode passes with the right evidence class.
+  ratchet: INCONCLUSIVE never clears a ratchet and is never reported as PASS.

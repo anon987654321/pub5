@@ -28,14 +28,13 @@ class TestIoTools < Minitest::Test
   def deny = Governor.new(Master::Result.err("denied", category: :policy))
 
   # realpath, because the tools realpath their root; on macOS /var is a symlink.
-  # A root that writes carries the smallest sacred manifest MASTER's own root
-  # has: Immutability refuses every write in a root without one.
+  # manifest: true gives the root a data/soul.yml, as MASTER's own root has.
   def with_root(manifest: false)
     Dir.mktmpdir("io_tools") do |raw|
       root = File.realpath(raw)
       if manifest
         FileUtils.mkdir_p(File.join(root, "data"))
-        File.write(File.join(root, "data", "soul.yml"), "absolute:\n  sacred_paths:\n    - data/soul.yml\n")
+        File.write(File.join(root, "data", "soul.yml"), "absolute: {}\n")
       end
       yield root
     end
@@ -194,22 +193,14 @@ class TestIoTools < Minitest::Test
     end
   end
 
-  def test_batch_replace_leaves_declared_sacred_paths_alone
+  def test_batch_replace_leaves_preserved_assets_alone
     with_root(manifest: true) do |root|
-      # Sacred is what the active root's soul declares. MASTER's own live
-      # list is empty per operator decree 2026-11-09, so the constant pins
-      # that and the root's declaration does the refusing. The manifest
-      # itself (data/soul.yml) stays sacred and must survive the batch.
-      assert_empty Master::Io::PathGuard::SACRED_PATHS
-      File.write(File.join(root, "data", "soul.yml"),
-                 "absolute:\n  sacred_paths:\n    - data/soul.yml\n    - lib/keep.rb\n")
-      sacred = write(root, "lib/keep.rb", "old\n")
-      before = File.read(sacred)
+      preserved = write(root, "RAILS/visual_contract/keep.json", "old\n")
       ordinary = write(root, "lib/x.txt", "old\n")
 
       Master::Io::BatchReplace.new(root:, governor: allow).call(old_str: "old", new_str: "new")
 
-      assert_equal before, File.read(sacred)
+      assert_equal "old\n", File.read(preserved)
       assert_equal "new\n", File.read(ordinary)
     end
   end

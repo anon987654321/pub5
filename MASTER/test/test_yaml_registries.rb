@@ -128,7 +128,6 @@ class TestLawsYamlRegistry < Minitest::Test
     assert_equal "PRESERVE_FIRST", law_id
     assert_match(/preserve/i, laws.fetch(law_id).fetch("statement"))
     refute soul.key?("rules"), "soul must not hold individual Law records; laws.yml owns that catalogue"
-    assert_kind_of Array, soul.dig("absolute", "sacred_paths"), "Soul owns protected paths"
     law_dir = File.expand_path("../law", __dir__)
     require File.join(law_dir, "definition")
     ::Law.load_all(law_dir) if ::Law.definitions.empty?
