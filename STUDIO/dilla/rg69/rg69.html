@@ -78,26 +78,26 @@ SOFTWARE.
 html{background:var(--bg);color:var(--txt);font:14px/1.45 Helvetica,"Helvetica Neue",Arial,sans-serif}
 body{max-width:1120px;margin:auto;padding:clamp(12px,3vw,36px)}
 h1,h2,p{margin:0}button,input,select{font:inherit;color:inherit;min-width:0}
-button,select{border:1px solid var(--brd);background:var(--panel);border-radius:6px;min-height:40px;padding:8px 12px}
+button,select{border:1px solid var(--brd);background:var(--panel);border-radius:6px;min-height:44px;padding:8px 12px}
 button{cursor:pointer;font-size:12px;font-weight:700;touch-action:manipulation}
 button:hover,button[aria-pressed="true"],.style-chip.active{border-color:var(--acc);color:var(--acc)}
 button:disabled{opacity:.45;cursor:not-allowed}
 :focus-visible{outline:2px solid var(--acc);outline-offset:3px}
 [data-kind="primary"],#welcome-start{background:var(--acc);border-color:var(--acc);color:var(--ink)}
 [data-kind="danger"]{color:var(--dng)}
-.machine-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 18px;border-bottom:1px solid var(--brd)}
-.brand-lockup{min-width:0}.brand-lockup h1,.welcome-title{font-size:clamp(44px,8vw,88px);line-height:.9;letter-spacing:-.085em;font-weight:700;color:var(--acc)}
+.machine-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 0 12px;border-bottom:1px solid var(--brd)}
+.brand-lockup{min-width:0}.brand-lockup h1,.welcome-title{font-size:clamp(40px,6vw,64px);line-height:.9;letter-spacing:-.085em;font-weight:700;color:var(--acc)}
 .brand-subline{font-weight:700;font-size:clamp(13px,2vw,19px);margin-top:9px;letter-spacing:-.02em}
 .panel-kicker,.hardware-label,.meter-scale,footer{font:10px/1.5 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--mut)}
 .panel-kicker{margin-bottom:10px}.header-tools{display:flex;align-items:center;gap:12px}
-.pony{width:clamp(78px,20vw,180px);height:auto;display:block;flex-shrink:0}
+.pony{width:clamp(72px,13vw,120px);height:auto;display:block;flex-shrink:0}
 #pos-display{font:12px var(--mono);letter-spacing:0;vertical-align:middle}
 .transport{padding:16px 0 8px}.transport-primary,.transport-actions,.tab-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 #play{min-width:104px;min-height:44px}#stop{min-width:76px}
 .ctrl-bpm{display:flex;align-items:center;gap:8px;font:12px var(--mono)}.ctrl-bpm input{width:94px}
 #status,#song-position,#harmony-info{font:11px/1.5 var(--mono);color:var(--mut)}
 #status{margin:4px 0 8px}#status[data-state="playing"]{color:var(--acc)}#status[data-state="audio"]{color:var(--dng)}
-.level-meter-row{display:flex;align-items:center;gap:10px;margin:0 0 20px}.vu-meter{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px;flex:1;height:8px}.vu-bar{background:var(--brd);border-radius:2px}.vu-bar.active{background:var(--acc)}
+.level-meter-row{display:flex;align-items:center;gap:10px;margin:0 0 12px}.vu-meter{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:3px;flex:1;height:8px}.vu-bar{background:var(--brd);border-radius:2px}.vu-bar.active{background:var(--acc)}
 .sound-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}.sound-strip label{display:grid;gap:5px}.sound-strip select{width:100%}#harmony-info{grid-column:1/-2;overflow-wrap:anywhere;text-align:left}#root-display{justify-self:end}
 label{font-size:12px;font-weight:700;color:var(--mut)}output{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--acc);font-weight:700}
 #song-position{margin:0 0 8px}.tracks{display:grid;gap:5px}
@@ -107,11 +107,11 @@ label{font-size:12px;font-weight:700;color:var(--mut)}output{font-family:var(--m
 .step:nth-child(4n+1){margin-inline-start:4px}.step:first-child{margin-inline-start:0}
 .track[data-track="k"]{--lane:#cb4686}.track[data-track="s"]{--lane:#ae79ce}.track[data-track="c"]{--lane:#e69a62}.track[data-track="h"]{--lane:#70b7a8}.track[data-track="o"]{--lane:#78a8d4}.track[data-track="b"]{--lane:#9e80c3}.track[data-track="keys"]{--lane:#d66c9d}.track[data-track="p"]{--lane:#bd94d2}
 .vel-fill{position:absolute;inset:auto 0 0;height:0;background:var(--lane,var(--acc));pointer-events:none}.step[aria-pressed="false"] .vel-fill{height:0!important}.step[aria-pressed="true"]{border-color:var(--lane,var(--acc))}.step.playing{outline:2px solid var(--txt);outline-offset:-3px}.step.inactive{opacity:.2}.step[data-prob]::after{content:attr(data-prob) "%";position:absolute;top:2px;right:2px;font:8px var(--mono)}.step[data-ratchet]::before{content:"";position:absolute;bottom:3px;left:3px;width:4px;height:4px;background:var(--txt)}
-.macro-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding:18px 0 8px}.macro-controls label{display:grid;grid-template-columns:1fr auto;gap:6px}.macro-controls output{font-size:20px}.macro-controls input{grid-column:1/-1}
+.macro-controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;padding:18px 0 8px}.macro-controls label{display:grid;grid-template-columns:1fr auto;gap:6px}.macro-controls output{font-size:20px}.macro-controls input{grid-column:1/-1}
 input[type=range]{width:100%;height:30px;margin:0;accent-color:var(--acc);cursor:pointer}
 #viz{display:block;width:100%;height:30px;background:var(--panel);border-radius:4px;margin:8px 0 20px}
 details{border-top:1px solid var(--brd)}summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;cursor:pointer;list-style:none;font-weight:700;color:var(--txt)}summary::-webkit-details-marker{display:none}summary::after{content:"+";color:var(--acc)}details[open]>summary::after{content:"−"}details>*:not(summary){margin-bottom:14px}
-fieldset{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:6px 12px;border:0;padding:0;margin:0}fieldset label{display:flex;justify-content:space-between;gap:5px}legend{font:11px var(--mono);color:var(--acc);margin-bottom:8px;text-transform:uppercase}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+fieldset{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:6px 12px;border:0;padding:0;margin:0}fieldset label{display:flex;justify-content:space-between;gap:5px}legend{font:11px var(--mono);color:var(--acc);margin-bottom:8px;text-transform:uppercase}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 select,input[type=text]{min-height:40px;background:var(--panel);border:1px solid var(--brd);border-radius:5px;padding:7px 9px;max-width:100%}input[type=text]{width:100%}.tab-search{flex:1;min-width:100px}.styles{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto}.style-chip{padding:7px 10px;border:1px solid var(--brd);border-radius:5px;cursor:pointer;font-size:12px}.tab-btn.active,.lock-btn.locked{color:var(--acc);border-color:var(--acc)}.lock-btn{min-height:28px;padding:2px 5px}
 #sample-drop{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}#sample-drop label{min-width:0}#sample-file{max-width:100%}#sample-pattern,#sample-status{grid-column:1/-1}#sample-pattern button[aria-pressed=true]{background:var(--acc);color:var(--ink)}
 #trace{max-height:160px;overflow:auto;background:var(--panel);padding:10px;font:11px/1.5 var(--mono);overflow-wrap:anywhere}.trace-line{display:block}.trace-time{color:var(--mut)}.trace-line--error,.engine-error{color:var(--dng)}.trace-line--success,.trace-line--command{color:var(--acc)}.term-input-row{display:flex;align-items:center;gap:8px;margin-top:8px}.term-prompt{color:var(--acc)}#term-input{flex:1}
@@ -121,38 +121,37 @@ footer{margin-top:16px;padding:12px 0;border-top:1px solid var(--brd)}.ctx-menu,
 body[data-density=compact] .step{min-height:28px}
 @media(max-width:700px){.sound-strip,.macro-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.two-col{grid-template-columns:1fr}.steps-grid{grid-template-columns:repeat(8,minmax(0,1fr))}.step,body[data-density=compact] .step{min-height:44px}.track,.track-ruler{grid-template-columns:32px 38px minmax(0,1fr)}.track-name{font-size:9px}.meter-scale{display:none}.header-tools{gap:5px}.header-tools button{padding:7px}.machine-header{gap:8px}.brand-lockup h1{font-size:48px}.step:nth-child(4n+1){margin-inline-start:1px}input[type=text],select{font-size:16px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+.edit-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px;align-items:start}.edit-grid fieldset{align-content:start}.edit-grid fieldset>button{grid-column:1/-1}details details{margin-top:12px}#sample-drop select{max-width:100%;width:100%}.macro-controls label{min-width:0}.macro-controls output{font-size:16px}@media(max-width:700px){.macro-controls label:last-child{grid-column:1/-1}.track,.track-ruler{grid-template-columns:28px 36px minmax(0,1fr);gap:3px}.track-btn{min-width:28px}.steps-grid{gap:2px}.machine-header .pony{width:76px}.brand-lockup h1{font-size:44px}.transport-primary{gap:6px}.ctrl-bpm{flex:1;min-width:125px}.ctrl-bpm input{width:72px}}
 </style>
 </head>
 <body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute"><symbol id="pony-art" viewBox="0 0 180 144"><path d="M12 112a73 73 0 0 1 146 0" fill="none" stroke="#e7a9cb" stroke-width="8"/><path d="M23 112a62 62 0 0 1 124 0" fill="none" stroke="#c4a7e7" stroke-width="7"/><path d="M34 112a51 51 0 0 1 102 0" fill="none" stroke="#a9d5d7" stroke-width="7"/><g stroke="#853661" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M58 92Q29 71 28 101Q30 122 50 113Q35 109 43 100L62 110" fill="#bd92e0"/><path d="M60 83Q74 70 94 82L104 65L126 73L122 94L126 124H114L109 103L88 105L85 124H73L73 105L66 124H54L58 103Q49 95 60 83Z" fill="#f9bbd9"/><path d="M95 66Q85 46 101 32L103 14L115 28Q144 23 150 47L163 57Q166 71 151 75L132 75L121 86Q103 82 95 66Z" fill="#ffd9eb"/><path d="M108 26L122 5L125 28" fill="#f8d995"/><path d="M102 31Q84 30 81 48Q76 66 92 75Q84 89 100 101Q119 98 110 80Q123 72 110 60Q99 49 118 41Q136 43 143 33Q127 19 102 31Z" fill="#c39be7"/><path d="M92 45Q98 30 114 33" fill="none" stroke="#ffe0f3" stroke-width="5"/><ellipse cx="138" cy="51" rx="8" ry="11" fill="#fff"/><ellipse cx="140" cy="53" rx="4" ry="7" fill="#50305f"/><circle cx="141" cy="49" r="2" fill="#fff" stroke="none"/><path d="M149 66q5 3 9-1" fill="none"/><path d="M78 88q-6-6-10 0q-3 5 10 12q13-7 10-12q-4-6-10 0Z" fill="#e45c9a" stroke="none"/></g><g fill="#d77eb4"><path d="M23 30l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><path d="M160 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="44" cy="20" r="3"/><circle cx="159" cy="93" r="3"/></g></symbol></svg>
 <a class="skip-link" href="#main-content">Skip to sequencer</a>
 <div id="welcome" class="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-describedby="welcome-description">
   <div class="welcome-dialog">
-    <svg class="pony" viewBox="0 0 180 144" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M12 112a73 73 0 0 1 146 0" fill="none" stroke="#e7a9cb" stroke-width="8"/><path d="M23 112a62 62 0 0 1 124 0" fill="none" stroke="#c4a7e7" stroke-width="7"/><path d="M34 112a51 51 0 0 1 102 0" fill="none" stroke="#a9d5d7" stroke-width="7"/><g stroke="#853661" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M58 92Q29 71 28 101Q30 122 50 113Q35 109 43 100L62 110" fill="#bd92e0"/><path d="M60 83Q74 70 94 82L104 65L126 73L122 94L126 124H114L109 103L88 105L85 124H73L73 105L66 124H54L58 103Q49 95 60 83Z" fill="#f9bbd9"/><path d="M95 66Q85 46 101 32L103 14L115 28Q144 23 150 47L163 57Q166 71 151 75L132 75L121 86Q103 82 95 66Z" fill="#ffd9eb"/><path d="M108 26L122 5L125 28" fill="#f8d995"/><path d="M102 31Q84 30 81 48Q76 66 92 75Q84 89 100 101Q119 98 110 80Q123 72 110 60Q99 49 118 41Q136 43 143 33Q127 19 102 31Z" fill="#c39be7"/><path d="M92 45Q98 30 114 33" fill="none" stroke="#ffe0f3" stroke-width="5"/><ellipse cx="138" cy="51" rx="8" ry="11" fill="#fff"/><ellipse cx="140" cy="53" rx="4" ry="7" fill="#50305f"/><circle cx="141" cy="49" r="2" fill="#fff" stroke="none"/><path d="M149 66q5 3 9-1" fill="none"/><path d="M78 88q-6-6-10 0q-3 5 10 12q13-7 10-12q-4-6-10 0Z" fill="#e45c9a" stroke="none"/></g><g fill="#d77eb4"><path d="M23 30l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><path d="M160 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="44" cy="20" r="3"/><circle cx="159" cy="93" r="3"/></g></svg><p class="welcome-title" id="welcome-title">RG-69</p>
-    <p class="welcome-sub" id="welcome-description">Ragnhild’s Dream Machine · analog beat instrument</p>
-    <button id="welcome-start" type="button">▶ play</button>
+    <svg class="pony" viewBox="0 0 180 144" aria-hidden="true" focusable="false"><use href="#pony-art"/></svg><p class="welcome-title" id="welcome-title">RG-69</p>
+    <p class="welcome-sub" id="welcome-description">Ragnhild’s Dream Machine</p>
+    <button id="welcome-start" type="button">Start</button>
   </div>
 </div>
 <header class="machine-header">
   <div class="brand-lockup">
-    <p class="panel-kicker">Ragnhild instruments · dream series</p><h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1><p class="brand-subline">Dream Machine</p>
+    <h1>RG-69 <span id="pos-display" aria-hidden="true">●</span></h1><p class="brand-subline">Dream Machine</p>
   </div>
-  <div class="header-tools"><svg class="pony" viewBox="0 0 180 144" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path d="M12 112a73 73 0 0 1 146 0" fill="none" stroke="#e7a9cb" stroke-width="8"/><path d="M23 112a62 62 0 0 1 124 0" fill="none" stroke="#c4a7e7" stroke-width="7"/><path d="M34 112a51 51 0 0 1 102 0" fill="none" stroke="#a9d5d7" stroke-width="7"/><g stroke="#853661" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M58 92Q29 71 28 101Q30 122 50 113Q35 109 43 100L62 110" fill="#bd92e0"/><path d="M60 83Q74 70 94 82L104 65L126 73L122 94L126 124H114L109 103L88 105L85 124H73L73 105L66 124H54L58 103Q49 95 60 83Z" fill="#f9bbd9"/><path d="M95 66Q85 46 101 32L103 14L115 28Q144 23 150 47L163 57Q166 71 151 75L132 75L121 86Q103 82 95 66Z" fill="#ffd9eb"/><path d="M108 26L122 5L125 28" fill="#f8d995"/><path d="M102 31Q84 30 81 48Q76 66 92 75Q84 89 100 101Q119 98 110 80Q123 72 110 60Q99 49 118 41Q136 43 143 33Q127 19 102 31Z" fill="#c39be7"/><path d="M92 45Q98 30 114 33" fill="none" stroke="#ffe0f3" stroke-width="5"/><ellipse cx="138" cy="51" rx="8" ry="11" fill="#fff"/><ellipse cx="140" cy="53" rx="4" ry="7" fill="#50305f"/><circle cx="141" cy="49" r="2" fill="#fff" stroke="none"/><path d="M149 66q5 3 9-1" fill="none"/><path d="M78 88q-6-6-10 0q-3 5 10 12q13-7 10-12q-4-6-10 0Z" fill="#e45c9a" stroke="none"/></g><g fill="#d77eb4"><path d="M23 30l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><path d="M160 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="44" cy="20" r="3"/><circle cx="159" cy="93" r="3"/></g></svg>
-    <button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
-  </div>
+  <svg class="pony" viewBox="0 0 180 144" aria-hidden="true" focusable="false"><use href="#pony-art"/></svg>
+    
+  
 </header>
 
-<nav class="transport" aria-label="Beat machine transport">
-  <div class="transport-primary">
+<div class="transport transport-primary" role="group" aria-label="Playback">
     <button id="play" data-kind="primary" aria-label="Play sequencer" aria-pressed="false" title="Play or pause (Space)">▶ Play</button>
     <button id="stop" type="button" aria-label="Stop" title="Stop (S)">■ Stop</button>
     <label class="ctrl-bpm">BPM <input id="bpm" type="range" min="60" max="170" value="96"> <output id="bpm-o">96</output></label>
-    <button id="tap" title="Tap tempo">Tap</button>
-    <button id="steps" type="button" aria-label="Change step count" title="Cycle 8, 16, 32, 64 steps">16 steps</button><button id="bank" type="button" disabled>Bank A</button><button id="random" title="Randomize (R)">Generate</button><button id="song-mode" type="button" aria-pressed="true" title="Switch between arranged song and loop">Song</button><button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button><button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button>
-  </div>
-
-</nav>
-<p id="status" role="status" aria-live="polite">Ready · press Play</p>
-<div class="level-meter-row"><span class="hardware-label">OUTPUT / VU</span><div class="vu-meter" id="vu" aria-label="VU Meter"></div><span class="meter-scale">−12 · −6 · 0 dB</span></div>
+    
+    <button id="random" title="Randomize (R)">Generate</button><button id="song-mode" type="button" aria-pressed="true" title="Switch between arranged song and loop">Song</button>
+</div>
+<p id="status" role="status" aria-live="polite">Ready</p>
+<div class="level-meter-row"><span class="hardware-label">Output</span><div class="vu-meter" id="vu" aria-label="VU Meter"></div><span class="meter-scale">−12 · −6 · 0 dB</span></div>
 <main id="main-content" tabindex="-1">
 <section class="machine-panel" aria-label="Sequencer">
 <div class="sound-strip">
@@ -163,25 +162,13 @@ body[data-density=compact] .step{min-height:28px}
 <output id="harmony-info" aria-live="polite"></output><output id="root-display" aria-label="Current chord"></output>
 </div>
 <div id="song-position" aria-live="off"></div><div class="tracks" id="tracks"></div>
-<div class="macro-controls"><label>POCKET <output id="pocket-o">68</output><input id="pocket" type="range" min="0" max="100" value="68"></label><label>DRIVE <output id="drive-o">72</output><input id="drive" type="range" min="0" max="100" value="72"></label><label>DUST <output id="vinyl-o">12</output><input id="vinyl" type="range" min="0" max="100" value="12"></label><label>SPACE <output id="reverb-o">34</output><input id="reverb" type="range" min="0" max="100" value="34"></label></div>
+<div class="macro-controls"><label>Groove <output id="pocket-o">68</output><input id="pocket" type="range" min="0" max="100" value="68"></label><label>Drive <output id="drive-o">72</output><input id="drive" type="range" min="0" max="100" value="72"></label><label>Dust <output id="vinyl-o">12</output><input id="vinyl" type="range" min="0" max="100" value="12"></label><label>Space <output id="reverb-o">34</output><input id="reverb" type="range" min="0" max="100" value="34"></label><label for="master-vol">Master <output id="master-vol-o">75</output><input id="master-vol" type="range" min="0" max="100" value="75"></label></div>
 <canvas id="viz" width="400" height="28" title="Waveform" aria-label="Audio waveform visualizer" role="img"></canvas>
 </section>
-<details>
-<summary>Styles &amp; moods</summary>
-<div class="tab-bar">
-<button class="tab-btn tab-sm active" id="tab-styles">Styles</button>
-<button class="tab-btn tab-sm" id="tab-moods">Moods</button>
-<input type="text" id="style-search" class="tab-search" placeholder="filter…" aria-label="Search presets">
-</div>
-<div class="styles" id="styles"></div>
-<div class="styles is-hidden" id="moods"></div>
-</details>
-<details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div></details>
-<details>
-<summary>Drum coloration</summary><fieldset><legend>Dedicated percussion chain</legend><label for="drum-sonitex">Record &amp; sampler wear <output id="drum-sonitex-o">100</output></label><input id="drum-sonitex" type="range" min="0" max="100" value="100"><label for="drum-vcs">Console &amp; phase <output id="drum-vcs-o">100</output></label><input id="drum-vcs" type="range" min="0" max="100" value="100"></fieldset></details><details>
-<summary>Sound / tape &amp; vinyl</summary>
+<details><summary>Sound</summary>
+<div class="edit-grid">
 <fieldset><legend>Recording chain</legend><label for="console">Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label for="phase">Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label for="sample-wear">Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label for="motion">Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><label for="duck">Ducking <output id="duck-o">20</output></label><input id="duck" type="range" min="0" max="100" value="20"><button id="clean-chain" type="button">Clean / color</button></fieldset>
-<div class="two-col">
+
 <fieldset><legend>Master</legend>
 <label for="swing">Swing <output id="swing-o">8</output></label><input id="swing" type="range" min="0" max="90" value="8" title="Swing">
 
@@ -197,21 +184,18 @@ body[data-density=compact] .step{min-height:28px}
 
 <label for="crackle">Vinyl crackle <output id="crackle-o">8</output></label><input id="crackle" type="range" min="0" max="100" value="8" title="Crackle">
 </fieldset>
-</div>
-</details>
-<details>
-<summary>Dream circuitry / modulation</summary><fieldset><label for="note-routing">Note routing</label><select id="note-routing"><option value="0">Sustained harmony</option><option value="1">Hocket · alternating notes</option><option value="2">Hocket · alternating phrases</option><option value="3">Hocket · seeded scatter</option></select><label for="pitch-rhythm">Pitch / rhythm</label><select id="pitch-rhythm"><option value="0">Original arrangement</option><option value="1">Pitch bag · 3 in 8</option><option value="2">Pitch bag · 5 in 16</option><option value="3">Pitch bag · offbeat</option></select><label for="lfo-morph">LFO morph <output id="lfo-morph-o">35</output></label><input id="lfo-morph" type="range" min="0" max="100" value="35"><label for="lfo-depth">LFO depth <output id="lfo-depth-o">100</output></label><input id="lfo-depth" type="range" min="0" max="100" value="100"><label for="lfo-rate">LFO rate <output id="lfo-rate-o">20</output></label><input id="lfo-rate" type="range" min="0" max="100" value="20"></fieldset></details><details><summary>Atmosphere / background</summary><fieldset><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset></details><details>
-<summary>Mix</summary>
-<fieldset>
+<fieldset><legend>Dedicated percussion chain</legend><label for="drum-sonitex">Record &amp; sampler wear <output id="drum-sonitex-o">100</output></label><input id="drum-sonitex" type="range" min="0" max="100" value="100"><label for="drum-vcs">Console &amp; phase <output id="drum-vcs-o">100</output></label><input id="drum-vcs" type="range" min="0" max="100" value="100"></fieldset><fieldset><legend>Atmosphere</legend><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset>
+<fieldset><legend>Mix</legend>
 <label for="drum-vol">Drums <output id="drum-vol-o">80</output></label><input id="drum-vol" type="range" min="0" max="100" value="80">
 <label for="bass-vol">Bass <output id="bass-vol-o">70</output></label><input id="bass-vol" type="range" min="0" max="100" value="70">
 <label for="keys-vol">Keys <output id="keys-vol-o">60</output></label><input id="keys-vol" type="range" min="0" max="100" value="60">
 <label for="pads-vol">Pads <output id="pads-vol-o">50</output></label><input id="pads-vol" type="range" min="0" max="100" value="50">
-<label for="master-vol">Master <output id="master-vol-o">75</output></label><input id="master-vol" type="range" min="0" max="100" value="75">
+
 </fieldset>
+</div>
 </details>
-<details>
-<summary>Pattern editing</summary>
+<details><summary>Patterns</summary>
+<div class="transport-actions"><button id="tap" title="Tap tempo">Tap</button><button id="steps" type="button" aria-label="Change step count" title="Cycle 8, 16, 32, 64 steps">16 steps</button><button id="bank" type="button" disabled>Bank A</button><button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button></div>
 <fieldset>
 
 <label>Drums <button class="lock-btn" data-lock="drum" title="Lock">🔓</button></label><select id="drum-pat" aria-label="Drum pattern"></select>
@@ -219,8 +203,19 @@ body[data-density=compact] .step{min-height:28px}
 <label>Keys <button class="lock-btn" data-lock="keys" title="Lock">🔓</button></label><select id="keys-pat" aria-label="Keys pattern"></select>
 <label>Pads <button class="lock-btn" data-lock="pads" title="Lock">🔓</button></label><select id="pads-pat" aria-label="Pads pattern"></select>
 </fieldset>
+<details><summary>Preset browser</summary><div class="tab-bar">
+<button class="tab-btn tab-sm active" id="tab-styles">Styles</button>
+<button class="tab-btn tab-sm" id="tab-moods">Moods</button>
+<input type="text" id="style-search" class="tab-search" placeholder="filter…" aria-label="Search presets">
+</div>
+<div class="styles" id="styles"></div>
+<div class="styles is-hidden" id="moods"></div></details><details><summary>Modulation</summary><fieldset><label for="note-routing">Note routing</label><select id="note-routing"><option value="0">Sustained harmony</option><option value="1">Hocket · alternating notes</option><option value="2">Hocket · alternating phrases</option><option value="3">Hocket · seeded scatter</option></select><label for="pitch-rhythm">Pitch / rhythm</label><select id="pitch-rhythm"><option value="0">Original arrangement</option><option value="1">Pitch bag · 3 in 8</option><option value="2">Pitch bag · 5 in 16</option><option value="3">Pitch bag · offbeat</option></select><label for="lfo-morph">LFO morph <output id="lfo-morph-o">35</output></label><input id="lfo-morph" type="range" min="0" max="100" value="35"><label for="lfo-depth">LFO depth <output id="lfo-depth-o">100</output></label><input id="lfo-depth" type="range" min="0" max="100" value="100"><label for="lfo-rate">LFO rate <output id="lfo-rate-o">20</output></label><input id="lfo-rate" type="range" min="0" max="100" value="20"></fieldset></details>
 </details>
-<details><summary>Session &amp; utilities</summary><div class="transport-actions">
+<details id="sampler"><summary>Sampler</summary>
+<div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div>
+</details>
+<details><summary>Session</summary>
+<div class="transport-actions"><button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button><button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">◑</button>
     
     <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
     <button id="record" data-kind="danger" title="Record">Record</button>
@@ -228,16 +223,13 @@ body[data-density=compact] .step{min-height:28px}
     <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
     
     
-  </div></details>
-<details>
-<summary>Terminal</summary>
-<div id="trace-wrap">
+  </div><details><summary>Diagnostics</summary><div id="trace-wrap">
 <aside id="trace" aria-label="Terminal output" role="log" aria-live="polite"></aside><button id="copy-log" type="button">Copy log</button>
 <div class="term-input-row">
 <span class="term-prompt">$</span>
 <input id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="help" aria-label="Terminal command">
 </div>
-</div>
+</div></details>
 </details>
 </main>
 <footer id="meta">rg-69 / init</footer>
@@ -354,7 +346,7 @@ const log=(message,level="i")=>{
 };
 function mirrorConsole(entry){
 log("console "+entry.level+": "+entry.message,entry.level==="error"?"e":entry.level==="warn"?"w":"i");
-if(entry.level==="error"||entry.level==="warn")trace.closest("details").open=true;
+if(entry.level==="error"||entry.level==="warn")for(let panel=trace.closest("details");panel;panel=panel.parentElement.closest("details"))panel.open=true;
 }
 const st=s=>{const node=$id("status");node.textContent=`status: ${s}`;node.dataset.state=s.split(/[ —]/,1)[0].toLowerCase();};
 const tp=(a,t)=>Array.isArray(a)?a:Array(t||16).fill(a);
@@ -2718,7 +2710,7 @@ log("clock0: "+(st_.playing?"running":"stopped")+" tick="+(st_.tick??-1)+" tempo
 if(liveGraph){log("master0: "+(liveGraph.monoBass?"90 Hz low-side reduction":"direct")+" · console strips="+liveGraph.consoleStrips.length);log("signal0: drums="+peakDb(liveGraph.drumMeter)+" master="+peakDb(liveGraph.masterMeter)+" output="+peakDb(analyser)+" gate="+outputGate.gain.value);log("voices0: "+JSON.stringify(st_.playedVoices||{})+" errors="+JSON.stringify(st_.audioErrors||{}));}
 }
 async function testAudio(){
-trace.closest("details").open=true;
+for(let panel=trace.closest("details");panel;panel=panel.parentElement.closest("details"))panel.open=true;
 try{
 await startToneFromGesture();
 const ctx=Tone.getContext().rawContext;
