@@ -379,7 +379,7 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "widener.connect(limiter);"
     assert_includes js, "dryMaster.connect(outputGate);"
     assert_includes js, "wetMaster.connect(outputGate);"
-    assert_includes js, "outputGate.connect(finalLimiter);finalLimiter.connect(ctx.destination);"
+    assert_includes js, "const monoBass=connectBassMono(ctx,outputGate,finalLimiter);finalLimiter.connect(ctx.destination);"
     assert_includes js, "if(masterG)smooth(masterG.gain,mix_.master/100);"
     assert_includes js, "if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);"
     assert_includes js, "if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);"
