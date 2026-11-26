@@ -328,16 +328,674 @@
         "swing": 54,
         "grit": 0.7
       }
+    },
+    {
+      "id": "afterglow",
+      "title": "Afterglow · original 16 bars",
+      "key": "Fm",
+      "bpm": 84,
+      "loop_bars": 16,
+      "bars": 16,
+      "chords": [
+        "Fm9",
+        "Abmaj9/Eb",
+        "Dbmaj9#11",
+        "Cm9",
+        "Bbm9",
+        "Eb13",
+        "Abmaj9",
+        "C7b9b13"
+      ],
+      "chord_bars": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "feel": {
+        "bass": "thumb",
+        "melody": "sweet_soul",
+        "swing": 55.5,
+        "grit": 0.35
+      },
+      "browser_segments": [
+        {
+          "symbol": "Fm9",
+          "bass": "F2",
+          "keys": [
+            "Ab3",
+            "C4",
+            "Eb4",
+            "G4"
+          ],
+          "pads": [
+            "F3",
+            "Ab3",
+            "Eb4",
+            "G4",
+            "C5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Abmaj9/Eb",
+          "bass": "Eb2",
+          "keys": [
+            "Ab3",
+            "C4",
+            "Eb4",
+            "Bb4"
+          ],
+          "pads": [
+            "Eb3",
+            "G3",
+            "C4",
+            "Bb4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Dbmaj9#11",
+          "bass": "Db2",
+          "keys": [
+            "Ab3",
+            "C4",
+            "F4",
+            "G4"
+          ],
+          "pads": [
+            "Db3",
+            "F3",
+            "C4",
+            "G4",
+            "Eb5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Cm9",
+          "bass": "C2",
+          "keys": [
+            "Bb3",
+            "D4",
+            "Eb4",
+            "G4"
+          ],
+          "pads": [
+            "C3",
+            "G3",
+            "Bb3",
+            "D4",
+            "Eb5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Bbm9",
+          "bass": "Bb1",
+          "keys": [
+            "Ab3",
+            "C4",
+            "Db4",
+            "F4"
+          ],
+          "pads": [
+            "Bb3",
+            "F4",
+            "Ab4",
+            "C5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Eb13",
+          "bass": "Eb2",
+          "keys": [
+            "G3",
+            "Db4",
+            "F4",
+            "C5"
+          ],
+          "pads": [
+            "Eb3",
+            "G3",
+            "Db4",
+            "C5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Abmaj9",
+          "bass": "Ab1",
+          "keys": [
+            "G3",
+            "Bb3",
+            "C4",
+            "Eb4"
+          ],
+          "pads": [
+            "Ab3",
+            "C4",
+            "G4",
+            "Bb4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "C7b9b13",
+          "bass": "C2",
+          "keys": [
+            "Bb3",
+            "Db4",
+            "E4",
+            "Ab4"
+          ],
+          "pads": [
+            "C3",
+            "E3",
+            "Bb3",
+            "Db4",
+            "Ab4"
+          ],
+          "steps": 32
+        }
+      ],
+      "provenance": "engine_original; RG-69 authored progression and voicings"
+    },
+    {
+      "id": "astral_journey",
+      "title": "Astral Journey · original 32 bars",
+      "key": "Dm",
+      "bpm": 82,
+      "loop_bars": 32,
+      "bars": 32,
+      "chords": [
+        "Dm9",
+        "G13sus",
+        "Cmaj9",
+        "Fmaj9#11",
+        "Bm7b5",
+        "E7b9",
+        "Am9",
+        "Abmaj7#11",
+        "Gm9",
+        "C13",
+        "Fmaj9",
+        "Fm9",
+        "Em7",
+        "A7b13",
+        "Dm9/F",
+        "A7sus4"
+      ],
+      "chord_bars": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "feel": {
+        "bass": "thumb",
+        "melody": "sweet_soul",
+        "swing": 55.5,
+        "grit": 0.35
+      },
+      "browser_segments": [
+        {
+          "symbol": "Dm9",
+          "bass": "D2",
+          "keys": [
+            "F3",
+            "A3",
+            "C4",
+            "E4"
+          ],
+          "pads": [
+            "D3",
+            "A3",
+            "C4",
+            "E4",
+            "F4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "G13sus",
+          "bass": "G2",
+          "keys": [
+            "F3",
+            "A3",
+            "C4",
+            "E4"
+          ],
+          "pads": [
+            "G3",
+            "C4",
+            "E4",
+            "F4",
+            "A4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Cmaj9",
+          "bass": "C2",
+          "keys": [
+            "E3",
+            "G3",
+            "B3",
+            "D4"
+          ],
+          "pads": [
+            "C3",
+            "G3",
+            "B3",
+            "D4",
+            "E4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Fmaj9#11",
+          "bass": "F2",
+          "keys": [
+            "E3",
+            "G3",
+            "A3",
+            "B3"
+          ],
+          "pads": [
+            "F3",
+            "A3",
+            "C4",
+            "E4",
+            "B4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Bm7b5",
+          "bass": "B1",
+          "keys": [
+            "F3",
+            "A3",
+            "B3",
+            "D4"
+          ],
+          "pads": [
+            "B2",
+            "F3",
+            "A3",
+            "D4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "E7b9",
+          "bass": "E2",
+          "keys": [
+            "G#3",
+            "B3",
+            "D4",
+            "F4"
+          ],
+          "pads": [
+            "E3",
+            "G#3",
+            "D4",
+            "F4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Am9",
+          "bass": "A1",
+          "keys": [
+            "G3",
+            "B3",
+            "C4",
+            "E4"
+          ],
+          "pads": [
+            "A3",
+            "C4",
+            "E4",
+            "G4",
+            "B4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Abmaj7#11",
+          "bass": "Ab1",
+          "keys": [
+            "G3",
+            "C4",
+            "D4",
+            "Eb4"
+          ],
+          "pads": [
+            "Ab3",
+            "C4",
+            "Eb4",
+            "G4",
+            "D5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Gm9",
+          "bass": "G2",
+          "keys": [
+            "F3",
+            "A3",
+            "Bb3",
+            "D4"
+          ],
+          "pads": [
+            "G3",
+            "Bb3",
+            "D4",
+            "F4",
+            "A4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "C13",
+          "bass": "C2",
+          "keys": [
+            "E3",
+            "Bb3",
+            "D4",
+            "A4"
+          ],
+          "pads": [
+            "C3",
+            "E3",
+            "Bb3",
+            "D4",
+            "A4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Fmaj9",
+          "bass": "F2",
+          "keys": [
+            "E3",
+            "G3",
+            "A3",
+            "C4"
+          ],
+          "pads": [
+            "F3",
+            "A3",
+            "C4",
+            "E4",
+            "G4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Fm9",
+          "bass": "F2",
+          "keys": [
+            "Eb3",
+            "G3",
+            "Ab3",
+            "C4"
+          ],
+          "pads": [
+            "F3",
+            "Ab3",
+            "C4",
+            "Eb4",
+            "G4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Em7",
+          "bass": "E2",
+          "keys": [
+            "G3",
+            "B3",
+            "D4",
+            "E4"
+          ],
+          "pads": [
+            "E3",
+            "G3",
+            "B3",
+            "D4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "A7b13",
+          "bass": "A1",
+          "keys": [
+            "G3",
+            "C#4",
+            "E4",
+            "F4"
+          ],
+          "pads": [
+            "A3",
+            "C#4",
+            "G4",
+            "F5"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "Dm9/F",
+          "bass": "F2",
+          "keys": [
+            "F3",
+            "A3",
+            "C4",
+            "E4"
+          ],
+          "pads": [
+            "D3",
+            "F3",
+            "A3",
+            "C4",
+            "E4"
+          ],
+          "steps": 32
+        },
+        {
+          "symbol": "A7sus4",
+          "bass": "A1",
+          "keys": [
+            "G3",
+            "B3",
+            "D4",
+            "E4"
+          ],
+          "pads": [
+            "A3",
+            "D4",
+            "E4",
+            "G4",
+            "B4"
+          ],
+          "steps": 32
+        }
+      ],
+      "provenance": "engine_original; RG-69 authored progression and voicings"
     }
   ],
   "drum_patterns": {
     "comment": "16 steps per bar, step 0 = downbeat. [step, velocity, optional lane]. Ghost notes ride low. Busts and fills are generated from bust_bars.",
     "in_space_measured": {
       "comment": "Measured transcription, not an authored groove: demucs htdemucs drums stem of the in_space canon row (render_evidence/measured_canon.json), 16-slot best-phase grid over 39 bars, velocities = measured onset strengths. The backbeat peaks at slots 2/3 and 10 rather than 4/12 - that drunk placement is what the analyzer measured, phase-locked per its own +/-45 ms window; pair with the in_space groove profile, which carries the +17.7 ms off-8th lateness the flat grid cannot.",
-      "kick": [[2, 0.52], [6, 1.0], [7, 0.63], [10, 0.67], [15, 0.52], [0, 0.26], [3, 0.33], [11, 0.44], [14, 0.33]],
-      "snare": [[2, 0.83], [3, 0.61], [6, 0.83], [10, 1.0], [11, 0.67], [14, 0.61], [15, 0.67]],
-      "ghost": [[1, 0.17], [5, 0.17], [7, 0.17]],
-      "hats": [[0, 0.87], [1, 0.93], [2, 1.0], [3, 0.73], [4, 0.87], [5, 0.87], [6, 0.6], [7, 0.6], [8, 0.87], [9, 0.93], [10, 1.0], [11, 0.73], [12, 0.87], [13, 0.93], [14, 0.87], [15, 0.93]],
+      "kick": [
+        [
+          2,
+          0.52
+        ],
+        [
+          6,
+          1
+        ],
+        [
+          7,
+          0.63
+        ],
+        [
+          10,
+          0.67
+        ],
+        [
+          15,
+          0.52
+        ],
+        [
+          0,
+          0.26
+        ],
+        [
+          3,
+          0.33
+        ],
+        [
+          11,
+          0.44
+        ],
+        [
+          14,
+          0.33
+        ]
+      ],
+      "snare": [
+        [
+          2,
+          0.83
+        ],
+        [
+          3,
+          0.61
+        ],
+        [
+          6,
+          0.83
+        ],
+        [
+          10,
+          1
+        ],
+        [
+          11,
+          0.67
+        ],
+        [
+          14,
+          0.61
+        ],
+        [
+          15,
+          0.67
+        ]
+      ],
+      "ghost": [
+        [
+          1,
+          0.17
+        ],
+        [
+          5,
+          0.17
+        ],
+        [
+          7,
+          0.17
+        ]
+      ],
+      "hats": [
+        [
+          0,
+          0.87
+        ],
+        [
+          1,
+          0.93
+        ],
+        [
+          2,
+          1
+        ],
+        [
+          3,
+          0.73
+        ],
+        [
+          4,
+          0.87
+        ],
+        [
+          5,
+          0.87
+        ],
+        [
+          6,
+          0.6
+        ],
+        [
+          7,
+          0.6
+        ],
+        [
+          8,
+          0.87
+        ],
+        [
+          9,
+          0.93
+        ],
+        [
+          10,
+          1
+        ],
+        [
+          11,
+          0.73
+        ],
+        [
+          12,
+          0.87
+        ],
+        [
+          13,
+          0.93
+        ],
+        [
+          14,
+          0.87
+        ],
+        [
+          15,
+          0.93
+        ]
+      ],
       "bust_bars": 8
     },
     "boom_bap": {
@@ -1369,7 +2027,7 @@
         ],
         [
           5,
-          1.0
+          1
         ],
         [
           9,
@@ -1387,7 +2045,7 @@
       "snare": [
         [
           4,
-          1.0
+          1
         ],
         [
           12,
@@ -1457,12 +2115,30 @@
     "in_space": {
       "comment": "Measured from the in_space canon row: swing position 52.7%, off-8th residual +17.7 ms LATE (slots 2/6/10/14 drag), on-grid share 0.67. The step offsets carry the measured lateness the swing percent cannot express; keep them together.",
       "spread_ms": 10,
-      "nudge": { "kick": 8, "snare": -6, "hat": -4, "ghost": 4 },
+      "nudge": {
+        "kick": 8,
+        "snare": -6,
+        "hat": -4,
+        "ghost": 4
+      },
       "drag_ms": 4,
-      "swing_by_lane": { "kick": 52.7, "snare": 52.7, "hat": 52.7, "ghost": 53 },
+      "swing_by_lane": {
+        "kick": 52.7,
+        "snare": 52.7,
+        "hat": 52.7,
+        "ghost": 53
+      },
       "step_offsets_ms": {
-        "hat": { "2": 18, "6": 18, "10": 18, "14": 18 },
-        "snare": { "2": 18, "10": 18 }
+        "hat": {
+          "2": 18,
+          "6": 18,
+          "10": 18,
+          "14": 18
+        },
+        "snare": {
+          "2": 18,
+          "10": 18
+        }
       }
     },
     "dilla_shadow": {
@@ -1556,6 +2232,36 @@
         "snare": 50,
         "hat": 50,
         "ghost": 50
+      }
+    },
+    "astral_pocket": {
+      "spread_ms": 2,
+      "nudge": {
+        "kick": 0,
+        "snare": 21,
+        "hat": -6,
+        "ghost": 16
+      },
+      "drag_ms": 2,
+      "anticipation": 0,
+      "swing_by_lane": {
+        "kick": 53,
+        "snare": 51,
+        "hat": 56,
+        "ghost": 52
+      },
+      "step_offsets_ms": {
+        "kick": {
+          "6": 10,
+          "10": 12,
+          "13": 11
+        },
+        "snare": {
+          "12": 7
+        },
+        "hat": {
+          "odd": 14
+        }
       }
     }
   },
@@ -2289,8 +2995,7 @@
         "delay_time": "8n"
       }
     }
-  }
-,
+  },
   "composition_forms": {
     "arc": {
       "source": "https://github.com/anon987654321/pub4/commit/d70c1a4fb11bdbc920ce68cec8d553a9f4d2e13e",
@@ -2362,8 +3067,7 @@
         }
       ]
     }
-  }
-,
+  },
   "craft_research": {
     "status": "historical research, not newly verified acoustic measurements",
     "sources": {
