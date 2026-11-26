@@ -1864,12 +1864,12 @@ end
 
 Law.define(:ROBUSTNESS_mutation_requires_explicit_authorization) do
   path %r{(?:^|/)MASTER/(?:lib/cli/|lib/boot/|bin/|tools/owner_registry_tasks)}
-  source "laws.yml ROBUSTNESS_mutation_requires_explicit_authorization - /fix mutations require explicit authorization, mode and scope"
-  ask "Does a mutating /fix repair require an explicit --apply authorization, an explicit requested mode and a named governed repository target before inventory or mutation begins? A bare /fix, startup, retry or plain run instruction is not write consent."
-  practice "Treat a write flag as scoped operator consent, not as the default consequence of invoking a repair command."
-  fix "Refuse mutation until --apply, --mode and a named target are all present; keep the same guard in natural-language routing and compatibility entrypoints."
-  bad "A plain /fix MASTER starts editing because repair is the default mode."
-  good "A plain /fix is read-only; /fix --mode=repair --apply MASTER is the explicit bounded write request."
+  source "laws.yml ROBUSTNESS_mutation_requires_explicit_authorization - /fix mutations require explicit scoped operator consent"
+  ask "Does mutation require an operator-requested named governed target or a separately admitted scoped task? Bare /fix, inferred commands, startup and retry alone are not consent."
+  practice "A direct named repair is write-enabled; preview flags and audit or visual modes always override it."
+  fix "Keep bare and inferred /fix read-only, refuse unscoped --apply, and preserve the same target and proof gates for named repairs and admitted tasks."
+  bad "An inferred /fix MASTER --apply begins editing a target the operator never requested."
+  good "A direct /fix MASTER requests a bounded repair; /fix alone or an inferred /fix previews."
 end
 
 Law.define(:ROBUSTNESS_autonomous_triggers_are_bounded) do

@@ -795,6 +795,23 @@ class TurnRouterTest < Minitest::Test
     assert_same token, captured[:cancellation]
   end
 
+  def test_inferred_fix_cannot_grant_write_authority
+    router = Master::CLI::TurnRouter
+    registry = Master::CLI::CommandRegistry
+    dispatcher = ->(input, **) { input }
+
+    router.stub(:dispatch_slash, dispatcher) do
+      %w[fix all].each do |command|
+        input = router.dispatch_inferred({ command:, args: "MASTER --apply", confidence: 0.99 },
+                                         container: build_container)
+        assert_includes input, "--dry-run"
+        options = registry.send(:fix_dispatch_options, input.delete_prefix("/fix "), nil)
+        assert_nil options[:mode_error]
+        refute registry.writes_requested?(apply: options.fetch(:apply), only: options.fetch(:only))
+      end
+    end
+  end
+
   def test_fold_routing_activates_cooperative_cancellation_before_setup
     token = Master::Core::CancellationToken.new
     Master.stub(:llm_reachable?, false) do

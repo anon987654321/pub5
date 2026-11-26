@@ -352,13 +352,12 @@ module Master
           coverage and two consecutive clean readings after the last mutation.
           Never convert unsupported or unmeasured work into a pass.
 
-          /fix and --dry-run are distinct. Bare /fix is read-only: it may
-          inventory, inspect, critique and preview a repair, but it does not
-          mutate the repository. A write requires the explicit operator
-          authorization `--apply`, an explicit `--mode=repair|elevate|all`,
-          and a named governed repository target. --dry-run and --read-only
-          always override --apply; audit and visual modes remain read-only.
-          Startup, retry and autonomous triggers never imply write consent.
+          A direct named /fix requests a bounded repair of that governed
+          target. Bare and inferred /fix may inspect, critique and preview,
+          never mutate. --apply without a target is refused; --dry-run and
+          --read-only override --apply, and audit and visual remain read-only.
+          Startup and retry never imply consent; autonomous tasks require
+          separate admission of their exact scope and budgets.
           Never promise that literally every defect was repaired. DONE means the
           complete applicable scope met its proof contract. Every exclusion,
           unmeasured surface, unresolved finding and blocker must be named, and

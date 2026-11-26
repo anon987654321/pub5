@@ -341,6 +341,17 @@ class TestPipeline < Minitest::Test
     assert_match(/exact OPENBSD target/, refused_host.fetch(:mode_error))
   end
 
+  def test_unnamed_fix_is_preview_unless_explicit_apply_demands_a_target
+    registry = Master::CLI::CommandRegistry
+
+    ["", "--mode=all", "--trace"].each do |raw|
+      options = registry.send(:fix_dispatch_options, raw, nil)
+      assert_nil options[:mode_error], raw
+      refute registry.writes_requested?(apply: options.fetch(:apply), only: options.fetch(:only)), raw
+    end
+    assert_match(/named repository target/, registry.send(:fix_dispatch_options, "--apply", nil).fetch(:mode_error))
+  end
+
   def test_audit_and_visual_modes_remain_read_only_even_with_apply
     registry = Master::CLI::CommandRegistry
 

@@ -287,7 +287,6 @@ module Master
         host_evidence = raw.to_s.split(/\s+/).any? { |token| token.casecmp?("--host-evidence") }
         # Keep the opt-in flag in raw so CodeWatch's safe re-exec preserves the
         # operator's request. DISPATCH_FLAG removes it from the target path.
-        mode_explicit = raw.to_s.split(/\s+/).any? { |token| MODE_FLAG.match?(token) }
         mode, raw, mode_error = extract_fix_mode(raw)
         return { mode_error: } if mode_error
 
@@ -298,9 +297,10 @@ module Master
           return { mode_error: "--host-evidence requires the exact OPENBSD target; it is never inferred for another tree" }
         end
         if apply == true && fix_stage_selected?(only) && target.to_s.strip.empty?
-          return {
-            mode_error: "mutating /fix requires a named repository target; use --dry-run to preview"
-          }
+          if raw.split.any? { |token| token.casecmp?("--apply") }
+            return { mode_error: "mutating /fix requires a named repository target; use --dry-run to preview" }
+          end
+          apply = false
         end
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
         cancellation.activate! if cancellation&.respond_to?(:activate!)

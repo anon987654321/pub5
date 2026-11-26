@@ -748,8 +748,8 @@ module Master
     end
 
 # Fail-closed fallback for direct/internal Pass callers. The canonical /fix CLI
-# passes apply:true only after explicit --apply, mode and named-target validation.
-# Plain /fix, a greeting, a question or an autonomous trigger remains read-only.
+# passes apply:true only after scoped consent and named-target validation.
+# Bare or inferred /fix, a greeting, a question or an unadmitted trigger is read-only.
 # Do not flip this fallback to true; TurnRouter and CommandRegistry own consent.
 def default_apply?(*) = false
 

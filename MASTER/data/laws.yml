@@ -309,8 +309,9 @@ ROBUSTNESS_bounded_operation_lifecycle:
 ROBUSTNESS_mutation_requires_explicit_authorization:
   parent: ROBUSTNESS
   statement: >
-    A mutating /fix repair runs without an explicit --apply authorization, an
-    explicit requested mode and a named governed repository target.
+    A mutating /fix runs without an operator-requested named governed target
+    or an admitted scoped task; inferred commands, missing targets, read-only
+    flags, audit and visual modes never authorize mutation.
   resolution: never
 
 ROBUSTNESS_autonomous_triggers_are_bounded:

@@ -336,7 +336,7 @@ Report added/removed files and directories in the delivery summary.
 Task routing and minimum proof:
 
 **Repair versus verification commands:**
-- `/fix [path]` is the canonical repair command. Bare `/fix` is a read-only preview: it observes, critiques and proposes repairs but does not mutate. A write requires explicit `--mode=repair|elevate|all --apply` plus a named repository target; `--dry-run` and `--read-only` override `--apply`, and startup/retry/autonomous triggers never imply consent. After explicit authorization, `/fix` repairs, re-observes and runs proof selected for the changed scope: focused affected tests when reliable, otherwise the target tree's registered suite or Rails source/rendered proof. Do not require `bin/check --profile=full` after every /fix.
+- `/fix [path]` is the canonical repair command. A direct named request authorizes bounded repair; bare or inferred `/fix` previews without writing. `--apply` without a target is refused; `--dry-run` and `--read-only` override writes. Startup and retry never imply consent; autonomous tasks require separate scoped admission. After explicit authorization, `/fix` repairs, re-observes and runs proof selected for the changed scope: focused affected tests when reliable, otherwise the target tree's registered suite or Rails source/rendered proof. Do not require `bin/check --profile=full` after every /fix.
 - `MASTER/bin/fix-here TREE` is an optional terminal wrapper around the same `/fix` runtime. It adds disk and parse preflight, provider preflight, a followable per-tree log, stall handling and RAILS app lifecycle. `--dry` checks tree, disk, model and the parse sweep; `--dry-run` runs /fix's read-only preview; `--no-publish` keeps commits local.
 - `MASTER/bin/check` is a separate profile-based verification runner, not a repair command. Its default is `operator`; `ci` is the local CI floor; `full` adds all probes and the full audit and is for broad/release verification, not every repair. `MASTER/bin/ci` is a compatibility entrypoint for `bin/check --profile=ci`.
 - `MASTER/bin/operator check` is the distinct repo-wide `Operator::CheckChain` maintenance ladder. It writes fixes by default; use `--scan-only` when only measuring. It is not an alias for `bin/check`.
@@ -622,17 +622,16 @@ every commit beneath yours, including other people's. Name in your report what
 went with you.
 
 **One verb, explicit modes.** `/fix [path] [--mode=repair|audit|visual|elevate|all]`
-is the only pipeline command. `repair` is the default read-only observe,
-critique, repair-preview, re-observe and verify lifecycle. A mutating run
-requires explicit `--apply`, an explicit `--mode=repair|elevate|all`, and a
-named governed repository target. `audit` is a read-only tree review: first-read, execution trace, non-persisting
+is the only pipeline command. `repair` is the default observe, critique,
+repair, re-observe and verify lifecycle. A direct named request authorizes
+a scoped repair; bare or inferred commands preview. `audit` is a read-only tree review: first-read, execution trace, non-persisting
 backlog review when due, structural review, scanner/structural preview,
 typography and principle map, council critique, and the existing per-tree repo
 sweep probes (RepoEcology without its history cache, SprawlCensus, Cohesion,
 DupCensus, data/law reach, namespace, design baseline and tree-specific checks). Probe exit success is not a Law PASS. Repair is
 replaced by preview; tree, backlog and structural-review proposals are not persisted. `visual` is a read-only style pass; `elevate` selects the
-improvement lane; `all` selects the existing all-work lane but remains read-only without
-explicit authorization. `--dry-run` and `--read-only` always mean no writes
+improvement lane; `all` selects the existing all-work lane. Both require
+a direct named request or separately admitted task to write. `--dry-run` and `--read-only` always mean no writes
 and override `--apply`. Audit and visual cannot be made write-enabled by
 `--apply`. Elevate and all retain the existing resource, file and stall
 budgets and every sacred-path, visual-custody, transaction and restructuring
@@ -643,17 +642,16 @@ The existing compatibility spellings rewrite to `/fix --mode=...`:
 means the read-only repair preview; `/visual` and `/style` mean visual;
 `/elevate` and `/map` mean elevate; `/all`, `/workflow`, `/triad`,
 `/sweep`, `/through` and `/self` mean all.
-Use `/fix --mode=repair|audit|visual|elevate|all` for explicit mode selection. `--read-only` is an explicit no-write alias for `--dry-run`. A write requires `--apply` with an explicit mode and target; `--apply` alone is refused.
+Use `/fix --mode=repair|audit|visual|elevate|all` for explicit mode selection. `--read-only` is an explicit no-write alias for `--dry-run`. Name the governed target for a direct repair; `--apply` alone is refused.
 Use `/fix` in new instructions.
 
 The run footer's file outcome docket names files that entered the repair
 adapter, their Laws, attempts and latest result. It is not a whole-tree census:
 untouched or unmeasured files must not be described as clean.
 
-**A mutating fix changes the tree only after explicit authorization** — past
-runs have broken Dilla and MASTER's own chat path. Plain `/fix` is read-only;
-use `--mode=repair --apply <target>` (or an explicitly selected `elevate` or
-`all` mode) to authorize a scoped write. `--no-autofix`, `--read-only` and
+**A mutating fix changes only the authorized scope** — past runs have
+broken Dilla and MASTER's own chat path. Bare or inferred `/fix` is read-only;
+a direct `/fix <target>` authorizes the scoped repair. `--no-autofix`, `--read-only` and
 `--dry-run` do not authorize writes. Read the printed diff before committing,
 and never commit rewrites of generated caches: the scanner descends into them.
 

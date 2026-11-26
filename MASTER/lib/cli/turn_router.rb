@@ -350,8 +350,10 @@ module Master
         command = inferred[:command].to_s
         args = inferred[:args].to_s
         container[:bus]&.publish("infer:auto", command:, args:, confidence: inferred[:confidence])
-        slash = args.empty? ? "/#{command}" : "/#{command} #{args}"
-        dispatch_slash(rewrite_slash(slash), container:, felt_sense:, on_turn:, cancellation:)
+        slash = rewrite_slash(args.empty? ? "/#{command}" : "/#{command} #{args}")
+        # Inference may select a scope for reading, never grant write consent.
+        slash = "#{slash} --dry-run" if slash.match?(%r{\A/fix(?:\s|\z)}i)
+        dispatch_slash(slash, container:, felt_sense:, on_turn:, cancellation:)
       end
 
       # Core::Fold's constitution requires exec evidence (test_pass, scan_clean,
