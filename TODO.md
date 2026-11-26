@@ -450,4 +450,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 - 2026-11-26: design candidate admission hardened against empty/ambiguous file names, focus-outline removal and invalid zero shadow values; focused tests authored, NOT_RUN.
 - 2026-11-26: direct Git checkout retried in the Ruby 3.3.8 environment; DNS resolution of github.com failed. Connector delivery works. Continue independent source work without claiming runtime proof.
 
+- 2026-11-26: shared-029 cache intake now checks image signatures against the declared MIME type, with mismatched and truncated-header cases. Isolated Ruby signature smoke test: 1 run, 10 assertions, 0 failures; full service and browser acceptance NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

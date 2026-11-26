@@ -175,6 +175,8 @@ def test_the_first_recognised_link_in_prose_or_editor_html_is_found
         assert_nil embed.cached_thumbnail(digest)
         refute embed.cache_thumbnail!(url, fetch: ->(_) { ["bad", "text/html"] })
         refute embed.cache_thumbnail!(url, fetch: ->(_) { ["", "image/jpeg"] })
+        refute embed.cache_thumbnail!(url, fetch: ->(_) { ["<html>not an image</html>", "image/jpeg"] })
+        refute embed.cache_thumbnail!(url, fetch: ->(_) { ["GIF89a", "image/jpeg"] })
         refute embed.cache_thumbnail!("https://example.com/x.jpg", fetch: ->(_) { flunk "unapproved host" })
 
         bytes = "\xFF\xD8\xFF\xE0 fixture".b
@@ -186,6 +188,19 @@ def test_the_first_recognised_link_in_prose_or_editor_html_is_found
         assert_nil embed.cached_thumbnail("../#{digest}")
       end
     end
+  end
+
+  def test_thumbnail_signatures_match_the_declared_image_type
+    {
+      "image/jpeg" => "\xFF\xD8\xFF\xE0 fixture",
+      "image/png" => "\x89PNG\r\n\x1A\n",
+      "image/gif" => "GIF89a",
+      "image/webp" => "RIFF\x04\0\0\0WEBP",
+    }.each do |type, bytes|
+      assert Shared::LinkEmbed.thumbnail_signature?(bytes, type), type
+      refute Shared::LinkEmbed.thumbnail_signature?("<html>", type), type
+    end
+    refute Shared::LinkEmbed.thumbnail_signature?("RIFF", "image/webp")
   end
 
   def test_invalid_and_future_fetch_timestamps_are_due_for_refresh

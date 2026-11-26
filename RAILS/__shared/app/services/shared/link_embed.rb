@@ -261,6 +261,19 @@ module Shared
     # holds the image after the call. A failed fetch is silent: the facade
     # degrades to no image, never to a provider contact on page view, and the
     # next refresh (the job, or the compose preview) tries again.
+    def thumbnail_signature?(body, type)
+      return false unless body.is_a?(String)
+
+      bytes = body.b
+      case type
+      when "image/jpeg" then bytes.start_with?("\xFF\xD8\xFF".b)
+      when "image/png" then bytes.start_with?("\x89PNG\r\n\x1A\n".b)
+      when "image/gif" then bytes.start_with?("GIF87a", "GIF89a")
+      when "image/webp" then bytes.start_with?("RIFF") && bytes.byteslice(8, 4) == "WEBP"
+      else false
+      end
+    end
+
     def cache_thumbnail!(url, fetch: method(:fetch_thumbnail))
       return false unless PROVIDERS.any? { |provider| provider.thumbnail?(url) }
       return true if thumbnail_cached?(url)
@@ -270,7 +283,8 @@ module Shared
 
       body, type = fetched
       extension = THUMBNAIL_TYPES[type]
-      return false unless extension && body.is_a?(String) && !body.empty? && body.bytesize <= THUMBNAIL_MAX_BODY
+      return false unless extension && body.is_a?(String) && body.bytesize <= THUMBNAIL_MAX_BODY
+      return false unless thumbnail_signature?(body, type)
 
       dir = thumbnail_cache_dir
       FileUtils.mkdir_p(dir)
