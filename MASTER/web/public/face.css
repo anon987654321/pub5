@@ -1565,10 +1565,6 @@ body[data-runtime-profile="crt"] #cognition-ecology {
   inset: 0;
   width: 100dvw;
   height: 100dvh;
-  min-width: 100dvw;
-  min-height: 100dvh;
-  max-width: 100dvw;
-  max-height: 100dvh;
   display: block;
   margin: 0;
   touch-action: manipulation;
