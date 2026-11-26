@@ -151,7 +151,7 @@ body[data-density=compact] .step{min-height:28px}
 <div class="sound-strip">
 <label>Style<select id="style-select"><option value="">Custom</option></select></label>
 <label>Harmony<select id="harmony-pat"><option value="">Independent patterns</option></select></label>
-<label>Keys<select id="keys-voice"></select></label>
+<label>Drums<select id="drum-machine"></select></label><label>Keys<select id="keys-voice"></select></label>
 <label>Pads<select id="pads-voice"></select></label>
 <output id="harmony-info" aria-live="polite"></output><output id="root-display" aria-label="Current chord"></output>
 </div>
@@ -178,7 +178,7 @@ body[data-density=compact] .step{min-height:28px}
 
 <label for="crackle">Vinyl crackle <output id="crackle-o">8</output></label><input id="crackle" type="range" min="0" max="100" value="8" title="Crackle">
 </fieldset>
-<fieldset><legend>Dedicated percussion chain</legend><label for="drum-sonitex">Record &amp; sampler wear <output id="drum-sonitex-o">100</output></label><input id="drum-sonitex" type="range" min="0" max="100" value="100"><label for="drum-vcs">Console &amp; phase <output id="drum-vcs-o">100</output></label><input id="drum-vcs" type="range" min="0" max="100" value="100"></fieldset><fieldset><legend>Atmosphere</legend><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset>
+<fieldset><legend>Dedicated percussion chain</legend><label for="drum-recording">Recording character</label><select id="drum-recording"></select><label for="drum-sonitex">Record &amp; sampler wear <output id="drum-sonitex-o">100</output></label><input id="drum-sonitex" type="range" min="0" max="100" value="100"><label for="drum-vcs">Console &amp; phase <output id="drum-vcs-o">100</output></label><input id="drum-vcs" type="range" min="0" max="100" value="100"></fieldset><fieldset><legend>Atmosphere</legend><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset>
 <fieldset><legend>Mix</legend>
 <label for="drum-vol">Drums <output id="drum-vol-o">80</output></label><input id="drum-vol" type="range" min="0" max="100" value="80">
 <label for="bass-vol">Bass <output id="bass-vol-o">70</output></label><input id="bass-vol" type="range" min="0" max="100" value="70">
@@ -421,8 +421,10 @@ return rg69AudioProfile;
 })
 .catch(error=>{console.warn("RG-69 shared Dilla sound profile unavailable; embedded fallback retained:",error);log("shared Dilla sound profile unavailable; using embedded RG-69 patch","w");return rg69AudioProfile;});
 // Independent one-shot percussion sources: no shared oscillator start/stop timeline.
-function createDrumBank(ctx,profile,connect){
-const {tone:t,kit:k,notes:n}=profile,sr=ctx.sampleRate;
+const DRUM_MACHINES={"original":{"name":"RG-69 original","pitch":1,"tail":1,"snare":1,"hat":1,"family":0},"tr808":{"name":"Roland TR-808","pitch":0.85,"tail":1.75,"snare":0.65,"hat":0.85,"family":0},"tr909":{"name":"Roland TR-909","pitch":1.13,"tail":1.1,"snare":1.1,"hat":1.2,"family":1},"tr606":{"name":"Roland TR-606","pitch":1.2,"tail":0.65,"snare":0.8,"hat":1.4,"family":0},"tr707":{"name":"Roland TR-707","pitch":1.1,"tail":0.85,"snare":1.1,"hat":1.05,"family":2},"tr727":{"name":"Roland TR-727","pitch":1.2,"tail":0.5,"snare":0.7,"hat":1.3,"family":2},"tr505":{"name":"Roland TR-505","pitch":1.04,"tail":0.65,"snare":0.9,"hat":1.15,"family":2},"tr626":{"name":"Roland TR-626","pitch":1.1,"tail":0.7,"snare":0.95,"hat":1.25,"family":2},"tr77":{"name":"Roland TR-77","pitch":0.9,"tail":0.6,"snare":0.6,"hat":0.7,"family":0},"cr78":{"name":"Roland CR-78","pitch":0.95,"tail":0.55,"snare":0.65,"hat":0.65,"family":0},"cr8000":{"name":"Roland CR-8000","pitch":0.98,"tail":0.8,"snare":0.75,"hat":0.85,"family":0},"cr5000":{"name":"Roland CR-5000","pitch":1.05,"tail":0.68,"snare":0.78,"hat":0.91,"family":0},"lm1":{"name":"Linn LM-1","pitch":1,"tail":0.9,"snare":1.2,"hat":0.85,"family":2},"linndrum":{"name":"LinnDrum LM-2","pitch":1.08,"tail":1,"snare":1.25,"hat":0.9,"family":2},"linn9000":{"name":"Linn 9000","pitch":1.04,"tail":0.95,"snare":1.1,"hat":1.1,"family":2},"dmx":{"name":"Oberheim DMX","pitch":0.99,"tail":0.8,"snare":1.35,"hat":0.8,"family":2},"dx":{"name":"Oberheim DX","pitch":1.03,"tail":0.75,"snare":1.2,"hat":0.9,"family":2},"drumulator":{"name":"E-mu Drumulator","pitch":0.9,"tail":0.9,"snare":1.15,"hat":0.7,"family":2},"sp12":{"name":"E-mu SP-12","pitch":0.94,"tail":0.85,"snare":1.1,"hat":0.8,"family":2},"sp1200":{"name":"E-mu SP-1200","pitch":0.92,"tail":0.95,"snare":1.3,"hat":0.75,"family":2},"mpc60":{"name":"Akai MPC60","pitch":1.05,"tail":0.9,"snare":1.2,"hat":0.95,"family":2},"s950":{"name":"Akai S950","pitch":0.96,"tail":1.1,"snare":0.95,"hat":0.75,"family":2},"mirage":{"name":"Ensoniq Mirage","pitch":0.94,"tail":0.8,"snare":0.85,"hat":0.65,"family":2},"emulator":{"name":"E-mu Emulator II","pitch":1.02,"tail":0.95,"snare":1,"hat":0.8,"family":2},"s550":{"name":"Roland S-550","pitch":1.07,"tail":0.85,"snare":1.1,"hat":0.95,"family":2},"sk1":{"name":"Casio SK-1","pitch":1.14,"tail":0.55,"snare":0.7,"hat":1.2,"family":2},"rz1":{"name":"Casio RZ-1","pitch":1.1,"tail":0.68,"snare":0.9,"hat":1.3,"family":2},"kr55":{"name":"Korg KR-55","pitch":0.9,"tail":0.7,"snare":0.62,"hat":0.82,"family":0},"kr33":{"name":"Korg KR-33","pitch":0.97,"tail":0.58,"snare":0.65,"hat":0.85,"family":0},"minipops":{"name":"Korg Mini Pops","pitch":1.15,"tail":0.5,"snare":0.55,"hat":0.75,"family":0},"ddm110":{"name":"Korg DDM-110","pitch":1.11,"tail":0.65,"snare":1.1,"hat":1.15,"family":2},"ddm220":{"name":"Korg DDM-220","pitch":1.13,"tail":0.54,"snare":0.85,"hat":1.4,"family":2},"dpm48":{"name":"Korg DPM-48","pitch":1.06,"tail":0.87,"snare":1.13,"hat":1,"family":2},"dr55":{"name":"Boss DR-55","pitch":1.16,"tail":0.6,"snare":0.7,"hat":1.3,"family":0},"dr110":{"name":"Boss DR-110","pitch":1.1,"tail":0.7,"snare":0.8,"hat":1.25,"family":0},"dr220":{"name":"Boss DR-220","pitch":1.05,"tail":0.7,"snare":1.05,"hat":1.12,"family":2},"dr550":{"name":"Boss DR-550","pitch":1.04,"tail":0.95,"snare":1.16,"hat":1.12,"family":2},"rx11":{"name":"Yamaha RX11","pitch":1.04,"tail":0.9,"snare":1.18,"hat":1.15,"family":2},"rx5":{"name":"Yamaha RX5","pitch":1.08,"tail":1.02,"snare":1.26,"hat":1.22,"family":2},"rx21":{"name":"Yamaha RX21","pitch":1.12,"tail":0.68,"snare":1.05,"hat":1.1,"family":2},"ry30":{"name":"Yamaha RY30","pitch":1.1,"tail":1.15,"snare":1.2,"hat":1.28,"family":2},"dd5":{"name":"Yamaha DD-5","pitch":1.15,"tail":0.55,"snare":0.9,"hat":1.2,"family":2},"r50":{"name":"Kawai R-50","pitch":1.05,"tail":0.8,"snare":1.1,"hat":1.05,"family":2},"r100":{"name":"Kawai R-100","pitch":1.08,"tail":0.95,"snare":1.23,"hat":1.13,"family":2},"sr16":{"name":"Alesis SR-16","pitch":1.08,"tail":1.1,"snare":1.2,"hat":1.15,"family":2},"hr16":{"name":"Alesis HR-16","pitch":1.04,"tail":0.98,"snare":1.17,"hat":1.1,"family":2},"machinedrum":{"name":"Elektron Machinedrum","pitch":1.2,"tail":1.2,"snare":1.35,"hat":1.4,"family":1},"rytm":{"name":"Elektron Analog Rytm","pitch":0.91,"tail":1.5,"snare":1.15,"hat":1.05,"family":1},"vermona":{"name":"Vermona DRM1","pitch":0.9,"tail":1.3,"snare":0.9,"hat":0.9,"family":0},"mfb503":{"name":"MFB-503","pitch":0.95,"tail":1.1,"snare":0.85,"hat":1.1,"family":0},"mfb522":{"name":"MFB-522","pitch":0.85,"tail":1.6,"snare":0.78,"hat":0.93,"family":0},"ace1":{"name":"Ace Tone Rhythm Ace","pitch":1.02,"tail":0.5,"snare":0.6,"hat":0.75,"family":0},"ace3":{"name":"Ace Tone FR-3","pitch":1.1,"tail":0.55,"snare":0.64,"hat":0.83,"family":0},"simmons":{"name":"Simmons SDS-V","pitch":0.88,"tail":1.4,"snare":0.95,"hat":0.7,"family":1},"synare":{"name":"Star Instruments Synare","pitch":0.93,"tail":1.3,"snare":0.8,"hat":0.9,"family":1},"pearl":{"name":"Pearl Syncussion","pitch":0.87,"tail":1.3,"snare":0.85,"hat":0.95,"family":1},"drumtraks":{"name":"Sequential DrumTraks","pitch":1.04,"tail":0.9,"snare":1.19,"hat":0.91,"family":2},"tom":{"name":"Sequential TOM","pitch":1.09,"tail":0.83,"snare":1.16,"hat":1.1,"family":2},"studio440":{"name":"Sequential Studio 440","pitch":1.01,"tail":0.94,"snare":1.24,"hat":0.86,"family":2},"sideman":{"name":"Wurlitzer Sideman","pitch":0.9,"tail":0.52,"snare":0.55,"hat":0.62,"family":0},"bontempi":{"name":"Bontempi rhythm","pitch":1.17,"tail":0.46,"snare":0.61,"hat":0.84,"family":0}};
+const validDrumMachine=id=>Object.hasOwn(DRUM_MACHINES,id)?id:"tr808";
+function createDrumBank(ctx,profile,connect,machine="tr808"){
+const {tone:t,kit:k,notes:n}=profile,sr=ctx.sampleRate,model=DRUM_MACHINES[validDrumMachine(machine)];
 const specs={
 kick:[k.kick.decay,t.kick.attack,n.kick,k.kick.level,k.kick.pan],
 kickSub:[k.sub.decay,.001,n.kickSub,k.sub.level,k.kick.pan],
@@ -435,7 +437,7 @@ hat:[k.hat.decay,t.hat.attack,n.hat,k.hat.level,k.hat.pan],
 open:[k.openhat.decay,t.openhat.attack,n.open,k.openhat.level,k.openhat.pan]
 };
 return Object.fromEntries(Object.entries(specs).map(([name,[decay,attack,freq,level,pan]])=>{
-const tail=Math.max(.018,decay),length=tail*1.5+.012,buffer=ctx.createBuffer(1,Math.ceil(sr*length),sr),pcm=buffer.getChannelData(0);
+const tail=Math.max(.018,decay*model.tail),length=tail*1.5+.012,buffer=ctx.createBuffer(1,Math.ceil(sr*length),sr),pcm=buffer.getChannelData(0);
 let phase=0,previous=0,low=0,seed=0x69d111a;
 const metal=[1,1.483,1.932,2.546,2.63,3.897];
 for(let i=0;i<pcm.length;i++){
@@ -446,25 +448,25 @@ low+=(noise-low)*.14;
 const high=noise-previous;previous=noise;
 let value=0;
 if(name==="kick"){
-phase+=2*Math.PI*freq*(1+(t.kick.octaves-1)*Math.exp(-time/Math.max(.005,t.kick.pitch_decay*.22)))/sr;
-value=Math.tanh(1.5*Math.sin(phase))*.85;
+phase+=2*Math.PI*freq*model.pitch*(1+(t.kick.octaves-1)*Math.exp(-time/Math.max(.005,t.kick.pitch_decay*.22)))/sr;
+value=Math.tanh((model.family===1?2.5:1.1)*Math.sin(phase))*.85+(model.family===2?noise*.12*Math.exp(-time*80):0);
 }else if(name==="kickSub"||name==="kickBody"||name==="snareRng"){
 phase+=2*Math.PI*freq/sr;value=name==="kickSub"?Math.sin(phase):2/Math.PI*Math.asin(Math.sin(phase));
 }else if(name==="hat"||name==="open"){
 let sum=0;for(const ratio of metal)sum+=Math.sign(Math.sin(2*Math.PI*freq*ratio*time+2.8*Math.sin(2*Math.PI*freq*ratio*t.hat.harmonicity*time)));
-value=.24*sum+.32*high;
+value=(model.family===2?.13:.24)*sum*model.hat+.32*high/model.hat;
 }else if(name==="clap"){
 const burst=Math.max(...[0,.011,.023].map(offset=>time>=offset?Math.exp(-(time-offset)/.009):0));
 value=(noise-low)*(.25+.75*burst);
-}else if(name==="snare")value=.75*(noise-low)+.25*Math.sin(2*Math.PI*n.snareRing*time);
+}else if(name==="snare")value=.75*(noise-low)*model.snare+.25*Math.sin(2*Math.PI*n.snareRing*time*model.pitch);
 else value=high*.65;
 const envelope=Math.min(1,time/Math.max(.0005,attack))*Math.exp(-time*5.5/tail)*Math.min(1,(length-time)/.008);
-pcm[i]=Math.max(-1,Math.min(1,value*envelope));
+const sample=Math.max(-1,Math.min(1,value*envelope));pcm[i]=model.family===2?Math.round(sample*127)/127:sample;
 }
 const out=ctx.createGain(),panner=ctx.createStereoPanner(),active=new Set();
 out.gain.value=Math.max(.001,Number(level)||1);panner.pan.value=Math.max(-1,Math.min(1,Number(pan)||0));out.connect(panner);
 const voice={
-connect(destination){connect(panner,destination);return voice;},
+connect(destination){connect(panner,destination);return voice;},dispose(){out.disconnect();panner.disconnect();},
 triggerAttackRelease(...args){
 const [pitch,duration,time,velocity]=freq?args:[0,...args];
 const at=Math.max(ctx.currentTime,Number(time)||0),rate=freq?Math.max(.25,Math.min(4,Number(pitch)/freq)):1;
@@ -484,6 +486,11 @@ return [name,voice];
 
 // Bounded polyphonic analogue/electric-piano models. Every note has its
 // own native oscillator and envelope; patch changes never rebuild the mixer.
+function createDrumRouter(ctx,profile,connect,initial){
+const names=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open"],outputs=Object.fromEntries(names.map(name=>[name,ctx.createGain()]));let bank=null,current=null;
+function select(id){id=validDrumMachine(id);if(id===current)return;if(bank)for(const voice of Object.values(bank)){voice.releaseAll(ctx.currentTime);voice.dispose();}bank=createDrumBank(ctx,profile,connect,id);current=id;for(const name of names)bank[name].connect(outputs[name]);}
+select(initial);return Object.fromEntries(names.map(name=>[name,{connect:dest=>connect(outputs[name],dest),triggerAttackRelease:(...args)=>bank[name].triggerAttackRelease(...args),releaseAll:at=>bank[name].releaseAll(at),setMachine:select}]));
+}
 function createPatchVoice(ctx,patch,lane){
 const output=ctx.createGain(),active=new Set(),limit=lane==="p"?20:16;
 output.gain.value=(lane==="p"?.43:.48)*(patch.level||.7);
@@ -507,6 +514,21 @@ osc.connect(amp);amp.connect(dest);sources.push(osc);nodes.push(amp);return {osc
 const type=patch.type,decay=patch.decay||2,attack=patch.attack??(type==="pad"?.4:.005);
 let sustain=.58,release=Math.min(2.4,Math.max(.12,decay*.25));
 switch(type){
+case "vector":{
+const lfo=ctx.createOscillator();lfo.frequency.value=.11+(patch.variant||0)*.09;
+for(const [i,wave] of ["sine","triangle","sawtooth","square"].entries()){const part=oscillator(wave,i===3?.5:1,.16,(i-1.5)*5),depth=gain(i%2?.09:-.09);lfo.connect(depth);depth.connect(part.amp.gain);nodes.push(depth);}sources.push(lfo);sustain=.76;release=2;break;
+}
+case "table":{
+const real=new Float32Array(33),imag=new Float32Array(33);
+for(let i=1;i<=Math.min(32,Math.floor(ctx.sampleRate*.45/freq));i++)imag[i]=Math.sin(i*(patch.variant+1)*.8)/i**(1.2-patch.brightness*.4);
+const part=oscillator("sine",1,.8);part.osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));oscillator("triangle",.5,.16);sustain=.66;release=1.5;break;
+}
+case "ensemble":{
+for(const cents of [-12,-5,4,11]){const part=oscillator("sawtooth",1,.16,cents),lfo=ctx.createOscillator(),depth=gain(3);lfo.frequency.value=.23+Math.abs(cents)*.07;lfo.connect(depth);depth.connect(part.osc.detune);sources.push(lfo);nodes.push(depth);}sustain=.8;release=2.4;break;
+}
+case "formant":{
+for(const [hz,q,level] of [[550,6,.45],[1100,9,.28],[2450,12,.16]]){const formant=ctx.createBiquadFilter();formant.type="bandpass";formant.frequency.value=hz;formant.Q.value=q;formant.connect(filter);nodes.push(formant);oscillator("sawtooth",1,level,0,formant);}sustain=.8;release=1.8;break;
+}
 case "terrain":{
 const variant=patch.variant||0,carrier=oscillator("sine",1,.72),mod=oscillator("sine",variant===1?1.501:variant===2?2:1,.0,0,carrier.osc.frequency);
 mod.amp.gain.value=freq*(variant===1?1.4:.65);
@@ -606,7 +628,7 @@ const p=rg69AudioProfile,t=p.tone,k=p.kit,v=p.voice;
 const keysModulation=t.keys.modulation_index*(v.brightness/t.keys.brightness_reference);
 const bassSub=new Tone.Synth({frequency:t.bass.sub_frequency,oscillator:{type:t.bass.sub_oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:0,release:t.bass.release}});bassSub.volume.value=t.bass.sub_volume_db;
 const instruments={
-...createDrumBank(Tone.getContext().rawContext,p,Tone.connect),
+...createDrumRouter(Tone.getContext().rawContext,p,Tone.connect,patches.drumMachine),
 bass:new Tone.MonoSynth({oscillator:{type:t.bass.oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:t.bass.sustain,release:t.bass.release}}),
 bassSub,
 // Bound fat-oscillator voice count and release to avoid overwhelming browser audio threads.
@@ -794,6 +816,7 @@ Object.assign(PATCH_CATALOGUE,{
 concert_harp:{name:"Concert harp · gut strings",type:"harp",decay:5.8,brightness:.68,level:.88},
 celtic_harp:{name:"Celtic harp · bright strings",type:"harp",variant:1,decay:4.2,brightness:.82,level:.82}
 });
+Object.assign(PATCH_CATALOGUE,{"rhodes_mark_ii":{"name":"Rhodes Mark II","type":"rhodes","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"yamaha_cp_70":{"name":"Yamaha CP-70","type":"harp","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"hohner_clavinet":{"name":"Hohner Clavinet","type":"harp","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"grand_piano":{"name":"Grand piano","type":"harp","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"kora":{"name":"Kora","type":"harp","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.006,"fm_ratio":4,"fm_index":5.5},"qanun":{"name":"Qanun","type":"harp","variant":1,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":5,"fm_index":6.5},"hammered_dulcimer":{"name":"Hammered dulcimer","type":"harp","variant":2,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":6,"fm_index":7.5},"hohner_pianet":{"name":"Hohner Pianet","type":"wurlitzer","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"rmi_electra_piano":{"name":"RMI Electra-piano","type":"organ","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"hammond_b3":{"name":"Hammond B3","type":"organ","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"farfisa":{"name":"Farfisa","type":"organ","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"vox_continental":{"name":"Vox Continental","type":"organ","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.006,"fm_ratio":4,"fm_index":5.5},"arp_odyssey":{"name":"ARP Odyssey","type":"minimoog","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"korg_ms_20":{"name":"Korg MS-20","type":"minimoog","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"roland_tb_303":{"name":"Roland TB-303","type":"minimoog","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"moog_taurus":{"name":"Moog Taurus","type":"minimoog","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.006,"fm_ratio":4,"fm_index":5.5},"roland_sh_101":{"name":"Roland SH-101","type":"juno","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"juno_60":{"name":"Juno-60","type":"juno","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"korg_polysix":{"name":"Korg Polysix","type":"juno","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"sequential_pro_one":{"name":"Sequential Pro-One","type":"prophet","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"prophet_10":{"name":"Prophet-10","type":"prophet","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"jupiter_8":{"name":"Jupiter-8","type":"prophet","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"oberheim_ob_xa":{"name":"Oberheim OB-Xa","type":"prophet","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.006,"fm_ratio":4,"fm_index":5.5},"memorymoog":{"name":"Memorymoog","type":"prophet","variant":1,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":5,"fm_index":6.5},"yamaha_cs_80":{"name":"Yamaha CS-80","type":"vector","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.45,"fm_ratio":1,"fm_index":2.5},"roland_d_50":{"name":"Roland D-50","type":"vector","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.45,"fm_ratio":2,"fm_index":3.5},"korg_wavestation":{"name":"Korg Wavestation","type":"vector","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.45,"fm_ratio":3,"fm_index":4.5},"yamaha_dx7":{"name":"Yamaha DX7","type":"fm","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"yamaha_tx81z":{"name":"Yamaha TX81Z","type":"fm","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"korg_m1":{"name":"Korg M1","type":"modal","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"celesta":{"name":"Celesta","type":"modal","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"vibraphone":{"name":"Vibraphone","type":"modal","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"marimba":{"name":"Marimba","type":"modal","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.006,"fm_ratio":4,"fm_index":5.5},"kalimba":{"name":"Kalimba","type":"modal","variant":1,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":5,"fm_index":6.5},"ppg_wave_2_2":{"name":"PPG Wave 2.2","type":"table","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.006,"fm_ratio":1,"fm_index":2.5},"ensoniq_sq_80":{"name":"Ensoniq SQ-80","type":"table","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.006,"fm_ratio":2,"fm_index":3.5},"kawai_k3":{"name":"Kawai K3","type":"table","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.006,"fm_ratio":3,"fm_index":4.5},"fairlight_cmi":{"name":"Fairlight CMI","type":"table","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.006,"fm_ratio":4,"fm_index":5.5},"mellotron_m400":{"name":"Mellotron M400","type":"ensemble","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.45,"fm_ratio":1,"fm_index":2.5},"chamberlin":{"name":"Chamberlin","type":"ensemble","variant":1,"brightness":0.54,"decay":3,"level":0.72,"attack":0.45,"fm_ratio":2,"fm_index":3.5},"solina_string_ensemble":{"name":"Solina String Ensemble","type":"ensemble","variant":2,"brightness":0.6599999999999999,"decay":3.9000000000000004,"level":0.72,"attack":0.45,"fm_ratio":3,"fm_index":4.5},"bowed_strings":{"name":"Bowed strings","type":"ensemble","variant":0,"brightness":0.78,"decay":4.800000000000001,"level":0.72,"attack":0.45,"fm_ratio":4,"fm_index":5.5},"roland_vp_330":{"name":"Roland VP-330","type":"formant","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.45,"fm_ratio":1,"fm_index":2.5},"glass_harmonica":{"name":"Glass harmonica","type":"freeze","variant":0,"brightness":0.42,"decay":2.1,"level":0.72,"attack":0.45,"fm_ratio":1,"fm_index":2.5}});
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
@@ -874,10 +897,10 @@ return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass
 });
 const bootStyle=bootStyleCandidates.find(style=>style.n==="Neo-Soul")||bootStyleCandidates.find(style=>style.n==="Dusty")||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
-const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,drumSonitex:100,drumVcs:100,tape:100,wobble:100,vinyl:100,crackle:100};
+const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,drumRecording:0,drumSonitex:100,drumVcs:100,tape:100,wobble:100,vinyl:100,crackle:100};
 let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,labSpace:0,labMorph:0,labChaos:0,labGrain:0,labNotch:0,labFreeze:0,labSpatial:0,labAdaptive:0,labDenoise:0,drift:0.05};
 let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
-let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106'};
+let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106',drumMachine:'tr808'};
 let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
@@ -962,8 +985,8 @@ function restoreSession(data){
 if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))throw Error("Unsupported session");
 const pat=data.pat||data.pat_,aud=data.aud||data.aud_,mix=data.mix||data.mix_;
 for(const [key,table] of Object.entries(PATTERN_TABLES))if(pat&&Object.hasOwn(table,pat[key]))pat_[key]=pat[key];
-if(pat){pat_.keysVoice=validPatch(pat.keysVoice);pat_.padsVoice=validPatch(pat.padsVoice);}
-for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:key==="ambience"?9:["noteRouting","pitchRhythm"].includes(key)?3:100,aud_[key]);
+if(pat){pat_.keysVoice=validPatch(pat.keysVoice);pat_.padsVoice=validPatch(pat.padsVoice);pat_.drumMachine=validDrumMachine(pat.drumMachine);}
+for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:key==="ambience"?9:key==="drumRecording"?DRUM_RECORDINGS.length-1:["noteRouting","pitchRhythm"].includes(key)?3:100,aud_[key]);
 for(const key of Object.keys(mix_))if(mix&&Object.hasOwn(mix,key))mix_[key]=clamp(mix[key],0,100,mix_[key]);
 for(const [key,pattern] of Object.entries(JSON.parse(ORIGINAL_DRUMS))){
 const incoming=data.drums&&Object.hasOwn(data.drums,key)?data.drums[key]:null;
@@ -1055,6 +1078,7 @@ $id("song-mode").textContent=st_.song?"Song":"Loop";
 $id("song-mode").setAttribute("aria-pressed",String(!!st_.song));
 }
 function syncUIFromState(){
+$id("drum-recording").value=String(Math.round(aud_.drumRecording));
 for(const [id,key] of [["lab-freeze","labFreeze"],["lab-spatial","labSpatial"],["lab-adaptive","labAdaptive"],["lab-denoise","labDenoise"]]){$id(id).value=aud_[key];$id(id+"-o").textContent=Math.round(aud_[key]);}
 for(const [id,key] of [["lab-space","labSpace"],["lab-morph","labMorph"],["lab-chaos","labChaos"],["lab-grain","labGrain"],["lab-notch","labNotch"]]){$id(id).value=aud_[key];$id(id+"-o").textContent=Math.round(aud_[key]);}
 for(const [id,key] of [["drum-sonitex","drumSonitex"],["drum-vcs","drumVcs"]]){ $id(id).value=aud_[key];$id(id+"-o").textContent=Math.round(aud_[key]);}
@@ -1089,7 +1113,7 @@ $id('bass-pat').value=pat_.b;
 $id('keys-pat').value=pat_.k;
 $id('pads-pat').value=pat_.p;
 $id('keys-voice').value=validPatch(pat_.keysVoice);$id('pads-voice').value=validPatch(pat_.padsVoice);
-keysN?.setPatch(pat_.keysVoice);padsN?.setPatch(pat_.padsVoice);
+keysN?.setPatch(pat_.keysVoice);padsN?.setPatch(pat_.padsVoice);$id("drum-machine").value=validDrumMachine(pat_.drumMachine);kickN?.setMachine(pat_.drumMachine);
 updateRootDisplay();
 applyFX();
 highlightActiveChip();
@@ -1157,6 +1181,7 @@ smooth(playback.frequency,18000-(musical?7500:4500)*wear);
 }
 
 // Drum-only record wear followed by a phase-colouring console strip.
+const DRUM_RECORDINGS=[["Valve tape",11,9500,1.4,1],["Clean",16,18000,1,0],["Super analog",15,14500,1.3,0.2],["Vinyl acetate",12,10500,1.35,1.4],["SP-1200",12,10500,1.18,0.45],["MPC60",12,15000,1.15,0.3],["S950",12,12500,1.1,0.4],["EPROM grit",8,6500,1.25,0.5],["Pedal overdrive",14,7500,1.8,0.3],["Cassette",12,6800,1.4,1.2],["Thermionic",15,12000,1.65,0.4],["Solid state",16,16000,1.15,0.15],["Modular",14,14000,1.3,0.2],["Dirt and layers",10,7500,1.5,1.6],["Lo-fi sampler",8,5000,1.1,0.65],["Half-inch tape",14,12000,1.25,0.7],["Two-inch tape",15,14500,1.22,0.4],["Reel 7.5 IPS",13,8500,1.3,0.9],["Reel 15 IPS",14,12000,1.23,0.65],["Reel 30 IPS",15,15500,1.18,0.3],["Shellac",10,4500,1.35,1.8],["Radio broadcast",12,5800,1.4,0.8]];
 function createDrumColor(ctx,source){
 const gain=value=>{const n=ctx.createGain();n.gain.value=value;return n;};
 const filter=(type,hz,q=.707)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;n.Q.value=q;return n;};
@@ -1173,8 +1198,9 @@ let seed=0x126069,previous=0,slow=0,click=0,lastBits=-1,amount=0;
 for(let i=0;i<length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const white=seed/2147483648-1;slow+=(white-slow)*.025;if((seed&1023)===0)click=white*.8;click*=.86;samples[i]=(.16*(white-previous)+.4*slow+click)*Math.exp(-i/(ctx.sampleRate*.045));previous=white;}
 return {output,update(aud){
 amount=Math.max(0,Math.min(1,(aud.drumSonitex??100)/100));const color=Math.max(0,Math.min(1,(aud.drumVcs??100)/100));
-const bits=16-Math.round(5*amount);if(bits!==lastBits){const levels=2**(bits-1);quant.curve=Float32Array.from({length:8193},(_,i)=>Math.round((i/4096-1)*levels)/levels);lastBits=bits;}
-smooth(dry.gain,1-.72*amount);smooth(wet.gain,.72*amount);smooth(pre.gain,1+.42*amount);smooth(shelf.gain,2*amount);smooth(band.frequency,18000-6500*amount);smooth(playback.frequency,16000-7200*amount);smooth(noise.gain,.15*amount);
+const [,targetBits,cutoff,boost,dustLevel]=DRUM_RECORDINGS[Math.round(aud.drumRecording??0)]||DRUM_RECORDINGS[0];
+const bits=16-Math.round((16-targetBits)*amount);if(bits!==lastBits){const levels=2**(bits-1);quant.curve=Float32Array.from({length:8193},(_,i)=>Math.round((i/4096-1)*levels)/levels);lastBits=bits;}
+smooth(dry.gain,1-.72*amount);smooth(wet.gain,.72*amount);smooth(pre.gain,1+(boost-1)*amount);smooth(shelf.gain,2*amount);smooth(band.frequency,18000-(18000-cutoff)*amount);smooth(playback.frequency,18000-(18000-cutoff)*amount);smooth(noise.gain,.15*amount*dustLevel);
 smooth(clean.gain,1-.8*color);smooth(colored.gain,.8*color);smooth(phase1.frequency,90+70*color);smooth(phase2.frequency,700+480*color);smooth(low.gain,2.2*color);smooth(mid.gain,-1.6*color);smooth(high.gain,-1.8*color);smooth(drive.gain,1+.32*color);smooth(comp.threshold,-12-4*color);smooth(comp.ratio,1+1.3*color);smooth(comp.release,Math.min(.32,20/aud.bpm));smooth(trim.gain,1+.1*color);
 },hit(at,velocity){
 if(amount<=0)return;const src=ctx.createBufferSource(),level=gain(Math.min(1,velocity)*.36);src.buffer=dust;src.connect(level);level.connect(noise);src.onended=()=>{src.disconnect();level.disconnect();};src.start(Math.max(ctx.currentTime,at));
@@ -2320,6 +2346,7 @@ $id("panic").addEventListener("click",()=>stop());
 }
 function buildSampler(){
 buildDreamShield();
+const recordingSelect=$id("drum-recording");DRUM_RECORDINGS.forEach(([name],i)=>{const option=document.createElement("option");option.value=String(i);option.textContent=name;recordingSelect.append(option);});recordingSelect.addEventListener("change",()=>{pushHistory();aud_.drumRecording=Number(recordingSelect.value);applyFX();saveSession();});
 for(const [id,key] of [["lab-freeze","labFreeze"],["lab-spatial","labSpatial"],["lab-adaptive","labAdaptive"],["lab-denoise","labDenoise"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 for(const [id,key] of [["lab-space","labSpace"],["lab-morph","labMorph"],["lab-chaos","labChaos"],["lab-grain","labGrain"],["lab-notch","labNotch"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 for(const [id,key] of [["drum-sonitex","drumSonitex"],["drum-vcs","drumVcs"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
@@ -2404,6 +2431,7 @@ catch(error){log("MIDI export: "+error.message,"e");}
 
 function buildUI(){
 buildSampler();
+const drumSelect=$id("drum-machine");for(const [id,model] of Object.entries(DRUM_MACHINES)){const option=document.createElement("option");option.value=id;option.textContent=model.name;drumSelect.append(option);}drumSelect.addEventListener("change",()=>{pushHistory();pat_.drumMachine=validDrumMachine(drumSelect.value);syncUIFromState();saveSession();});
 const sel_d=$id('drum-pat'),sel_b=$id('bass-pat'),sel_k=$id('keys-pat'),sel_p=$id('pads-pat');
 for(const [id,key] of [["keys-voice","keysVoice"],["pads-voice","padsVoice"]]){
 const select=$id(id);
