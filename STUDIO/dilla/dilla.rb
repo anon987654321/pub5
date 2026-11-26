@@ -162,6 +162,11 @@ module Dilla
       opts.mode = :audit
       args.shift
       opts.source = args.shift or abort "audit: provide the rendered WAV path"
+    when "battle"
+      opts.mode = :battle
+      args.shift
+      opts.extra["paths"] = args.dup
+      args.clear
     when "compare"
       opts.mode = :compare
       args.shift
@@ -272,6 +277,7 @@ module Dilla
         ruby dilla.rb output-path reference-root
       ruby dilla.rb audit PATH.wav              verify sidecars, WAV structure and checksums
       ruby dilla.rb compare TAKE.wav TAKE2.wav  compare verified take evidence, no edits
+      ruby dilla.rb battle dilla.wav rg69.wav  compare actual PCM, await blind listening
       ruby dilla.rb review TAKE.wav --decision approve|reject --sha256 HASH
                                                  explicitly record operator listening decision
       ruby dilla.rb reproduce TAKE.provenance.json --out replay.wav
@@ -298,6 +304,7 @@ module Dilla
     when :output_path then output_path(opts)
     when :audit then puts JSON.pretty_generate(audit_render(opts.source, overwrite: opts.overwrite))
     when :compare then puts JSON.pretty_generate(compare_takes(opts.extra.fetch("paths")))
+    when :battle then puts JSON.pretty_generate(compare_engine_audio(opts.extra.fetch("paths")))
     when :review
       puts JSON.pretty_generate(record_listening_review(opts.source, decision: opts.extra["decision"], sha256: opts.extra["sha256"]))
     when :reproduce
@@ -325,6 +332,7 @@ module Dilla
         form == "unchanged" ? [] : CompositionForm.new(form, bars:).plan
       end,
       "compare_takes" => ->(request) { compare_takes(request.fetch("paths")) },
+      "compare_engine_audio" => ->(request) { compare_engine_audio(request.fetch("paths")) },
       "render" => lambda do |request|
         opts = parse_cli(Array(request["args"]).map(&:to_s))
         raise ArgumentError, "listening decisions require the explicit operator CLI" if opts.mode == :review
@@ -600,13 +608,16 @@ module Dilla
       return ["7alt", [], bass] if rest == "7alt"
 
       modifiers = []
-      rest = rest.sub(/(b5|#5|b9|#9|#11|b13)\z/) { modifiers << Regexp.last_match(1); "" }
+      while rest.match?(/(b5|#5|b9|#9|#11|b13)\z/)
+        rest = rest.sub(/(b5|#5|b9|#9|#11|b13)\z/) { modifiers.unshift(Regexp.last_match(1)); "" }
+      end
       quality = case rest
                 when "", "maj", "M" then "maj"
                 when "m", "min", "-" then "m"
                 when "mMaj", "mM" then "mMaj7"
                 when "mMaj7", "mM9" then rest == "mM9" ? "mMaj9" : "mMaj7"
                 when "mMaj9", "mmaj9" then "mMaj9"
+                when "13sus" then "7sus4"
                 else rest
                 end
       [quality, modifiers, bass]
@@ -1004,7 +1015,7 @@ module Dilla
     private
 
     def flat_events(bar_count)
-      loop_bars = [@progress["loop_bars"].to_i.clamp(1, 8), bar_count].min
+      loop_bars = [@progress["loop_bars"].to_i.clamp(1, 128), bar_count].min
       chord_plan = build_chord_plan(loop_bars, bar_count)
       drum_events = build_drums(bar_count, loop_bars)
       melodic = build_melodic(chord_plan, loop_bars, bar_count)
@@ -3189,6 +3200,44 @@ module Dilla
       "reviewed_sha256" => provenance.dig("human_acceptance", "sha256") }
   rescue JSON::ParserError => error
     raise ArgumentError, "invalid take receipt: #{error.message}"
+  end
+
+  # Cross-engine evidence is measured from the same PCM format, not from
+  # self-reported render metrics. This does not weaken the strict receipt audit.
+  def compare_engine_audio(paths)
+    raise ArgumentError, "battle needs two to eight WAVs" unless paths.is_a?(Array) && paths.length.between?(2, 8)
+    takes = paths.map do |path|
+      wav = File.expand_path(path.to_s)
+      raise ArgumentError, "unsafe or oversized WAV" unless File.file?(wav) && !File.symlink?(wav) && File.size(wav) <= 512 * 1024 * 1024
+      info = audit_wav_file(wav)
+      raise ArgumentError, "battle expects 16-bit mono/stereo PCM" unless info["bits_per_sample"] == 16 && [1, 2].include?(info["channels"]) && info["block_align"] == info["channels"] * 2 && info["sample_rate"].positive? && info["byte_rate"] == info["sample_rate"] * info["block_align"]
+      peak = energy = count = clipped = 0
+      digest = Digest::SHA256.new
+      File.open(wav, "rb") do |file|
+        digest.update(file.read(44))
+        while (chunk = file.read(65_536))
+          digest.update(chunk)
+          chunk.unpack("s<*").each do |sample|
+            peak = [peak, sample.abs].max
+            energy += sample * sample
+            count += 1
+            clipped += 1 if sample == -32_768 || sample == 32_767
+          end
+        end
+      end
+      raise ArgumentError, "empty PCM" if count.zero?
+      db = ->(v) { (20 * Math.log10([v, 1e-9].max)).round(2) }
+      rms = Math.sqrt(energy.to_f / count) / 32_768
+      { "path" => wav, "sha256" => digest.hexdigest, "duration_s" => info["duration_s"],
+        "sample_rate" => info["sample_rate"], "peak_dbfs" => db.call(peak / 32_768.0),
+        "rms_dbfs" => db.call(rms), "crest_db" => db.call(peak / 32_768.0 / [rms, 1e-9].max),
+        "full_scale_samples" => clipped, "silent" => peak.zero? }
+    end
+    target = takes.reject { |take| take["silent"] }.map { |take| take["rms_dbfs"] }.min
+    takes.each { |take| take["suggested_playback_gain_db"] = (target - take["rms_dbfs"]).round(2) if target && !take["silent"] }
+    { "takes" => takes, "selection" => "AWAITING_OPERATOR", "level_basis" => "PCM RMS, not LUFS",
+      "criteria" => { "emotion" => 25, "groove" => 20, "harmony" => 20, "timbre" => 15, "arrangement" => 10, "mix" => 10 },
+      "note" => "No audio altered or auditioned; filenames and engine identity must be hidden during listening." }
   end
 
   def compare_takes(paths)
