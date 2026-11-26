@@ -1383,7 +1383,7 @@ const update=(aud,mix)=>{
 const tape=Math.max(0,Math.min(1,aud.tape/100)),wobble=Math.max(0,Math.min(1,aud.wobble/100)),vinyl=Math.max(0,Math.min(1,aud.vinyl/100)),crackle=Math.max(0,Math.min(1,aud.crackle/100));
 latest=aud;latestMix=mix;
 const motion=(aud.motion??32)/100;
-const wet=Math.max(.95*tape,.68*wobble);
+const wet=Math.max(.32*tape,.24*wobble);
 // Sampler resolution is handled by the recording stages.
 smooth(dryMaster.gain,1-wet);smooth(wetMaster.gain,0);
 smooth(returnGain.gain,wet);
@@ -1565,7 +1565,7 @@ const gain=v=>{const n=ctx.createGain();n.gain.value=v;return n;};
 const filter=(type,hz)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;return n;};
 const dry=gain(1),wet=gain(0),input=gain(1),trim=gain(1),triode=ctx.createWaveShaper(),pentode=ctx.createWaveShaper(),magnetic=ctx.createWaveShaper(),pre=filter("highshelf",3200),post=filter("highshelf",3200),dc=filter("highpass",12);
 // Mastering has only three shapers; prioritize alias rejection here.
-for(const n of [triode,pentode,magnetic])n.oversample=ctx.sampleRate<=48000?"4x":"2x";
+for(const n of [triode,pentode,magnetic])n.oversample=httpPage&&ctx.sampleRate<=48000?"4x":"2x";
 source.connect(dry);dry.connect(destination);source.connect(input);input.connect(triode);triode.connect(pentode);pentode.connect(pre);pre.connect(magnetic);magnetic.connect(post);post.connect(dc);dc.connect(trim);trim.connect(wet);wet.connect(destination);
 let last=-1,compensation=1;
 function update(settings){
@@ -1639,6 +1639,8 @@ warm.type="lowshelf";warm.frequency.value=125;warm.gain.value=.8;
 matte.type="highshelf";matte.frequency.value=7800;matte.gain.value=-1.6;
 updateMasterGlue(glue,aud);
 const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);const glueOut=ctx.createGain(),programmeGlue=createProgrammeGlue(ctx,hfRestore,glueOut,glue,aud);const masterColor=createMasterColor(ctx,glueOut,finalDynamics,aud);finalLimiter.connect(ctx.destination);
+// Local playback keeps an independent, bounded clean monitor path around the expensive master effects.
+const monitor=new Tone.Gain(httpPage?0:.65),monitorGate=new Tone.Gain(offline?1:0);masterG.connect(monitor);monitor.connect(monitorGate);Tone.connect(monitorGate,ceiling);
 revSend.connect(rev);
 dlySend.connect(dly);
 const roomTone=new Tone.Filter(5400,"lowpass");rev.connect(roomTone);roomTone.connect(masterG);
@@ -1719,7 +1721,7 @@ tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready,programmeGlue.ready,...recordingStages.map(stage=>stage.ready)]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,programmeGlue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,monitorGate,glue,programmeGlue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -2215,7 +2217,7 @@ st_.exporting=true;
 let context=null,resume=false;
 try{
 context=Tone.getContext();
-resume=st_.playing;if(resume){pauseClock();outputGate.gain.rampTo(0,.015);}
+resume=st_.playing;if(resume){pauseClock();outputGate.gain.rampTo(0,.015);liveGraph?.monitorGate.gain.rampTo(0,.015);}
 $id('export').disabled=true;
 rg69AudioProfileLocked=true;
 const take=session(),aud_=take.aud,mix_=take.mix,sampleTake=sampleAudio;
@@ -2563,7 +2565,7 @@ update();
 for(const [label,voice] of [["Kick","kick"],["Snare","snare"],["Clap","clap"],["Hat","hat"],["Open","open"]]){
 const button=document.createElement("button");button.type="button";button.textContent=label;button.addEventListener("click",async()=>{
 try{if(st_.exporting||st_.offlineRendering)return;const activation=startToneFromGesture();if(!st_.started){if(!st_.booting)st_.booting=initAudio(activation).then(()=>{st_.started=true;});try{await st_.booting;}finally{st_.booting=null;}}else await activation;
-const at=audioTime()+.015,pitch=rg69AudioProfile.notes[voice],synth=liveGraph.instruments[voice];outputGate.gain.setValueAtTime(1,audioTime());if(["snare","clap"].includes(voice))synth.triggerAttackRelease(.14,at,.8);else synth.triggerAttackRelease(pitch,.14,at,.8);liveGraph.drumColor.hit(at,.8);
+const at=audioTime()+.015,pitch=rg69AudioProfile.notes[voice],synth=liveGraph.instruments[voice];outputGate.gain.setValueAtTime(1,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(1,audioTime());if(["snare","clap"].includes(voice))synth.triggerAttackRelease(.14,at,.8);else synth.triggerAttackRelease(pitch,.14,at,.8);liveGraph.drumColor.hit(at,.8);
 }catch(error){log("pad: "+error.message,"e");showView("song");}
 });$id("drum-pads").append(button);
 }
@@ -2970,7 +2972,7 @@ await (activationPromise||Tone.start());
 }
 claimOwner();if(!st_.heartbeat)st_.heartbeat=setInterval(keepOwner,1800);
 st_.playing=true;
-outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());
+outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(1,audioTime());
 $id('play').setAttribute('aria-pressed','true');
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
 startClock();
@@ -3011,7 +3013,7 @@ $id('play').addEventListener('click',async()=>{
     }
   } else {
     pauseClock();
-    outputGate.gain.rampTo(0,.015);
+    outputGate.gain.rampTo(0,.015);liveGraph?.monitorGate.gain.rampTo(0,.015);
     st("paused");
     playButton.textContent = "▶ Play";
     playButton.setAttribute("aria-pressed", "false");
@@ -3032,7 +3034,7 @@ $id('song-mode').addEventListener('click',()=>{pushHistory();st_.song=!st_.song;
 $id('stop').addEventListener('click',()=>{
 st_.playing=false;
 clearInterval(st_.heartbeat);st_.heartbeat=null;releaseOwner();
-pauseClock();if(st_.started)outputGate.gain.rampTo(0,.015);
+pauseClock();if(st_.started)outputGate.gain.rampTo(0,.015);liveGraph?.monitorGate.gain.rampTo(0,.015);
 st_.idx=-1;st_.visualIdx=-1;
 st_.barCount=0;st_.tick=-1;st_.songEndAt=null;showSongPosition();
 const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
@@ -3067,14 +3069,14 @@ tone.frequency.value=440;gain.gain.setValueAtTime(0,at);gain.gain.linearRampToVa
 tone.connect(gain);gain.connect(ctx.destination);tone.onended=()=>{tone.disconnect();gain.disconnect();};tone.start(at);tone.stop(at+.24);
 if(!st_.started){await initAudio(Promise.resolve());st_.started=true;}
 const wasPlaying=st_.playing;
-if(!wasPlaying){outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());}
+if(!wasPlaying){outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(1,audioTime());}
 const base=audioTime()+.35;
 for(let i=0;i<4;i++){
 liveGraph.instruments.kick.triggerAttackRelease(rg69AudioProfile.notes.kick,.15,base+i*.2,.9);
 liveGraph.instruments.hat.triggerAttackRelease(rg69AudioProfile.notes.hat,.05,base+i*.2,.8);
 }
 setTimeout(()=>logAudioState(),480);
-setTimeout(()=>{if(!st_.playing&&st_.started)outputGate.gain.setValueAtTime(0,audioTime());},1500);
+setTimeout(()=>{if(!st_.playing&&st_.started){outputGate.gain.setValueAtTime(0,audioTime());liveGraph?.monitorGate.gain.setValueAtTime(0,audioTime());}},1500);
 }catch(error){console.error("audio test:",error);}
 }
 $id('audio-test').addEventListener('click',testAudio);
@@ -3126,7 +3128,7 @@ clearInterval(st_.heartbeat);st_.heartbeat=null;
 cancelAnimationFrame(st_.rafId);
 st_.rafId=null;
 releaseOwner();
-pauseClock();if(st_.started)outputGate.gain.rampTo(0,.005);
+pauseClock();if(st_.started)outputGate.gain.rampTo(0,.005);liveGraph?.monitorGate.gain.rampTo(0,.005);
 [kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN].forEach(s=>{
 s?.releaseAll?.(Tone.now());
 });
