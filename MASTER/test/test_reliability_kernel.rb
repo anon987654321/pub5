@@ -23,22 +23,33 @@ class TestReliabilityKernel < Minitest::Test
   end
 
   def test_fix_journal_records_and_resumes_an_interrupted_run
+    with_resumed_run do |first, resumed, root|
+      assert_equal first["id"], resumed["id"]
+      assert resumed["resumed"]
+      assert_equal 2, Master::Fix::RunJournal.new(root:).next_pass(resumed)
+      assert_equal 1, resumed["resume_count"]
+      assert_resumed_process_ownership(resumed, root)
+    end
+  end
+
+  def with_resumed_run
     Dir.mktmpdir("master-reliability") do |root|
       journal = Master::Fix::RunJournal.new(root:)
       first = journal.start_or_resume(target: root, files: [File.join(root, "a.rb")],
                                       max_passes: 15, budget_seconds: 60)
       journal.pass_start(first["id"], 1, transaction_id: "test-pass")
       journal.pass_finish(first["id"], 1, status: :continue, message: "still fixing")
-
       resumed = Master::Fix::RunJournal.new(root:).start_or_resume(
         target: root, files: [File.join(root, "a.rb")], max_passes: 15, budget_seconds: 60,
       )
-
-      assert_equal first["id"], resumed["id"]
-      assert resumed["resumed"]
-      assert_equal 2, Master::Fix::RunJournal.new(root:).next_pass(resumed)
-      assert_equal 1, resumed["resume_count"]
+      yield first, resumed, root
     end
+  end
+
+  def assert_resumed_process_ownership(resumed, root)
+    assert_equal Process.pid, resumed["pid"]
+    assert_equal Master::Fix::RunJournal.instance_id, resumed["process_token"]
+    assert_equal resumed["pid"], Master::Fix::RunJournal.new(root:).history.last["pid"]
   end
 
   def test_fix_journal_replays_an_active_pass_after_crash

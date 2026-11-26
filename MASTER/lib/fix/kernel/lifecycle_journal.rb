@@ -187,8 +187,8 @@ module Master
           previous_state = active["state"]
           active["state"] = "active"
           active["resumed_from"] = previous_state unless previous_state == "active"
-          active["resumed_at"] = Time.now.utc.iso8601
           active["resume_count"] = active.fetch("resume_count", 0).to_i + 1
+          claim_resumed_run!(active)
           remaining = remaining_for(active)
           persist(data)
           emit("fix:resume", run_id: active["id"], pass: next_pass(active),
@@ -203,6 +203,18 @@ module Master
           persist(data)
           emit("fix:start", run_id: run["id"], target: run["target"])
           run.merge("resumed" => false, "remaining_seconds" => Integer(budget_seconds).to_f)
+        end
+
+        # A resumed receipt belongs to this process, not the dead writer that
+        # created it. Keeping the former PID makes a healthy recovery look
+        # interrupted to /fix status and can cause a later invocation to
+        # reason about the wrong owner.
+        def claim_resumed_run!(run)
+          resumed_at = Time.now.utc.iso8601
+          run["resumed_at"] = resumed_at
+          run["pid"] = Process.pid
+          run["process_token"] = self.class.instance_id
+          run["last_seen_at"] = resumed_at
         end
 
         def new_run_record(target, files, max_passes, budget_seconds, now)
