@@ -8,6 +8,7 @@ require "tmpdir"
 require "vips"
 
 require_relative "../replicate/subprocess"
+require_relative "judge"
 
 begin
   require_relative "../postpro/depth"
@@ -44,11 +45,20 @@ module Studio
       # copied per step. A wider strip is faster and coarser.
       SHEAR = 60
       STRIP = 6
-      # The shear assembles at a quarter of the delivery size; the encode
-      # upscales. Full-size assembly costs twenty times as much for detail the
-      # shear destroys anyway.
-      ASSEMBLY = 0.25
+      # How sharply the shear accelerates across the width. A linear shear
+      # crawls at the edges and bands; a curve spends its time where the eye
+      # reads motion. 1.0 would be the old straight ramp.
+      CURVE = 1.7
+      # The shear assembles at half the delivery size; the encode upscales.
+      # Quarter size stepped 18 px of time per column, which is what banded.
+      ASSEMBLY = 0.5
       AUDIO = File.expand_path("../dilla/dilla.wav", __dir__)
+      # The same house print the stills get, as Postpro's exported LUT plus
+      # temporal grain in the encode pass. The full per-frame chain costs about
+      # six seconds a frame at delivery size, so a ten-second piece would take
+      # twenty-five minutes; the LUT is that chain in one pass.
+      PRINT = "lut3d=file=#{File.expand_path("house.cube", __dir__)}:interp=tetrahedral," \
+              "noise=alls=3:allf=t+u,eq=contrast=1.04:saturation=1.05"
       # How far the depth warp pushes in, as a fraction of frame width, and how
       # many poses a chronophotograph holds.
       PUSH = 0.30
@@ -78,9 +88,14 @@ module Studio
         pieces
       end
 
-      # The newest developed still for this subject, if one is on disk.
+      # The newest developed still for this subject that the ledger did not
+      # reject. A rejected capture is not a source.
       def latest_still
-        Dir.glob(File.join(@directory, "postpro_*#{@subject}*.png")).max_by { |path| File.mtime(path) }
+        ledger = File.join(@directory, @subject, "ledger.jsonl")
+        Dir.glob(File.join(@directory, "postpro_*#{@subject}*.png"))
+           .sort_by { |path| File.mtime(path) }
+           .reverse
+           .find { |path| !Studio::Lora::Judge.rejected?(path, ledger:) }
       end
 
       # The newest four takes, in the order they were filmed. Older takes stay
@@ -111,7 +126,7 @@ module Studio
             (0...steps).each do |step|
               x = step * STRIP
               take = [STRIP, width - x].min
-              source = frames[(index + (step * @shear / steps)) % frames.length]
+              source = frames[(index + shear_offset(step, steps)) % frames.length]
               image = image.insert(vips_image(source).crop(x, 0, take, height), x, 0)
             end
             image.write_to_file(File.join(shots, format("o_%05d.png", index)))
@@ -119,7 +134,8 @@ module Studio
 
           encode(File.join(shots, "o_%05d.png"), out, upscale: true)
         end
-        finish("slit_scan", out, "shear" => @shear, "strip" => STRIP, "clip" => clip)
+        finish("slit_scan", out, "shear" => @shear, "curve" => CURVE,
+                                   "assembly" => ASSEMBLY, "strip" => STRIP, "clip" => clip)
       end
 
       # A camera that never existed. One still plus a depth plane yields
@@ -128,7 +144,7 @@ module Studio
       def depth_warp(still, out: output_path("depth_warp"))
         image = Vips::Image.new_from_file(still, access: :random)
         base = fitted(image)
-        plane = depth_plane(base)
+        plane, depth_source = depth_plane(base)
         coords = Vips::Image.xyz(base.width, base.height)
         x = coords[0].cast("float")
         y = coords[1].cast("float")
@@ -149,7 +165,7 @@ module Studio
           end
           encode(File.join(shots, "o_%05d.png"), out)
         end
-        finish("depth_warp", out, "still" => still, "push" => PUSH)
+        finish("depth_warp", out, "still" => still, "push" => PUSH, "depth" => depth_source)
       end
 
       # Two takes, one surface. Columns left of a sweeping edge read from the
@@ -175,14 +191,15 @@ module Studio
               x = step * STRIP
               take = [STRIP, width - x].min
               source = (x.to_f / width) < edge ? left : right
-              frame = vips_image(source[(index + (step * @shear / steps)) % frames])
+              frame = vips_image(source[(index + shear_offset(step, steps)) % frames])
               image = image.insert(frame.crop(x, 0, take, height), x, 0)
             end
             image.write_to_file(File.join(shots, format("o_%05d.png", index)))
           end
           encode(File.join(shots, "o_%05d.png"), out, upscale: true)
         end
-        finish("dual_slit", out, "first" => first, "second" => second, "shear" => @shear)
+        finish("dual_slit", out, "first" => first, "second" => second, "shear" => @shear,
+                                   "curve" => CURVE, "assembly" => ASSEMBLY)
       end
 
       # Marey's plate: one surface, many moments. Each sampled pose is stacked
@@ -323,7 +340,7 @@ module Studio
       end
 
       def encode(pattern, out, upscale: false)
-        filter = upscale ? "scale=#{WIDTH}:#{HEIGHT}:flags=lanczos" : "null"
+        filter = [upscale ? "scale=#{WIDTH}:#{HEIGHT}:flags=lanczos" : nil, PRINT].compact.join(",")
         shell([
           "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
           "-framerate", FPS.to_s, "-i", pattern, "-vf", filter,
@@ -332,12 +349,10 @@ module Studio
       end
 
       # Depth 0-1 with near bright, at the delivery size, from the local
-      # estimator or postpro's cues when the model is absent.
+      # estimator or a radial cue when the model is absent.
       def depth_plane(image)
-        return nil unless defined?(Postpro::Depth)
-
-        plane = Postpro::Depth.near(image)
-        return nil unless plane
+        plane = Postpro::Depth.near(image) if defined?(Postpro::Depth)
+        return [radial_plane(image), "radial"] unless plane
 
         plane = plane.resize(WIDTH.to_f / plane.width) if plane.width < WIDTH
         # The estimator returns 0..1 floats, not 0..255 samples. Normalising by
@@ -345,7 +360,27 @@ module Studio
         low = plane.min
         span = plane.max - low
         span = 1.0 if span.abs < 1e-6
-        plane.linear(1.0 / span, -low / span).copy(interpretation: :"b-w")
+        [plane.linear(1.0 / span, -low / span).copy(interpretation: :"b-w"), "estimator"]
+      end
+
+      # Without the estimator, a centred ramp is still a real parallax cue: the
+      # subject pushes forward and the edges trail. It is a proxy, and the
+      # sidecar says so.
+      def radial_plane(image)
+        coords = Vips::Image.xyz(image.width, image.height)
+        cx = image.width / 2.0
+        cy = image.height / 2.0
+        dx = (coords[0] - cx) / cx
+        dy = (coords[1] - cy) / cy
+        # Squared radius is monotonic and avoids a sqrt op this libvips
+        # build does not carry; the falloff shape is not load-bearing.
+        radius = (dx * dx) + (dy * dy)
+        radius.linear(-0.5, 1.0).copy(interpretation: :"b-w")
+      end
+
+      # Time offset for a column, accelerating across the width.
+      def shear_offset(step, steps)
+        ((step.to_f / [steps - 1, 1].max)**CURVE * @shear).round
       end
 
       # Scale and crop to the delivery frame without letterboxing.
@@ -375,7 +410,7 @@ module Studio
         File.write(sidecar, JSON.pretty_generate(
                               "kind" => kind, "subject" => @subject, "output" => out,
                               "size" => [WIDTH, HEIGHT], "fps" => FPS, "seconds" => @seconds,
-                              "created_at" => Time.now.utc.iso8601, **record
+                              "created_at" => Time.now.utc.iso8601, "print" => "house_lut", **record
                             ))
         File.chmod(0o600, sidecar)
         out

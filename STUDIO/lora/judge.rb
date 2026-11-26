@@ -360,6 +360,33 @@ module Studio
         end
       end
 
+      # The delivery verdict the ledger recorded for a still. A path with no
+      # row is unproven, not rejected. A rejected still must never seed a film,
+      # a gallery entry or a warp: the capture is the defect and no grade
+      # reaches it.
+      def self.rejected?(path, ledger:)
+        row = delivery_row(path, ledger:)
+        return false unless row
+
+        quality = row["quality"] || {}
+        quality["technical"] == "FAIL" || quality["delivery"] == "REJECTED_CANDIDATE"
+      end
+
+      def self.delivery_row(path, ledger:)
+        return nil unless ledger && File.file?(ledger)
+
+        target = File.expand_path(path)
+        File.readlines(ledger, chomp: true).reverse_each do |line|
+          next if line.strip.empty?
+
+          entry = JSON.parse(line)
+          return entry if entry["kind"] == "render" && File.expand_path(entry["path"].to_s) == target
+        rescue JSON::ParserError
+          next
+        end
+        nil
+      end
+
       def assess(candidate:, original: nil, likeness: nil)
         reading = Postpro::Uncanny.read(candidate)
         thresholds = load_thresholds

@@ -16,6 +16,10 @@ module Studio
       # the shortest that clears thirty seconds after the crossfades.
       CLIPS = 4
       SECONDS = 10
+      # dilla_print is Postpro's exported house LUT applied in one ffmpeg pass.
+      # The per-frame chain costs about six seconds a frame at delivery size, so
+      # a thirty-seven-second piece would take two hours; Promo refuses a cut
+      # over its postpro ceiling for that reason.
       LOOK = "dilla_print"
       AUDIO = File.expand_path("../dilla/dilla.wav", __dir__)
 

@@ -89,17 +89,21 @@ module Studio
                    end
           scene = recipe.fetch("scene")
           grade_seed = Studio::Lora::Selfie.grade_seed(index + 1, @subject)
+          inference_seed = Studio::Lora::Selfie.inference_seed(@subject, sitting,
+                                                               salt: attempts_for(sitting))
           result = nil
           begin
             stem = "#{@subject}_selfie_#{format("%02d", index + 1)}"
             result = @series.write(scene, film: false, output_stem: stem, grade_seed:,
                                    preset: recipe.fetch("preset"), compiled: compiled_recipe?(recipe),
-                                   chain_presets: @chain_presets, chain: @chain)
+                                   chain_presets: @chain_presets, chain: @chain,
+                                   seed: inference_seed)
             path = result.fetch("still")
             likeness = Studio::Lora::Judge.likeness(reference: reference, candidate: path)
             quality = Studio::Lora::Judge.assess(candidate: path, original: result.dig("capture", "original"), likeness:)
             record("render", series_id:, index: index, scene: scene, path: path, likeness: likeness,
-                   recipe: recipe, grade_seed: grade_seed, review: "NOT_REVIEWED",
+                   recipe: recipe, grade_seed: grade_seed, inference_seed: inference_seed,
+                   review: "NOT_REVIEWED",
                    quality: quality, refinement: Studio::Lora::Judge.refinement(quality),
                    grade_sha256: result.dig("capture", "grade_sha256"))
             rendered << path
@@ -117,6 +121,21 @@ module Studio
         rendered
       end
 
+      # How many paid attempts this sitting already has. A retry of a rejected
+      # sitting salts its seed so the same prompt cannot buy the same frame.
+      def attempts_for(sitting)
+        return 0 unless File.file?(@ledger_path)
+
+        File.readlines(@ledger_path, chomp: true).count do |line|
+          next false if line.strip.empty?
+
+          entry = JSON.parse(line)
+          entry["kind"] == "render" && entry["index"].to_i == sitting - 1
+        rescue JSON::ParserError
+          false
+        end
+      end
+
       # A sitting already developed is that sitting. Rerunning a series must not
       # buy the same frame twice, so a run fills in the sittings the subject
       # does not have yet and leaves the rest alone.
@@ -124,7 +143,9 @@ module Studio
         marker = "_#{@subject}_selfie_#{format("%02d", sitting)}_"
         Dir.glob(File.join(@directory, "postpro_*_selfie_#{format("%02d", sitting)}_*.{png,jpg,jpeg,webp}"))
            .select { |path| File.basename(path).include?(marker) }
-           .max
+           .sort
+           .reverse
+           .find { |path| !Studio::Lora::Judge.rejected?(path, ledger: @ledger_path) }
       end
 
       # Motion for the promo. One image-to-video call per clip, each starting on
@@ -165,10 +186,14 @@ module Studio
       end
 
       # The delivered frame is the local grade's output; a raw render is only a
-      # fallback for a series that has not been developed yet.
+      # fallback for a series that has not been developed yet. A still the
+      # ledger rejected is never delivered: the capture is the defect, so a
+      # film or a warp built on it would inherit the defect.
       def latest_still
-        developed = Dir.glob(File.join(@directory, "postpro_*#{@subject}_selfie_*_v1.png"))
-        return developed.max unless developed.empty?
+        developed = Dir.glob(File.join(@directory, "postpro_*#{@subject}_selfie_*_v1.png")).sort.reverse
+        accepted = developed.find { |path| !Studio::Lora::Judge.rejected?(path, ledger: @ledger_path) }
+        return accepted if accepted
+        return nil unless developed.empty?
 
         Dir.glob(File.join(@directory, "#{@subject}_selfie_*.{jpg,jpeg,png}")).max
       end

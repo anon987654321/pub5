@@ -22,6 +22,7 @@ require "json"
 require "optparse"
 require "fileutils"
 require "open3"
+require "rbconfig"
 require "time"
 require "yaml"
 require_relative "api"
@@ -89,6 +90,47 @@ module Studio
     LOOKS = parse_video_presets(
       File.read(File.join(__dir__, "..", "postpro", "video.yml"), encoding: "UTF-8")
     )
+
+    # Looks whose grade is Postpro's per-frame chain, not a filter string. The
+    # catalogue names the Postpro preset and leaves `filters` empty so the look
+    # is applied once, not twice.
+    def parse_postpro_presets(text)
+      document = YAML.safe_load(
+        text, permitted_classes: [], permitted_symbols: [], aliases: false
+      )
+      presets = document.is_a?(Hash) ? document["presets"] : nil
+      return {}.freeze unless presets.is_a?(Hash)
+
+      presets.each_with_object({}) do |(name, spec), result|
+        next unless spec.is_a?(Hash) && spec.key?("postpro")
+
+        value = spec["postpro"]
+        unless value.is_a?(String) && value.match?(/\A[a-z0-9_]+\z/)
+          raise ArgumentError, "video preset #{name.inspect} names an invalid postpro preset"
+        end
+        unless Array(spec["filters"]).empty?
+          raise ArgumentError, "video preset #{name.inspect} cannot combine postpro with ffmpeg filters"
+        end
+
+        result[name] = value
+      end.freeze
+    rescue Psych::Exception => error
+      raise ArgumentError, "video grade catalogue is invalid: #{error.message}"
+    end
+
+    # Measured on a 32-frame 1080x1920 cut: 5.74 s of CPU per frame, 200 s wall.
+    # A 37-second promo is 1110 frames, so the per-frame chain is a two-hour
+    # render; the exported LUT is the same chain in one ffmpeg pass.
+    POSTPRO_SECONDS_PER_FRAME = 6.0
+    MAX_POSTPRO_FRAMES = Integer(ENV.fetch("STUDIO_PROMO_POSTPRO_MAX_FRAMES", "240"))
+
+    POSTPRO_LOOKS = parse_postpro_presets(
+      File.read(File.join(__dir__, "..", "postpro", "video.yml"), encoding: "UTF-8")
+    )
+
+    def postpro_for(name)
+      POSTPRO_LOOKS[name.to_s]
+    end
 
     def looks
       LOOKS
@@ -275,7 +317,7 @@ module Studio
 
     def render(stills: [], clips: [], audio:, out:, look: "dilla_heavy", size: DEFAULT_SIZE,
                fps: DEFAULT_FPS, still_seconds: DEFAULT_STILL_SECONDS,
-               clip_seconds: DEFAULT_CLIP_SECONDS, crossfade: DEFAULT_CROSSFADE)
+               clip_seconds: DEFAULT_CLIP_SECONDS, crossfade: DEFAULT_CROSSFADE, postpro: nil)
       raise "ffmpeg is not on PATH" unless ffmpeg?
       raise ArgumentError, "audio not found: #{audio}" unless File.file?(audio)
 
@@ -283,19 +325,81 @@ module Studio
       missing = segments.map { |segment| segment.fetch(:path) }.reject { |path| File.file?(path) }
       raise ArgumentError, "segment not found: #{missing.first}" unless missing.empty?
 
-      FileUtils.mkdir_p(File.dirname(File.expand_path(out)))
-      args = build_args(stills:, clips:, audio:, out:, size:, fps:, still_seconds:,
+      postpro_preset = (postpro || postpro_for(look))&.to_s
+      if postpro_preset
+        expected = (segments.sum { |segment| segment.fetch(:seconds) } * fps).round
+        if expected > MAX_POSTPRO_FRAMES
+          raise ArgumentError,
+                "postpro grades #{expected} frames; the full chain costs about " \
+                "#{POSTPRO_SECONDS_PER_FRAME}s per 1080x1920 frame, so the cut is " \
+                "over the #{MAX_POSTPRO_FRAMES}-frame ceiling. Use a LUT look " \
+                "(dilla_print) for long pieces, or raise the ceiling deliberately."
+        end
+      end
+      final = File.expand_path(out)
+      cut = postpro_preset ? final.sub(/\.mp4\z/, ".ungraded.mp4") : final
+      FileUtils.mkdir_p(File.dirname(final))
+      args = build_args(stills:, clips:, audio:, out: cut, size:, fps:, still_seconds:,
                         clip_seconds:, crossfade:, look:)
       _, status = Open3.capture2e(Studio::Subprocess.environment, *args)
-      raise "ffmpeg failed to write #{out}" unless status.success? && File.file?(out)
+      raise "ffmpeg failed to write #{cut}" unless status.success? && File.file?(cut)
 
-      write_sidecar(out, segments:, audio:, look:, size:, fps:, still_seconds:, clip_seconds:,
-                    crossfade:, args:)
+      if postpro_preset
+        grade_cut(cut, final, preset: postpro_preset)
+        File.unlink(cut)
+      end
+
+      write_sidecar(final, segments:, audio:, look:, size:, fps:, still_seconds:, clip_seconds:,
+                    crossfade:, args:, postpro: postpro_preset)
+      final
+    end
+
+    # The same per-frame chain a still gets, applied to the finished cut. The
+    # catalogue's look filters are empty for such a preset, so the print look is
+    # applied exactly once, here.
+    def grade_cut(source, out, preset:)
+      script = File.expand_path("../postpro/postpro.rb", __dir__)
+      raise "postpro is missing: #{script}" unless File.file?(script)
+
+      frames = video_frames(source)
+      environment = Studio::Subprocess.environment.merge(
+        "POSTPRO_VIDEO_MAX_FRAMES" => [[frames, 1].max, 10_000].min.to_s,
+        "POSTPRO_VIDEO_MAX_SECONDS" => [[frames + 180, 5].max, 3_600].min.to_s
+      )
+      _, status = Open3.capture2e(environment, RbConfig.ruby, script,
+                                  "--video", source, "--output", out, "--preset", preset)
+      raise "postpro failed to grade #{source}" unless status.success? && File.file?(out)
+
       out
     end
 
+    def video_frames(path)
+      output, status = Open3.capture2e(
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=nb_frames,r_frame_rate:format=duration",
+        "-of", "json", path
+      )
+      raise "ffprobe could not read #{path}" unless status.success?
+
+      document = JSON.parse(output)
+      stream = Array(document["streams"]).first || {}
+      frames = stream["nb_frames"].to_s
+      return frames.to_i if frames.match?(/\A\d+\z/)
+
+      rate = stream["r_frame_rate"].to_s
+      fps = if rate.include?("/")
+              numerator, denominator = rate.split("/").map(&:to_f)
+              denominator.to_f.zero? ? 0.0 : numerator / denominator
+            else
+              rate.to_f
+            end
+      (fps * document.dig("format", "duration").to_f).round
+    rescue JSON::ParserError => error
+      raise "ffprobe returned invalid JSON for #{path}: #{error.message}"
+    end
+
     def write_sidecar(out, segments:, audio:, look:, size:, fps:, still_seconds:, clip_seconds:,
-                      crossfade:, args:)
+                      crossfade:, args:, postpro: nil)
       path = out.sub(/\.mp4\z/, "") + ".promo.json"
       stills = segments.select { |segment| segment.fetch(:kind) == "still" }.map { |segment| segment.fetch(:path) }
       clips = segments.select { |segment| segment.fetch(:kind) == "clip" }.map { |segment| segment.fetch(:path) }
@@ -303,6 +407,7 @@ module Studio
         "engine" => "promo",
         "created_at" => Time.now.utc.iso8601,
         "look" => look,
+        "postpro" => postpro,
         "size" => size,
         "fps" => fps,
         "still_seconds" => still_seconds,

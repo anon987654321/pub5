@@ -125,7 +125,7 @@ module Studio
       end
 
       def write(words, film: true, duration: 5, output_stem: nil, grade_seed: nil, preset: nil, compiled: false,
-                prediction_budget: nil, chain_presets: [], discard_raw: false, chain: nil)
+                prediction_budget: nil, chain_presets: [], discard_raw: false, chain: nil, seed: nil)
         lint_prompt!(words)
         if preset && !Studio::Lora::Craft::LABORATORY.include?(preset)
           raise ArgumentError, "unknown laboratory preset"
@@ -153,7 +153,7 @@ module Studio
         @chain_steps = nil
         @chain_intermediates = []
         grade_seed ||= SecureRandom.random_number(2_147_483_647) if preset
-        still = render_still(words, stem, grade_seed:, preset:, chain:)
+        still = render_still(words, stem, grade_seed:, preset:, chain:, seed:)
         intermediates = Array(@chain_intermediates)
         Array(chain_presets).each do |extra|
           intermediates << still
@@ -173,10 +173,11 @@ module Studio
 
       # Explicit structured shots use the same inference and consent boundary
       # as free-form requests. The compiled prompt already owns camera geometry.
-      def write_shot(shot, grade_seed: nil, prediction_budget: nil)
+      def write_shot(shot, grade_seed: nil, prediction_budget: nil, seed: nil)
         plan = Studio::Lora::Craft.compile_shot(shot)
         result = write(plan.fetch("prompt"), film: false, output_stem: "#{@subject}_selfie_shot",
-                       grade_seed:, preset: plan.fetch("preset"), compiled: true, prediction_budget:)
+                       grade_seed:, preset: plan.fetch("preset"), compiled: true, prediction_budget:,
+                       seed:)
         result.merge("plan" => plan)
       ensure
         @compiled_capture = false
@@ -381,13 +382,13 @@ module Studio
         raise ArgumentError, "prompt works against itself: #{reasons}"
       end
 
-      def render_still(words, stem, grade_seed: nil, preset: nil, chain: nil)
+      def render_still(words, stem, grade_seed: nil, preset: nil, chain: nil, seed: nil)
         base_path = File.join(@directory, safe_stem(stem))
         existing = %w[.png .jpg .jpeg .webp].map { |extension| "#{base_path}#{extension}" }
                                               .find { |candidate| File.exist?(candidate) || File.symlink?(candidate) }
         raise "refusing to replace an existing still: #{existing}" if existing
 
-        output = render_with_fallback(words)
+        output = render_with_fallback(words, seed:)
         path = "#{base_path}#{still_extension(output)}"
         raise "refusing to replace an existing still: #{path}" if File.exist?(path) || File.symlink?(path)
 
@@ -461,14 +462,14 @@ module Studio
       # Replicate's free tier. Each engine gets the input shape it declares; a
       # reference model is handed the subject's own photographs, a text model
       # only the prompt, and the subject's LoRA its trained version.
-      def render_with_fallback(words, timeout: 600)
+      def render_with_fallback(words, timeout: 600, seed: nil)
         chain = render_chain
         failures = []
         chain.each_with_index do |candidate, index|
           @prediction_budget&.consume!
           model = resolve_engine(candidate)
           begin
-            input = still_input(words, candidate)
+            input = still_input(words, candidate, seed:)
             output = client.predict(model, input, timeout:)
             @last_capture_model = model
             # Never persist uploaded reference URLs, tokens, or arbitrary provider inputs.
@@ -521,11 +522,11 @@ module Studio
       public :engine
 
       # The input for one engine, shaped to what that engine declares.
-      def still_input(words, engine_name = nil)
+      def still_input(words, engine_name = nil, seed: nil)
         engine_name ||= engine
         spec = Studio::ReplicateClient::Models.engines[engine_name]
         case
-        when engine_name == "$subject_lora" then lora_input(words)
+        when engine_name == "$subject_lora" then lora_input(words, seed:)
         when spec && spec["likeness"] == "reference" then reference_input(words, engine_name)
         else text_input(words, engine_name)
         end
@@ -534,7 +535,7 @@ module Studio
       # The subject's trained LoRA: one named profile supplies all three
       # inference controls. A/B reviews can vary the profile without changing
       # scene text, model version, seed, output format or post-production.
-      def lora_input(words)
+      def lora_input(words, seed: nil)
         settings = Studio::ReplicateClient::TRAINING_STANDARDS.fetch("inference")
         profile = settings.fetch("profiles").fetch(inference_profile)
         desired = {
@@ -550,7 +551,7 @@ module Studio
           output_quality: settings["output_quality"],
           go_fast: settings["go_fast"],
           lora_scale: profile.fetch("lora_scale"),
-          seed: settings["seed"],
+          seed: seed || settings["seed"],
         }
         allowed = Array(@validated_still_inputs).map(&:to_s)
         optional.each do |key, value|

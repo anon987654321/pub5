@@ -2,6 +2,7 @@
 
 require "yaml"
 require "json"
+require "digest"
 require "rbconfig"
 require_relative "../replicate/subprocess"
 
@@ -285,7 +286,7 @@ module Studio
              "face, subsurface scattering warming the light through the ears and " \
              "nostrils, natural asymmetry"
       LIGHT = "one clear light direction with a real shadow side, catchlights in " \
-              "both eyes shaped by the source"
+              "both eyes shaped by the source, highlights rolling off with retained texture"
       FOCUS = "sharp focus on the nearest eye"
       # Shared craft contains capture technique only. Film stock is a per-shot
       # decision, not a universal prompt fragment.
@@ -538,11 +539,11 @@ module Studio
       # identity descriptor are added once by IdeaPicture.
       SUBJECT_SCENES = {
         "johann" => [
-          "a candid mid-torso selfie beside a rain-streaked café window in central Bergen, wearing a long charcoal herringbone wool chore coat over an oatmeal Fair Isle lambswool crewneck, the coat's broad collar and knit texture clearly visible, wet cobblestones and a soft harbour blur outside, cool north daylight, rectangular window catchlights, a quiet expression just after a laugh, portrait-distance facial proportions with intimate direct-to-lens framing, 85mm",
-          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wearing a forest-green Fair Isle wool crewneck over a clean white waffle-knit Henley, relaxed dark denim, the patterned knit visible across the chest, waist-up framing, wind moving the hair and coat collar, broad overcast sky as a softbox, relaxed half-smile, natural eye contact, 50mm",
+          "a candid mid-torso selfie beside a rain-streaked café window in central Bergen, wearing a long charcoal herringbone wool chore coat over an oatmeal Fair Isle lambswool crewneck, the coat's broad collar and knit texture clearly visible, wet cobblestones and a soft harbour blur outside, cool north daylight with the window's bright panes still holding soft grey detail, rectangular window catchlights, a quiet expression just after a laugh, portrait-distance facial proportions with intimate direct-to-lens framing, 85mm",
+          "a coastal-ferry-deck selfie with a Norwegian fjord wall behind, wearing a forest-green Fair Isle wool crewneck over a clean white waffle-knit Henley, relaxed dark denim, the patterned knit visible across the chest, waist-up framing, wind moving the hair and coat collar, a broad overcast sky held at mid-grey with its cloud structure readable, soft even light on the face, relaxed half-smile, natural eye contact, 50mm",
           "a late-night record-shop selfie between listening shelves, wearing a dark espresso suede leather blouson over a cream cashmere zip cardigan and charcoal merino crewneck, the suede nap and simple collar clearly visible, one warm tungsten practical and a cool street-window fill, waist-up framing, mixed warm and cool catchlights, amused mid-conversation expression, eyes finding the lens, 50mm",
-          "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow and dark pine outside, one warm lamp behind and cold sky fill across the face, head-and-shoulders framing, visible breath, unguarded eyes, 85mm",
-          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight, chest-up framing, a real small grin, eyes on the lens, documentary colour-negative photography, 50mm",
+          "a winter cabin selfie at blue hour, wearing a deep aubergine velvet tailored blazer over a black fine-gauge merino rollneck, relaxed dark wool trousers, the velvet pile catching the warm cabin light, snow at mid-grey with the dark pine structure readable outside, one warm lamp behind and cold sky fill across the face, head-and-shoulders framing, visible breath, unguarded eyes, 85mm",
+          "a morning harbour-side selfie after rain, working boats and muted buildings falling softly out of focus, clean grey daylight with the harbour highlights holding texture, chest-up framing, a real small grin, eyes on the lens, documentary colour-negative photography, 50mm",
           "a black-and-white street portrait selfie beneath an old Bergen arcade, wet stone catching a hard strip of daylight, chest-up framing, rich Tri-X silver tones, direct gaze and natural facial texture, an unhurried calm, 85mm",
         ].freeze,
         "ragnhild" => [
@@ -593,7 +594,10 @@ module Studio
         return phone_selfie(body) if phone
 
         stock = Studio::Lora::Craft::STOCK.fetch(stocks.fetch(index))
-        "#{body}, #{stock}"
+        # Medium first, as Black Forest Labs' prompting guide asks: the stock and
+        # what it does to the frame open the caption, then the subject and the
+        # setting. See guides.yml#prompting.flux_2.
+        "#{stock}. #{body}"
       end
 
       # Only name stocks that the current laboratory can actually develop.
@@ -779,6 +783,16 @@ module Studio
         # Keep capture neutral; the authoritative laboratory develops it once.
         body = body.gsub(/, (?:documentary colour-negative photography|rich Tri-X silver tones|tactile HP5 documentary grain|muted Fuji colour|natural colour-negative film)/i, "")
         { "scene" => body, "preset" => preset, "sitting" => n }
+      end
+
+      # One inference seed per sitting, derived from the subject and the sitting
+      # so a series is reproducible without handing every sitting the same seed.
+      # `inference.seed` in the training standard is an A/B control: with a
+      # distilled FLUX dev and a face LoRA, one fixed seed returned the same
+      # composition for every prompt, which reads as a collapsed LoRA.
+      def self.inference_seed(subject, number, salt: 0)
+        digest = Digest::SHA256.digest("#{subject}:#{Integer(number)}:#{Integer(salt)}")
+        digest.unpack1("N") % 2_147_483_647
       end
 
       # A distinct postpro heavy look per frame, and per subject. postpro deals
