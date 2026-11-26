@@ -527,6 +527,31 @@ test("shared render budget gives coarse-pointer devices the mobile ceiling", () 
   assert.equal(desktop.constrained_device, false);
 });
 
+test("primary rendering observes active, idle, battery and reduced-motion cadence", () => {
+  const source = readFileSync(join(publicDir, "face.part3.txt"), "utf8");
+  const start = source.indexOf("function faceFrameTarget(");
+  const end = source.indexOf("\n}", start) + 2;
+  assert.ok(start >= 0 && end > start);
+  const policy = { active_fps: 24, idle_fps: 12, battery_fps: 12, reduced_motion_fps: 8 };
+  for (const [quiet, reduced, profile, expected] of [
+    [false, false, "calm", 24], [true, false, "calm", 12],
+    [false, false, "battery", 12], [true, true, "battery", 8],
+    [false, true, "calm", 8]
+  ]) {
+    const target = runInNewContext(source.slice(start, end) + "\nfaceFrameTarget;", {
+      FACE_BUDGET: policy, faceReducedMotionActive: () => reduced,
+      rootBody: { dataset: { runtimeProfile: profile } },
+      window: { MASTER_VISUAL_LIMITS: { maxFps: 60 } }
+    });
+    assert.equal(target(quiet), expected);
+  }
+  assert.match(source, /!quietFace && !motionReduced && fpsEma < target \* \.82/);
+  assert.match(source, /quietFace = stillModeAtEntry && morphSettled/);
+  assert.match(source, /rootBody\.dataset\.faceGpu = 'lost'/);
+  assert.match(source, /rootBody\.dataset\.faceGpu = 'recovering'/);
+  assert.match(source, /rootBody\.dataset\.faceGpu = 'ready'/);
+});
+
 test("shared render budget honors declared reduced motion and hidden-tab ceilings", () => {
   const reducedState = loadFaceStateBudget({ reducedMotion: true });
   assert.equal(reducedState.reducedMotion(), true);
