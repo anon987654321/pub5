@@ -717,8 +717,8 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 <label for="harmony-pat">Harmony catalogue</label><select id="harmony-pat" aria-label="Harmony catalogue"><option value="">Independent patterns</option></select><output id="harmony-info" aria-live="polite"></output>
 <label>Drums <button class="lock-btn" data-lock="drum" title="Lock">🔓</button> <span id="root-display"></span></label><select id="drum-pat" aria-label="Drum pattern"></select>
 <label>Bass <button class="lock-btn" data-lock="bass" title="Lock">🔓</button></label><select id="bass-pat" aria-label="Bass pattern"></select>
-<label>Keys <button class="lock-btn" data-lock="keys" title="Lock">🔓</button></label><select id="keys-pat" aria-label="Keys pattern"></select>
-<label>Pads <button class="lock-btn" data-lock="pads" title="Lock">🔓</button></label><select id="pads-pat" aria-label="Pads pattern"></select>
+<label>Keys <button class="lock-btn" data-lock="keys" title="Lock">🔓</button></label><select id="keys-pat" aria-label="Keys pattern"></select><label for="keys-voice">Keys voice</label><select id="keys-voice"></select>
+<label>Pads <button class="lock-btn" data-lock="pads" title="Lock">🔓</button></label><select id="pads-pat" aria-label="Pads pattern"></select><label for="pads-voice">Pads voice</label><select id="pads-voice"></select>
 </fieldset>
 </details>
 <details>
@@ -995,7 +995,77 @@ return [name,voice];
 }));
 }
 
-function createToneInstruments(){
+// Bounded polyphonic analogue/electric-piano models. Every note has its
+// own native oscillator and envelope; patch changes never rebuild the mixer.
+function createPatchVoice(ctx,patch,lane){
+const output=ctx.createGain(),active=new Set(),limit=lane==="p"?20:16;
+output.gain.value=.32*(patch.level||.7);
+const gain=value=>{const node=ctx.createGain();node.gain.value=value;return node;};
+function stop(voice,at){
+if(voice.stopped)return;voice.stopped=true;
+for(const source of voice.sources){try{source.stop(at);}catch(error){}}
+}
+function trigger(note,duration,time,velocity){
+const at=Math.max(ctx.currentTime,time),freq=typeof note==="number"?note:noteHz(note);
+if(!Number.isFinite(freq)||freq<=0)return;
+while(active.size>=limit){const oldest=active.values().next().value;active.delete(oldest);stop(oldest,at);}
+const envelope=gain(0),filter=ctx.createBiquadFilter(),sources=[],nodes=[envelope,filter];
+filter.type="lowpass";filter.Q.value=.65;filter.frequency.value=patch.cutoff||900+patch.brightness*8400;
+filter.connect(envelope);envelope.connect(output);
+const voice={sources,stopped:false};active.add(voice);
+function oscillator(type,ratio,level,cents=0,dest=filter){
+const osc=ctx.createOscillator(),amp=gain(level);osc.type=type;osc.frequency.value=freq*ratio;osc.detune.value=cents;
+osc.connect(amp);amp.connect(dest);sources.push(osc);nodes.push(amp);return {osc,amp};
+}
+const type=patch.type,decay=patch.decay||2,attack=patch.attack??(type==="pad"?.4:.005);
+let sustain=.58,release=Math.min(2.4,Math.max(.12,decay*.25));
+switch(type){
+case "rhodes":{
+const carrier=oscillator("sine",1,.82),bell=oscillator("sine",1,.18,0);
+bell.osc.frequency.value=freq*2.01;
+const mod=oscillator("sine",1,0,0,carrier.osc.frequency);
+mod.amp.gain.setValueAtTime(freq*(.7+patch.brightness*1.6),at);
+mod.amp.gain.exponentialRampToValueAtTime(.001,at+Math.min(.4,decay*.25));
+sustain=.10;release=.22;break;
+}
+case "wurlitzer":oscillator("triangle",1,.75);oscillator("square",1,.22);oscillator("sine",2,.14);sustain=.14;release=.18;break;
+case "prophet":oscillator("sawtooth",1,.44,-5);oscillator("sawtooth",1,.44,6);oscillator("triangle",.5,.18);filter.Q.value=1.3;sustain=.46;break;
+case "juno":oscillator("sawtooth",1,.48,-4);oscillator("square",1,.24,5);oscillator("sine",.5,.22);sustain=.65;break;
+case "minimoog":oscillator("sawtooth",1,.45,-4);oscillator("triangle",.5,.32);oscillator("square",1,.17,4);filter.Q.value=2.1;sustain=.45;break;
+case "organ":for(const [ratio,level] of [[.5,.18],[1,.6],[2,.18],[3,.12],[4,.08]])oscillator("sine",ratio,level);sustain=.85;release=.14;break;
+case "musicbox":oscillator("sine",1,.76);oscillator("sine",2.76,.18);oscillator("sine",5.4,.08);sustain=.04;release=.16;break;
+case "fm":{
+const carrier=oscillator("sine",1,.8),mod=oscillator("sine",patch.fm_ratio||2.71,0,0,carrier.osc.frequency);
+mod.amp.gain.setValueAtTime(freq*(patch.fm_index||4.3),at);
+mod.amp.gain.exponentialRampToValueAtTime(.001,at+Math.min(.5,decay));
+sustain=.15;release=.2;break;
+}
+default:oscillator("sawtooth",1,.34,-9);oscillator("triangle",1,.34,7);oscillator("sine",2,.18);sustain=.65;
+}
+const amp=Math.max(.001,Math.min(1,velocity||.8)),end=at+Math.max(.01,duration),rise=Math.min(attack,Math.max(.003,duration*.65)),fall=Math.min(end,at+rise+Math.max(.03,decay*.35));
+envelope.gain.setValueAtTime(0,at);envelope.gain.linearRampToValueAtTime(amp,at+rise);
+envelope.gain.linearRampToValueAtTime(amp*sustain,fall);
+envelope.gain.setValueAtTime(amp*sustain,end);envelope.gain.linearRampToValueAtTime(0,end+release);
+for(const source of sources){source.start(at);source.stop(end+release+.01);}
+if(sources.length)sources[0].onended=()=>{active.delete(voice);for(const source of sources)source.disconnect();for(const node of nodes)node.disconnect();};
+}
+return {connect:dest=>Tone.connect(output,dest),triggerAttackRelease(notes,duration,time,velocity){for(const note of [notes].flat())trigger(note,duration,time,velocity);},releaseAll(at){for(const voice of active)stop(voice,Math.max(ctx.currentTime,at));active.clear();}};
+}
+function createPatchRouter(original,id,lane){
+const output=new Tone.Gain(1),ctx=Tone.getContext().rawContext,voices={original};
+original.connect(output);let current="original";
+const router={
+connect(destination){output.connect(destination);return router;},
+setPatch(next){next=validPatch(next);if(next===current)return;
+if(!voices[next]){voices[next]=createPatchVoice(ctx,PATCH_CATALOGUE[next],lane);voices[next].connect(output);}
+voices[current].releaseAll?.(ctx.currentTime+.005);current=next;},
+triggerAttackRelease(...args){voices[current].triggerAttackRelease(...args);},
+releaseAll(at){for(const voice of Object.values(voices))voice.releaseAll?.(at);}
+};
+router.setPatch(id);return router;
+}
+
+function createToneInstruments(patches={}){
 const p=rg69AudioProfile,t=p.tone,k=p.kit,v=p.voice;
 const keysModulation=t.keys.modulation_index*(v.brightness/t.keys.brightness_reference);
 const bassSub=new Tone.Synth({frequency:t.bass.sub_frequency,oscillator:{type:t.bass.sub_oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:0,release:t.bass.release}});bassSub.volume.value=t.bass.sub_volume_db;
@@ -1007,6 +1077,8 @@ bassSub,
 keys:new Tone.PolySynth({voice:Tone.FMSynth,maxPolyphony:Math.max(16,t.keys.max_polyphony),options:{harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}}),
 pads:new Tone.PolySynth({voice:Tone.Synth,maxPolyphony:Math.max(24,t.pads.max_polyphony),options:{oscillator:{type:t.pads.oscillator,count:Math.min(t.pads.count,2),spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:Math.min(t.pads.release,2.4)}}})
 };
+instruments.keys=createPatchRouter(instruments.keys,patches.keysVoice,"keys");
+instruments.pads=createPatchRouter(instruments.pads,patches.padsVoice,"p");
 return instruments;
 }
 
@@ -1154,6 +1226,10 @@ BASS_PATS[id]=bass.join(",");KEYS_PATS[id]=keys;PAD_PATS[id]=pads;
 }
 function harmonyPatternName(id){const row=HARMONIES[id];return row?row.title:id;}
 
+// Browser patches share the Ruby voice catalogue. These are procedural models.
+const PATCH_CATALOGUE={"rhodes_mark1":{"name":"Rhodes Mark I","type":"rhodes","decay":2.6,"brightness":0.62,"tremolo":0.12,"pan":-0.1,"level":0.9},"rhodes_dusty":{"name":"Rhodes · dusty","type":"rhodes","decay":2.2,"brightness":0.38,"tremolo":0.2,"pan":0.12,"level":0.9},"tape_strings":{"name":"Tape strings","type":"pad","attack":0.6,"decay":8,"brightness":0.4,"pan":0.05,"level":0.5},"music_box":{"name":"Music box","type":"musicbox","decay":1.4,"brightness":0.7,"pan":-0.18,"level":0.62},"glass_pad":{"name":"Glass pad","type":"pad","attack":1.2,"decay":10,"brightness":0.3,"pan":0,"level":0.42},"church_organ":{"name":"Church organ","type":"organ","decay":4,"brightness":0.5,"pan":0.08,"level":0.5},"prophet_5":{"name":"Prophet-5","type":"prophet","decay":3.8,"brightness":0.58,"pan":-0.05,"level":0.82},"juno_106":{"name":"Juno-106","type":"juno","decay":6.5,"brightness":0.42,"ensemble":0.09,"ensemble_rate":0.21,"pan":0.08,"level":0.68},"minimoog_solo":{"name":"Minimoog","type":"minimoog","decay":1.05,"cutoff":2350,"brightness":0.62,"pan":0.12,"level":0.72},"wurlitzer_200a":{"name":"Wurlitzer 200A","type":"wurlitzer","decay":1.8,"brightness":0.55,"pan":-0.1,"level":0.82},"fm_glass":{"name":"FM glass","type":"fm","decay":0.82,"fm_ratio":2.71,"fm_index":4.3,"brightness":0.88,"pan":0,"level":0.4}};
+const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
+const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
 {n:'Industrial',m:['Aggressive','Dark'],d:'hate-pummel',b:'industrialbass',k:'indstab',p:'industrialdrone',bpm:[140,160],sw:[0,5],dr:[60,90],tm:[20,38]},
 {n:'Hard Techno',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'darkchrom',p:'noisewash',bpm:[145,160],sw:[0,3],dr:[70,95],tm:[22,42]},
@@ -1236,7 +1312,7 @@ const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
 let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 let aud_={pocket:industrialBoot.includes(bootStyle)?12:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:(bootStyle.dr[0]+bootStyle.dr[1])/2,tape:(bootStyle.tm[0]+bootStyle.tm[1])/2,comp:78,width:52,reverb:industrialBoot.includes(bootStyle)?18:34,delay:26,filter:62,wobble:12,vinyl:22,crackle:18,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
-let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
+let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p,keysVoice:'original',padsVoice:'original'};
 let seq_={};
 ['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
@@ -1298,6 +1374,7 @@ function restoreSession(data){
 if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))throw Error("Unsupported session");
 const pat=data.pat||data.pat_,aud=data.aud||data.aud_,mix=data.mix||data.mix_;
 for(const [key,table] of Object.entries(PATTERN_TABLES))if(pat&&Object.hasOwn(table,pat[key]))pat_[key]=pat[key];
+if(pat){pat_.keysVoice=validPatch(pat.keysVoice);pat_.padsVoice=validPatch(pat.padsVoice);}
 for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:100,aud_[key]);
 for(const key of Object.keys(mix_))if(mix&&Object.hasOwn(mix,key))mix_[key]=clamp(mix[key],0,100,mix_[key]);
 for(const [key,pattern] of Object.entries(JSON.parse(ORIGINAL_DRUMS))){
@@ -1408,6 +1485,8 @@ $id('drum-pat').value=pat_.d;
 $id('bass-pat').value=pat_.b;
 $id('keys-pat').value=pat_.k;
 $id('pads-pat').value=pat_.p;
+$id('keys-voice').value=validPatch(pat_.keysVoice);$id('pads-voice').value=validPatch(pat_.padsVoice);
+keysN?.setPatch(pat_.keysVoice);padsN?.setPatch(pat_.padsVoice);
 updateHarmonyDisplay();
 updateRootDisplay();
 applyFX();
@@ -1433,7 +1512,7 @@ Tone.getContext().rawContext.addEventListener('statechange',()=>{
     pauseClock();outputGate?.gain.rampTo(0,.015);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
-const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);
+const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed,{patches:pat_});
 ({masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt}=graph);
 ({kick:kickN,kickSub,kickClk,kickBody,snare:snareN,snareRng,clap:clapN,hat:hatN,open:openN,bass:bassN,bassSub,keys:keysN,pads:padsN}=graph.instruments);
 ({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=graph.effects);
@@ -1499,7 +1578,7 @@ update(aud,mix);
 return {update};
 }
 
-function createAudioGraph(aud,mix,seed,{offline=false,duration=0}={}){
+function createAudioGraph(aud,mix,seed,{offline=false,duration=0,patches={}}={}){
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
 const drumG=new Tone.Gain(mix.drum/100);
@@ -1548,7 +1627,7 @@ crackleNoise.volume.value=rg69NoiseLevelDb(-65,aud.crackle,rg69AudioProfile.rig.
 if(offline){vinylNoise.stop(duration);crackleNoise.stop(duration);}
 const crackleFlt=new Tone.Filter(380,'bandpass');crackleFlt.Q.value=5;crackleNoise.connect(crackleFlt);crackleFlt.connect(masterG);
 // Live and offline use the same profile-driven instrument constructor.
-const instruments=createToneInstruments();
+const instruments=createToneInstruments(patches);
 const kickN=instruments.kick,kickSub=instruments.kickSub,kickClk=instruments.kickClk,kickBody=instruments.kickBody;
 const snareN=instruments.snare,snareRng=instruments.snareRng,clapN=instruments.clap,hatN=instruments.hat,openN=instruments.open;
 const bassN=instruments.bass,bassSub=instruments.bassSub,keysN=instruments.keys,padsN=instruments.pads;
@@ -2054,7 +2133,7 @@ $id('progress-fill').style.width='0%';
 log("exporting WAV...","i");
 st_.offlineRendering=true;document.body.inert=true;
 const buf=await Tone.Offline(async()=>{
-const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn});
+const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn,patches:take.pat});
 await graph.ready;
 // Schedule all steps using the shared triggerNotes helper
 for(let i=0;i<bars*16;i++){
@@ -2237,6 +2316,13 @@ catch(error){log("MIDI export: "+error.message,"e");}
 function buildUI(){
 buildSampler();
 const sel_d=$id('drum-pat'),sel_b=$id('bass-pat'),sel_k=$id('keys-pat'),sel_p=$id('pads-pat');
+for(const [id,key] of [["keys-voice","keysVoice"],["pads-voice","padsVoice"]]){
+const select=$id(id);
+for(const value of ["original",...Object.keys(PATCH_CATALOGUE)]){
+const option=document.createElement("option");option.value=value;option.textContent=patchName(value);select.appendChild(option);
+}
+select.addEventListener("change",()=>{pushHistory();pat_[key]=validPatch(select.value);syncUIFromState();saveSession();log("voice: "+patchName(pat_[key]),"k");});
+}
 const harmonySelect=$id('harmony-pat');
 for(const [id,row] of Object.entries(HARMONIES)){
 const option=document.createElement('option');option.value=id;option.textContent=row.title;harmonySelect.appendChild(option);
@@ -2866,9 +2952,10 @@ const n=parseFloat(args[0]);
 const PARAMS={swing:1,drive:1,tape:1,comp:1,width:1,reverb:1,delay:1,filter:1,wobble:1,vinyl:1,crackle:1};
 
 switch(cmd){
-case'help':case'?':TERM_CMDS.forEach(l=>log(l));log('audio / diagnose');break;
+case'help':case'?':TERM_CMDS.forEach(l=>log(l));log('audio / diagnose / voice keys|pads <id>');break;
 case'audio':testAudio();break;
 case'diagnose':logAudioState();break;
+case'voice':{const key=args[0]==='pads'?'padsVoice':'keysVoice',id=args[1];if(id==='original'||Object.hasOwn(PATCH_CATALOGUE,id)){pushHistory();pat_[key]=id;syncUIFromState();saveSession();log('voice: '+patchName(id),'k');}else log('voices: original '+Object.keys(PATCH_CATALOGUE).join(' '));break;}
 case'clear':case'cls':$id('trace').replaceChildren();break;
 case'play':case'p':$id('play').click();break;
 case'stop':$id('stop').click();break;
