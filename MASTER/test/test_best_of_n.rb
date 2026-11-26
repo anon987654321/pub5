@@ -213,6 +213,16 @@ class BestOfNTest < Minitest::Test
     assert_equal [variants.first, variants.last], distinct
   end
 
+  def test_candidate_coverage_uses_distinct_diffs_not_generated_count
+    partial = B.diversity_receipt(requested: 10, generated: 10, distinct: 3)
+    assert_equal :partial, partial.fetch(:status)
+    assert_equal :normalized_diff, partial.fetch(:method)
+    assert_equal 3, partial.fetch(:distinct)
+
+    complete = B.diversity_receipt(requested: 10, generated: 12, distinct: 10)
+    assert_equal :observed, complete.fetch(:status)
+  end
+
   def test_visual_exploration_defaults_to_ten_and_clamps_to_fifty
     ENV.delete("MASTER_FIX_BEST_OF")
     assert_equal 10, B.n
