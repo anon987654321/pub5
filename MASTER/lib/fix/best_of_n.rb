@@ -133,7 +133,7 @@ module Master
       # Existing reciprocal tribunal reviews a bounded, numbered pool.
       # Only an explicit judge selection can influence ordering; it cannot
       # waive the caller's mechanical or runtime verification.
-      def council_order(rows, agent:, domain:, artifact:, bus: nil, budget: nil, image: nil)
+      def council_order(rows, agent:, domain:, artifact:, bus: nil, budget: nil, image: nil, refine: nil)
         return rows if rows.size < 2
         return rows if budget && budget <= 0
 
@@ -149,7 +149,7 @@ module Master
         context = "Compare these competing changes to the same artifact. Preserve its underlying structure, contracts and identity. " \
                   "Challenge other specialists' proposals in subsequent rounds. Do not invent execution evidence. " \
                   "In the final judge findings, use location 'candidate N' and proposed_repair 'select candidate N' " \
-                  "for preferred existing candidates only. Do not select a candidate with an unresolved critical objection."
+                  "for preferred existing candidates only. Include concrete improvements in the claim and evidence fields. Do not select a candidate with an unresolved critical objection."
         result = Master::Review::LLMDispatcher::PassClock.within(budget) do
           council::Tribunal.new(agent:, event_bus: bus).review(evidence:, personas: panel, context:, image:,
             required_veto_roles: domain == :design ? [] : ["Security"])
@@ -169,7 +169,15 @@ module Master
         end.uniq
         bus&.publish("fix:candidate_council", count: rows.size, selected: preferred.size,
           status: preferred.empty? ? :inconclusive : :observed)
-        preferred.map { |index| rows[index] } + rows.each_with_index.reject { |_, index| preferred.include?(index) }.map(&:first)
+        ordered = preferred.map { |index| rows[index] } + rows.each_with_index.reject { |_, index| preferred.include?(index) }.map(&:first)
+        if refine && preferred.any?
+          critique = Array(judge[:structured_findings]).map do |finding|
+            finding.values_at("location", "claim", "evidence", "proposed_repair").join(" — ")
+          end.join("\n")
+          revised = refine.call(ordered.first, critique)
+          ordered.unshift(revised) if revised && !ordered.include?(revised)
+        end
+        ordered
       rescue StandardError => e
         Master::Ground::Swallow.log(e, context: "BestOfN.council_order")
         bus&.publish("fix:candidate_council_inconclusive", count: rows.size)

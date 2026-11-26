@@ -376,9 +376,28 @@ module Master
 
           remaining = @file_deadline && (@file_deadline.to_f - Time.now.to_f).floor
           budget = remaining ? [remaining / 3, 120].min : 120
-          viable = BestOfN.council_order(viable, agent: @agent, domain: :general, artifact: path, bus: @bus, budget:) do |row|
+          refine = lambda do |row, critique|
+            next if @file_deadline && Time.now >= @file_deadline
+
+            request = candidate_prompt(violation:, src: original, path:, style: :file, index: 0,
+              suffix: "Council critique (advisory):\n#{critique}\nSelected change:\n#{BestOfN.change_signature(original, row.fetch(:source)).join("\n")}\nReturn one improved complete source, preserving all contracts.")
+            Thread.current[:master_llm_answer_model] = nil
+            source = extract_code(ask_agent(request, image: @visual_image).to_s, File.extname(path).downcase)
+            author = Thread.current[:master_llm_answer_model]
+            next if source.to_s.strip.empty? || source == original
+            signature = BestOfN.change_signature(original, source)
+            next if viable.any? { |item| BestOfN.change_signature(original, item[:source]) == signature }
+
+            count = rescan_candidate(source, path)
+            next if count > baseline
+
+            { source:, findings: count, diff_bytes: UnifiedDiff.between(original, source, context: 0).to_s.bytesize,
+              author_models: (Array(row[:author_models]) + [author]).compact.uniq }
+          end
+          viable = BestOfN.council_order(viable, agent: @agent, domain: :general, artifact: path, bus: @bus, budget:, refine:) do |row|
             BestOfN.change_signature(original, row.fetch(:source)).join("\n")
           end
+          viable = viable.first(BestOfN::MAX_N)
           return if viable.empty?
 
           simulation = user_simulation

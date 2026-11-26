@@ -191,11 +191,18 @@ module Master
           end.sort
         end
         @say.call("candidate exploration: requested #{@plan.candidates}, generated #{generated.size}, distinct #{distinct.size}")
-        @world.council ? @world.council.call(distinct, @target) : distinct
+        return distinct unless @world.council
+
+        reviewed = @world.council.call(distinct, @target, lambda do |candidate, critique|
+          context = candidate.edits.map { |edit| "#{edit.file}: #{edit.proposal.find} -> #{edit.proposal.replace}" }.join("\n")
+          propose(sources, start, feedback: "Selected proposal:\n#{context}\nCouncil critique (advisory):\n#{critique}\nProduce one materially improved candidate against the unchanged source.")
+        end)
+        reviewed.uniq(&:key).first(BestOfN::MAX_N)
       end
 
-      def propose(sources, variant)
-        reply = @world.ask.call(prompt(sources, variant), [@target[:shot]])
+      def propose(sources, variant, feedback: nil)
+        request = [prompt(sources, variant), feedback].compact.join("\n\n")
+        reply = @world.ask.call(request, [@target[:shot]])
         rules = DesignEdit::Rules.new(guard: @world.guard, scale: nil, type_scale: type_steps, classes: sheet_classes(sources))
         candidate = parse_candidate(reply, sources, rules)
         raise DesignEdit::Refused, "already tried and undone" if @rejected.include?(candidate.key)
