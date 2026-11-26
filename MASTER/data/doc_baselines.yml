@@ -37,3 +37,11 @@ doc_paths:
   - path: public/three.module.js
     why: Deleted 2026-07-28; the section is the register that records the deletion,
       so it must be able to name the path.
+  STUDIO/README.md:
+  - path: rg69.css
+    why: The section records that the RG-69 styles were folded into the page's own
+      blocks; the asset is meant not to exist, and dilla_test.rb fails if it comes
+      back. The mention is the guard, not a citation.
+  - path: rg69.js
+    why: Same folding record as rg69.css; the application code lives in the page's
+      script blocks and dilla_test.rb fails if a separate asset returns.

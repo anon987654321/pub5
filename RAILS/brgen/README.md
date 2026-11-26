@@ -674,7 +674,7 @@ copy or campaign assets.
 The canonical food surface is `/food` on the localised Marketplace host, as in
 `markedsplass.<city>/food` or `marketplace.<city>/food`. Restaurants, menus, delivery drivers,
 group orders and reviews are backed by the nested `Takeaway` engine, kept at
-`engines/takeaway`. Marketplace and takeaway share one campaign-art system, described in the
+`engines/marketplace/engines/takeaway`. Marketplace and takeaway share one campaign-art system, described in the
 shared engine's README. The former `takeaway.<city>` host remains a compatibility mount of the
 same engine, and new links should point to Marketplace.
 

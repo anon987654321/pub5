@@ -3924,10 +3924,10 @@ documents:
   # deliberately or the NO_NEW_DOCUMENTS Law finds it. A new docs folder for
   # prose is always a finding.
   allowed_documents:
-    [AGENTS.md, APP_SPEC.md, ARCHAEOLOGY.md, CLAUDE.md,
+    [AGENTS.md, APPARATUS.md, APP_SPEC.md, ARCHAEOLOGY.md, CLAUDE.md,
      FACE_WORLD.md, GEMINI.md, GLM.md, LEGACY_RESTORE.md, LOOKBOOK.md,
      PUB4_PERMISSION_MATRIX.md, PUB5_PERMISSION_MATRIX.md, README.md,
-     RESTORATION_REPORT.md, RUNBOOK.md, SOCIAL_FRONT_PAGE.md,
+     RESTORATION_REPORT.md, RUNBOOK.md, SOCIAL_FRONT_PAGE.md, SOURCES.md,
      TREE_CONTRACTS.md, ad_creative_governance.md, bergen_brand_systems.md,
      bringhurst-strunk-research.md, business-plan-quality.md, contract.md,
      openbsd_kernel_philosophy.md, proposal.md, rails-layout-refiner.md,

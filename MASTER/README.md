@@ -535,7 +535,7 @@ checks probe the verticals and secondary hosts as a guest.
 The rendered checks need a real browser. They load pages in Chrome through the
 DevTools protocol, then measure geometry, reflow, occlusion, viewport spill,
 keyboard order, phone-sized tap targets, WebGL surfaces and web vitals, and they
-compare layout against snapshots committed under `data/layout_snapshots`. The
+compare layout against snapshots committed under `checks/data/layout_snapshots`. The
 rendered suite bundles most of them and is a required leaf of `layout_suite`, not a separate optional proof. A source-clean layout cannot pass acceptance if the browser is absent, a route is skipped, a measurement is inconclusive, a visual baseline is missing, or a rendered check has an unapproved finding. `web_vitals_budget` measures
 LCP and CLS on one mobile first screen per app, using the canonical
 `pixel_snapshot` inventory; it source-checks INP collection rather than inventing

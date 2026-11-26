@@ -227,6 +227,8 @@ class TestDocPaths < Minitest::Test
     MIGRATION.md
     SECURITY.md
     STUDIO/dilla/vendor/tone/LICENSE.md
+    STUDIO/lora/APPARATUS.md
+    STUDIO/lora/merethe/sources/additional/SOURCES.md
     STUDIO/lora/receipts/unblock-receipt-2026-11-22.md
     STUDIO/replicate/agent-guidance/claude/agents/rails-layout-refiner.md
   ].freeze
@@ -463,8 +465,19 @@ class TestDocPaths < Minitest::Test
   # directory, so the root form of that public key reads as ignored while
   # `OPENBSD/priv/ssh/…` does not. The operator's decision there is that the file
   # is missing and should be added, which is a citation this check must keep.
+  #
+  # A candidate that already carries a tree prefix (`STUDIO/lora/.cache/…` from
+  # STUDIO/README.md) is root-relative by construction — the doc-relative join
+  # would read `STUDIO/STUDIO/…` — so it is checked raw. That is what keeps a
+  # local cache ledger citable on a clean checkout: the path is ignored, so a
+  # clone is entitled not to have it.
   def generated?(candidate, doc)
-    Dir.chdir(REPO) { system("git", "check-ignore", "-q", File.join(File.dirname(doc), candidate)) }
+    relative = File.join(File.dirname(doc), candidate)
+    raw = TREES.any? { |tree| candidate.start_with?("#{tree}/") } ? candidate : nil
+    Dir.chdir(REPO) do
+      system("git", "check-ignore", "-q", relative) ||
+        (raw && system("git", "check-ignore", "-q", raw))
+    end
   end
 
   def tracked

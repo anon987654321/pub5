@@ -1,7 +1,7 @@
 schema: 1
 app: MASTER
 pass: polish
-date: 2026-11-18
+date: "2026-11-18"
 authorization: >
   Operator request to land the polishing register and make MASTER able to
   identify and implement similar polishing opportunities as part of /fix.

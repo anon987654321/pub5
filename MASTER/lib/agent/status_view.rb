@@ -12,6 +12,7 @@
 # device, credential or external environment), and refused (a proposal checked
 # and rejected, retained with its reason).
 
+require_relative "agent_cli"
 require "yaml"
 
 module Master
