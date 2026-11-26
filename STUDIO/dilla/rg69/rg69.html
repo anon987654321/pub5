@@ -905,6 +905,68 @@ log("shared Dilla sound profile: "+rg69AudioProfile.name,"k");
 return rg69AudioProfile;
 })
 .catch(error=>{console.warn("RG-69 shared Dilla sound profile unavailable; embedded fallback retained:",error);log("shared Dilla sound profile unavailable; using embedded RG-69 patch","w");return rg69AudioProfile;});
+// Independent one-shot percussion sources: no shared oscillator start/stop timeline.
+function createDrumBank(ctx,profile,connect){
+const {tone:t,kit:k,notes:n}=profile,sr=ctx.sampleRate;
+const specs={
+kick:[k.kick.decay,t.kick.attack,n.kick,k.kick.level,k.kick.pan],
+kickSub:[k.sub.decay,.001,n.kickSub,k.sub.level,k.kick.pan],
+kickClk:[t.kick.click_decay,t.kick.click_attack,0,k.kick.level,k.kick.pan],
+kickBody:[t.kick.body_decay,t.kick.body_attack,n.kickBody,k.kick.level,k.kick.pan],
+snare:[k.snare.decay,t.snare.attack,0,k.snare.level,k.snare.pan],
+snareRng:[t.snare.ring_decay,t.snare.ring_attack,n.snareRing,k.snare.level,k.snare.pan],
+clap:[k.perc.decay,t.clap.attack,0,k.perc.level,k.perc.pan],
+hat:[k.hat.decay,t.hat.attack,n.hat,k.hat.level,k.hat.pan],
+open:[k.openhat.decay,t.openhat.attack,n.open,k.openhat.level,k.openhat.pan]
+};
+return Object.fromEntries(Object.entries(specs).map(([name,[decay,attack,freq,level,pan]])=>{
+const tail=Math.max(.018,decay),length=tail*1.5+.012,buffer=ctx.createBuffer(1,Math.ceil(sr*length),sr),pcm=buffer.getChannelData(0);
+let phase=0,previous=0,low=0,seed=0x69d111a;
+const metal=[1,1.483,1.932,2.546,2.63,3.897];
+for(let i=0;i<pcm.length;i++){
+const time=i/sr;
+seed=(Math.imul(seed,1664525)+1013904223)>>>0;
+const noise=seed/2147483648-1;
+low+=(noise-low)*.14;
+const high=noise-previous;previous=noise;
+let value=0;
+if(name==="kick"){
+phase+=2*Math.PI*freq*(1+(t.kick.octaves-1)*Math.exp(-time/Math.max(.005,t.kick.pitch_decay*.22)))/sr;
+value=Math.tanh(1.5*Math.sin(phase))*.85;
+}else if(name==="kickSub"||name==="kickBody"||name==="snareRng"){
+phase+=2*Math.PI*freq/sr;value=name==="kickSub"?Math.sin(phase):2/Math.PI*Math.asin(Math.sin(phase));
+}else if(name==="hat"||name==="open"){
+let sum=0;for(const ratio of metal)sum+=Math.sign(Math.sin(2*Math.PI*freq*ratio*time+2.8*Math.sin(2*Math.PI*freq*ratio*t.hat.harmonicity*time)));
+value=.24*sum+.32*high;
+}else if(name==="clap"){
+const burst=Math.max(...[0,.011,.023].map(offset=>time>=offset?Math.exp(-(time-offset)/.009):0));
+value=(noise-low)*(.25+.75*burst);
+}else if(name==="snare")value=.75*(noise-low)+.25*Math.sin(2*Math.PI*n.snareRing*time);
+else value=high*.65;
+const envelope=Math.min(1,time/Math.max(.0005,attack))*Math.exp(-time*5.5/tail)*Math.min(1,(length-time)/.008);
+pcm[i]=Math.max(-1,Math.min(1,value*envelope));
+}
+const out=ctx.createGain(),panner=ctx.createStereoPanner(),active=new Set();
+out.gain.value=Math.max(.001,Number(level)||1);panner.pan.value=Math.max(-1,Math.min(1,Number(pan)||0));out.connect(panner);
+const voice={
+connect(destination){connect(panner,destination);return voice;},
+triggerAttackRelease(...args){
+const [pitch,duration,time,velocity]=freq?args:[0,...args];
+const at=Math.max(ctx.currentTime,Number(time)||0),rate=freq?Math.max(.25,Math.min(4,Number(pitch)/freq)):1;
+const source=ctx.createBufferSource(),gain=ctx.createGain(),end=at+Math.min(length/rate,Math.max(.008,Number(duration)||.01)+Math.min(.09,tail*.35));
+source.buffer=buffer;source.playbackRate.value=rate;
+gain.gain.setValueAtTime(Math.max(0,Math.min(1,Number(velocity)||0)),at);
+gain.gain.setValueAtTime(Math.max(0,Math.min(1,Number(velocity)||0)),Math.max(at,end-.006));gain.gain.linearRampToValueAtTime(0,end);
+source.connect(gain);gain.connect(out);active.add(source);
+source.onended=()=>{active.delete(source);source.disconnect();gain.disconnect();};
+source.start(at);source.stop(end);
+},
+releaseAll(time){for(const source of active){try{source.stop(Math.max(ctx.currentTime,time));}catch(error){}}}
+};
+return [name,voice];
+}));
+}
+
 function createToneInstruments(){
 const p=rg69AudioProfile,t=p.tone,k=p.kit,v=p.voice;
 const hatResonance=t.hat.resonance_base_hz+k.hat.tone*t.hat.resonance_tone_span_hz;
@@ -912,25 +974,13 @@ const openResonance=t.openhat.resonance_base_hz+k.hat.tone*t.openhat.resonance_t
 const keysModulation=t.keys.modulation_index*(v.brightness/t.keys.brightness_reference);
 const bassSub=new Tone.Synth({frequency:t.bass.sub_frequency,oscillator:{type:t.bass.sub_oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:0,release:t.bass.release}});bassSub.volume.value=t.bass.sub_volume_db;
 const instruments={
-kick:new Tone.MembraneSynth({pitchDecay:t.kick.pitch_decay,octaves:t.kick.octaves,oscillator:{type:t.kick.oscillator},envelope:{attack:t.kick.attack,decay:k.kick.decay,sustain:0,release:t.kick.release}}),
-kickSub:new Tone.Synth({oscillator:{type:"sine"},envelope:{attack:.001,decay:k.sub.decay,sustain:0,release:.1}}),
-kickClk:new Tone.NoiseSynth({noise:{type:"white"},envelope:{attack:t.kick.click_attack,decay:t.kick.click_decay,sustain:0}}),
-kickBody:new Tone.Synth({oscillator:{type:t.kick.body_oscillator},envelope:{attack:t.kick.body_attack,decay:t.kick.body_decay,sustain:0}}),
-snare:new Tone.NoiseSynth({noise:{type:t.snare.noise},envelope:{attack:t.snare.attack,decay:k.snare.decay,sustain:0}}),
-snareRing:new Tone.Synth({oscillator:{type:t.snare.ring_oscillator},envelope:{attack:t.snare.ring_attack,decay:t.snare.ring_decay,sustain:0}}),
-clap:new Tone.NoiseSynth({noise:{type:t.clap.noise},envelope:{attack:t.clap.attack,decay:k.perc.decay,sustain:0}}),
-hat:new Tone.MetalSynth({frequency:p.notes.hat,envelope:{attack:t.hat.attack,decay:k.hat.decay,release:t.hat.release},harmonicity:t.hat.harmonicity,modulationIndex:t.hat.modulation_index,resonance:hatResonance,octaves:t.hat.octaves}),
-open:new Tone.MetalSynth({frequency:p.notes.open,envelope:{attack:t.openhat.attack,decay:k.openhat.decay,release:t.openhat.release},harmonicity:t.openhat.harmonicity,modulationIndex:t.openhat.modulation_index,resonance:openResonance,octaves:t.openhat.octaves}),
+...createDrumBank(Tone.getContext().rawContext,p,Tone.connect),
 bass:new Tone.MonoSynth({oscillator:{type:t.bass.oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:t.bass.sustain,release:t.bass.release}}),
 bassSub,
 // Bound fat-oscillator voice count and release to avoid overwhelming browser audio threads.
 keys:new Tone.PolySynth({voice:Tone.FMSynth,maxPolyphony:Math.max(16,t.keys.max_polyphony),options:{harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}}),
 pads:new Tone.PolySynth({voice:Tone.Synth,maxPolyphony:Math.max(24,t.pads.max_polyphony),options:{oscillator:{type:t.pads.oscillator,count:Math.min(t.pads.count,2),spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:Math.min(t.pads.release,2.4)}}})
 };
-for(const [lane,source] of [["kick","kick"],["kickSub","sub"],["kickClk","kick"],["kickBody","kick"],["snare","snare"],["snareRing","snare"],["clap","perc"],["hat","hat"],["open","openhat"]]){
-const level=Math.max(0.001,Number(k[source].level)||1);
-instruments[lane].volume.value=20*Math.log10(level);
-}
 return instruments;
 }
 
@@ -1338,21 +1388,6 @@ let reverbReady = true;
 // why Export WAV used to throw on the first repeated hat. The offline render
 // therefore builds one throwaway metal voice per stroke and connects it to the
 // same destination the live instrument uses.
-function oneShotMetal(which,resonance,destination,decayScale,level){
-  const t=rg69AudioProfile.tone[which],k=rg69AudioProfile.kit[which];
-  const synth=new Tone.MetalSynth({
-    frequency:which==='openhat'?rg69AudioProfile.notes.open:rg69AudioProfile.notes.hat,
-    envelope:{attack:t.attack,decay:k.decay*(decayScale||1),release:t.release},
-    harmonicity:t.harmonicity,
-    modulationIndex:t.modulation_index,
-    resonance:resonance,
-    octaves:t.octaves
-  });
-  synth.volume.value=20*Math.log10(Math.max(0.001,Number(level)||1));
-  synth.connect(destination);
-  return synth;
-}
-
 async function initAudio(activationPromise){
 // Lock the fetched or embedded profile before the first await. Audio startup
 // never waits on a catalogue request or a network timeout.
@@ -1420,7 +1455,7 @@ const instruments=createToneInstruments();
 const kickN=instruments.kick,kickSub=instruments.kickSub,kickClk=instruments.kickClk,kickBody=instruments.kickBody;
 const snareN=instruments.snare,snareRng=instruments.snareRing,clapN=instruments.clap,hatN=instruments.hat,openN=instruments.open;
 const bassN=instruments.bass,bassSub=instruments.bassSub,keysN=instruments.keys,padsN=instruments.pads;
-const drift=new Tone.LFO(.05+aud.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();drift.connect(kickN.oscillator.detune);drift.connect(snareRng.detune);
+const drift=new Tone.LFO(.05+aud.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();drift.connect(bassN.detune);
 const kickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
 kickClkBP.Q.value=toneProfile.kick.click_filter_q;kickClk.connect(kickClkBP);
 const snareRngBP=new Tone.Filter(toneProfile.snare.ring_filter_base_hz+kitProfile.snare.tone*toneProfile.snare.ring_filter_tone_span_hz,'bandpass');
@@ -1439,18 +1474,12 @@ const padsLFO=new Tone.LFO(0.12,600,1400);padsLFO.start();padsLFO.connect(padsFl
 const padsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
 const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.value=toneProfile.pads.saturation_wet;
 const panners=createRG69Panners();
-kickN.connect(panners.kick);panners.kick.connect(kickSat);
-kickSub.connect(panners.kickSub);panners.kickSub.connect(kickSat);
-kickClkBP.connect(panners.kickClick);panners.kickClick.connect(kickSat);
-kickBody.connect(panners.kickBody);panners.kickBody.connect(kickSat);
+kickN.connect(kickSat);kickSub.connect(kickSat);kickClkBP.connect(kickSat);kickBody.connect(kickSat);
 kickSat.connect(kickComp);kickComp.connect(drumDrive);
-snareN.connect(panners.snare);panners.snare.connect(drumSat);
-snareRngBP.connect(panners.snareRing);panners.snareRing.connect(drumSat);
-clapN.connect(panners.clap);panners.clap.connect(drumSat);
-const hatFlt=new Tone.Filter(7600,'highpass');
-const openFlt=new Tone.Filter(6200,'highpass');
-hatN.connect(hatFlt);hatFlt.connect(panners.hat);panners.hat.connect(drumSat);
-openN.connect(openFlt);openFlt.connect(panners.open);panners.open.connect(drumSat);
+snareN.connect(drumSat);snareRngBP.connect(drumSat);clapN.connect(drumSat);
+const hatFlt=new Tone.Filter(5500,'highpass'),openFlt=new Tone.Filter(4200,'highpass');
+hatN.connect(hatFlt);hatFlt.connect(drumSat);
+openN.connect(openFlt);openFlt.connect(drumSat);
 drumSat.connect(drumDrive);drumDrive.connect(drumG);
 bassN.connect(bassG);bassSub.connect(bassG);
 keysN.connect(keySat);keySat.connect(keysChorus);keysChorus.connect(keysTrem);keysTrem.connect(keysDrive);
@@ -1458,7 +1487,9 @@ keysDrive.connect(keysG);keysG.connect(keysTexture);keysTexture.connect(keysLP);
 keysLP.connect(panners.keys);panners.keys.connect(masterG);panners.keys.connect(revSend);panners.keys.connect(dlySend);
 padsN.connect(padsFlt);padsFlt.connect(padsG);padsG.connect(padsBW);padsBW.connect(padsSat);
 padsSat.connect(panners.pads);panners.pads.connect(masterG);panners.pads.connect(revSend);panners.pads.connect(dlySend);
-const routes={drum:[drumG,masterG,revSend,dlySend],bass:[bassG,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
+const drumFXSend=new Tone.Gain(.2),bassFXSend=new Tone.Gain(.15);
+drumG.connect(masterG);drumG.connect(drumFXSend);bassG.connect(masterG);bassG.connect(bassFXSend);
+const routes={drum:[drumFXSend,masterG,revSend,dlySend],bass:[bassFXSend,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
 const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
 installLaneFX(routes,effects);
 
@@ -1559,9 +1590,7 @@ synths.kickBody.triggerAttackRelease(pitch.kickBody*pitchShift,hitGate(thirtySec
 else if(v==='s'){synths.snare.triggerAttackRelease(hitGate(eighth),rt,vl);synths.snareRng.triggerAttackRelease(pitch.snareRing*pitchShift,hitGate(sixteenthDuration),rt,vl*0.5)}
 else if(v==='c')synths.clap.triggerAttackRelease(hitGate(sixteenthDuration),rt,vl);
 else if(v==='h'){
-// An offline MetalSynth cannot take a second start, so the export renders each
-// stroke through its own throwaway voice at the profile's tone. Live playback
-// keeps the single instrument, which is what the sliders and meters drive.
+// Both live playback and export use independent percussion one-shots.
 synths.hat.triggerAttackRelease(pitch.hat*pitchShift,hitGate(Math.min(sixteenthDuration*.5,.06)),rt,vl);
 }
 else if(v==='o'){
@@ -1598,11 +1627,7 @@ const events=compileStep(index,time,opts);
 for(const event of events){
 const {voice,args}=event;
 try{
-if(opts.metalTap&&["hat","open"].includes(voice)){
-const which=voice==="hat"?"hat":"openhat",t=rg69AudioProfile.tone[which],k=rg69AudioProfile.kit;
-const resonance=t.resonance_base_hz+k.hat.tone*t.resonance_tone_span_hz;
-oneShotMetal(which,resonance,opts.metalTap[voice],1,k[which].level).triggerAttackRelease(...args);
-}else synths[voice].triggerAttackRelease(...args);
+synths[voice].triggerAttackRelease(...args);
 }catch(error){if(!opts.onError)throw error;opts.onError(voice,error);}
 }
 if(opts.sampleGraph){try{playSample(index,time,opts);}catch(error){if(!opts.onError)throw error;opts.onError('sample',error);}}
@@ -1641,7 +1666,7 @@ applyTranspose:true
 st_.visualQueue.push({time:scheduledTime,idx:st_.idx,tick:st_.tick});
 }
 const audioTime=()=>Tone.getContext().rawContext.currentTime;
-const CLOCK_INTERVAL=20,CLOCK_HORIZON=.065,CLOCK_LEAD=.045;
+const CLOCK_INTERVAL=20,CLOCK_HORIZON=.14,CLOCK_LEAD=.10;
 function pauseClock(){
 st_.playing=false;clearTimeout(st_.timer);st_.timer=null;
 st_.clockEpoch=(st_.clockEpoch||0)+1;st_.visualQueue=[];
@@ -1657,8 +1682,8 @@ if(!st_.playing||epoch!==st_.clockEpoch)return;
 try{
 const now=audioTime(),step=60/aud_.bpm/4;
 if(!Number.isFinite(now)||!Number.isFinite(step)||step<=0)throw Error("Invalid clock time");
-if(st_.nextStepAt<now+.025){
-const skipped=Math.max(0,Math.floor((now+.025-st_.nextStepAt)/step));
+if(st_.nextStepAt<now+.008){
+const skipped=Math.max(0,Math.floor((now+.008-st_.nextStepAt)/step));
 st_.tick=(st_.tick??-1)+skipped;st_.idx=((st_.idx??-1)+skipped)%st_.stepCount;
 st_.nextStepAt=now+CLOCK_LEAD;
 }
@@ -1925,8 +1950,7 @@ applyProb:true,
 applyRatchet:true,
 sixteenth:sixteenth,
 addSwing:true,
-applyTranspose:true,
-metalTap:{hat:graph.hatFlt,open:graph.openFlt}
+applyTranspose:true
 });
 const pct=Math.round((i/(bars*16))*100);
 if(i%(bars*2)===0){
@@ -2484,7 +2508,7 @@ await (activationPromise||Tone.start());
 }
 claimOwner();if(!st_.heartbeat)st_.heartbeat=setInterval(keepOwner,1800);
 st_.playing=true;
-outputGate.gain.rampTo(1,.015);
+outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());
 $id('play').setAttribute('aria-pressed','true');
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
 startClock();
