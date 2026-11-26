@@ -91,6 +91,17 @@ class TestFixStatus < Minitest::Test
     refute_includes rendered, "fix0: active tree=RAILS"
   end
 
+  def test_process_listing_drops_a_dead_fix_pid
+    dead = 999_999_999
+    listing = "#{dead} 00:01 ruby MASTER/bin/master /fix RAILS\n"
+    success = Struct.new(:success?).new(true)
+    status = Operator::FixStatus.new(root: @root)
+
+    Master::Io::Exec.stub(:capture2, [listing, success]) do
+      assert_empty status.send(:processes)
+    end
+  end
+
   def test_live_process_without_a_receipt_is_not_described_by_an_old_run
     write("fix_runs.json", JSON.generate("runs" => [run_record("RAILS", pid: 0)]))
     status = Operator::FixStatus.new(root: @root)

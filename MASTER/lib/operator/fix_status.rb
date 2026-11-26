@@ -452,15 +452,22 @@ module Operator
 
       out.each_line.filter_map do |line|
         pid, elapsed, command = line.strip.split(/\s+/, 3)
-        next unless command.to_s.match?(%r{(?:\A|/)master(?:\.rb)?\s+/fix(?:\s|\z)}) || command.to_s.match?(%r{bin/master\s+/fix})
-        next if pid.to_i == Process.pid
+        next unless live_fix_process?(pid, command)
 
         queue = self.class.queue_from(command)
-        next unless @trees.empty? || queue.empty? || (queue & @trees).any?
+        next unless visible_queue?(queue)
 
         { pid: pid.to_i, elapsed:, queue: }
       end
     end
+
+    def live_fix_process?(pid, command)
+      matches = command.to_s.match?(%r{(?:\A|/)master(?:\.rb)?\s+/fix(?:\s|\z)}) ||
+        command.to_s.match?(%r{bin/master\s+/fix})
+      matches && pid.to_i != Process.pid && alive?(pid)
+    end
+
+    def visible_queue?(queue) = @trees.empty? || queue.empty? || (queue & @trees).any?
 
     def wanted?(target)
       tree = relative(target).split("/").first
@@ -477,8 +484,10 @@ module Operator
 
       Process.kill(0, pid.to_i)
       true
-    rescue Errno::ESRCH, Errno::EPERM, RangeError, TypeError
+    rescue Errno::ESRCH, RangeError, TypeError
       false
+    rescue Errno::EPERM
+      true
     end
 
     def state_roots
