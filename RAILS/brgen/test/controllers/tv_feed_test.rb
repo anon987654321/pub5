@@ -106,6 +106,18 @@ class TvFeedTest < ActionDispatch::IntegrationTest
   # ranking that only counted accounts would be built on a small minority.
   # Shared::PruneGuestUsersJob destroy_alls those users, and Tv::ViewEvent is
   # dependent: :destroy on them, so the rows go with them rather than orphaning.
+  test "progress cannot be written against a different video's URL" do
+    first = video(title: "First")
+    second = video(title: "Second")
+    event = first.view_events.create!(user: @viewer)
+    sign_in_as(@viewer)
+    host! "tv.brgen.no"
+
+    patch tv.video_view_event_path(second, event), params: { watch_time_seconds: 42 }
+    assert_response :not_found
+    assert_nil event.reload.watch_time_seconds
+  end
+
   test "a logged-out viewer's watch time counts too" do
     clip = video(title: "Gjest")
     host! "tv.brgen.no"
@@ -123,7 +135,7 @@ class TvFeedTest < ActionDispatch::IntegrationTest
 
     get tv.feed_path
     assert_response :success
-    assert_select "video.tv-feed-video[preload=none][playsinline]", 1
+    assert_select "video.tv-feed-video[preload=none][playsinline][controls]", 1
     assert_select "video.tv-feed-video[autoplay]", 0
 
     stylesheet = File.read(Rails.root.join("app/assets/stylesheets/_brgen_vertical_surfaces.scss"))

@@ -20,8 +20,8 @@ class Tv::ViewEventsController < Tv::BaseController
     # Tv::Video includes Shared::Sluggable, so the nested path carries a slug
     # and find_by(id:) answers nil for every real request. Tv::BaseController
     # inherits Shared::SluggedVerticalController, which provides slug lookup.
-    video = Tv::Video.publicly_visible.find_by(slug: params[:video_id]) ||
-            Tv::Video.publicly_visible.find_by(id: params[:video_id])
+    scope = Tv::Video.publicly_visible.in_current_city
+    video = scope.find_by(slug: params[:video_id]) || scope.find_by(id: params[:video_id])
     return head :not_found unless video
 
     event = video.view_events.create!(user: Current.user)
@@ -36,7 +36,11 @@ class Tv::ViewEventsController < Tv::BaseController
   # nothing is listening for the response, so this answers :no_content either
   # way rather than rendering anything.
   def update
-    event = Current.user.tv_view_events.find_by(id: params[:id])
+    scope = Tv::Video.publicly_visible.in_current_city
+    video = scope.find_by(slug: params[:video_id]) || scope.find_by(id: params[:video_id])
+    return head :not_found unless video
+
+    event = Current.user.tv_view_events.find_by(id: params[:id], tv_video_id: video.id)
     return head :not_found unless event
 
     event.record_progress!(params[:watch_time_seconds])

@@ -46,13 +46,13 @@ module Maps
     end
 
     def map_cache_key
-      "maps/points/#{Current.city_record.id}/#{request.host}/#{bbox_key}"
+      "maps/points/#{Current.city_record.id}/#{request.protocol}#{request.host}/#{I18n.locale}/#{bbox_key}"
     end
 
     def bbox_key
       return "all" unless bbox
 
-      %i[sw_lat sw_lng ne_lat ne_lng].join("/")
+      [bbox[:latitude].begin, bbox[:longitude].begin, bbox[:latitude].end, bbox[:longitude].end].join("/")
     end
 
     # The city's own coordinates, else the middle of what is on the map. A city
@@ -73,7 +73,10 @@ module Maps
       return @bbox if defined?(@bbox)
 
       values = %i[sw_lat sw_lng ne_lat ne_lng].map { |key| Float(params[key], exception: false) }
-      @bbox = if values.all? { |v| v&.finite? } && values[0] <= values[2] && values[1] <= values[3]
+      @bbox = if values.all? { |v| v&.finite? } &&
+                 values.values_at(0, 2).all? { |v| v.between?(-90, 90) } &&
+                 values.values_at(1, 3).all? { |v| v.between?(-180, 180) } &&
+                 values[0] <= values[2] && values[1] <= values[3]
                 { latitude: values[0]..values[2], longitude: values[1]..values[3] }
       end
     end

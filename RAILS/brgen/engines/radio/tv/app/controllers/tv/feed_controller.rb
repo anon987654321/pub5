@@ -23,6 +23,7 @@ class Tv::FeedController < Tv::BaseController
     @videos = Tv::Video.trending
                        .joins(:video_file_attachment)
                        .includes(:channel, video_file_attachment: :blob, thumbnail_attachment: :blob)
+                       .order(id: :asc)
                        .limit(PAGE)
                        .offset(offset)
     @next_offset = offset + PAGE

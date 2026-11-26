@@ -25,6 +25,20 @@ class MapsViewPointsTest < ActionDispatch::IntegrationTest
     refute_includes titles, "Fløyen"
   end
 
+  test "two cached map views do not share the same bounding box" do
+    Rails.stub(:cache, ActiveSupport::Cache::MemoryStore.new) do
+      get "/", params: { sw_lat: 60.396, sw_lng: 5.320, ne_lat: 60.399, ne_lng: 5.330 }, as: :json
+      assert_response :success
+      assert_includes response.parsed_body.map { _1["title"] }, "Bryggen"
+
+      get "/", params: { sw_lat: 60.394, sw_lng: 5.340, ne_lat: 60.396, ne_lng: 5.350 }, as: :json
+      assert_response :success
+      titles = response.parsed_body.map { _1["title"] }
+      assert_includes titles, "Fløyen"
+      refute_includes titles, "Bryggen"
+    end
+  end
+
   test "the page says where to refetch and carries the list the HUD fills" do
     get "/"
 
