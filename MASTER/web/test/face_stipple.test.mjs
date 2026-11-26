@@ -1175,9 +1175,13 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
   for (const mask of api.profiles) {
     const min = [Infinity, Infinity, Infinity], max = [-Infinity, -Infinity, -Infinity];
     const projections = [new Set(), new Set(), new Set()];
+    let interior = 0;
     for (let index = 0; index < 2048; index++) {
       const point = api.sample(mask.id, index);
       const normal = api.normalAt(mask.id, ...point);
+      const field = api.fieldAt(mask.id, ...point);
+      assert.ok(field < .012, mask.id + ' carrier escaped material');
+      if (field < -.008) interior++;
       assert.ok([...point, ...normal].every(Number.isFinite), mask.id + " invalid surface");
       assert.ok(Math.abs(Math.hypot(...normal) - 1) < 1e-8, mask.id + " invalid normal");
       point.forEach((v, axis) => {
@@ -1187,6 +1191,7 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
         projections[axis].add(Math.floor(a * 32) + ":" + Math.floor(b * 32));
       });
     }
+    assert.ok(interior >= 2048 * .09 && interior <= 2048 * .24, mask.id + ' interior stratum is missing or too dense');
     assert.ok(max.every((v, i) => v - min[i] > .4), mask.id + " lacks spatial extent");
     assert.ok(projections.every(cells => cells.size > 100), mask.id + " lacks multi-angle coverage");
     assert.equal(api.mouthGeometry(mask.id), null, "abstract forms have no invented anatomical mouth");
