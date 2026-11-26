@@ -144,6 +144,7 @@ module Master
         detail_capture = Master::Trace::Dmesg.detail_enabled?
         streamed_detail = +""
         streamed_bytes = 0
+        last_progress = started
         stream_started = false
         first_token_latency_ms = nil
         provider_started = nil
@@ -156,6 +157,7 @@ module Master
               @bus&.publish("llm:stream_started", model: selected_model)
               first_token_latency_ms = elapsed_ms(provider_started) if provider_started
             end
+            last_progress = Process.clock_gettime(Process::CLOCK_MONOTONIC) if chunk_bytes.positive?
             if detail_capture && streamed_detail.bytesize < 2_000
               remaining = 2_000 - streamed_detail.bytesize
               streamed_detail << chunk.to_s.byteslice(0, remaining).to_s
@@ -167,7 +169,7 @@ module Master
         end
         cache_key = cache_key_for(messages.last[:content], messages[0...-1], selected_model, system, temperature)
         result = breaker_for(selected_model).call(estimate_cost(messages.last[:content], selected_model)) do
-          Timeout.timeout(call_deadline_for(selected_model)) do
+          with_progress_deadline(selected_model, stream:, progress: -> { last_progress }) do
             @cache.fetch(cache_key, selected_model) do
               provider_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
               send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, &stream_handler)
@@ -294,6 +296,46 @@ module Master
         return deadline unless Io::LaneSelection.kind(model) == :free
 
         [deadline, Io::LaneSelection.free_call_timeout_s].min
+      end
+
+      # A streaming reply is alive when it keeps producing bytes. Keep the
+      # ordinary cap for a silent/non-streaming call, but turn it into an idle
+      # deadline for streams so a useful long answer is not mistaken for a hang.
+      # The enclosing /fix run budget is still the absolute operation ceiling.
+      def with_progress_deadline(model, stream:, progress:)
+        timeout = call_deadline_for(model)
+        return Timeout.timeout(timeout) { yield } unless stream
+
+        caller = Thread.current
+        stopped = false
+        state_lock = Mutex.new
+        deadline = { timeout:, progress:, state_lock:, stopped: -> { stopped } }
+        watchdog = stream_progress_watchdog(caller, deadline)
+        yield
+      ensure
+        state_lock&.synchronize { stopped = true }
+        watchdog&.join(1)
+      end
+
+      def stream_progress_watchdog(caller, deadline)
+        Thread.new do
+          loop do
+
+            sleep 0.25
+            state = stream_progress_state(deadline)
+            break if state[:stopped]
+
+            caller.raise(Timeout::Error) if state[:expired]
+          end
+        end
+      end
+
+      def stream_progress_state(deadline)
+        deadline[:state_lock].synchronize do
+          stopped = deadline[:stopped].call
+          elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - deadline[:progress].call
+          { stopped:, expired: !stopped && elapsed >= deadline[:timeout] }
+        end
       end
 
       # A call past its hard deadline is parked for the cool-off and recorded as a

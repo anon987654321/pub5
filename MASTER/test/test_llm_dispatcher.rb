@@ -788,6 +788,25 @@ class TestLLMDispatcher < Minitest::Test
     assert_equal "routed-model", first_tokens.first.first
     assert_operator first_tokens.first.last, :>=, 0
   end
+
+  def test_stream_progress_extends_the_idle_deadline_without_extending_a_silent_call
+    dispatcher, = build_dispatcher
+    dispatcher.instance_variable_set(:@availability, Struct.new(:dispatch_deadline_s).new(1))
+    last_progress = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+    result = dispatcher.send(
+      :with_progress_deadline, "routed-model", stream: true, progress: -> { last_progress }
+    ) do
+      3.times do
+        sleep 0.45
+        last_progress = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+      :completed
+    end
+
+    assert_equal :completed, result
+  end
+
   def test_failed_stream_does_not_record_a_successful_first_token_sample
     dispatcher, = recording_dispatcher
     first_tokens = []
