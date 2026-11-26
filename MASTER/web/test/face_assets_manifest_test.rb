@@ -109,13 +109,7 @@ test "the view renders its ordered manifest from the yaml, not a literal list" d
     assert_equal starts.sort, starts, "shell_boot loads in manifest order"
   end
 
-  # face_2d_fallback is deliberately after the boot script: a blocking
-  # script above it would delay the tap wiring the primer depends on.
-  test "face_2d_fallback still loads after the boot script" do
-    boot = view_source.index('asset_path("face_primer.js")')
-    fallback = view_source.index('asset_path("face_2d_fallback.js")')
-
-    assert boot && fallback
-    assert_operator fallback, :>, boot
+  test "legacy face scripts are absent" do
+    refute_match(/face_ascii\.js|face_2d_fallback\.js/, view_source)
   end
 end

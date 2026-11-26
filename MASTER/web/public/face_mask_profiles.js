@@ -324,14 +324,6 @@
   }
 
   function start() {
-    const search = window.location?.search || "";
-    // The opt-in material laboratory uses the unmasked portrait; production
-    // always starts with the selected volume.
-    if (!/(?:^|[?&])stipple=0(?:&|$)/.test(search) &&
-        /(?:^|[?&])(?:stipple|playground)=1(?:&|$)/.test(search)) {
-      window.MASTER_FACE_WORLD?.setSubjectForm?.("face");
-      return;
-    }
     apply(current, "conversation-start");
   }
   window.MASTER_FACE_MASKS = Object.freeze({

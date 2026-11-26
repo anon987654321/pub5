@@ -24,7 +24,6 @@ module MasterFaceStylesheet
     42_wscons_skin.css
     43_face_chrome.css
     44_stipple_playground.css
-    50_ascii_face.css
     60_session_chrome.css
   ].freeze
 

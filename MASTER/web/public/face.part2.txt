@@ -175,41 +175,7 @@ void main(){
     float cheekRgn=smoothstep(0.10,0.56,abs(position.y)) * smoothstep(0.52,0.16,abs(position.x));
     float browRgn=smoothstep(0.26,0.48,abs(position.y)) * smoothstep(0.48,0.16,abs(position.x));
     p=mix(scatter,position,lm)+noise+vec3(0.,-uJaw*0.05*jawRgn,0.);
-    p.y *= mix(1.0, FACE_FUTURE_CRANIAL_HEIGHT * FACE_FUTURE_VERTICALIZATION, lm);
-    float faceBand = smoothstep(-0.72, 0.18, position.y);
-    float faceWidth = mix(FACE_FUTURE_LOWER_FACE, FACE_FUTURE_UPPER_FACE * FACE_FUTURE_CRANIAL_WIDTH, faceBand);
-    p.x *= mix(1.0, faceWidth, lm);
-    float jawBand = smoothstep(-0.80, -0.08, -position.y);
-    float faceDepth = mix(FACE_FUTURE_FACIAL_PROJECTION, FACE_FUTURE_FACIAL_PROJECTION * FACE_FUTURE_MASTICATORY, jawBand);
-    p.z *= mix(1.0, faceDepth, lm);
-    p.x += (position.x < 0.0 ? FACE_FUTURE_SIDE_BIAS_LEFT : FACE_FUTURE_SIDE_BIAS_RIGHT) * 0.25 * lm;
-    p.z += cheekRgn * (FACE_FUTURE_NOSE - 1.0) * 0.018 * lm;
-    p.y -= jawRgn * (1.0 - FACE_FUTURE_JAW_SOFTENING) * 0.018 * lm;
-    p.y += browRgn * (1.0 - FACE_FUTURE_BROW) * 0.012 * lm;
-
-    // The default carved-field portrait uses shallow, local planes rather than
-    // copied ceremonial motifs: a quiet brow shelf, recessed eye sockets,
-    // raised cheek planes, a narrow bridge, and a restrained chin plane.
-    float eyeX = 1.0 - smoothstep(0.055, 0.15, abs(abs(position.x) - 0.145));
-    float eyeY = 1.0 - smoothstep(0.040, 0.11, abs(position.y - 0.115));
-    float eyeSocket = eyeX * eyeY;
-    float browShelf = (1.0 - smoothstep(0.035, 0.10, abs(position.y - 0.235)))
-      * (1.0 - smoothstep(0.12, 0.42, abs(position.x)));
-    float cheekPlane = (1.0 - smoothstep(0.05, 0.16, abs(position.y + 0.015)))
-      * smoothstep(0.10, 0.21, abs(position.x))
-      * (1.0 - smoothstep(0.22, 0.34, abs(position.x)));
-    float noseBridge = (1.0 - smoothstep(0.025, 0.09, abs(position.x)))
-      * (1.0 - smoothstep(0.10, 0.28, abs(position.y - 0.035)));
-    float chinPlane = (1.0 - smoothstep(0.035, 0.10, abs(position.y + 0.345)))
-      * (1.0 - smoothstep(0.08, 0.27, abs(position.x)));
-    // A restrained seeded imbalance keeps the planes human and avoids a mirrored face.
-    float sideWeight = position.x < 0.0 ? 1.0 : 0.38;
-    float sideCarve = (seed - 0.5) * 2.0 * sideWeight * FACE_CARVE_ASYMMETRY;
-    p.z -= eyeSocket * FACE_CARVE_ORBITAL * lm;
-    p.z += browShelf * FACE_CARVE_BROW * lm;
-    p.z += cheekPlane * (FACE_CARVE_CHEEK + sideCarve) * lm;
-    p.z += noseBridge * FACE_CARVE_NOSE * lm;
-    p.z -= chinPlane * FACE_CARVE_CHIN * lm;
+    p += normalize(p + vec3(.001)) * sin(uTime * 1.1 + seed) * .006 * lm;
     p.xy += normalize(cursorFace - p.xy + vec2(0.001)) * curiousPull;
     float tremorf=snoise(position*18.0+uTime*3.2+seed)*uTremor*0.003;
     p+=vec3(tremorf,tremorf*0.7,0.0);
@@ -287,10 +253,10 @@ void main(){
   vec4 mv=modelViewMatrix*vec4(p,1.);
   float depth=clamp(p.z/0.82,0.,1.);
   // Identical opaque bitmap ink; geometry supplies depth.
-  gl_PointSize=3.0;
+  gl_PointSize = 1.0 + step(0.28, fract(seed * 7.13)) + step(0.88, fract(seed * 13.7));
   gl_Position=projectionMatrix*mv;
   vAlpha=1.0;
-  vColor=vec3(0.9333333);
+  vColor = vec3(clamp(0.44 + 0.42 * smoothstep(-0.42, 0.42, p.z) + 0.12 * fract(seed * 3.17), 0.0, 1.0));
   vDepth=depth;
   vZoneVal=zone;
 }`;
@@ -302,9 +268,6 @@ varying float vDepth;
 varying float vZoneVal;
 uniform float uFocusDim;
 void main(){
-  vec2 cell = floor(gl_PointCoord * 3.0);
-  // The same seven-cell, solid asymmetric bitmap for every carrier.
-  if ((cell.x == 0.0 && cell.y == 0.0) || (cell.x == 2.0 && cell.y == 2.0)) discard;
   gl_FragColor=vec4(vColor,1.0);
 }`;
 
