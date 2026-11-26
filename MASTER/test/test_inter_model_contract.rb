@@ -242,6 +242,15 @@ class TestInterModelContract < Minitest::Test
                  "the current ideation implementation must use the validated adapter"
   end
 
+  def test_council_ideation_rejects_rephrased_duplicates_across_rounds
+    ideation = Master::Review::Council::Ideation.new(agent: Object.new, root: @root)
+    prior = ["Remove duplicate configuration parsing from the runtime loader"]
+    duplicate = "REMOVE duplicate configuration parsing from the runtime loader!"
+    distinct = "Validate persisted session state at the serialization boundary"
+
+    assert_equal [distinct], ideation.send(:distinct_additions, prior, [duplicate, distinct, distinct])
+  end
+
   def test_council_ideation_uses_validated_protocol_for_every_model_turn
     initial_ideas = 10.times.map { |index| "Initial approach #{index + 1}" }
     additional_ideas = 5.times.map { |index| "Additional approach #{index + 1}" }
