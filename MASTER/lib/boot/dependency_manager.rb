@@ -371,14 +371,14 @@ module Master
         lock = File.join(@root, "Gemfile.lock")
         return "" unless File.file?(lock)
 
-        File.read(lock)[/^BUNDLED WITH\n\s+(.+)$/m, 1].to_s.strip
+        File.read(lock)[/^BUNDLED WITH\r?\n[ \t]+([^\r\n]+)\r?$/, 1].to_s.strip
       end
 
       def locked_ruby_version
         lock = File.join(@root, "Gemfile.lock")
         return "" unless File.file?(lock)
 
-        File.read(lock)[/^RUBY VERSION\n\s+ruby\s+(.+)$/m, 1].to_s.strip
+        File.read(lock)[/^RUBY VERSION\r?\n[ \t]+ruby[ \t]+([^\r\n]+)\r?$/, 1].to_s.strip
       end
 
       # The bundle the deploy installed. vps_deploy_master.sh runs `bundle install`

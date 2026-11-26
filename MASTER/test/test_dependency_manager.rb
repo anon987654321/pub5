@@ -46,6 +46,24 @@ class TestDependencyManager < Minitest::Test
     manager
   end
 
+  def test_lock_version_readers_do_not_consume_subsequent_sections
+    File.write(File.join(@root, "Gemfile.lock"), <<~LOCK)
+      RUBY VERSION
+        ruby 3.3.13
+
+      BUNDLED WITH
+        4.0.20
+
+      CHECKSUMS
+        example (1.0.0)
+    LOCK
+    manager = fake_manager([])
+    status = manager.status
+
+    assert_equal "3.3.13", status[:ruby_required]
+    assert_equal "4.0.20", status[:bundler]
+  end
+
   def test_process_capture_result_helpers_use_the_canonical_result_type
     manager = fake_manager([])
 
