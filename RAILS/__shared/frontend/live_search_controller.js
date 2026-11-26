@@ -17,12 +17,38 @@ export default class extends Controller {
   }
 
   disconnect() {
-    clearTimeout(this.timeout)
+    this.cancelPending()
   }
 
-  input() {
+  cancelPending() {
     clearTimeout(this.timeout)
+    this.timeout = null
+  }
+
+  input(event) {
+    this.cancelPending()
+    if (event?.isComposing) return
     this.timeout = setTimeout(() => this.submitForm(), this.delayValue)
+  }
+
+  filter(event) {
+    // A search field emits change on blur as well as input while typing.
+    // Only the other form controls need an immediate change submission.
+    if (this.hasInputTarget && event.target === this.inputTarget) return
+    this.submitForm()
+  }
+
+  start(event) {
+    if (!this.hasFormTarget || event.target !== this.formTarget) return
+    this.cancelPending()
+    this.submission = event.detail?.formSubmission
+    const shell = this.element.classList.contains("search") ? this.element : this.element.closest(".search")
+    if (shell) {
+      shell.dataset.state = "loading"
+      shell.setAttribute("aria-busy", "true")
+    }
+    this.formTarget.setAttribute("aria-busy", "true")
+    this.announce(this.updatingValue)
   }
 
   // A control can belong to this form from elsewhere on the page through its
@@ -40,17 +66,10 @@ export default class extends Controller {
   submitForm() {
     if (!this.hasFormTarget) return
 
-    const shell = this.element.classList.contains("search") ? this.element : this.element.closest(".search")
-    if (shell) {
-      shell.dataset.state = "loading"
-      shell.setAttribute("aria-busy", "true")
-    }
-
+    this.cancelPending()
     const action = new URL(this.formTarget.action, window.location.origin)
     action.searchParams.set("format", "turbo_stream")
     this.formTarget.action = action.pathname + action.search
-    this.formTarget.setAttribute("aria-busy", "true")
-    this.announce(this.updatingValue)
     this.formTarget.requestSubmit()
   }
 
@@ -59,7 +78,9 @@ export default class extends Controller {
   }
 
   complete(event) {
-    if (event.target !== this.formTarget) return
+    if (!this.hasFormTarget || event.target !== this.formTarget) return
+    if (this.submission && event.detail?.formSubmission !== this.submission) return
+    this.submission = null
 
     this.formTarget.removeAttribute("aria-busy")
     const succeeded = event.detail?.success !== false

@@ -5,14 +5,13 @@
   data-controller="live-search search-focus"
   role="search"
   aria-label="<%= label %>"
-  data-action="turbo:submit-end->live-search#complete"
+  data-action="turbo:submit-start->live-search#start turbo:submit-end->live-search#complete"
   data-live-search-updating-value="<%= t("status.updating_results") %>"
   data-live-search-updated-value="<%= t("status.results_updated") %>"
   data-live-search-failed-value="<%= t("status.search_failed") %>"
 >
   <%= form_with url: url, method: :get, data: {
-        controller: "auto-submit",
-        action: "change->auto-submit#submit",
+        action: "submit->live-search#cancelPending change->live-search#filter",
         turbo_stream: true,
         live_search_target: "form"
       } do |f| %>
@@ -24,7 +23,7 @@
             placeholder: placeholder,
             data: {
               live_search_target: "input",
-              action: "input->live-search#input focus->search-focus#focus blur->search-focus#blur"
+              action: "input->live-search#input compositionend->live-search#input focus->search-focus#focus blur->search-focus#blur"
             },
             aria: { label: t("search.query"), controls: local_assigns.fetch(:results_id, "live_search_results"), expanded: query.to_s.strip.present? } %>
       <%# capture, not call. The block was written in the calling view, so it

@@ -76,3 +76,35 @@ test("the timeago adapter keeps the canonical week duration and a real consumer"
   assert.match(reports, /data-controller="timeago"/)
   assert.match(reports, /data-timeago-refresh-interval-value="60000"/)
 })
+
+
+test("live search waits for IME input and cancels stale debounced submissions", async () => {
+  const source = await readSource("__shared/frontend/live_search_controller.js")
+  // Substitute only the Stimulus base class; execute the shipped methods.
+  const { default: LiveSearch } = await import("data:text/javascript," +
+    encodeURIComponent(source.replace(/^import .*$/m, "class Controller {}")))
+  const controller = new LiveSearch()
+  let sends = 0
+  const input = {}
+  controller.hasInputTarget = true
+  controller.inputTarget = input
+  controller.delayValue = 1
+  controller.submitForm = () => { sends += 1; controller.cancelPending() }
+  controller.connect()
+
+  controller.input({ isComposing: true })
+  assert.equal(controller.timeout, null)
+  controller.input({ isComposing: false })
+  assert.notEqual(controller.timeout, null)
+  controller.cancelPending() // manual Enter or form submission
+  controller.filter({ target: input }) // search field blur is not a filter change
+  await new Promise(resolve => setTimeout(resolve, 10))
+  assert.equal(sends, 0)
+
+  controller.input({ isComposing: false })
+  await new Promise(resolve => setTimeout(resolve, 10))
+  assert.equal(sends, 1)
+  controller.filter({ target: {} })
+  assert.equal(sends, 2)
+  controller.disconnect()
+})

@@ -31,7 +31,7 @@
 
       <% live = local_assigns[:live] == true %>
       <% live_data = { controller: "live-search", live_search_target: "form", turbo_stream: true,
-                       action: "change@document->live-search#relay turbo:submit-end->live-search#complete",
+                       action: "change@document->live-search#relay submit->live-search#cancelPending turbo:submit-start->live-search#start turbo:submit-end->live-search#complete",
                        live_search_updating_value: t("status.updating_results"),
                        live_search_updated_value: t("status.results_updated"),
                        live_search_failed_value: t("status.search_failed") } %>
@@ -41,7 +41,7 @@
           <%= search_field_tag :q, params[:q], id: nil, class: "nav-search-input", placeholder: search_placeholder,
                 aria: { label: search_label, controls: (StorefrontSearch::RESULTS if live) },
                 data: { live_search_target: ("input" if live),
-                        action: ["focus->search-focus#focus blur->search-focus#blur", ("input->live-search#input" if live)].compact.join(" ") } %>
+                        action: ["focus->search-focus#focus blur->search-focus#blur", ("input->live-search#input compositionend->live-search#input" if live)].compact.join(" ") } %>
           <button type="submit" class="nav-search-submit" aria-label="<%= t("search.submit") %>"><%= icon :search, size: 22 %></button>
           <% if live %>
             <span class="visually-hidden" role="status" aria-live="polite" data-live-search-target="status"></span>
@@ -116,7 +116,7 @@
 
       <% live = local_assigns[:live] == true %>
       <% live_data = { controller: "live-search", live_search_target: "form", turbo_stream: true,
-                       action: "change@document->live-search#relay turbo:submit-end->live-search#complete",
+                       action: "change@document->live-search#relay submit->live-search#cancelPending turbo:submit-start->live-search#start turbo:submit-end->live-search#complete",
                        live_search_updating_value: t("status.updating_results"),
                        live_search_updated_value: t("status.results_updated"),
                        live_search_failed_value: t("status.search_failed") } %>
@@ -126,7 +126,7 @@
           <%= search_field_tag :q, params[:q], id: nil, class: "nav-search-input", placeholder: search_placeholder,
                 aria: { label: search_label, controls: (StorefrontSearch::RESULTS if live) },
                 data: { live_search_target: ("input" if live),
-                        action: ["focus->search-focus#focus blur->search-focus#blur", ("input->live-search#input" if live)].compact.join(" ") } %>
+                        action: ["focus->search-focus#focus blur->search-focus#blur", ("input->live-search#input compositionend->live-search#input" if live)].compact.join(" ") } %>
           <button type="submit" class="nav-search-submit" aria-label="<%= t("search.submit") %>"><%= icon :search, size: 22 %></button>
           <% if live %>
             <span class="visually-hidden" role="status" aria-live="polite" data-live-search-target="status"></span>
