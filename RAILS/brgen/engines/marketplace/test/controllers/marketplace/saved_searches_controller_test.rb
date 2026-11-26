@@ -57,10 +57,13 @@ class Marketplace::SavedSearchesControllerTest < ActionDispatch::IntegrationTest
   test "the listings grid narrows to the saved place" do
     seller = User.create!(email_address: "ss_seller_#{SecureRandom.hex(3)}@example.com", password: "secret1234")
     category = Marketplace::Category.create!(name: "Probe", slug: "ss-#{SecureRandom.hex(4)}")
-    here = Marketplace::Listing.create!(user: seller, category:, title: "Sykkel her", price_cents: 100, stock: 1,
-                                        location: "Sandviken")
-    there = Marketplace::Listing.create!(user: seller, category:, title: "Sykkel der", price_cents: 100, stock: 1,
-                                         location: "Fana")
+    # The grid shows the request city's listings, and a listing takes its city from the tenant.
+    here, there = ActsAsTenant.with_tenant(@city) do
+      %w[Sandviken Fana].map do |place|
+        Marketplace::Listing.create!(user: seller, category:, title: "Sykkel #{place}", price_cents: 100, stock: 1,
+                                     location: place)
+      end
+    end
 
     get marketplace.listings_path(location: "Sandviken")
 
