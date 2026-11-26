@@ -195,6 +195,8 @@ deliberately with `--overwrite`; the seed reproduces it byte for byte:
 
 Open `rg69/rg69.html` directly in the browser, from any directory. Tone.js 14.8.49 and its MIT license are embedded; no companion files, server, build step or CDN are required. The embedded library must match `vendor/tone/Tone.min.js` exactly (enforced by the regression suite). Local files use the embedded sound profile; HTTP pages can load the shared catalogue.
 
+New sessions start with Industrial, Hard Techno or HATE Style (140–165 BPM across the three presets). The original `hate-pummel` and `hate-grind` four-on-the-floor patterns, sub-bass, dissonant stabs, acid and drone patches remain available. Industrial styles use a restrained Pocket; Drive controls dedicated drum saturation independently of Tape. Saved sessions restore their own settings. Non-HTTP pages always use the embedded catalogue, even when the browser reports `file://` rather than `null` as its origin.
+
 The front panel has eight lanes (kick, snare, clap, closed hat, open hat, bass, keys and pads), 8/16/32/64-step patterns, 16-step banks, per-lane lengths, and Pocket, Drive, Dust and Space macros. The step menu edits velocity, timing, probability, ratchets, gate, pitch and loop conditions. Pocket scales both swing and microtiming; its timing offsets are original engine choices, not measured Dilla transcriptions.
 
 The sampler accepts local audio, detects transients or divides the source into sixteen equal slices, and sequences slices with pitch, reverse, gate and offset controls. Session JSON, local autosave and share links retain the sample settings, not the audio bytes: reload the original sample after reopening a session. Use samples you have permission to use.
