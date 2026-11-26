@@ -620,6 +620,21 @@ window._chatPassHairline = () => {
   setTimeout(() => last.classList.remove('msg-pass-flash'), 420);
 };
 
+// Project measured public boot state into the existing terminal, never raw
+// internal logs, server paths, credentials or operator command output.
+function syncTerminalBoot() {
+  const line = document.getElementById('terminal-boot');
+  if (!line) return;
+  const container = window.MASTER_CONTAINER_READY === true ? 'ready' : 'starting';
+  const face = document.body.classList.contains('face-ready') ? 'ready' :
+    (document.body.dataset.bootState === 'ERROR' ? 'unavailable; reload to retry' : 'waiting for first frame');
+  line.textContent = `master0 at mainbus0: ${container}\nface0 at master0: ${face}`;
+}
+window.addEventListener('master:boot-state', syncTerminalBoot);
+window.addEventListener('master:container-ready', syncTerminalBoot);
+window.addEventListener('master:face-ready', syncTerminalBoot);
+syncTerminalBoot();
+
 // The visible "dmesg" transcript line (raw internal event names like
 // "llm0 at master0: ...") is removed, but face_micro_interactions.js's
 // veto/pass ecology reaction depends on the chat:dmesg event firing, so the
