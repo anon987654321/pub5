@@ -316,9 +316,17 @@ module Studio
       # look here, once, rather than at each call site.
       HOUSE_CHAIN = %w[aged_kodachrome].freeze
 
-      # The Replicate development chain run before any local grade: repair, then
-      # sharpen, then emulate stock. Declared in STUDIO/replicate/chains.yml.
-      STILL_CHAIN = "stills".freeze
+      # The Replicate development chain run before any local grade, declared in
+      # STUDIO/replicate/chains.yml. It is native: the frame the LoRA drew, with
+      # no model in between. The old default repaired, upscaled and emulated
+      # stock first, and every step of that rebuilds the face — restore-image
+      # re-synthesises it, the upscaler smooths it, analog-film paints grain
+      # over the result. Measured on ragnhild the stills frame read fifteen years
+      # younger with plastic skin; on merethe it came back as a different, younger
+      # woman. The chains are still there to be chosen with --chain, but a
+      # pipeline whose subject is a real person cannot default to a face
+      # restoration model.
+      STILL_CHAIN = "native".freeze
 
       # A chain that develops nothing hands back the frame as the model left it,
       # so the film character is already in the pixels. The house look is a

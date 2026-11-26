@@ -165,7 +165,7 @@ class TestStudioReplicateChain < Minitest::Test
     )
     result = picture.write(
       "a quiet portrait against a north window", film: false, output_stem: "probe_selfie_01",
-      preset: "house", chain: Studio::Lora::Craft::STILL_CHAIN, discard_raw: true
+      preset: "house", chain: "stills", discard_raw: true
     )
 
     receipt = JSON.parse(File.read("#{result.fetch("capture").fetch("original")}.json"))
