@@ -20,6 +20,8 @@ module Master
         Mueller-Brockmann's grid systems; apply them as measurements, not as a style to imitate.
 
         First compare the whole before and after viewport when supplied: hierarchy, proportion, negative space, optical balance and product identity. Reject a locally cleaner detail that weakens the whole composition.
+        Reward removal of redundant chrome, decoration and repeated information when the primary task is clearer.
+        Do not treat intentional visual difference as a regression; verify that necessary controls and meaning survive.
         The remaining attached images are the changed regions of the re-rendered page, cropped and enlarged 400%
         so edges, alignment and baselines read at the pixel. Each is listed as R<n> x,y wxh below,
         followed by the findings and computed values the browser reported.

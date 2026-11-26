@@ -179,15 +179,10 @@ body:not(.face-ready) #prompt-form.live {
   transform: none;
   background: transparent;
 }
-body #prompt-form.live:focus-within {
-  opacity: 1;
-  background: black;
-}
 #prompt-form .prompt-sigil { color: var(--face-alert); font-weight: 700; margin-inline-end: 0.6ch; }
 #prompt-form .sep { color: var(--face-muted); margin-inline-end: 0.4ch; }
 #prompt-form input, #prompt-form textarea { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--face-fg); font: inherit; caret-color: var(--face-fg); padding: 0px 0; resize: none; line-height: var(--leading-body); max-height: 120px; }
 #prompt-form input::placeholder, #prompt-form textarea::placeholder { color: var(--face-muted); }
-html[data-input-dense="1"] #prompt-form { border-top: 1.5px solid color-mix(in srgb, var(--face-fg) 28%, transparent); transition: border-top-width .2s var(--ease-out); }
 
 /* Closed-caption strip (FA141) */
 #tts-live {

@@ -588,7 +588,7 @@ module Master
           source "Nielsen Heuristic #8 - aesthetic and minimalist design"
           ask "Does this output contain information that does not earn its place for the current task?"
           tags %i[DESIGN AESTHETIC]
-          fix "Remove redundant status, decoration, and secondary detail from the primary path."
+          fix "Subtract before adding. Keep only elements that serve the task or intentional identity; prefer hierarchy, alignment and negative space over framing and repeated signals. Preserve essential capabilities and accessible affordances; verify the whole output."
           example_path "/repo/app/views/example.html.erb"
           bad %(<button class="btn"><svg class="icon"></svg><span>Save</span></button>\n)
           good %(<button class="btn">Save</button>\n)

@@ -46,6 +46,8 @@ module Master
           Distinguish prose measure from display type, and intentional group separation from accidental irregularity.
           Compare content priority, visual rhythm, optical rather than merely mathematical alignment, and whether each grouping earns its space.
           Preserve intentional identity and distinguish expressive composition from accidental inconsistency.
+          Prefer a simpler composition when it serves the same task with fewer competing elements; do not reward
+          similarity to the baseline when the baseline is cluttered. Reject hiding or removing essential controls.
           Name the specific visible relationship that improves. Say "same" if neither is demonstrably better.
           Return only JSON: {"better": "A" or "B" or "same", "why": "<one short sentence>"}.
         TEXT
@@ -66,6 +68,11 @@ module Master
           Edit a rule whose selector matches one of these classes or ids, or it will change nothing you can see.
           All classes and ids on the page: #{@page_tokens.first(80).join(' ')}.
           Direction: #{direction}
+          Before proposing an edit, identify the primary task, focal subject, and the visible elements that earn their place.
+          Prefer subtraction: redundant chrome, repeated labels, unnecessary grouping, borders and separators should
+          not survive merely because they already exist. Prefer space, alignment and hierarchy to containers.
+          Preserve essential capabilities and discoverable accessible controls. If a subtraction needs changes outside
+          this loop's permitted scope, do not disguise it as a spacing fix.
           Make ONE edit to ONE of the stylesheets below that improves the layout you can see: spacing, alignment,
           sizing, hierarchy, grid or flex structure, overflow, reading width. Diagnose a specific relationship
           between visible elements, not merely an isolated number. Prefer intrinsic reflow and meaningful

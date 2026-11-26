@@ -10,12 +10,10 @@
   background: transparent; color: var(--chrome-text);
   font: 400 var(--terminal-font-size)/var(--leading-body) var(--font-mono);
   font-variant-ligatures: none; font-variant-numeric: tabular-nums; touch-action: manipulation;
-  transition: outline-color var(--transition-fast) var(--ease-out);
 }
 body #prompt-form.live, body:not(.face-ready) #prompt-form.live {
   transform: none; background: transparent;
 }
-body #prompt-form.live:focus-within, #prompt-form:focus-within { background: transparent; outline: 2px solid var(--chrome-focus); outline-offset: -2px; }
 body[data-layout="face"] #prompt-form { opacity: 1; pointer-events: auto; transform: none; }
 body[data-layout="face"].controls-hidden #prompt-form,
 body[data-layout="face"][data-edge-hover="1"] #prompt-form { opacity: .96; pointer-events: auto; }
@@ -262,4 +260,16 @@ body[data-layout="face"] #prompt-form #music-loop-button,
 body[data-layout="face"] #prompt-form #pause-speech-button {
   display: none;
 }
-body[data-layout="face"] .master-titlebar { padding-inline-end: calc(var(--inset-r) + 164px); }
+body[data-layout="face"] .master-titlebar {
+  padding-inline-end: calc(var(--inset-r) + 164px);
+  background: transparent;
+}
+body[data-layout="face"] #prompt-input:focus-visible { outline: none; }
+body[data-layout="face"] #prompt-form:has(#prompt-input:focus-visible) .prompt-sigil {
+  color: var(--chrome-text);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+@media (forced-colors: active) {
+  body[data-layout="face"] #prompt-input:focus-visible { outline: 2px solid CanvasText; }
+}
