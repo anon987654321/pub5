@@ -82,6 +82,8 @@ module Master
           measurer:,
           rebuild:,
           anchors: [violation[:anchor]].compact,
+          requested: n,
+          bus: loop.instance_variable_get(:@bus),
           read: -> { File.read(path, encoding: "UTF-8") },
           write: ->(src) { loop.send(:write_atomic, path, src) },
         )
@@ -136,6 +138,14 @@ module Master
           seen << signature
           true
         end
+      end
+
+      # Coverage is about actual distinct diffs, not semantic diversity or proof.
+      # A narrow verified repair may survive an incomplete exploration; the
+      # receipt must not describe that smaller tournament as complete.
+      def diversity_receipt(requested:, generated:, distinct:)
+        { requested:, generated:, distinct:, method: :normalized_diff,
+          status: distinct >= requested ? :observed : :partial }
       end
 
       # Existing reciprocal tribunal reviews a bounded, numbered pool.
@@ -241,9 +251,13 @@ module Master
         !apps.empty? && apps.map { |app| ::Operator::DesignRun.build_css(app, root:, force: true) }.all?
       end
 
-      def rank(candidates, original:, surfaces:, root:, measurer:, read:, write:, rebuild:, anchors: [])
+      def rank(candidates, original:, surfaces:, root:, measurer:, read:, write:, rebuild:, anchors: [], requested: nil, bus: nil)
         pool = distinct_changes(candidates.map(&:to_s).reject { |c| c.strip.empty? || c == original }) do |source|
           change_signature(original, source)
+        end
+        if requested
+          bus&.publish("fix:visual_candidate_diversity",
+                       diversity_receipt(requested:, generated: candidates.compact.size, distinct: pool.size))
         end
         scored = pool.each_with_index.map do |source, i|
           raise SourceChanged, "source changed before visual candidate trial" unless read.call == original
