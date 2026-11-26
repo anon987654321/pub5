@@ -16,6 +16,17 @@ class TestBootEntrypoint < Minitest::Test
     assert_match(/exec\(RbConfig\.ruby, File\.join\(__dir__, "check"\), "--profile=ci"/, source)
   end
 
+  def test_check_defers_default_gems_until_bundle_activation
+    source = File.read(File.expand_path("../bin/check", __dir__))
+    boot = source.index("Master::Boot::Entrypoint.prepare!")
+    refute_nil boot
+    %w[shellwords open3 timeout].each do |name|
+      position = source.index(%(require "#{name}"))
+      refute_nil position
+      assert_operator position, :>, boot, "#{name} must load from the locked bundle"
+    end
+  end
+
   def test_json_uses_the_bundle_resolution_not_a_ruby_release_pin
     refute GEMFILE.lines.any? { |line| line.start_with?('gem "json", "=') }
     refute LOCKFILE.lines.any? { |line| line.start_with?("  json (=") }

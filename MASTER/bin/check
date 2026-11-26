@@ -1,10 +1,6 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require "shellwords"
-require "open3"
-require "timeout"
-
 # Read-only help and log retrieval stay available even when the MASTER runtime
 # itself cannot boot. This command verifies; /fix is the canonical repair loop.
 CHECK_HELP = <<~HELP.freeze
@@ -76,6 +72,10 @@ exit(show_check_log(ARGV)) if ARGV.include?("--show-log")
 
 require_relative "../lib/boot/entrypoint"
 Master::Boot::Entrypoint.prepare!(root: File.expand_path("..", __dir__))
+
+require "shellwords"
+require "open3"
+require "timeout"
 
 # The ladder, law/ and the scan registry and then the critique tier, is a mode of this command rather than
 # a second one: --ladder, or any of its own flags, hands the arguments to lib/operator/check_ladder.rb.
