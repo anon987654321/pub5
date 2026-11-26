@@ -460,4 +460,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-010 ten Brgen core views migrated (Nearby, Events, Posts, Stories, Communities and Wiki). Existing contexts reused or semantic containers named, with RSVP scoped to its forms and collection headers scoped to direct actions. Source contracts authored; rendered parity NOT_RUN.
 
+- 2026-11-26: shared-010 migrated fourteen remaining Brgen core view files across Messenger, Stories, Communities, moderation, partner programmes, federation and account settings. Scoped compact styling to the actual action groups; engine views and rendered acceptance remain open. Source tests authored, NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

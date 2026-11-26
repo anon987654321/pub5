@@ -340,6 +340,13 @@ def test_brgen_old_dialect_outranks_the_social_stack
     end
   end
 
+  def test_brgen_core_administration_uses_contextual_sizing
+    %w[stories/show communities/show conversations/show communities/wiki/show admin/reports/index communities/bans/index partner/programs/index fediverse/follows/index communities/_membership communities/moderators/index communities/moderation/index business_verifications/_status account_settings/_blocked_person admin/business_verifications/index].each do |name|
+      source = File.read(File.join(ROOT, "brgen", "app", "views", "#{name}.html.erb"))
+      refute_includes source, "button-small", name
+    end
+  end
+
   def test_brgen_maps_search_uses_the_place_list_column
     source = File.read(File.join(ROOT, "brgen", "app", "assets", "stylesheets", "_brgen_vertical_surfaces.scss"))
     list = source[/body\.vertical-maps\s+\.place-list\s*\{([^}]*)\}/m, 1]

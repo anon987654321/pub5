@@ -57,7 +57,7 @@
     <%= form_with url: story_replies_path(@story), method: :post, class: "story-reply" do |f| %>
       <%= f.label :content, t("stories.reply_label") %>
       <%= f.text_field :content, required: true, maxlength: 500, placeholder: t("stories.reply_placeholder") %>
-      <%= f.submit t("actions.send"), class: "button button-small" %>
+      <%= f.submit t("actions.send"), class: "button" %>
     <% end %>
     <%# A story is gone in a day; reporting it must work before then. %>
     <%= render "shared/report_button", target: @story, reason: nil %>
@@ -65,7 +65,7 @@
 
   <%# The viewer list is the author's alone. Everyone else sees the count. %>
   <% if @viewers %>
-    <section role="region" aria-label="<%= t("stories.seen_by") %>">
+    <section class="story-viewers" role="region" aria-label="<%= t("stories.seen_by") %>">
       <%= tag.h2 t("stories.seen_count", count: @story.views_count) %>
       <ul class="viewer-list">
         <% @viewers.each do |view| %>
@@ -73,7 +73,7 @@
         <% end %>
       </ul>
       <%= button_to t("actions.delete"), story_path(@story), method: :delete,
-            class: "button button-ghost button-small",
+            class: "button button-ghost",
             data: { turbo_confirm: t("stories.confirm_delete") } %>
     </section>
   <% else %>

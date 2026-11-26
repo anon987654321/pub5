@@ -39,7 +39,8 @@
                       ".notification-actions", ".sidebar-card", ".playlist-admin",
                       ".messenger-master-invite", ".password-field", ".search-form >",
                       ".nearby-room", ".nearby-person", ".nearby-chat-widget-composer",
-                      ".rsvp-form", ".event-organiser-actions", ".collection-header >")
+                      ".rsvp-form", ".event-organiser-actions", ".collection-header >",
+                      ".story-reply", ".story-viewers", ".community-header", ".messenger-group-members", ".messenger-inbox-settings", ".wiki-history", ".wiki-page > .page-header", ".report-actions", ".ban-list", ".partner-memberships", ".fedi-follow-list", ".community-membership", ".member-list", ".mod-queue", ".business-verification-request", ".blocked-person", ".verification-actions")
 );
 @forward "components";
 @forward "search_yep";

@@ -29,7 +29,7 @@
             tell you. %>
         <span class="fedi-follow-state"><%= t("fediverse.states.#{follow.state}") %></span>
         <%# destructive: no-confirm-ok — reversible — the remote actor is followed again from the same page %>
-        <%= button_to t("actions.unfollow"), fediverse_follow_path(uri: follow.fedi_actor.uri), method: :delete, class: "button button-ghost button-small" %>
+        <%= button_to t("actions.unfollow"), fediverse_follow_path(uri: follow.fedi_actor.uri), method: :delete, class: "button button-ghost" %>
       </li>
     <% end %>
   </ul>

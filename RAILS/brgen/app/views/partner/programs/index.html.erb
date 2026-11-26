@@ -9,12 +9,12 @@
   <% if @mine.any? %>
     <section aria-label="<%= t("partner.your_memberships") %>">
       <%= tag.h2 t("partner.your_memberships") %>
-      <ul class="stack">
+      <ul class="stack partner-memberships">
         <% @mine.each do |m| %>
           <li>
             <%= link_to m.program.name, partner_program_path(m.program) %>
             <span class="tag"><%= m.status %></span>
-            <%= link_to t("partner.dashboard"), partner_membership_path(m), class: "button button-small" %>
+            <%= link_to t("partner.dashboard"), partner_membership_path(m), class: "button" %>
           </li>
         <% end %>
       </ul>

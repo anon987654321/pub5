@@ -67,7 +67,7 @@
 
           <div class="messenger-details-panel">
             <% if @conversation.group_dm? %>
-              <section class="messenger-details-section" aria-label="<%= t("messages.group_members_label") %>">
+              <section class="messenger-details-section messenger-group-members" aria-label="<%= t("messages.group_members_label") %>">
                 <h2><%= t("messages.group_members_label") %></h2>
                 <ul class="messenger-member-list" role="list">
                   <% @conversation.participants.each do |participant| %>
@@ -78,7 +78,7 @@
                       <% if @is_group_admin || participant.id == Current.user.id %>
                         <%= button_to participant.id == Current.user.id ? t("messages.group_leave") : t("actions.remove"),
                               group_member_path(@conversation, participant), method: :delete,
-                              class: "button button-ghost button-small",
+                              class: "button button-ghost",
                               data: { turbo_confirm: t("messages.confirm_group_remove") } %>
                       <% end %>
                     </li>
@@ -86,13 +86,13 @@
                 </ul>
                 <%# The people picker, not a field that wanted an exact username. %>
                 <%= link_to t("messages.group_add"), new_group_member_path(@conversation),
-                            class: "button button-small" %>
+                            class: "button" %>
                 <% if @is_group_admin %>
                   <%= form_with model: @conversation, url: group_path(@conversation), method: :patch,
                                 class: "messenger-details-form" do |f| %>
                     <%= f.label :name, t("messages.group_name") %>
                     <%= f.text_field :name, value: @conversation.name, maxlength: 80 %>
-                    <%= f.submit t("actions.save"), class: "button button-small" %>
+                    <%= f.submit t("actions.save"), class: "button" %>
                   <% end %>
                 <% end %>
               </section>
@@ -107,26 +107,26 @@
             <%# Handling of your own inbox: each of these is yours alone and the
                 other side is told nothing. Block is only offered in a direct
                 thread; a group is left by leaving it. %>
-            <section class="messenger-details-section">
+            <section class="messenger-details-section messenger-inbox-settings">
               <% if @participant&.muted? %>
                 <%# destructive: no-confirm-ok — reversible — the thread is muted again with one click %>
-                <%= button_to t("messages.unmute"), conversation_mute_path(@conversation), method: :delete, class: "button button-ghost button-small" %>
+                <%= button_to t("messages.unmute"), conversation_mute_path(@conversation), method: :delete, class: "button button-ghost" %>
               <% else %>
-                <%= button_to t("messages.mute"), conversation_mute_path(@conversation), class: "button button-ghost button-small" %>
+                <%= button_to t("messages.mute"), conversation_mute_path(@conversation), class: "button button-ghost" %>
               <% end %>
               <% if @participant&.archived? %>
                 <%# destructive: no-confirm-ok — reversible — the thread is archived again with one click %>
-                <%= button_to t("messages.unarchive"), conversation_archive_path(@conversation), method: :delete, class: "button button-ghost button-small" %>
+                <%= button_to t("messages.unarchive"), conversation_archive_path(@conversation), method: :delete, class: "button button-ghost" %>
               <% else %>
-                <%= button_to t("messages.archive"), conversation_archive_path(@conversation), class: "button button-ghost button-small", form: { data: { turbo_frame: "_top" } } %>
+                <%= button_to t("messages.archive"), conversation_archive_path(@conversation), class: "button button-ghost", form: { data: { turbo_frame: "_top" } } %>
               <% end %>
               <% if @conversation.direct? && (blockee = @conversation.other_participants(Current.user).first) %>
                 <% if @blocked_by_me %>
                   <%# destructive: no-confirm-ok — reversible — lifting a block loses nothing; the person can be blocked again %>
-                  <%= button_to t("messages.unblock_user"), unblock_user_path(blockee), method: :delete, class: "button button-ghost button-small" %>
+                  <%= button_to t("messages.unblock_user"), unblock_user_path(blockee), method: :delete, class: "button button-ghost" %>
                 <% else %>
                   <%= button_to t("messages.block_user"), block_user_path(blockee),
-                        class: "button button-ghost button-small",
+                        class: "button button-ghost",
                         data: { turbo_confirm: t("messages.confirm_block") } %>
                 <% end %>
               <% end %>
@@ -257,13 +257,13 @@
                      id: "message_request_title" %>
           <%= tag.p t("messages.request_body") %>
           <%= button_to t("messages.request_accept"), conversation_request_path(@conversation),
-                class: "button button-primary button-small", form: { data: { turbo_frame: "_top" } } %>
+                class: "button button-primary", form: { data: { turbo_frame: "_top" } } %>
           <%= button_to t("messages.request_decline"), conversation_request_path(@conversation), method: :delete,
-                class: "button button-ghost button-small",
+                class: "button button-ghost",
                 form: { data: { turbo_frame: "_top", turbo_confirm: t("messages.confirm_request_decline") } } %>
           <% if @conversation.direct? %>
             <%= button_to t("messages.request_report_block"), conversation_request_path(@conversation, report: 1),
-                  method: :delete, class: "button button-ghost button-small",
+                  method: :delete, class: "button button-ghost",
                   form: { data: { turbo_frame: "_top", turbo_confirm: t("messages.confirm_request_report_block") } } %>
           <% end %>
         </section>
