@@ -43,6 +43,29 @@ class TestScanPathFilter < Minitest::Test
     refute Scanner.skip_path?(File.join(Master::REPO_ROOT, "MASTER", "data", "soul.yml"), root: Master::REPO_ROOT)
   end
 
+  # The dev-bootstrap install target and, beside it, the unpacked build
+  # sources: none of it is authored, and walking it on a whole-tree observe
+  # turned the 2026-11-26 /fix RAILS review pass into a 4 GB OOM kill (4406
+  # corpus candidates for 3709 authored files). Skipped from both roots, the
+  # same way .master and runtime are.
+  def test_the_bootstrap_toolchain_prefix_is_skipped_from_every_root
+    paths = [
+      File.join(Master::ROOT, ".tools", "ruby", "bin", "ruby"),
+      File.join(Master::ROOT, ".tools", "ruby-3.4.7", "spec", "ruby", "core", "regexp", "shared", "new.rb"),
+      File.join(Master::REPO_ROOT, "MASTER", ".tools", "ruby", "lib", "ruby", "3.4.0", "rubygems.rb"),
+    ]
+    paths.each do |path|
+      [Master::ROOT, Master::REPO_ROOT, File.dirname(Master::ROOT)].each do |root|
+        assert Scanner.skip_path?(path, root:), "#{path} is scanned from #{root}"
+      end
+    end
+  end
+
+  def test_an_authored_master_tool_is_still_scanned
+    refute Scanner.skip_path?(File.join(Master::ROOT, "tools", "agent_context.rb"), root: Master::ROOT)
+    refute Scanner.skip_path?(File.join(Master::ROOT, "tools", "glm_gateway.js"), root: Master::REPO_ROOT)
+  end
+
   def test_compiled_assets_are_skipped_from_the_face_root
     assert Scanner.skip_path?(File.join(PUBLIC, "assets", "face-abc123.js"), root: PUBLIC)
   end

@@ -80,7 +80,17 @@ module Master
         # db/schema.rb a suffix skip. Both spellings, for the same dual-root
         # reason the face bundles carry theirs.
         SELF_FINDINGS_CEILING = %w[data/self_findings.yml MASTER/data/self_findings.yml].freeze
-        MASTER_LOCAL_PATHS = %w[.master runtime].flat_map { |path| [path, "MASTER/#{path}"] }.freeze
+        # MASTER_LOCAL_PATHS: runtime state and toolchain build artifacts that
+        # live inside MASTER. `.master` holds the loop's own journals; `runtime`
+        # holds redirected live state. `.tools` is what bin/dev-bootstrap builds
+        # into — the vendored Ruby prefix and, between runs, the hundreds of
+        # megabytes of unpacked build sources beside it. None of it is authored
+        # here, and a whole-tree walk that ingests it turned the 2026-11-26 /fix
+        # RAILS review pass into a 4 GB OOM kill: 4406 corpus candidates for
+        # 3709 authored files, the reference graph analyzing ruby's own spec
+        # suite ("invalid byte sequence in UTF-8" at
+        # .tools/ruby-3.4.7/spec/... was the first symptom).
+        MASTER_LOCAL_PATHS = %w[.master runtime .tools].flat_map { |path| [path, "MASTER/#{path}"] }.freeze
         SKIP_RELATIVE_PATHS = (MASTER_LOCAL_PATHS + AGENT_WORKTREES + GENERATED_FACE_BUNDLES +
                                SELF_FINDINGS_CEILING + %w[
           MASTER/web/public/assets MASTER/web/script/three_build

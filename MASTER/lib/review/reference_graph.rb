@@ -27,7 +27,7 @@ module Master
       PROBE_BYTES = 8 * 1024
 
       FALLBACK_IGNORE_DIRS = %w[
-        .git .claude node_modules vendor tmp log coverage dist build .bundle
+        .git .claude .tools node_modules vendor tmp log coverage dist build .bundle
         .cache .next .output .turbo reports scratch site-packages venv .venv
         venv-demucs __pycache__ storage cache knowledge fixtures var
       ].freeze
