@@ -256,9 +256,10 @@ module Master
           names = []
           names.concat(%w[Typographer] + ["Graphic Designer", "Web Designer", "Accessibility"]) if paths.any? { |path| path.match?(%r{\.(?:css|scss|html|erb|svg)\z}i) }
           names.concat(["Sound Engineer", "Hip-Hop Producer", "Sound Designer"]) if paths.any? { |path| path.match?(%r{(?:/|\A)dilla/|\.(?:wav|flac|mid|mp3)\z}i) }
-          names.concat(["Graphic Designer", "Design Lead"]) if paths.any? { |path| path.match?(%r{(?:/|\A)(?:photography|cinema|lora)(?:/|\z)|\.(?:png|jpe?g|webp|mov|mp4)\z}i) }
+          names.concat(["Photographer", "Colourist", "Cinematographer", "Graphic Designer", "Design Lead"]) if paths.any? { |path| path.match?(%r{(?:/|\A)(?:photography|cinema|lora|postpro|replicate)(?:/|\z)|\.(?:png|jpe?g|webp|mov|mp4)\z}i) }
+          names << "Film Editor" if paths.any? { |path| path.match?(%r{(?:motion|film|video)[^/]*\.rb\z|\.(?:mov|mp4)\z}i) }
           names << "Typographer" if paths.any? { |path| path.match?(%r{(?:/|\A)BIZ/|\.pdf\z}i) }
-          specialists = all.select { |persona| names.include?(persona.name) }
+          specialists = names.uniq.filter_map { |name| all.find { |persona| persona.name == name } }
           veto = panel.select(&:veto?)
           (veto + specialists + panel).uniq
         end
