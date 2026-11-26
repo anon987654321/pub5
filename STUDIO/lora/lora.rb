@@ -737,6 +737,116 @@ module Studio
       end
 
       # Same numbered draws as the recovered composer; no provider calls.
+      SELFIE_FRAMING = "self-portrait framing, no wide-angle distortion"
+      # Both eyes, since a selfie meets the lens square on; SCENARIO_FOCUS spends four
+      # more tokens on the nearest one, which a budget this full cannot give.
+      SELFIE_FOCUS = "both eyes sharp"
+      SELFIE_CROPS = ["close on the face", "head and shoulders", "chest up"].freeze
+      # The lens follows the crop, so each crop fills its frame from the stated
+      # distance with the lens a photographer standing there would carry.
+      SELFIE_CROP_LENS = { "close on the face" => "105mm", "head and shoulders" => "85mm", "chest up" => "50mm" }.freeze
+      SELFIE_GAZES = ["eyes on the lens", "eyes just past the lens", "chin lowered, eyes up", "looking off frame"].freeze
+      # Warm faces caught around a laugh rather than posed for one, and no bare
+      # "smiling", which collapses to one performed shape. Neutral moments were tried
+      # first and this adapter read them as dour: of forty-eight selfies drawn from
+      # "holding a breath", "tired and unguarded" and their kin, one smiled.
+      SELFIE_MOMENTS = [
+        "just after a laugh", "a wide real grin", "laughing at something off frame",
+        "a warm half-smile", "amused, about to laugh", "cheeks lifted, eyes bright", "biting back a grin",
+      ].freeze
+      SELFIE_ARMS = ["arm in frame", "no arm in frame", "hand at the jaw"].freeze
+      SELFIE_PLACES = [
+        "parked car", "ferry deck", "unmade bed", "kitchen counter", "bus window seat",
+        "front hallway", "rooftop", "under an umbrella", "crowded bar",
+      ].freeze
+      # Ten lights against nine places. Two pools of one length read at any strides
+      # pair the same entries forever, and a light paired only with places that refuse
+      # it is never drawn.
+      SELFIE_LIGHTS = %w[window open_shade overcast golden_hour practical neon direct_flash mixed backlit hard].freeze
+      SELFIE_STOCKS = %w[portra portra800 gold ultramax cinestill fuji400h superia hp5 trix instax polaroid].freeze
+
+      # The catchlight follows the light, since its shape is the light's shape: a
+      # window reads as a pane, a flash as a hard dot. A featureless dot on every face
+      # is how generated eyes give themselves away.
+      SELFIE_CATCHLIGHTS = {
+        "window" => "window catchlights", "open_shade" => "soft sky catchlights",
+        "overcast" => "soft sky catchlights", "golden_hour" => "warm sun catchlights",
+        "practical" => "lamp catchlights", "neon" => "neon catchlights",
+        "direct_flash" => "hard flash catchlights", "mixed" => "warm and cool catchlights",
+        "backlit" => "faint catchlights", "hard" => "hard sun catchlights",
+      }.freeze
+
+      SELFIE_FIELDS = {
+        moment: [SELFIE_MOMENTS, 1],
+        gaze: [SELFIE_GAZES, 3],
+        crop: [SELFIE_CROPS, 2],
+        arm: [SELFIE_ARMS, 1],
+        place: [SELFIE_PLACES, 4],
+        lighting: [SELFIE_LIGHTS, 3],
+        distance: [%w[3m 2m], 1],
+        stock: [SELFIE_STOCKS, 3],
+      }.freeze
+
+      SELFIE_PLACE_LIGHT_CONFLICTS = {
+        "ferry deck" => %w[window practical neon mixed],
+        "unmade bed" => %w[open_shade overcast neon],
+        "kitchen counter" => %w[open_shade overcast neon],
+        "bus window seat" => %w[open_shade],
+        "front hallway" => %w[open_shade overcast golden_hour neon hard],
+        "rooftop" => %w[window practical],
+        "under an umbrella" => %w[golden_hour window hard],
+        "crowded bar" => %w[window open_shade overcast golden_hour hard],
+      }.freeze
+
+      def self.selfie_pick(field, index)
+        pool, stride = SELFIE_FIELDS.fetch(field)
+        pool[(index * stride) % pool.length]
+      end
+
+      # The drawn light, stepped past what the place refuses and past the light the
+      # previous selfie ended on, so neighbours never share one. Walked forward from
+      # the first selfie rather than remembered, so it stays a function of the number.
+      def self.selfie_light(index)
+        previous = nil
+        (0..index).each { |i| previous = selfie_light_after(selfie_pick(:place, i), i, previous) }
+        previous
+      end
+
+      def self.selfie_light_after(place, index, previous)
+        refused = SELFIE_PLACE_LIGHT_CONFLICTS.fetch(place, []) + [previous]
+        start = index * SELFIE_FIELDS.fetch(:lighting).last
+        steps = (0...SELFIE_LIGHTS.length).map { |step| SELFIE_LIGHTS[(start + step * 7) % SELFIE_LIGHTS.length] }
+        steps.find { |light| !refused.include?(light) }
+      end
+
+      # Numbered like scenarios: selfie 12 is the same sitting on every run.
+      def self.selfie_sitting(number)
+        pick = SELFIE_FIELDS.keys.to_h { |field| [field, selfie_pick(field, number - 1)] }
+        light = selfie_light(number - 1)
+        {
+          "n" => number,
+          "side" => "Selfies",
+          "title" => "Selfie #{number}",
+          "scene" => [SELFIE_FRAMING, *pick.values_at(:crop, :gaze, :moment, :arm, :place)].join(", "),
+          "key" => "#{light.tr('_', ' ')}, #{SELFIE_CATCHLIGHTS.fetch(light)}",
+          "distance" => pick.fetch(:distance).sub(/m\z/, " m"),
+          "lens" => SELFIE_CROP_LENS.fetch(pick.fetch(:crop)),
+          "focus" => SELFIE_FOCUS,
+          "stock" => pick.fetch(:stock),
+        }
+      end
+
+      # Historical 48-frame composer; concise capture instructions, one local grade.
+      def self.selfie_recipe(number)
+        n = Integer(number)
+        raise ArgumentError, "selfie must be between 1 and 48" unless n.between?(1, 48)
+        row = selfie_sitting(n)
+        prompt = [row.fetch("scene"), row.fetch("key"), "camera #{row.fetch("distance")} away",
+                  row.fetch("lens"), row.fetch("focus"), "natural unretouched skin"].join(", ")
+        { "scene" => prompt, "preset" => PRESET_BY_STOCK.fetch(row.fetch("stock")),
+          "sitting" => n, "direction" => "selfies", "historical_source" => row }
+      end
+
       def self.scenario_recipe(number)
         n = Integer(number)
         raise ArgumentError, "scenario must be positive" unless n.positive?
@@ -780,6 +890,7 @@ module Studio
       end
 
       def self.recipe(number, subject: nil, direction: "varied")
+        return selfie_recipe(number) if direction == "selfies"
         return scenario_recipe(number) if direction == "scenarios"
         return historical_recipe(number, direction:) if %w[shoots warp best].include?(direction)
         return directional_recipe(number, direction:) unless direction == "varied"
@@ -797,7 +908,7 @@ module Studio
           return historical_recipe((offset + index / 4) % 50 + 1, direction: "shoots")
             .merge("sitting" => n, "direction" => "varied")
         when 3
-          return scenario_recipe((offset + index / 4) % 200 + 1)
+          return selfie_recipe((offset + index / 4) % 48 + 1)
             .merge("sitting" => n, "direction" => "varied")
         end
         index /= 2
