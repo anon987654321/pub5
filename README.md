@@ -84,7 +84,7 @@ for that boundary, then read any narrower app, engine or workstream contract.
 | --- | --- | --- |
 | Codex and Copilot | `AGENTS.md` | Read the complete shared contract directly. |
 | Gemini CLI | `GEMINI.md` | Generated pointer to `AGENTS.md`. |
-| GLM | `GLM.md` | Generated pointer to `AGENTS.md`. |
+| GLM | `GLM.md` | Generated session brief (glm-contract block in `MASTER/AGENTS.md`): model routing and toolchain recovery for sandbox runs; routes to `AGENTS.md`. |
 | Cursor | `.cursorlaws` | Generated project-specific pointer to `AGENTS.md`. |
 | Claude Code | `CLAUDE.md` | Hand-written bootstrap; routes to `AGENTS.md`. |
 | Aider | `.aider.conf.yml` | Loads the canonical policy files; automatic commits are disabled. |

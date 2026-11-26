@@ -167,8 +167,9 @@ class TestDocPaths < Minitest::Test
     refute_match(/live in `TREE_CONTRACTS\.md`/, claude)
   end
 
-  # AGENTS.md is generated from MASTER/AGENTS.md. Gemini, GLM and Cursor
-  # have short pointer files; Codex and Copilot read AGENTS.md directly.
+  # AGENTS.md is generated from MASTER/AGENTS.md. Gemini and Cursor have
+  # short pointer files; GLM.md renders the glm-contract session brief from
+  # the same source. Codex and Copilot read AGENTS.md directly.
   HARNESS_FILES = %w[AGENTS.md GEMINI.md GLM.md .cursorlaws].freeze
 
   PROJECT_READMES = %w[

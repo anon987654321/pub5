@@ -398,6 +398,56 @@ examples. Man pages use mdoc(7); Markdown adopts its precision, not its syntax.
 
 <!-- agent-contract:end -->
 
+<!-- glm-contract:begin -->
+
+# GLM session brief
+
+Read [the canonical AGENTS.md](AGENTS.md) first — it routes to
+`MASTER/AGENTS.md`, `MASTER/data/soul.yml` and `MASTER/data/laws.yml`.
+This brief adds what a GLM session in a disposable z.ai sandbox needs on
+top: model routing and toolchain recovery. It carries no separate policy;
+where it seems to disagree with the contract, the contract wins and this
+text gets fixed.
+
+## Model routing
+
+- `MASTER/data/models.yml` owns chain order; glm-5.3-flash leads the
+  default and primary chains by operator request. Read the file for the
+  current head instead of trusting this sentence.
+- A session reroute is environment-only. `MASTER_MODEL=gateway:<id>`
+  forces one model onto every lane; `MASTER_LLM_GATEWAY_URL` points the
+  hosted sender at a loopback gateway. No sacred file is touched.
+- `source MASTER/tools/glm_env.sh` sets the session environment: the tools
+  Ruby on PATH, the gateway variables, the Chrome binary. Start the gateway
+  beside it with `node MASTER/tools/glm_gateway.js &` — an
+  OpenAI-compatible loopback; image asks route to the vision endpoint;
+  credentials are read at request time and never logged.
+- Prove the lane before any `/fix` boot with
+  `cd MASTER && ruby tools/probe_glm_lane.rb`; it answers
+  `OK: GLM-LANE-OK` through the real dispatcher.
+
+## Toolchain recovery
+
+- Prefer the host Ruby; `MASTER/bin/dev-bootstrap` is the fallback that
+  builds `MASTER/.tools/ruby` with its own openssl, libyaml and zlib.
+- On a host with no compiler toolchain, extracting Debian ruby3.3
+  packages into a home prefix works. Keep their `RUBYLIB` and
+  `LD_LIBRARY_PATH` away from MASTER: a Debian 3.3 stdlib on the load path
+  breaks the tools Ruby's gem_prelude, and the version probe then reports
+  `PUB5_RUBY is not compatible`. Ruby's vendored default prism and
+  bundler shadow the bundle's pinned versions, so keep the default lib dir
+  off the load path.
+
+## Before running anything
+
+- Read `Working alone in this repo` in `MASTER/AGENTS.md`: it records the
+  operational traps (sandbox recycles, boot order, flow needles, wedges)
+  that are not deducible from the code.
+- Answer in the operator's language, with Strunk and White economy:
+  active verbs, concrete nouns, one topic per paragraph, no filler.
+
+<!-- glm-contract:end -->
+
 ## Working alone in this repo
 
 An agent arrives with none of the session context that makes the tree
@@ -535,6 +585,42 @@ the old set before publishing, and a failed sweep leaves no review set. The
 critic reads only captures emitted by the current sweep; it never reuses an
 older image or manifest. An HTTP-200 startup placeholder is not a rendered
 page and must never be published as review evidence.
+
+**The sandbox recycles without warning.** It keeps `/home/z/my-project` —
+the clone, `scripts/`, `download/` — and nothing else: no processes, no
+`~/.cache`, no stored credentials. Commit before heavy verification, not
+after: a tree lost uncommitted is usually unrecoverable, because neither
+the clone URL nor the token is ever written to disk. `bin/operator land`
+pushes as it commits.
+
+**Boot Rails servers only after the CSS exists.** `build_all_css.rb`
+must run before a boot: a stale Propshaft asset boots a 500
+`MissingAssetError`, and the server survives restarts that do not
+actually kill it. Check the real listeners with `ss -ltnp` and clear a
+stale `tmp/pids/server.pid` before calling a boot failed.
+
+**Two Rails commands have prerequisites that fail quietly.** `rails
+routes` needs `rails dev:cache` first (StimulusReflex), and a route
+manifest regeneration needs `db:prepare` on a fresh clone. Run them in
+that order or the output reads as a defect.
+
+**Flow needles describe rendered HTML, not source.** A needle must
+tolerate attributes between class and value (`data-post-score` grew
+beside `post-vote-score`) and a `<mark>` highlight that splits a title.
+Content negotiation can hide the difference from curl while the check's
+own FlowClient sees it; replay the journey through FlowClient before
+editing the needle.
+
+**An honest inconclusive is not a failure.** A `requires_data` journey on
+an unseeded dataset downgrades to its named inconclusive. Fill data
+through the introspective seeders — they read the schema and validators,
+create only what those admit, and print what they could not — then rerun.
+Seed facts need a source; unverifiable ones are marked operator-provided.
+
+**`runner --all` can wedge on undrained popen output.** The stalled log
+survives its own timeout while both wedged checks pass standalone. Run
+them standalone; use `WEDGE_DIAGNOSTIC=1` to dump the runner's syscall,
+wchan and fd table before blaming the checks.
 
 ## Judging your own work
 

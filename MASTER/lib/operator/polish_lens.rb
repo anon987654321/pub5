@@ -205,20 +205,22 @@ module Operator
       end
     end
 
-    # Compare the generated peers only; CLAUDE.md is the hand-written bootstrap.
+    # Compare the generated pointer peers only; CLAUDE.md is the hand-written
+    # bootstrap and GLM.md renders its own glm-contract brief, so the true
+    # pointer pair is GEMINI.md and .cursorlaws.
     def pointer_symmetry(root, paths: nil)
-      names = %w[GEMINI.md GLM.md]
+      names = %w[GEMINI.md .cursorlaws]
       names.select! { |name| paths.include?(File.join(root, name)) } if paths
       # A symmetry check observes both documents. Do not read the other pointer
       # when a repair pass owns only one of them.
       return [] if paths && names.size < 2
 
-      counts = %w[GEMINI.md GLM.md].map do |n|
+      counts = names.map do |n|
         f = File.join(root, n)
         File.exist?(f) ? File.readlines(f).size : nil
       end.compact
       return [] if counts.uniq.size <= 1
-      candidate = (names & %w[GEMINI.md GLM.md]).first || "GEMINI.md"
+      candidate = (names & %w[GEMINI.md .cursorlaws]).first || "GEMINI.md"
       [Finding.new(id: "pointer_symmetry", path: candidate, line: 1, law: "PROXIMITY",
                    kind: "align", detail: "generated pointer files differ in length (#{counts.join(", ")})",
                    edit: "make the generated pointers one symmetric line each", proof: "ruby MASTER/tools/polish_lens.rb --json",
