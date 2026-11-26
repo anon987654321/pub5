@@ -17,10 +17,10 @@
           <% if question.answered? %>
             <p class="listing-answer"><%= question.answer %></p>
           <% elsif question.answerable_by?(Current.user) %>
-            <%= form_with model: question, url: listing_question_path(listing, question), method: :patch do |f| %>
+            <%= form_with model: question, url: listing_question_path(listing, question), method: :patch, class: "listing-answer-form" do |f| %>
               <%= f.label :answer, t("marketplace.answer") %>
               <%= f.text_area :answer, rows: 2, required: true %>
-              <%= f.submit t("marketplace.post_answer"), class: "button button-small" %>
+              <%= f.submit t("marketplace.post_answer"), class: "button" %>
             <% end %>
           <% else %>
             <p class="listing-question-meta"><%= t("marketplace.awaiting_answer") %></p>

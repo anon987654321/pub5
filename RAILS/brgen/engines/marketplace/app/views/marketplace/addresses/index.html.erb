@@ -16,10 +16,10 @@
           <span class="chip"><%= t("marketplace.default_address") %></span>
         <% else %>
           <%= button_to t("marketplace.make_default"), address_path(address),
-                method: :patch, class: "button button-ghost button-small" %>
+                method: :patch, class: "button button-ghost" %>
         <% end %>
         <%= button_to t("actions.delete"), address_path(address), method: :delete,
-              class: "button button-ghost button-small",
+              class: "button button-ghost",
               data: { turbo_confirm: t("marketplace.confirm_delete_address") } %>
       </li>
     <% end %>

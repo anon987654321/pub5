@@ -32,7 +32,7 @@
         <input id="map-search" type="search" placeholder="<%= t("search.places") %>" data-map-target="search"
                role="searchbox" aria-label="<%= t("search.places_label") %>">
       </div>
-      <%= link_to t("maps.browse_list"), places_path, class: "button button-ghost button-small map-browse-link" %>
+      <%= link_to t("maps.browse_list"), places_path, class: "button button-ghost map-browse-link" %>
     </div>
     <%# The canvas's circles have no focus target, so the points the map shows
         are also a list of links here: the way in for a keyboard or a screen

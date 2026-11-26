@@ -72,12 +72,12 @@
           <p class="order-return-note"><%= t("marketplace.return_refund_pending") %></p>
         <% end %>
         <% if @order.seller == Current.user && sent_back.open? %>
-          <div class="order-actions">
+          <div class="order-actions return-actions">
             <% if sent_back.status == "requested" %>
-              <%= button_to t("marketplace.return_approve"), order_return_path(@order, sent_back, decision: "approve"), method: :patch, class: "button button-small" %>
-              <%= button_to t("marketplace.return_refuse"), order_return_path(@order, sent_back, decision: "refuse"), method: :patch, class: "button button-ghost button-small" %>
+              <%= button_to t("marketplace.return_approve"), order_return_path(@order, sent_back, decision: "approve"), method: :patch, class: "button" %>
+              <%= button_to t("marketplace.return_refuse"), order_return_path(@order, sent_back, decision: "refuse"), method: :patch, class: "button button-ghost" %>
             <% else %>
-              <%= button_to t("marketplace.return_receive"), order_return_path(@order, sent_back, decision: "receive"), method: :patch, class: "button button-small" %>
+              <%= button_to t("marketplace.return_receive"), order_return_path(@order, sent_back, decision: "receive"), method: :patch, class: "button" %>
             <% end %>
           </div>
         <% end %>

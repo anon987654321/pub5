@@ -55,9 +55,9 @@
            — <%= t("marketplace.order_statuses.#{order.status}", default: order.status.to_s.humanize) %>
           <% if order.message.present? %><%= tag.p order.message %><% end %>
           <% if order.status == "pending" %>
-            <div class="cluster mt-8">
-              <%= button_to t("marketplace.accept"), listing_order_path(listing, order), params: { accept: true }, method: :patch, class: "button button-primary button-small" %>
-              <%= button_to t("marketplace.decline"), listing_order_path(listing, order), params: { decline: true }, method: :patch, class: "button button-ghost button-small" %>
+            <div class="cluster mt-8 listing-offer-actions">
+              <%= button_to t("marketplace.accept"), listing_order_path(listing, order), params: { accept: true }, method: :patch, class: "button button-primary" %>
+              <%= button_to t("marketplace.decline"), listing_order_path(listing, order), params: { decline: true }, method: :patch, class: "button button-ghost" %>
             </div>
           <% end %>
         </article>
@@ -68,8 +68,8 @@
             body: t("marketplace.no_offers_body"),
             action: { label: t("marketplace.edit_listing"), path: edit_listing_path(listing) } %>
     <% end %>
-    <%= button_to t("marketplace.remove_listing"), listing_path(listing), method: :delete,
+    <%= button_to t("marketplace.remove_listing"), listing_path(listing), method: :delete, form: { class: "listing-remove-form" },
         data: { turbo_confirm: t("marketplace.confirm_remove_listing") },
-        class: "button button-danger button-small m-16" %>
+        class: "button button-danger m-16" %>
   </div>
 <% end %>

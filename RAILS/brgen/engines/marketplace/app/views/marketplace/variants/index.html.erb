@@ -14,14 +14,14 @@
       the buyer's size picker lists them in this order. %>
   <ul role="list" class="variant-list" data-controller="sortable" data-sortable-resource-name-value="variant" data-sortable-move-up-label-value="<%= t("marketplace.move_up") %>" data-sortable-move-down-label-value="<%= t("marketplace.move_down") %>">
     <% @variants.each do |variant| %>
-      <li role="listitem" data-sortable-update-url="<%= listing_variant_path(@listing, variant) %>">
+      <li class="listing-variant" role="listitem" data-sortable-update-url="<%= listing_variant_path(@listing, variant) %>">
         <span class="variant-label"><%= variant.label %></span>
         <span class="variant-price"><%= variant.price_display %></span>
         <span class="variant-stock">
           <%= variant.unlimited_stock? ? t("marketplace.stock_unlimited") : t("marketplace.stock_left", count: variant.stock.to_i) %>
         </span>
         <%= button_to t("actions.remove"), listing_variant_path(@listing, variant), method: :delete,
-              class: "button button-ghost button-small",
+              class: "button button-ghost",
               data: { turbo_confirm: t("marketplace.confirm_remove_variant") } %>
       </li>
     <% end %>
