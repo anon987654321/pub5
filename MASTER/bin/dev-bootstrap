@@ -186,7 +186,19 @@ build() {
   mkdir -p "$TOOLS"
   cd "$TOOLS"
 
-  if [ ! -f yaml-0.2.5/.built ]; then
+  # A .built marker attests a build, not an install. $PREFIX is the install
+  # target and the documented path a session wipes when it wants a fresh
+  # interpreter; wiping it leaves the source markers behind, and a guard that
+  # trusts them then rebuilds Ruby against an empty prefix — configure skips
+  # ext/openssl, ext/psych and ext/fiddle silently, and the interpreter boots
+  # but cannot load OpenSSL ("cannot load such file -- openssl" at first
+  # bundle). Each dep therefore re-installs whenever its installed artifact is
+  # missing, marker or no marker.
+  dep_ready() {
+    [ -f "$1/.built" ] && [ -e "$2" ]
+  }
+
+  if ! dep_ready yaml-0.2.5 "$YAML_PREFIX/lib/libyaml.a"; then
     say "fetching libyaml 0.2.5"
     fetch https://pyyaml.org/download/libyaml/yaml-0.2.5.tar.gz yaml.tar.gz
     rm -rf yaml-0.2.5
@@ -200,7 +212,7 @@ build() {
   # zlib and OpenSSL are built from source for the same reason libyaml is: a
   # container with no dev packages has no headers, and without OpenSSL the built
   # Ruby's RubyGems cannot fetch a gem over HTTPS at all.
-  if [ ! -f zlib-1.3.1/.built ]; then
+  if ! dep_ready zlib-1.3.1 "$ZLIB_PREFIX/lib/libz.a"; then
     say "fetching zlib 1.3.1"
     fetch https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz zlib.tar.gz
     rm -rf zlib-1.3.1
@@ -211,7 +223,7 @@ build() {
   fi
   say "zlib ready at $ZLIB_PREFIX"
 
-  if [ ! -f "openssl-$OPENSSL_VER/.built" ]; then
+  if ! dep_ready "openssl-$OPENSSL_VER" "$OPENSSL_PREFIX/lib/libssl.a"; then
     say "fetching openssl $OPENSSL_VER"
     fetch "https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz" openssl.tar.gz
     rm -rf "openssl-$OPENSSL_VER"
@@ -227,7 +239,7 @@ build() {
   # libffi is what the fiddle gem (a default gem Ruby rebuilds) needs to build.
   # It must be shared: fiddle links it into a shared object, and a static-only
   # archive without PIC cannot be linked there.
-  if [ ! -f libffi-3.4.6/.built ]; then
+  if ! dep_ready libffi-3.4.6 "$FFI_PREFIX/lib/libffi.so"; then
     say "fetching libffi 3.4.6"
     fetch https://github.com/libffi/libffi/releases/download/v3.4.6/libffi-3.4.6.tar.gz \
       libffi.tar.gz
@@ -239,7 +251,14 @@ build() {
   fi
   say "libffi ready at $FFI_PREFIX"
 
-  if [ ! -f ruby-$RUBY_VER/.built ]; then
+  # The same marker-vs-install rule for the interpreter itself: a .built marker
+  # beside an interpreter whose ext/openssl never built (deps were missing at
+  # configure time) must not survive. The dep guards above have re-installed
+  # whatever was absent, so re-running configure and make here picks the
+  # extensions up; the probe is the only honest check.
+  if [ ! -f ruby-$RUBY_VER/.built ] || \
+     ! LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+       "$PREFIX/bin/ruby" -e 'require "openssl"' >/dev/null 2>&1; then
     say "fetching ruby $RUBY_VER (this is the long step; re-running resumes)"
     if [ ! -d ruby-$RUBY_VER ]; then
       # The series directory tracks RUBY_VER; a hard-coded one fetched a tarball
