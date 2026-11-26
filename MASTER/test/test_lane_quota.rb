@@ -50,6 +50,17 @@ class TestLaneQuota < Minitest::Test
     end
   end
 
+# Ollama Cloud answered 402 "Add usage credits" yet stayed primary run after run,
+# because no billing pattern knew its wording (2026-11-26).
+def test_an_ollama_cloud_402_is_a_billing_hold
+  reply = %q(StandardError: ollama_cloud 402: {"error":{"message":"Add usage credits or subscribe and save up to 66%"}})
+  assert_equal :billing, Master::Io::LaneReply.read(reply).kind
+  Quota.note("ollama_cloud:deepseek-v4.1-flash", reply)
+  assert Quota.dead?("ollama_cloud:deepseek-v4.1-flash")
+  assert_equal "billing", Quota.reasons.fetch("ollama_cloud")
+  refute Master::Io::LaneReply.read("line 402 of the file has an error"), "a bare number is no status"
+end
+
   def test_reset_durations_in_the_forms_providers_use
     assert_equal 165 * 3600 + 22 * 60 + 49, Quota.wait_in(AGY_REPLY)
     assert_equal 7200, Quota.wait_in("quota exceeded, resets in 2h")
@@ -140,7 +151,7 @@ class TestLaneQuota < Minitest::Test
 
     assert_equal @now + 6 * 3600, deadline
     assert Quota.dead?("claude-sonnet-5-5")
-    refute Quota.dead?("replicate:anthropic/claude-opus-5.5"),
+    refute Quota.dead?("replicate:anthropic/claude-opus-5.5", manual: []),
            "the Replicate-hosted Claude mirror has a separate provider billing boundary"
     assert_equal "billing", Quota.raw.fetch("reason:claude")
     refute Quota.raw.key?("unknown:claude"), "a known billing failure is not a guessed quota"

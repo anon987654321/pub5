@@ -10,7 +10,8 @@ module Master
     #   HTTP         "429 ... Retry-After: 30", or a bare 429
     #   ollama       "ollama unreachable at http://localhost:11434: Connection refused"
     #   expired auth "401 Unauthorized", "Please run /login"
-    #   billing      OpenRouter "402 Insufficient credits", OpenAI "You exceeded your current quota"
+    #   billing      OpenRouter "402 Insufficient credits", OpenAI "You exceeded your current quota",
+    #                Ollama Cloud "402: Add usage credits"
     #   refused key  "HTTP 403", Gemini "PERMISSION_DENIED"
     #
     # `read` answers a Verdict (kind, wait in seconds) or nil when the reply is
@@ -27,6 +28,9 @@ module Master
       MAX_WAIT_S = 8 * 86_400
       PAYMENT_PAST_DUE_RE = /\bpayment\s+(?:is\s+)?past\s+due\b/i.freeze
       CREDIT_BALANCE_LOW_RE = /\bcredit balance is too low\b/i.freeze
+      # Ollama Cloud: "ollama_cloud 402: Add usage credits or subscribe" (2026-11-26). Its own words,
+      # not a bare 402: OpenRouter's 402 "Insufficient credits" stays a re-probed spent lane.
+      NO_CREDIT_RE = /\badd\s+usage\s+credits\b/i.freeze
       SPENT_RE = /quota\s+(?:reached|exceeded|exhausted|spent)|RESOURCE_EXHAUSTED|usage\s+limit|insufficient\s+(?:quota|credits?)|out\s+of\s+(?:quota|credits?)|(?:session|rate|message|weekly|daily)\s+limit|limit\s+(?:reached|exceeded)|exceeded\s+your\s+current\s+quota|payment\s+required|(?:HTTP\W{0,3}|status\W{0,3}|error\W{0,3})402\b/i
       LIMIT_429_RE = /(?:\bHTTP\W{0,3}|\bstatus\W{0,3}|\bcode\W{0,3}|\berror\W{0,3})429\b|\b429\s+(?:too\s+many|rate|error)/i
       UNREACHABLE_RE = /ECONNREFUSED|connection\s+refused|(?:ollama|server|host)\s+unreachable|unreachable\s+at|Failed\s+to\s+open\s+TCP|could\s+not\s+resolve|getaddrinfo|network\s+is\s+unreachable|name\s+or\s+service\s+not\s+known/i
@@ -50,7 +54,7 @@ module Master
       def read(reply, now: Time.now.to_f)
         text = reply.to_s
         return Verdict.new(:billing, BILLING_WAIT_S, false) if
-          PAYMENT_PAST_DUE_RE.match?(text) || CREDIT_BALANCE_LOW_RE.match?(text)
+          [PAYMENT_PAST_DUE_RE, CREDIT_BALANCE_LOW_RE, NO_CREDIT_RE].any? { |re| re.match?(text) }
 
         stated = stated_wait(text, now)
         spent = SPENT_RE.match?(text) || (LIMIT_429_RE.match?(text) && !UNREACHABLE_RE.match?(text))
