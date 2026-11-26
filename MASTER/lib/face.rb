@@ -83,14 +83,33 @@ module Master
       # a path outside falls back to the home-relative spelling. When the road
       # must be shortened it keeps the checkout, the gap and the standing leaf.
       PATH_SOFT_MAX = 24
+      PROMPT_MODEL_MAX = 36
 
       def shell_prompt(path: Master.repo_root, llm: nil, root: Master::ROOT)
         dir = checkout_path(path)
         dir = road_shortened(dir)
-        budget = [prompt_max(root:) - 2, 1].max
+        lane = prompt_model_segment(llm)
+        budget = [prompt_max(root:) - lane.length - 3, 1].max
         dir = dir[-budget, budget] if dir.length > budget
-        name = llm.to_s.strip
-        "#{dir} #{name.empty? ? "$" : "#{name}@master$"}"
+        format_shell_prompt(dir, lane:).rstrip
+      end
+
+      # Browser and CLI share punctuation and model labels, not host authority.
+      def format_shell_prompt(location, git: "", lane: "")
+        [location, git, lane, "$"].reject(&:empty?).join(" ") + " "
+      end
+
+      def prompt_model_segment(model, credit = nil)
+        name = model.to_s.scrub.gsub(/\e\[[0-9;?]*[ -\/]*[@-~]/, "").sub(/\Aweb-chat:/, "").split("/").last.to_s
+        name = name.gsub(/[^A-Za-z0-9._:+-]/, "")
+        return "" if name.empty?
+
+        tag = name[/:[A-Za-z0-9]+\z/].to_s
+        name = name[0, PROMPT_MODEL_MAX - tag.length] + tag if name.length > PROMPT_MODEL_MAX
+        label = if credit.is_a?(Numeric) && credit.finite?
+                  credit.negative? ? format("-$%.2f", -credit) : format("$%.2f", credit)
+                end
+        "[#{[name, label].compact.join(" ")}]"
       end
 
       # The road as the ksh prompt draws it: checkout-relative inside the
