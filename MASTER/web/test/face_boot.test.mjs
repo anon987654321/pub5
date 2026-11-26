@@ -1594,7 +1594,7 @@ test("shell chrome uses plain CLI prompt words and downloads no font", () => {
   const css = readFileSync(join(publicDir, "face.css"), "utf8");
 
   assert.doesNotMatch(view, /id="wordmark"|Contract\.wordmark|Contract\.glyph/);
-  assert.match(view, /class="prompt-sigil"[^>]*><%= Master::Face::Contract\.shell_prompt %><\/span>/);
+  assert.match(view, /class="prompt-sigil"[^>]*><%= Master::Face::Contract\.shell_prompt\(path: Master::ROOT, llm: @model == "booting" \? nil : @model\) %><\/span>/);
   assert.match(css, /#prompt-form \{[\s\S]*?inset-inline: 0; inset-inline-start: 0;[\s\S]*?width: 100%; max-width: none;[\s\S]*?background: transparent/);
   assert.match(css, /#prompt-form input, #prompt-form textarea \{[\s\S]*?var\(--font-mono\)/);
   assert.doesNotMatch(view, /class="sep2"|\$ <\/span>/);
