@@ -10,6 +10,20 @@ class TestModelParse < Minitest::Test
 
   def parse(text) = Master::Core::Model.parse(text, verbs: VERBS)
 
+  # A provider refusal (ollama_cloud 402, 2026-11-26) escaped propose and crashed bin/master -p.
+  # It is now a stop the fold turns into a blocked run with the reply in its summary.
+  class RefusingChat
+    def with_instructions(*) = self
+    def with_format(*) = self
+    def ask(*) = raise(StandardError, "402: Add usage credits or subscribe")
+  end
+
+  def test_a_provider_refusal_stops_the_run_naming_the_model_and_the_reply
+    model = Master::Core::Model.new(model_id: "ollama_cloud:x", chat: RefusingChat.new)
+    error = assert_raises(Master::Core::Model::Recipe::Stopped) { model.propose([], verbs: VERBS) }
+    assert_equal "provider failed for ollama_cloud:x: StandardError: 402: Add usage credits or subscribe", error.message
+  end
+
   def test_clean_write_effect
     e = parse('{"verb":"write","args":{"path":"a.rb","content":"A = 1\n"}}')
     assert_equal :write, e.verb

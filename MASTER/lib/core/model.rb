@@ -212,9 +212,12 @@ module Master::Core
 
     # The one method the Core calls. Returns an Effect.
     def propose(context, verbs:, scope: nil)
-      reply = ask(transcript(context), Model.offer(verbs, scope))
+      reply = ask_provider(transcript(context), Model.offer(verbs, scope))
       Model.parse(reply, verbs:)
     end
+
+    # Prefix of the stop a failed provider call raises.
+    PROVIDER_FAILED = "provider failed for"
 
     # Pure: model text -> Effect. Unknown/absent verb or bad JSON -> a note the
     # loop can react to, never an exception. Tolerant of ```json fences and a stray
@@ -258,6 +261,14 @@ module Master::Core
     # Hosted keyless gateways vary in structured-output support and a rejected
     # response_format would kill the turn, so endpoint lanes stay unconstrained
     # — parse is total, and a malformed reply is a note the loop can react to.
+    # A provider that refuses the call (ollama_cloud 402 "Add usage credits", 2026-11-26) ends
+    # the run as blocked, naming the model and the reply, instead of escaping as a crash.
+    def ask_provider(prompt, schema)
+      ask(prompt, schema)
+    rescue StandardError => e
+      raise Recipe::Stopped, "#{PROVIDER_FAILED} #{@model_id}: #{e.class}: #{e.message.to_s[0, 400]}"
+    end
+
     def ask(prompt, schema)
       held = chat.with_instructions(SYSTEM)
       held = held.with_format(schema) if held.respond_to?(:with_format) && @endpoint.nil?
