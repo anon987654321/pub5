@@ -1624,102 +1624,85 @@ async function swapMask(imageUrl) {
   }
 }
 
-const CLI_FACE_WEB_DENSITY = 360;
-let orbitalGeometry = null;
-let orbitalMaterial = null;
-let orbitalField = null;
-
 function faceFieldSample(index, salt = 0) {
   const value = Math.sin(index * 12.9898 + salt * 78.233) * 43758.5453;
   return value - Math.floor(value);
 }
 
-function ensureOrbitalField() {
-  if (orbitalField || !_hasWebGL || !THREE || !scene || !head) return;
+let frameLoopActive = false;
+let frameRequest = null;
+let frameRequestedAt = 0;
+let watchdogTimer = null;
+let watchdogLastFrames = -1;
+let pumpTimer = null;
+let naturalRafSeen = false;
 
-  orbitalGeometry = new THREE.BufferGeometry();
-  const positions = new Float32Array(CLI_FACE_WEB_DENSITY * 3);
-  const seeds = new Float32Array(CLI_FACE_WEB_DENSITY * 3);
-  for (let i = 0; i < CLI_FACE_WEB_DENSITY; i++) {
-    const a = faceFieldSample(i, 1) * Math.PI * 2;
-    const r = 1.34 + Math.pow(faceFieldSample(i, 2), 0.72) * 1.95;
-    const j = i * 3;
-    positions[j] = Math.cos(a) * r;
-    positions[j + 1] = Math.sin(a) * r * 0.72;
-    positions[j + 2] = (faceFieldSample(i, 3) - 0.5) * 0.72;
-    seeds[j] = a;
-    seeds[j + 1] = r;
-    seeds[j + 2] = faceFieldSample(i, 4);
-  }
-  orbitalGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  orbitalGeometry.setAttribute('seed', new THREE.BufferAttribute(seeds, 3));
-  orbitalMaterial = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 1,
-    sizeAttenuation: false,
-    transparent: true,
-    opacity: 0.10,
-    depthWrite: false
+function queueFaceFrame() {
+  if (State.hidden || document.hidden || frameRequest !== null) return;
+  frameLoopActive = true;
+  frameRequestedAt = performance.now();
+  frameRequest = requestAnimationFrame(t => {
+    frameRequest = null;
+    naturalRafSeen = true;
+    stopFramePump();
+    frame(t);
   });
-  orbitalField = new THREE.Points(orbitalGeometry, orbitalMaterial);
-  orbitalField.renderOrder = -1;
-  scene.add(orbitalField);
 }
 
-let frameLoopActive = false;
 function ensureFrameLoop() {
   if (State.hidden || document.hidden) return;
-  // Always schedule a frame. face_semantics.js used to call this during module
-  // init before startEverything(); the frameLoopActive guard then made
-  // startEverything()'s call a no-op while the first rAF never ran — scene alive,
-  // dbgFrames stuck at 0, canvas black ("face not showing").
-  frameLoopActive = true;
-  requestAnimationFrame(frame);
+  queueFaceFrame();
   armFrameLoopWatchdog();
 }
 
-// Self-healing for the render loop. frame() only continues if its own last
-// requestAnimationFrame ran — any single missed tick (visibilitychange races,
-// iOS app-switch rAF suspension, GPU driver churn) kills the loop forever
-// with zero errors. Instead of finding every trigger, check every 2s whether
-// frames actually advanced while the tab is visible, and re-arm if not.
-// If re-arming doesn't help either (some webviews and battery-saver modes
-// suspend rAF wholesale while the page stays visible), fall back to a
-// setTimeout pump at ~25fps — a slightly cheaper face beats a black one —
-// and hand back to rAF the moment natural ticks resume.
-let _watchdogTimer = null;
-let _watchdogLastFrames = -1;
-let _pumpTimer = null;
-let _pumpTick = false;
-let _naturalRafSeen = false;
-function _startFramePump() {
-  if (_pumpTimer) return;
-  _pumpTimer = setInterval(() => {
-    if (State.hidden || document.hidden) return;
-    _pumpTick = true;
-    try { frame(performance.now()); } finally { _pumpTick = false; }
-    requestAnimationFrame(frame); // keep offering control back to rAF
-  }, 40);
+function stopFramePump() {
+  if (pumpTimer === null) return;
+  clearInterval(pumpTimer);
+  pumpTimer = null;
 }
-function _stopFramePump() {
-  if (!_pumpTimer) return;
-  clearInterval(_pumpTimer);
-  _pumpTimer = null;
+
+function suspendFaceFrames() {
+  if (frameRequest !== null) cancelAnimationFrame(frameRequest);
+  frameRequest = null;
+  frameLoopActive = false;
+  stopFramePump();
 }
+
 function armFrameLoopWatchdog() {
-  if (_watchdogTimer) return;
-  _watchdogTimer = setInterval(() => {
-    if (State.hidden || document.hidden) { _watchdogLastFrames = _dbgFrames; return; }
-    if (_naturalRafSeen) {
-      _naturalRafSeen = false;
-      _stopFramePump();
-    } else if (_dbgFrames === _watchdogLastFrames) {
-      requestAnimationFrame(frame);
-      _startFramePump();
+  if (watchdogTimer !== null) return;
+  watchdogTimer = setInterval(() => {
+    if (State.hidden || document.hidden) {
+      suspendFaceFrames();
+      watchdogLastFrames = _dbgFrames;
+      return;
     }
-    _watchdogLastFrames = _dbgFrames;
+    if (naturalRafSeen) {
+      naturalRafSeen = false;
+      stopFramePump();
+    } else if (_dbgFrames === watchdogLastFrames) {
+      // Replace a stalled callback rather than accumulating concurrent loops.
+      if (frameRequest !== null && performance.now() - frameRequestedAt >= 2000) {
+        cancelAnimationFrame(frameRequest);
+        frameRequest = null;
+      }
+      queueFaceFrame();
+      if (pumpTimer === null) pumpTimer = setInterval(() => {
+        if (!State.hidden && !document.hidden) frame(performance.now());
+      }, 40);
+    }
+    watchdogLastFrames = _dbgFrames;
   }, 2000);
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) suspendFaceFrames();
+});
+window.addEventListener("pagehide", () => {
+  suspendFaceFrames();
+  if (watchdogTimer !== null) clearInterval(watchdogTimer);
+  watchdogTimer = null;
+});
+window.addEventListener("pageshow", ensureFrameLoop);
 
 // WebGL context loss is the silent permanent-black-canvas case: the browser
 // (usually a phone under GPU memory pressure) revokes the context, every
@@ -1921,7 +1904,6 @@ function frame(t) {
     return;
   }
   frameLoopActive = true;
-  if (!_pumpTick) _naturalRafSeen = true;
 
   const stillModeAtEntry = window.MASTER_FACE_STATE?.isStillMode?.(State.mode) ?? State.mode === 'idle';
   const stillAge = t - Number(State.lastTouch || 0);
@@ -1930,7 +1912,7 @@ function frame(t) {
     stillAge >= stillAfter && (State.pulse || 0) <= 0.01;
   const targetFrameMs = 1000 / (quietFace ? FACE_IDLE_FPS : FACE_ACTIVE_FPS);
   if (faceLastPaintAt && t - faceLastPaintAt < targetFrameMs) {
-    requestAnimationFrame(frame);
+    queueFaceFrame();
     return;
   }
   faceLastPaintAt = t;
@@ -1969,7 +1951,7 @@ function frame(t) {
   }
   if (!renderer && !asciiView) {
     lastT = t;
-    if (!State.hidden) requestAnimationFrame(frame);
+    if (!State.hidden) queueFaceFrame();
     else frameLoopActive = false;
     return;
   }
@@ -2326,7 +2308,7 @@ function frame(t) {
   if (asciiView) {
     drawAsciiFace(t);
     markFaceReady();
-    if (!State.hidden) requestAnimationFrame(frame);
+    if (!State.hidden) queueFaceFrame();
     else frameLoopActive = false;
     return;
   }
@@ -2365,7 +2347,7 @@ function frame(t) {
   renderer.render(scene, camera);
   markFaceReady();
 
-  if (!State.hidden) requestAnimationFrame(frame);
+  if (!State.hidden) queueFaceFrame();
   else frameLoopActive = false;
 }
 
