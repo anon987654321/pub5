@@ -47,6 +47,7 @@ module Studio
           ["Render a selfie series", :selfie],
           ["Create a photograph or animate a still", :photograph],
           ["Produce a finished selfie film", :film],
+          ["Extract photographs from an existing video", :frames],
           ["Produce the promo piece: clips, cut and soundtrack", :promo],
           ["Validate a subject's training plan", :validate],
           ["Audit photographic quality and subject readiness", :quality],
@@ -59,6 +60,10 @@ module Studio
         when :review
           subject = wizard.ask("Subject", default: "ragnhild")
           review_command(["--subject", subject])
+        when :frames
+          clip = wizard.ask("Local video file")
+          directory = wizard.ask("New private output directory")
+          frames_command([clip, directory])
         when :recover then puts JSON.pretty_generate(recovery_command([]))
         when :selfie then selfie(wizard)
         when :photograph then photograph_command([])
@@ -143,6 +148,7 @@ module Studio
           "scenes" => Studio::Lora::Selfie::SCENES,
           "subject_scenes" => Studio::Lora::Selfie::SUBJECT_SCENES,
           "historical_sittings" => Studio::Lora::Guides.load.fetch("historical_sittings"),
+          "cinematic_craft" => Studio::Lora::Guides.load.fetch("cinematic_craft"),
         }
       end
 
@@ -217,11 +223,26 @@ module Studio
         when "selfie" then photograph_command(["--selfie-series", *argv.drop(1)])
         when "photograph", "photo" then photograph_command(argv.drop(1))
         when "film" then film_command(argv.drop(1))
+        when "frames" then frames_command(argv.drop(1))
         when "promo" then promo_command(argv.drop(1))
         when "train" then train_command(argv.drop(1))
         when "-h", "--help", nil then puts help
         else abort "lora: unknown command #{argv.first.inspect} (see --help)"
         end
+      end
+
+      def frames_command(argv)
+        require "optparse"
+        require_relative "../replicate/motion"
+        count = 8
+        OptionParser.new do |parser|
+          parser.on("--count N", Integer) { |value| count = value }
+        end.parse!(argv)
+        raise ArgumentError, "usage: lora.rb frames VIDEO NEW_DIRECTORY [--count N]" unless argv.size == 2
+
+        result = Studio::ReplicateClient::Motion.sample_frames(argv[0], directory: argv[1], count:)
+        puts JSON.pretty_generate(result)
+        0
       end
 
       def quality_command(argv)
@@ -270,6 +291,8 @@ module Studio
             ruby STUDIO/lora/lora.rb selfie --subject NAME
                                                        render a selfie series after likeness approval
             ruby STUDIO/lora/lora.rb film            make finished, locally private selfie films
+            ruby STUDIO/lora/lora.rb frames VIDEO NEW_DIRECTORY [--count N]
+                                                       extract local photographic candidates without provider calls
             ruby STUDIO/lora/lora.rb promo SUBJECT   clips, cut and soundtrack for the promo
           The subject craft itself (scenes, prompting rules, grades) lives in
           this file as Studio::Lora::Craft and Studio::Lora::Selfie.
