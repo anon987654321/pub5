@@ -122,7 +122,9 @@ module Master
         return give_up(number) unless refresh
 
         Dir.mktmpdir("master-design-") do |directory|
-          accepted = candidates.each_with_index.filter_map { |edit, index| trial(edit, capture: File.join(directory, "#{index}.png")) }
+          pool = candidates
+          accepted = pool.each_with_index.filter_map { |edit, index| trial(edit, capture: File.join(directory, "#{index}.png")) }
+          @say.call("candidate verification: #{pool.size} tried, #{accepted.size} qualified, #{pool.size - accepted.size} not qualified")
           best = accepted.reduce { |left, right| prefer_candidate(left, right) }
           return give_up(number) unless best
 
@@ -173,6 +175,7 @@ module Master
 
       def give_up(number)
         @spent[@target[:surface].id] += 1
+        @say.call("no qualifying improvement in this round; not proof of global convergence")
         round(number:, why: "no usable edit", outcome: :none, after: @target[:score])
       end
 

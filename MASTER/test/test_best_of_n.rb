@@ -195,6 +195,17 @@ class BestOfNTest < Minitest::Test
       refine: ->(*) { flunk "full pool must not grow" }) { |row| row }
   end
 
+  def test_identical_edits_at_different_locations_remain_distinct
+    original = "same\nkeep\nsame\n"
+    first = "changed\nkeep\nsame\n"
+    second = "same\nkeep\nchanged\n"
+    refute_equal B.change_signature(original, first), B.change_signature(original, second)
+  end
+
+  def test_change_signature_retains_source_lines_starting_with_diff_markers
+    assert B.change_signature("++ old\n", "++ new\n").any? { |line| line.include?("new") }
+  end
+
   def test_diversity_compares_changed_lines_not_the_unchanged_file
     original = "a\nb\nc\n"
     variants = ["a\nnew value\nc\n", "a\nnew  value\nc\n", "a\nb\nother\n"]

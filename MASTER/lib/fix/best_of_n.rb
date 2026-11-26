@@ -117,7 +117,13 @@ module Master
       # conservative heuristic, not proof of semantic equivalence.
       def change_signature(original, source)
         diff = UnifiedDiff.between(original, source, context: 0).to_s
-        diff.lines.grep(/\A[+-](?![+-])/).map { |line| line.gsub(/\s+/, " ").strip }.reject(&:empty?).uniq.sort
+        # Keep hunk locations and multiplicity: identical text changed at two
+        # different call sites is not necessarily the same repair.
+        diff.lines.drop_while { |line| !line.start_with?("@@") }.filter_map do |line|
+          next unless line.start_with?("@@", "+", "-")
+
+          line.gsub(/\s+/, " ").strip
+        end
       end
 
       def distinct_changes(rows)
