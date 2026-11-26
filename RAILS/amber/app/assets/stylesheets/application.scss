@@ -1317,8 +1317,7 @@
      inline link the height grows below the text and "Sign in" hugs the top. A
      wardrobe card sizes its actions here by where they sit, not by a class. */
   /* The size-class leads stay only for the markup that still names a size
-     pending its per-site rendered check (shared-010): the bare button-small
-     sites on the item page and declutter, plus the two
+     pending its per-site rendered check (shared-010): the two
      shared partials whose containers also hold full-size buttons
      (_live_search_form, _master_invite). Every other compact button sizes from
      where it sits; each context here held only compact buttons at the
@@ -1327,6 +1326,10 @@
   .button.button-small,
   .creator-profile-header > .button,
   .creator-showcase-list .button,
+  .overdue-challenges .button,
+  .declutter-destinations .button,
+  .last-chance-outfits .button,
+  .item-affiliate-links .button,
   .item-card-actions :is(a, button),
   .profile-creator-link .button,
   .flash .button,

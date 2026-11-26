@@ -112,7 +112,7 @@
     <% affiliate_route = "#{params[:controller]}##{params[:action]}" %>
     <% affiliate_click_epi = Shared::LinkConverter.request_epi(route: affiliate_route) %>
     <% if @item.affiliate_links.any? %>
-      <ul>
+      <ul class="item-affiliate-links">
         <% @item.affiliate_links.each do |link| %>
           <li>
             <%# data-controller here rather than on the list: one controller per
@@ -125,7 +125,7 @@
                           outbound_click_surface_value: "item_affiliate",
                           outbound_click_epi_value: affiliate_click_epi } %>
             <%= button_to t("actions.remove"), item_affiliate_link_path(@item, link), method: :delete,
-                  class: "button-small",
+                  class: "button",
                   data: { turbo_confirm: t("items.confirm_remove_affiliate_link") } %>
           </li>
         <% end %>

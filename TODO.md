@@ -454,4 +454,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-010 Amber creator profile edit/show migrated from explicit size classes to semantic header/showcase contexts, keeping existing compact declarations. Source regression authored; browser and Rails tests NOT_RUN. Keep shared-010 open for remaining sites.
 
+- 2026-11-26: shared-010 Amber declutter/index, declutter/review and items/show now size action buttons through semantic list and navigation contexts. Focused source regression authored; rendered proof NOT_RUN. Shared partials and Brgen remain open.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

@@ -56,14 +56,14 @@
 
   <section>
     <%= tag.h2 t("declutter.move_item") %>
-    <nav aria-label="<%= t("declutter.move_item") %>">
+    <nav class="declutter-destinations" aria-label="<%= t("declutter.move_item") %>">
       <%# Donate and release take the garment out of the active wardrobe, so they ask first. %>
       <% %w[keep wear_this_week repair sell donate sentimental_archive release].each do |target| %>
         <% confirm = t("declutter.confirm_leave_wardrobe", title: @item.title) if %w[donate release].include?(target) %>
         <%= button_to t("declutter.targets.#{target}"), move_declutter_path(@item, target: target), method: :patch,
-              class: "button-small", form: { data: { turbo_confirm: confirm }.compact } %>
+              class: "button", form: { data: { turbo_confirm: confirm }.compact } %>
       <% end %>
-      <%= button_to t("declutter.declutter_box"), move_declutter_path(@item, target: "declutter_box"), method: :patch, class: "button-small" %>
+      <%= button_to t("declutter.declutter_box"), move_declutter_path(@item, target: "declutter_box"), method: :patch, class: "button" %>
     </nav>
   </section>
 
@@ -86,12 +86,12 @@
     <section>
       <%= tag.h2 t("declutter.last_chance_outfits") %>
       <p><%= t("declutter.one_more_role") %></p>
-      <ul>
+      <ul class="last-chance-outfits">
         <% @last_chance.each_with_index do |suggestion, index| %>
           <li>
             <%= tag.strong Array(suggestion[:titles] || suggestion["titles"]).join(" · ") %>
             <p><%= suggestion[:reason] || suggestion["reason"] %></p>
-            <%= button_to t("declutter.create_outfit"), create_last_chance_outfit_declutter_path(@item, index: index), method: :post, class: "button-small" %>
+            <%= button_to t("declutter.create_outfit"), create_last_chance_outfit_declutter_path(@item, index: index), method: :post, class: "button" %>
           </li>
         <% end %>
       </ul>

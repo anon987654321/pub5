@@ -33,6 +33,17 @@ class WardrobeClassNamesTest < ActionDispatch::IntegrationTest
     assert_includes scss, ".creator-showcase-list .button,"
   end
 
+  test "declutter and item actions use contextual sizing" do
+    root = Rails.root.join("app/views")
+    %w[declutter/index declutter/review items/show].each do |name|
+      refute_includes root.join("#{name}.html.erb").read, "button-small"
+    end
+    scss = Rails.root.join("app/assets/stylesheets/application.scss").read
+    %w[overdue-challenges declutter-destinations last-chance-outfits item-affiliate-links].each do |context|
+      assert_includes scss, ".#{context} .button,"
+    end
+  end
+
   test "the stylesheet sizes the card's actions by where they sit" do
     scss = Rails.root.join("app/assets/stylesheets/application.scss").read
     # The rule sits inside @layer base, so its selectors are indented.

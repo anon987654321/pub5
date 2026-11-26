@@ -35,12 +35,12 @@
   <% if @overdue_challenges.present? %>
     <section role="region" aria-label="<%= t("declutter.overdue_label") %>">
       <%= tag.h2 t("declutter.overdue_challenges") %>
-      <ul>
+      <ul class="overdue-challenges">
         <% @overdue_challenges.each do |challenge| %>
           <li>
             <%= link_to challenge.item.title, review_declutter_path(challenge.item) %>
             <%= t("declutter.due", date: l(challenge.due_on)) %>
-            <%= button_to t("declutter.complete"), complete_challenge_declutter_path(challenge.item), method: :post, class: "button-small" %>
+            <%= button_to t("declutter.complete"), complete_challenge_declutter_path(challenge.item), method: :post, class: "button" %>
           </li>
         <% end %>
       </ul>
