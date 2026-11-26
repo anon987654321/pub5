@@ -419,18 +419,18 @@ class TestKeylessRouting < Minitest::Test
     assert_equal "grok", router.cli_lane("grok-cli:auto")["binary"]
   end
 
-  def test_manually_dead_codex_lane_stays_out_of_the_pool_when_login_succeeds
-    ENV["MASTER_NO_POOL_PROBES"] = "1"
-    router = Master::CLI::Routing::ModelRouter.new(
-      config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
-    )
-    router.define_singleton_method(:executable_on_path?) { |_binary| true }
-    router.define_singleton_method(:probe_value) { |_name, wait:| true }
+  # The ChatGPT sign-in carries a /fix run when the other subscriptions are spent: a
+  # signed-in Codex lane is chosen ahead of the free floor, and a parked one is not.
+  def test_a_signed_in_codex_lane_leads_the_free_floor_until_its_plan_is_parked
+    router = signed_in_cli_router
+    refute_includes Master::Io::LaneQuota.manual_dead, "codex-cli"
+    assert router.reachable?("codex-cli:auto")
 
-    assert_includes Master::Io::LaneQuota.manual_dead, "codex-cli"
+    chain = router.fallback_chain(task_type: :code_generation)
+    assert_operator chain.index("codex-cli:auto"), :<, first_unsubscribed(chain), chain.inspect
+
+    Master::Io::LaneQuota.note("codex-cli:auto", "You've hit your usage limit. Try again at 5:18 AM.")
     refute router.reachable?("codex-cli:auto")
-    refute_includes router.fallback_chain(task_type: :code_generation), "codex-cli:auto"
-    refute_includes router.pool, "codex-cli:auto"
   end
 
   # mistral.rs, LM Studio and llama-server all answer the OpenAI /models call.
@@ -929,5 +929,20 @@ class TestKeylessRouting < Minitest::Test
     )
     assert router.web_chat_enabled?
     assert_includes router.fallback_chain(task_type: :exploration), "web-chat:grok"
+  end
+
+  def signed_in_cli_router
+    config = FakeConfig.new(model: Master.free_primary_model)
+    router = Master::CLI::Routing::ModelRouter.new(config:, root: Master::ROOT)
+    router.define_singleton_method(:executable_on_path?) { |_binary| true }
+    router.define_singleton_method(:probe_value) { |_name, wait:| true }
+    router
+  end
+
+  # Index of the first lane that no subscription in data/models.yml carries.
+  def first_unsubscribed(chain)
+    catalogue = YAML.load_file(File.join(Master::ROOT, "data/models.yml"), aliases: true)
+    subscriptions = catalogue.fetch("subscription_lanes")
+    chain.index { |model| !subscriptions.include?(model.split(":", 2).first) }
   end
 end

@@ -209,17 +209,14 @@ model_defs:
     id: grok-cli:auto
     <<: *model_defaults
     score: { quality: 0.90, speed: 0.50, cost: 0.3 }
-  # codex-cli: deliberately absent from model tiers. The live router also
-  # discovers generic CLI declarations, so data/lanes.yml keeps this lane out of
-  # ordinary selection until a bounded `codex exec` probe proves it can answer.
-  # `codex login status` succeeds instantly, but `codex exec` -- the configured
-  # ask command below -- hung past 250s with no reply on five attempts, with and
-  # without --sandbox/--ephemeral, with an explicit model, and with inherited
-  # session environment variables stripped. CLI login health is not execution health;
-  # the dispatcher timeout is 300s. Re-probed 2026-11-26 on the operator's ChatGPT
-  # sign-in: this exact ask answered "ready" through --output-last-message in 4.8s
-  # (a Responses WebSocket error is logged and falls back), so data/lanes.yml no
-  # longer lists it dead. A tier entry still waits on an end-to-end fallback test.
+  # codex-cli runs on the operator's ChatGPT sign-in. It sat out of the tiers after
+  # `codex exec` hung past 250s on five attempts; re-probed 2026-11-26, the configured
+  # ask (prompt on stdin, --output-last-message) answered in 4.8s, so it rejoins beside
+  # grok-cli. A spent plan replies "You've hit your usage limit" and LaneQuota parks it.
+  codex_cli_auto: &codex_cli_auto
+    id: codex-cli:auto
+    <<: *model_defaults
+    score: { quality: 0.90, speed: 0.50, cost: 0.3 }
   gemma_2_27b: &gemma_2_27b
     id: google/gemma-2-27b-it
     <<: *model_defaults
@@ -284,6 +281,7 @@ models:
     - *deepseek_chat
     - *agy_auto
     - *grok_cli_auto
+    - *codex_cli_auto
     - *nemotron_ultra
     - *gemini_flash_openrouter
     # Local recovery stays behind remote lanes. Ollama requires its explicit opt-in;
@@ -327,6 +325,7 @@ models:
     - *gemini_flash
     - *command_r_plus
     - *grok_cli_auto
+    - *codex_cli_auto
     - *zai_cli_auto
     - *glm_5_3_flash
     - *ollama_deepseek_v4_1_flash
