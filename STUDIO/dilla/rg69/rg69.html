@@ -687,7 +687,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 <fieldset><legend>Master</legend>
 <label for="swing">Swing <output id="swing-o">8</output></label><input id="swing" type="range" min="0" max="90" value="8" title="Swing">
 
-<label for="tape">Tape <output id="tape-o">44</output></label><input id="tape" type="range" min="0" max="100" value="44" title="Tape">
+<label for="tape">Tape wear <output id="tape-o">44</output></label><input id="tape" type="range" min="0" max="100" value="44" title="Tape saturation, compression and bandwidth">
 <label for="comp">Comp <output id="comp-o">78</output></label><input id="comp" type="range" min="0" max="100" value="78" title="Comp">
 <label for="width">Width <output id="width-o">52</output></label><input id="width" type="range" min="0" max="100" value="52" title="Width">
 </fieldset>
@@ -695,9 +695,9 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 
 <label for="delay">Delay <output id="delay-o">26</output></label><input id="delay" type="range" min="0" max="100" value="26" title="Delay">
 <label for="filter">Filter <output id="filter-o">62</output></label><input id="filter" type="range" min="0" max="100" value="62" title="Filter">
-<label for="wobble">Wobble <output id="wobble-o">8</output></label><input id="wobble" type="range" min="0" max="100" value="8" title="Wobble">
+<label for="wobble">Wow / flutter <output id="wobble-o">8</output></label><input id="wobble" type="range" min="0" max="100" value="8" title="Tape speed drift and flutter">
 
-<label for="crackle">Crackle <output id="crackle-o">8</output></label><input id="crackle" type="range" min="0" max="100" value="8" title="Crackle">
+<label for="crackle">Vinyl crackle <output id="crackle-o">8</output></label><input id="crackle" type="range" min="0" max="100" value="8" title="Crackle">
 </fieldset>
 </div>
 </details>
@@ -1155,9 +1155,9 @@ BASS_PATS[id]=bass.join(",");KEYS_PATS[id]=keys;PAD_PATS[id]=pads;
 function harmonyPatternName(id){const row=HARMONIES[id];return row?row.title:id;}
 
 const STYLES=[
-{n:'Industrial',m:['Aggressive','Dark'],d:'hate-pummel',b:'industrialbass',k:'indstab',p:'industrialdrone',bpm:[140,160],sw:[0,5],dr:[60,90],tm:[1,5]},
-{n:'Hard Techno',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'darkchrom',p:'noisewash',bpm:[145,160],sw:[0,3],dr:[70,95],tm:[1,3]},
-{n:'HATE Style',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'acid',p:'noisewash',bpm:[150,165],sw:[0,5],dr:[80,98],tm:[1,3]},
+{n:'Industrial',m:['Aggressive','Dark'],d:'hate-pummel',b:'industrialbass',k:'indstab',p:'industrialdrone',bpm:[140,160],sw:[0,5],dr:[60,90],tm:[20,38]},
+{n:'Hard Techno',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'darkchrom',p:'noisewash',bpm:[145,160],sw:[0,3],dr:[70,95],tm:[22,42]},
+{n:'HATE Style',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'acid',p:'noisewash',bpm:[150,165],sw:[0,5],dr:[80,98],tm:[28,48]},
 // Shares the F-minor engine-original harmony and dub palette; its tempo, drum
 // grammar and Tone.js performance remain an independent RG-69 arrangement.
 {n:'F-minor Dub',m:['Dark','Industrial'],d:'bluehour',b:'bluehourbass',k:'bluehourkeys',p:'bluehourwash',bpm:[92,100],sw:[6,12],dr:[62,80],tm:[18,28]},
@@ -1217,7 +1217,7 @@ pushHistory();
 pat_.d=m.d;pat_.b=m.b;pat_.k=m.k;pat_.p=m.p;
 if(m.bpm)aud_.bpm=m.bpm[0]+Math.random()*(m.bpm[1]-m.bpm[0]);
 if(m.sw!==undefined)aud_.swing=m.sw[0]+Math.random()*(m.sw[1]-m.sw[0]);
-setStylePocket(m);if(m.d==='hate-pummel'||m.d==='hate-grind'){aud_.drive=m.d==='hate-grind'?88:75;aud_.tape=3;aud_.reverb=18;}
+setStylePocket(m);if(m.d==='hate-pummel'||m.d==='hate-grind'){aud_.drive=m.d==='hate-grind'?88:75;aud_.tape=30;aud_.reverb=18;}
 syncUIFromState();saveSession();
 log('mood applied','k');
 }
@@ -1234,7 +1234,7 @@ const industrialBoot=bootStyleCandidates.filter(style=>['Industrial','Hard Techn
 const bootStylePool=industrialBoot.length?industrialBoot:bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
 let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
-let aud_={pocket:industrialBoot.includes(bootStyle)?12:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:(bootStyle.dr[0]+bootStyle.dr[1])/2,tape:(bootStyle.tm[0]+bootStyle.tm[1])/2,comp:78,width:52,reverb:industrialBoot.includes(bootStyle)?18:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
+let aud_={pocket:industrialBoot.includes(bootStyle)?12:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:(bootStyle.dr[0]+bootStyle.dr[1])/2,tape:(bootStyle.tm[0]+bootStyle.tm[1])/2,comp:78,width:52,reverb:industrialBoot.includes(bootStyle)?18:34,delay:26,filter:62,wobble:12,vinyl:22,crackle:18,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
 let seq_={};
@@ -1449,6 +1449,56 @@ st_.randomizeFxPending=false;
 applyFX();log("audio0: shared graph ready","k");
 }
 
+// Parallel analogue wear: a native dry/wet rig, independent of the sequencer.
+function createAnalogRig(ctx,master,output,dryMaster,wetMaster,profile,aud,mix,offline,duration){
+const gain=value=>{const node=ctx.createGain();node.gain.value=value;return node;};
+const filter=(type,frequency)=>{const node=ctx.createBiquadFilter();node.type=type;node.frequency.value=frequency;return node;};
+const smooth=(param,value)=>{const now=ctx.currentTime;param.cancelScheduledValues(now);param.setTargetAtTime(value,now,.035);};
+const input=gain(1),head=filter("lowshelf",65),shape=ctx.createWaveShaper(),compression=ctx.createDynamicsCompressor();
+shape.curve=Float32Array.from({length:2049},(_,i)=>Math.tanh(1.65*(i/1024-1))/1.65);
+shape.oversample="2x";
+compression.threshold.value=-18;compression.knee.value=14;compression.ratio.value=2;compression.attack.value=.008;compression.release.value=.12;
+const rolloff=filter("lowpass",15000),delay=ctx.createDelay(.04),returnGain=gain(0);
+delay.delayTime.value=.006;
+input.connect(head);head.connect(shape);shape.connect(compression);compression.connect(rolloff);rolloff.connect(delay);delay.connect(returnGain);
+const wow=ctx.createOscillator(),flutter=ctx.createOscillator(),wowDepth=gain(0),flutterDepth=gain(0);
+wow.frequency.value=.42;flutter.frequency.value=5.3;
+wow.connect(wowDepth);flutter.connect(flutterDepth);wowDepth.connect(delay.delayTime);flutterDepth.connect(delay.delayTime);
+// Noise beds are independent, repeatable buffers, not a constant crackle oscillator.
+const length=Math.round(ctx.sampleRate*12),hiss=ctx.createBuffer(1,length,ctx.sampleRate),crackle=ctx.createBuffer(1,length,ctx.sampleRate);
+const bed=hiss.getChannelData(0),dust=crackle.getChannelData(0);let seed=0x6911a,low=0,previous=0;
+const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+for(let i=0;i<length;i++){
+const white=random()*2-1;low+=(white-low)*.035;
+bed[i]=.40*low+.16*(white-previous);previous=white;
+}
+for(let at=.02;at<12;at+=.035+random()*.34){
+const start=Math.floor(at*ctx.sampleRate),span=Math.ceil((.001+random()*.006)*ctx.sampleRate),amp=.08+random()*.65,polarity=random()>.5?1:-1;
+for(let i=0;i<span&&start+i<length;i++)dust[start+i]+=polarity*amp*(.65+.35*(random()*2-1))*Math.exp(-5*i/span);
+}
+const hissSource=ctx.createBufferSource(),dustSource=ctx.createBufferSource(),hissGain=gain(0),dustGain=gain(0),hissFilter=filter("lowpass",6200),dustFilter=filter("highpass",480);
+hissSource.buffer=hiss;hissSource.loop=true;dustSource.buffer=crackle;dustSource.loop=true;
+hissSource.connect(hissFilter);hissFilter.connect(hissGain);
+dustSource.connect(dustFilter);dustFilter.connect(dustGain);
+const update=(aud,mix)=>{
+const tape=Math.max(0,Math.min(1,aud.tape/100)),wobble=Math.max(0,Math.min(1,aud.wobble/100)),vinyl=Math.max(0,Math.min(1,aud.vinyl/100)),crackle=Math.max(0,Math.min(1,aud.crackle/100));
+const wet=Math.max(.68*tape,.48*wobble);
+smooth(dryMaster.gain,Math.max(.22,.85-wet));smooth(wetMaster.gain,.15);
+smooth(returnGain.gain,Math.min(.63,wet));
+smooth(input.gain,1+1.65*tape);smooth(head.gain,2.8*tape);
+smooth(rolloff.frequency,15000-9500*tape);
+smooth(wowDepth.gain,.0014*wobble);smooth(flutterDepth.gain,.00019*wobble);
+const level=mix.master/100;
+smooth(hissGain.gain,level*(.022*tape+.16*vinyl)*Math.min(2,Math.max(.5,profile.rig.vinyl.level/.05)));
+smooth(dustGain.gain,level*.48*crackle*Math.min(2,Math.max(.5,profile.rig.vinyl.crackle/.3)));
+};
+Tone.connect(master,input);Tone.connect(returnGain,output);Tone.connect(hissGain,output);Tone.connect(dustGain,output);
+const start=ctx.currentTime;wow.start(start);flutter.start(start);hissSource.start(start);dustSource.start(start);
+if(offline&&duration>start){for(const source of [wow,flutter,hissSource,dustSource])source.stop(duration);}
+update(aud,mix);
+return {update};
+}
+
 function createAudioGraph(aud,mix,seed,{offline=false,duration=0}={}){
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
@@ -1546,8 +1596,12 @@ const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
 installLaneFX(routes,effects);
 
 const sampleG=new Tone.Gain(.65);sampleG.connect(masterG);sampleG.connect(revSend);sampleG.connect(dlySend);
+let analog=null;
+try{analog=createAnalogRig(ctx,masterG,outputGate,dryMaster,wetMaster,rg69AudioProfile,aud,mix,offline,duration);
+vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
+}catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const ready=rev.ready.then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,analog,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1572,8 +1626,11 @@ if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);
 if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
 if(widener)widener.width.value=aud_.width/100;
+if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
+else{
 if(vinylNoise)vinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,profile.rig.vinyl.level,.1);
 if(crackleNoise)crackleNoise.volume.value=rg69NoiseLevelDb(-65,aud_.crackle,profile.rig.vinyl.crackle,.5);
+}
 if(driftLFO)driftLFO.frequency.value=.05+aud_.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz);
 }
 
