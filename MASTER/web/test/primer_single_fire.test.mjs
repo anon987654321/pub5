@@ -19,15 +19,17 @@ function primerScript() {
 function element(id) {
   const listeners = {};
   const added = [];
+  const removed = [];
   return {
     id,
     added,
+    removed,
     listeners,
     dataset: {},
     textContent: "",
     tabIndex: 0,
     parentNode: null,
-    classList: { add: (name) => added.push(name), remove: () => {} },
+    classList: { add: (name) => added.push(name), remove: (name) => removed.push(name), contains: () => false },
     addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
     setAttribute() {},
     getAttribute: () => null,
@@ -36,20 +38,24 @@ function element(id) {
   };
 }
 
-function loadPrimer({ search = "" } = {}) {
+function loadPrimer({ search = "", readyState = "complete" } = {}) {
   const timers = [];
   const transitions = [];
   const primer = element("primer");
   const nodes = { primer, "prompt-form": element("prompt-form"), "ui-status": element("ui-status"), "primer-title": element("primer-title") };
   const windowListeners = {};
   const warnings = [];
+  const documentListeners = {};
+  let reloads = 0;
   const sandbox = {
     document: {
+      readyState,
+      addEventListener: (type, fn) => { documentListeners[type] = fn; },
       currentScript: { dataset: { faceModule: "/face.js?v=test" } },
       getElementById: (id) => nodes[id] || null,
-      body: { classList: { add() {}, remove() {} }, dataset: {} },
+      body: { classList: { add() {}, remove() {}, contains: () => false }, dataset: {} },
     },
-    location: { search },
+    location: { search, reload: () => { reloads += 1; } },
     URLSearchParams,
     CustomEvent: class { constructor(type) { this.type = type; } },
     setTimeout: (fn) => { timers.push(fn); return timers.length; },
@@ -67,7 +73,7 @@ function loadPrimer({ search = "" } = {}) {
   // Only the autostart timer: the rest are the 8s hint and the 35s watchdog,
   // whose fallback dismisses the primer on purpose when the face never paints.
   const runAutostart = () => timers.shift()();
-  return { primer, transitions, runAutostart, sandbox, windowListeners, warnings };
+  return { primer, transitions, runAutostart, sandbox, windowListeners, warnings, documentListeners, timers, nodes, reloads: () => reloads };
 }
 
 test("autostart plus every tap event dismisses the primer once", () => {
@@ -88,6 +94,30 @@ test("with ?primer=1 the first tap fires and a second tap does nothing", () => {
 
   assert.equal(transitions.filter((p) => p === "PRIMER").length, 1);
   assert.equal(primer.added.filter((c) => c === "gone").length, 1);
+});
+
+test("early activation waits for the parsed shell before importing the face", () => {
+  const { runAutostart, documentListeners, transitions, sandbox, primer } = loadPrimer({ readyState: "loading" });
+  runAutostart();
+  assert.deepEqual(transitions, ["PRIMER"]);
+  assert.equal(sandbox.__MASTER_FACE_IMPORT__, undefined);
+  assert.equal(primer.added.includes("gone"), false);
+  sandbox.document.readyState = "interactive";
+  documentListeners.DOMContentLoaded();
+  assert.deepEqual(transitions, ["PRIMER", "ASSETS"]);
+  assert.equal(sandbox.__MASTER_FACE_IMPORT__, true);
+});
+
+test("a missing painted frame exposes the existing primer as a reload control", () => {
+  const { runAutostart, timers, primer, nodes, transitions, reloads } = loadPrimer();
+  runAutostart();
+  timers[1](); // 35s watchdog, without a face-ready signal.
+  assert.equal(transitions.at(-1), "ERROR");
+  assert.ok(primer.removed.includes("gone"));
+  assert.equal(primer.tabIndex, 0);
+  assert.match(nodes["primer-title"].textContent, /face failed to load/);
+  primer.listeners.click.forEach(fn => fn({}));
+  assert.equal(reloads(), 1);
 });
 
 test("audio gesture rejection is reported and a later gesture can recover", async () => {
