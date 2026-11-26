@@ -580,6 +580,26 @@ class TestCheckChain < Minitest::Test
     assert_equal "1", captured_envs[1].fetch("CHECK_STRICT_INCONCLUSIVE")
   end
 
+  def test_scan_only_rails_checks_run_once_per_unchanged_tree
+    runs = 0
+    capture = ->(*_args, **_kwargs) { runs += 1; [false, ["red"], 1] }
+
+    ENV["MASTER_PROOF_STORE"] = "1"
+    G.instance_variable_set(:@rails_checks_kept, nil)
+
+    G.stub(:baseline_key, "same-bytes") do
+      G.stub(:capture, capture) do
+        2.times { assert_equal [false, ["red"], 1], G.rails_checks(scan_only: true) }
+        G.rails_checks(scan_only: false)
+      end
+    end
+
+    assert_equal 2, runs, "a repeat on the same bytes reuses; a writing run always measures"
+  ensure
+    ENV["MASTER_PROOF_STORE"] = "0"
+    G.instance_variable_set(:@rails_checks_kept, nil)
+  end
+
   # Rails verification delegates to premerge without narrowing flags. Keep its
   # default group set observable so a future --apps-only default cannot silently
   # turn a full /fix proof into a smaller one.

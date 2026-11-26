@@ -692,15 +692,42 @@ module Operator
     # any other, so launched with this process's Ruby every check was skipped and
     # the stage reported one refusal as its whole result.
     def rails_checks(scan_only:, strict_inconclusive: false)
-      CheckHeartbeat.around("rails checks") do |progress|
-        env = strict_env.merge(progress).merge("CHECK_AUTOFIX" => scan_only ? "0" : "1", **Master::Fix::WorkLane.check_env)
-        # A proof cannot pass a check that measured nothing. The normal contribution
-        # mode remains permissive; /fix opts into strict inconclusive handling here
-        # because this child environment is constructed explicitly.
-        env["CHECK_STRICT_INCONCLUSIVE"] = "1" if strict_inconclusive
-        capture(RUBY, File.join(MASTER, "checks", "runner.rb"), "--all",
-                chdir: File.join(ROOT, "RAILS"), env:)
+      fixed = strict_env.merge("CHECK_AUTOFIX" => scan_only ? "0" : "1", **Master::Fix::WorkLane.check_env)
+      # A proof cannot pass a check that measured nothing. The normal contribution
+      # mode remains permissive; /fix opts into strict inconclusive handling here
+      # because this child environment is constructed explicitly.
+      fixed["CHECK_STRICT_INCONCLUSIVE"] = "1" if strict_inconclusive
+      key = scan_only && rails_checks_key(fixed)
+      kept = key && @rails_checks_kept&.fetch(key, nil)
+      if kept
+        Master::Trace::Dmesg.status("check0", "rails checks reused, RAILS unchanged since they ran")
+        return kept
       end
+
+      reading = CheckHeartbeat.around("rails checks") do |progress|
+        capture(RUBY, File.join(MASTER, "checks", "runner.rb"), "--all",
+                chdir: File.join(ROOT, "RAILS"), env: fixed.merge(progress))
+      end
+      keep_rails_checks(key, reading)
+      reading
+    end
+
+    def keep_rails_checks(key, reading)
+      @rails_checks_kept = key ? { key => reading } : nil
+      nil
+    end
+
+    # The pre-repair baseline's source stage and the first pass's proof baseline both ran
+    # runner.rb --all read-only on the same bytes (2026-11-26: two 20-minute sweeps back to
+    # back). A scan-only reading stands while RAILS's content and the child env are unchanged;
+    # the last one is kept, in this process only. MASTER_PROOF_STORE=0 measures every time.
+    def rails_checks_key(env)
+      return if ENV["MASTER_PROOF_STORE"] == "0"
+
+      [baseline_key("RAILS", trees: ["RAILS"]), env.sort]
+    rescue StandardError => e
+      Master::Trace::Dmesg.status("check0", "rails checks reuse off, RAILS fingerprint unreadable: #{e.class}")
+      nil
     end
 
     # The repair-aware runner owns deterministic source/rendered corrections;
