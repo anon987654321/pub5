@@ -54,6 +54,9 @@ export default class extends Controller {
     this.observer = new MutationObserver((mutations) => {
       const added = mutations.flatMap((m) => Array.from(m.addedNodes))
       if (!added.length) return
+      // A Turbo replacement under the same DOM id is an edit, not an arrival.
+      const replaced = new Set(mutations.flatMap((m) =>
+        Array.from(m.removedNodes, (node) => node.id).filter(Boolean)))
       added.forEach((node) => { if (node.nodeType === Node.ELEMENT_NODE) this.#stamp(node) })
       // #dayBreaks writes children of the element this observer watches, so it
       // would wake itself forever. Suspending is the whole guard.
@@ -65,11 +68,15 @@ export default class extends Controller {
       if (this.followingTail) {
         this.toTail()
       } else {
-        this.unread += added.filter((node) => {
+        const arrivals = new Set(added.filter((node) => {
           const sender = node.querySelector?.("[data-sender-id]")?.dataset.senderId
-          return sender && sender !== this.viewerIdValue
-        }).length
-        this.#renderPill()
+          return node.id && node.parentElement === this.element &&
+            !replaced.has(node.id) && sender && sender !== this.viewerIdValue
+        }).map((node) => node.id))
+        if (arrivals.size) {
+          this.unread += arrivals.size
+          this.#renderPill()
+        }
       }
     })
     this.observer.observe(this.element, { childList: true })
