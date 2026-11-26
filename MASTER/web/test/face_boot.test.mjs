@@ -232,7 +232,7 @@ test("FaceWorld morphs the primary face field into a topic with a bounded fallba
   assert.match(runtime, /MASTER_FACE_WORLD\?\.setSubjectFromText\?\.\(v\)/);
 });
 
-test("the carved-field portrait is the canonical default and keeps legacy aliases", () => {
+test("the volumetric sculpture keeps legacy topology aliases", () => {
   const state = readFileSync(join(publicDir, "face_state.js"), "utf8");
   const rules = readFileSync(join(root, "..", "..", "MASTER", "data", "tokens.yml"), "utf8");
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
@@ -247,12 +247,8 @@ test("the carved-field portrait is the canonical default and keeps legacy aliase
   assert.match(rules, /topology_aliases:\s+papua-mask: carved-field/);
   assert.match(state, /CONTRACT_SPATIAL\.topology_aliases/);
   assert.match(world, /topology === "carved-field" \|\| topology === "papua-mask"/);
-  assert.match(shader, /FACE_CARVE_ORBITAL/);
-  assert.match(shader, /FACE_CARVE_CHEEK/);
-  assert.match(shader, /FACE_CARVE_NOSE/);
-  assert.match(shader, /FACE_CARVE_CHIN/);
-  assert.match(shader, /float eyeSocket/);
-  assert.match(shader, /float browShelf/);
+  assert.match(shader, /gl_PointSize = 1\.0;/);
+  assert.doesNotMatch(shader, /FACE_CARVE_|FACE_FUTURE_/);
 });
 
 test("semantic object subjects are validated, bounded and feature-staged", () => {

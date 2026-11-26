@@ -980,10 +980,6 @@ async function runMessageTurn(text) {
   if (/^\/wake$/i.test(trimmed)) { wakeFromSleep(); return; }
   const maskMatch = trimmed.match(/^\/mask\s+(\S+)$/i);
   if (maskMatch) { swapMask(maskMatch[1]); return; }
-  if (/^\/leader$/i.test(trimmed)) { swapMask('/dario.jpg'); return; }
-  if (/^\/dario$/i.test(trimmed)) { swapMask('/dario.jpg'); return; }
-  if (/^\/puffy$/i.test(trimmed)) { swapMask('/puffy.jpg'); return; }
-  if (/^\/trump$/i.test(trimmed)) { swapMask('/trump.jpg'); return; }
   const rateMatch = trimmed.match(/^\/rate\s+([\d.]+)$/i);
   if (rateMatch) { setTtsRate(parseFloat(rateMatch[1])); return; }
   const pitchMatch = trimmed.match(/^\/pitch\s+([+-]?[\d.]+)$/i);

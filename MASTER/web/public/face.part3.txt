@@ -701,10 +701,9 @@ function frame(t) {
   renderer.setClearColor(0x000000, 1);
   renderer.domElement.style.opacity = '';
   window.MASTER_FACE_WORLD?.update?.(performance.now());
-  window.MASTER_FACE_SPARSE?.update?.(performance.now());
   if (!faceContextLost && !renderer.getContext?.()?.isContextLost?.()) {
     renderer.render(scene, camera);
-    if (rootBody.dataset.faceGpu === 'recovering') {
+    if (renderer.info.render.points && rootBody.dataset.faceGpu === 'recovering') {
       rootBody.dataset.faceGpu = 'ready';
       rootBody.classList.add('face-ready');
       if (uiStatus?.textContent.startsWith('gpu context lost')) uiStatus.textContent = '';
