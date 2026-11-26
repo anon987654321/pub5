@@ -998,12 +998,13 @@ effects:{delay_time:"8n",delay_feedback_range:.37,reverb_decay_scale:4,wobble_fr
 function finalizeRG69AudioProfile(profile){
 const kit=profile.kit,tone=profile.tone;
 return Object.assign({},profile,{notes:Object.freeze({
-kick:Tone.Frequency("C1").transpose(kit.kick.tune).toFrequency(),
-kickSub:Tone.Frequency("C1").transpose(kit.sub.tune).toFrequency(),
-kickBody:Tone.Frequency("C2").transpose(kit.kick.tune).toFrequency(),
-snareRing:Tone.Frequency("E4").transpose(kit.snare.tune).toFrequency(),
-hat:Tone.Frequency(tone.hat.frequency).transpose(kit.hat.tune).toFrequency(),
-open:Tone.Frequency(tone.openhat.frequency).transpose(kit.hat.tune).toFrequency()
+// mtof is context-free; do not create a worker-backed AudioContext during page load.
+kick:Tone.mtof(24+Number(kit.kick.tune)),
+kickSub:Tone.mtof(24+Number(kit.sub.tune)),
+kickBody:Tone.mtof(36+Number(kit.kick.tune)),
+snareRing:Tone.mtof(64+Number(kit.snare.tune)),
+hat:tone.hat.frequency*2**(kit.hat.tune/12),
+open:tone.openhat.frequency*2**(kit.hat.tune/12)
 })});
 }
 function resolveRG69AudioProfile(data){
@@ -1017,7 +1018,9 @@ return finalizeRG69AudioProfile({name:config.name,tone:config.tone,kit,voice,rig
 }
 let rg69AudioProfile=finalizeRG69AudioProfile(RG69_AUDIO_FALLBACK);
 let rg69AudioProfileLocked=false;
-const rg69AudioProfileReady=fetch("../data/dilla.json",{cache:"force-cache"})
+const rg69AudioProfileReady=location.origin==="null"
+?Promise.resolve().then(()=>{log("local page: embedded Dilla sound profile","k");return rg69AudioProfile;})
+:fetch("../data/dilla.json",{cache:"force-cache"})
 .then(response=>{if(!response.ok)throw new Error("Dilla catalogue request failed: "+response.status);return response.json();})
 .then(data=>{
 const loaded=resolveRG69AudioProfile(data);
@@ -1045,8 +1048,10 @@ hat:new Tone.MetalSynth({frequency:p.notes.hat,envelope:{attack:t.hat.attack,dec
 open:new Tone.MetalSynth({frequency:p.notes.open,envelope:{attack:t.openhat.attack,decay:k.openhat.decay,release:t.openhat.release},harmonicity:t.openhat.harmonicity,modulationIndex:t.openhat.modulation_index,resonance:openResonance,octaves:t.openhat.octaves}),
 bass:new Tone.MonoSynth({oscillator:{type:t.bass.oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:t.bass.sustain,release:t.bass.release}}),
 bassSub,
-keys:new Tone.PolySynth(Tone.FMSynth,{maxPolyphony:Math.min(6,t.keys.max_polyphony),harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}),
-pads:new Tone.PolySynth(Tone.Synth,{maxPolyphony:Math.min(4,t.pads.max_polyphony),oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}})
+// Polyphony is a PolySynth option, not an option of its individual voice.
+// At 170 BPM, four-note pad chords every beat overlap roughly 64 voices.
+keys:new Tone.PolySynth({voice:Tone.FMSynth,maxPolyphony:Math.max(32,t.keys.max_polyphony),options:{harmonicity:t.keys.harmonicity,modulationIndex:keysModulation,oscillator:{type:t.keys.oscillator},envelope:{attack:t.keys.attack,decay:t.keys.decay,sustain:t.keys.sustain,release:t.keys.release},modulation:{type:t.keys.modulation_oscillator},modulationEnvelope:{attack:t.keys.mod_attack,decay:t.keys.mod_decay,sustain:t.keys.mod_sustain,release:t.keys.mod_release}}}),
+pads:new Tone.PolySynth({voice:Tone.Synth,maxPolyphony:Math.max(96,t.pads.max_polyphony),options:{oscillator:{type:t.pads.oscillator,count:t.pads.count,spread:t.pads.spread},envelope:{attack:t.pads.attack,decay:t.pads.decay,sustain:t.pads.sustain,release:t.pads.release}}})
 };
 for(const [lane,source] of [["kick","kick"],["kickSub","sub"],["kickClk","kick"],["kickBody","kick"],["snare","snare"],["snareRing","snare"],["clap","perc"],["hat","hat"],["open","openhat"]]){
 const level=Math.max(0.001,Number(k[source].level)||1);
@@ -1593,10 +1598,15 @@ const position=0.5+((mpcSwing-50)/16)*(2/3-0.5);
 return (position-0.5)*sixteenth*2;
 }
 
+function microtimingSeconds(offsetMs,sixteenth){
+const limit=Math.min(.025,sixteenth/4);
+return Math.max(-limit,Math.min(limit,(Number(offsetMs)||0)/1000));
+}
+
 function triggerNotes(stepIdx,baseTime,synths,opts){
 const sixteenth=opts.sixteenth||60/aud_.bpm/4;
 const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud_.swing,opts.addSwing);
-const noteTime=offsetMs=>Math.max(0,swungTime+(Number(offsetMs)||0)/1000);
+const noteTime=offsetMs=>Math.max(0,swungTime+microtimingSeconds(offsetMs,sixteenth));
 // Resolve note lengths to seconds before scheduling. Tone's musical-time
 // parser consults Transport when given strings such as "8n"; doing that
 // inside a Transport callback causes timing warnings and extra work.
@@ -1617,9 +1627,13 @@ if(vel>0&&(!opts.applyProb||Math.random()*100<prob)){
 const drift=opts.applyTranspose?(Math.random()-0.5)*5:0;
 const t=noteTime(seq_[v][stepIdx].t);
 const vl=vel*seq_[v][stepIdx].v;
-const ratch=opts.applyRatchet?seq_[v][stepIdx].r||1:1;
+const ratch=opts.applyRatchet?Math.max(1,Math.min(4,Math.round(Number(seq_[v][stepIdx].r)||1))):1;
+const nextStep=(stepIdx+1)%(opts.stepCount||16);
+const nextTime=baseTime+sixteenth+swingOffsetSeconds(nextStep,sixteenth,aud_.swing,opts.addSwing)+microtimingSeconds(seq_[v][nextStep].t,sixteenth);
+// Preserve the first hit; fit ratchets before the next step instead of scheduling backwards.
+const ratchetSpan=Math.min(sixteenth,Math.max(0,nextTime-t));
 for(let r=0;r<ratch;r++){
-const rt=t+r*(sixteenth/ratch);
+const rt=t+r*(ratchetSpan/ratch);
 if(v==='k'){
 const kfreq=opts.applyTranspose?pitch.kick*(1+drift/1200):pitch.kick;
 const subfreq=opts.applyTranspose?pitch.kickSub*(1+drift/1200):pitch.kickSub;
@@ -1634,12 +1648,12 @@ else if(v==='h'){
 // An offline MetalSynth cannot take a second start, so the export renders each
 // stroke through its own throwaway voice at the profile's tone. Live playback
 // keeps the single instrument, which is what the sliders and meters drive.
-if(opts.metalTap)oneShotMetal('hat',hatResonance,opts.metalTap.hat,1,kitP.hat.level).triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl);
-else synths.hat.triggerAttackRelease(Math.min(sixteenthDuration*0.5,0.06),rt,vl);
+if(opts.metalTap)oneShotMetal('hat',hatResonance,opts.metalTap.hat,1,kitP.hat.level).triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl);
+else synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl);
 }
 else if(v==='o'){
-if(opts.metalTap)oneShotMetal('openhat',openResonance,opts.metalTap.open,1,kitP.openhat.level).triggerAttackRelease(eighth,rt,vl);
-else synths.open.triggerAttackRelease(eighth,rt,vl);
+if(opts.metalTap)oneShotMetal('openhat',openResonance,opts.metalTap.open,1,kitP.openhat.level).triggerAttackRelease(pitch.open,eighth,rt,vl);
+else synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
 }
 }
 }
@@ -1673,6 +1687,7 @@ synths.pads.triggerAttackRelease(pad,half,noteTime(seq_.p[stepIdx].t),seq_.p[ste
 }
 
 function scheduleLoop(time){
+if(!st_.playing)return;
 st_.idx=(st_.idx+1)%st_.stepCount;
 const scheduledTime=Number.isFinite(time)?time:Tone.now();
 // Update the small transport display on beats, not every sixteenth note.
@@ -1705,6 +1720,7 @@ pads:padsN
 muteMap:st_.muteState,
 applyProb:true,
 applyRatchet:true,
+stepCount:st_.stepCount,
 sixteenth:sixteenth,
 addSwing:true,
 applyTranspose:true
@@ -1921,6 +1937,7 @@ return wav;
 
 async function exportWAV(){
 try{
+await startToneFromGesture();
 rg69AudioProfileLocked=true;
 const bars=8,leadIn=0.05,len=bars*4*(60/aud_.bpm);
 $id('progress-wrap').style.display='block';
@@ -2451,7 +2468,15 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 // One gesture is enough: boot the engine if it is not running yet, then start
 // the transport. The welcome gate and the play button both land here, so the
 // first click plays music instead of only arming the engine.
-function startToneFromGesture(){const context=Tone.getContext();if(location.origin==="null")context.clockSource="timeout";return Tone.start();}
+let fileClockConfigured=false;
+function startToneFromGesture(){
+if(location.origin==="null"&&!fileClockConfigured){
+Tone.setContext(new Tone.Context({clockSource:"timeout"}));
+fileClockConfigured=true;
+}
+Tone.getContext();
+return Tone.start();
+}
 
 async function startPlayback(activationPromise){
 if(!st_.started){
