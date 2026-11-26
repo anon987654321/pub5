@@ -150,6 +150,22 @@ class SwipeControllerCommitTest < Minitest::Test
     assert_equal({ "cards" => 1, "queued" => 0 }, run_page(KEY_IN_A_FIELD))
   end
 
+  def test_an_arrow_key_in_a_photo_carousel_does_not_like
+    result = run_page(<<~JS)
+      const key = { type: "keydown", target: { closest: (s) => s.includes("carousel") ? {} : null } }
+      console.log(JSON.stringify(await swipe(() => ({ ok: true, status: 204 }), (c) => c.like(key))))
+    JS
+    assert_equal({ "cards" => 1, "queued" => 0 }, result)
+  end
+
+  def test_an_already_handled_arrow_key_does_not_pass
+    result = run_page(<<~JS)
+      const key = { type: "keydown", defaultPrevented: true, target: { closest: () => null } }
+      console.log(JSON.stringify(await swipe(() => ({ ok: true, status: 204 }), (c) => c.pass(key))))
+    JS
+    assert_equal({ "cards" => 1, "queued" => 0 }, result)
+  end
+
   def test_an_arrow_key_held_with_a_modifier_leaves_the_card
     assert_equal({ "cards" => 1, "queued" => 0 }, run_page(KEY_WITH_A_MODIFIER))
   end

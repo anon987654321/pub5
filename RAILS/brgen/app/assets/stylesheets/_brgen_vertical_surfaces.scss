@@ -477,13 +477,19 @@ display: block;
   // that published chrome band rather than letting the bar cover their hit area.
   // --nav-swiper-h includes the safe area; keep one deliberate spacing step after the chrome.
   inset-block-start: calc(var(--top-band-block) + var(--nav-swiper-h) + var(--space-4));
-  inset-inline-end: var(--space-8);
+  inset-inline-end: var(--space-4);
+  max-width: calc(100% - 2 * var(--space-4));
   z-index: 11;
   display: flex;
   gap: 12px;
   align-items: center;
   pointer-events: auto;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
 }
+
+.radio-nav > * { flex: 0 0 auto; white-space: nowrap; scroll-snap-align: start; }
 
 // At desktop widths the brand shares the nav row, so only the nav band clears.
 @media (min-width: 768px) {
@@ -741,10 +747,15 @@ font-size: clamp(12px, 3vw, var(--text-small));
 
 .radio-home-header nav {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
   gap: 8px;
 }
+
+.radio-home-header nav > * { flex: 0 0 auto; scroll-snap-align: start; }
 
 .radio-home-link,
 .radio-section-link {
@@ -908,6 +919,34 @@ font-size: clamp(12px, 3vw, var(--text-small));
 .radio-playlist-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+
+.radio-track-list--covers {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: min(76vw, 20rem);
+  gap: var(--space-3);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x mandatory;
+}
+
+.radio-track-list--covers > .radio-track-card {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  scroll-snap-align: start;
+}
+
+.radio-track-list--covers .radio-track-card-main {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.radio-track-list--covers .radio-track-card-art {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.radio-track-list--covers .radio-track-card-share { justify-self: start; }
 
 .radio-playlist-card {
   display: grid;

@@ -6,7 +6,8 @@
       <p class="radio-home-label"><%= t("playlist.home_title") %></p>
       <%= tag.h1 t("playlist.hosted_tracks") %>
     </div>
-    <nav aria-label="<%= t("radio.navigation") %>">
+    <nav tabindex="0" aria-label="<%= t("radio.navigation") %>"
+         data-controller="carousel" data-carousel-options-value='{"preserveSizing":true,"scrollSnapType":"x proximity"}'>
       <%= link_to t("playlist.browse_playlists"), root_path, class: "radio-home-link" %>
       <%= link_to t("playlist.sets"), sets_path, class: "radio-home-link" %>
       <% if authenticated? %>
@@ -16,26 +17,34 @@
     </nav>
   </header>
 
+  <% covers = params[:view] == "covers" %>
   <%= form_with url: hosted_tracks_path, method: :get, class: "cluster", data: { turbo: false } do |f| %>
+    <%= f.hidden_field :view, value: "covers" if covers %>
     <%= f.hidden_field :mine, value: "1" if @mine %>
     <%= f.hidden_field :creator, value: @creator if @creator %>
-    <div class="field">
-      <%= f.label :q, t("playlist.recording_search") %>
-      <%= f.search_field :q, value: @query %>
+    <div class="search" role="search" aria-label="<%= t("playlist.recording_search") %>" data-controller="search-focus">
+      <%= f.search_field :q, value: @query, placeholder: t("playlist.recording_search"), aria: { label: t("playlist.recording_search") } %>
     </div>
     <div class="field">
       <%= f.label :genre, t("playlist.genre_filter") %>
       <%= f.text_field :genre, value: @genre %>
     </div>
     <%= f.submit t("playlist.filter_recordings"), class: "button" %>
-    <%= link_to t("playlist.clear_recording_filters"), hosted_tracks_path(mine: @mine ? "1" : nil), class: "button button-ghost" %>
+    <%= link_to t("playlist.clear_recording_filters"), hosted_tracks_path(mine: @mine ? "1" : nil, view: ("covers" if covers)), class: "button button-ghost" %>
   <% end %>
 
   <% if @tracks.any? %>
     <section class="radio-discovery" aria-label="<%= t("playlist.hosted_tracks") %>">
-      <div id="hosted_tracks" class="radio-track-list">
+      <%= link_to t(covers ? "playlist.list_view" : "playlist.cover_view"),
+            hosted_tracks_path(request.query_parameters.except("page", "format").merge("view" => (covers ? nil : "covers"))),
+            class: "radio-home-link" %>
+      <div id="hosted_tracks" class="radio-track-list<%= " radio-track-list--covers" if covers %>"
+           <% if covers %>
+           tabindex="0" role="group" aria-label="<%= t("playlist.cover_view") %>"
+           data-controller="carousel" data-carousel-options-value='{"preserveSizing":true}'
+           <% end %>>
         <% @tracks.each do |track| %>
-          <%= render "playlist/playlists/radio_track_card", track: track %>
+          <%= render "playlist/playlists/radio_track_card", track: track, cover_view: covers %>
         <% end %>
       </div>
       <%= render "shared/pager", pagy: @pagy %>

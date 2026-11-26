@@ -54,6 +54,8 @@ en:
     unique_recent: "Unique accounts · last 7 days"
     my_recordings: "My recordings"
     all_recordings: "All recordings"
+    cover_view: "Browse covers"
+    list_view: "List view"
     recording_search: "Title, artist or album"
     genre_filter: "Genre"
     filter_recordings: "Filter"

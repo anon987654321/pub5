@@ -23,7 +23,8 @@
   ></canvas>
 
   <% unless local_assigns.fetch(:minimal, false) %>
-  <nav class="radio-nav" aria-label="<%= t("radio.navigation") %>">
+  <nav class="radio-nav" tabindex="0" aria-label="<%= t("radio.navigation") %>"
+       data-controller="carousel" data-carousel-options-value='{"preserveSizing":true,"scrollSnapType":"x proximity"}'>
     <%= link_to t("radio.browse_tracks"), hosted_tracks_path %>
     <% if authenticated? %>
       <%= link_to t("playlist.new_playlist"), new_playlist_path %>

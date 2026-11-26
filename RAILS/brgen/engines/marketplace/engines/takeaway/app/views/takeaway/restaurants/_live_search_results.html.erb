@@ -2,7 +2,8 @@
 <% restaurant_filter_params = request.query_parameters.except("page", "format") %>
 <%# The cuisines are the category shortcut rail: a white square well with the
     cuisine's initial above its name, "Alle" first. %>
-<nav class="deal-cats" aria-label="<%= t("actions.all_cuisines") %>">
+<nav class="deal-cats" tabindex="0" aria-label="<%= t("actions.all_cuisines") %>"
+     data-controller="carousel" data-carousel-options-value='{"preserveSizing":true}'>
   <%= link_to restaurants_path(restaurant_filter_params.except("cuisine")), class: "deal-cat#{" active" if params[:cuisine].blank?}", aria: { current: (params[:cuisine].blank? ? "page" : nil) } do %>
     <span class="store-shortcut-well" aria-hidden="true"><%= icon :layers, size: 32 %></span>
     <%= t("actions.all_cuisines") %>

@@ -215,8 +215,8 @@ export default class extends Controller {
 
   // The arrow keys listen on the window: one typed into a field, or held with a modifier, is not a swipe.
   _foreignKey(e) {
-    return e?.type === "keydown" && Boolean(e.altKey || e.ctrlKey || e.metaKey || e.shiftKey ||
-      e.target?.isContentEditable || e.target?.closest?.("input, textarea, select, [contenteditable]"))
+    return e?.type === "keydown" && Boolean(e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey ||
+      e.target?.isContentEditable || e.target?.closest?.("input, textarea, select, button, a, summary, [contenteditable], [data-swipe-ignore], [data-controller~=carousel]"))
   }
 
   _announce(card, isLike) {

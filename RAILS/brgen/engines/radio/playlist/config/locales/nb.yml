@@ -54,6 +54,8 @@ nb:
     unique_recent: "Unike kontoer · siste 7 dager"
     my_recordings: "Mine opptak"
     all_recordings: "Alle opptak"
+    cover_view: "Bla i omslag"
+    list_view: "Listevisning"
     recording_search: "Tittel, artist eller album"
     genre_filter: "Sjanger"
     filter_recordings: "Filtrer"

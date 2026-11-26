@@ -3,7 +3,7 @@
   <%= link_to hosted_track_path(track), class: "radio-track-card-main" do %>
     <div class="radio-track-card-art" aria-hidden="true">
       <% if track.artwork.attached? %>
-        <%= image_tag main_app.url_for(track.artwork.variant(:thumb)), alt: "", width: 64, height: 64 %>
+        <%= image_tag main_app.url_for(track.artwork.variant(:thumb)), alt: "", width: (local_assigns[:cover_view] ? 320 : 64), height: (local_assigns[:cover_view] ? 320 : 64), loading: "lazy", decoding: "async" %>
       <% else %>
         <span><%= track.title.to_s.first&.upcase || "R" %></span>
       <% end %>

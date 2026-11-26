@@ -8,7 +8,8 @@
 
   <%# The photos keep alt "": each sits inside a link whose visible text is the
       headline or title, and a filled alt would announce it twice. %>
-  <div class="deal-grid top-offers-rail" role="list">
+  <div class="deal-grid top-offers-rail" role="list" tabindex="0" aria-labelledby="top-offers-heading"
+       data-controller="carousel" data-carousel-options-value='{"preserveSizing":true}'>
     <% offers.each do |offer| %>
       <% deal = offer if offer.is_a?(Marketplace::Deal) %>
       <% listing = deal ? deal.listing : offer %>

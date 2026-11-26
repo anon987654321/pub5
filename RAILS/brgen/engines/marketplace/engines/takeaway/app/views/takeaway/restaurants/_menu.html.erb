@@ -14,10 +14,18 @@
           body: t("empty.kitchen_no_food"),
           action: { label: t("actions.all_restaurants"), path: restaurants_path } %>
   <% else %>
+    <% menu_sections = @menu_items.group_by { |item| item.menu_category&.name.presence || t("takeaway.other_items") } %>
+    <% if menu_sections.size > 1 %>
+      <nav class="store-pills takeaway-menu-jumps" tabindex="0" aria-label="<%= t("takeaway.menu") %>"
+           data-controller="carousel" data-carousel-options-value='{"preserveSizing":true,"scrollSnapType":"x proximity"}'>
+        <% menu_sections.each_key.with_index do |section_name, index| %>
+          <%= link_to section_name, "#menu-category-#{index}", class: "deal-cat" %>
+        <% end %>
+      </nav>
+    <% end %>
     <%= form_with scope: :takeaway_order, url: restaurant_orders_path(@restaurant), data: { controller: "form-submit", action: "submit->form-submit#lock" } do |f| %>
-      <% menu_sections = @menu_items.group_by { |item| item.menu_category&.name.presence || t("takeaway.other_items") } %>
-      <% menu_sections.each do |section_name, items| %>
-        <% section_id = "menu-category-#{section_name.parameterize}" %>
+      <% menu_sections.each_with_index do |(section_name, items), index| %>
+        <% section_id = "menu-category-#{index}" %>
         <section class="takeaway-menu-section" aria-labelledby="<%= section_id %>">
           <%= tag.h3 section_name, id: section_id, class: "store-heading menu-category-heading" %>
           <div class="deal-grid" role="list">

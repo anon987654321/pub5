@@ -18,7 +18,8 @@
 
       Every link that rebuilds the index carries the kind, or a category tap on
       the jobs list lands back on goods. %>
-  <nav class="deal-cats" aria-label="<%= t("aria.categories") %>">
+  <nav class="deal-cats" tabindex="0" aria-label="<%= t("aria.categories") %>"
+       data-controller="carousel" data-carousel-options-value='{"preserveSizing":true}'>
     <%= link_to listings_path(listing_filter_params.except("category_id")),
           class: "deal-cat#{" active" unless params[:category_id]}",
           aria: { current: (params[:category_id].blank? ? "page" : nil) } do %>

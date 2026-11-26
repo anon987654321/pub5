@@ -19,7 +19,8 @@
 
 <section role="tabpanel" tabindex="0" data-tabs-target="panel" data-tabs-hash-value="#photos" aria-labelledby="profile-photos-tab">
   <% if @profile.photos.attached? %>
-    <div class="photo-strip">
+    <div class="photo-strip photo-strip--carousel" tabindex="0" role="group" aria-label="<%= t("dating.photos_tab") %>"
+         data-controller="carousel" data-carousel-options-value='{"preserveSizing":true}' data-swipe-ignore="true">
       <% @profile.photos.each do |photo| %>
         <%= lazy_image_tag photo, alt: @profile.name, blurhash: photo.try(:metadata).try(:[], "blurhash"), class: "photo-thumb" %>
       <% end %>
