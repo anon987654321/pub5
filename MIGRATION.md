@@ -76,12 +76,11 @@ RAILS 1,800–2,200, OPENBSD 100–150, STUDIO 40–50).
   `bin/render_dns.rb` generates the unsigned zones and `nsd.conf` from
   `data/dns.yml`, and the signed artifacts remain untracked by design, as in
   pub4.
-- `OPENBSD/bin/deploy` is the one Ruby deploy entrypoint: it validates the
-  app argument and hands off to the proven serial stages in
-  `OPENBSD/bin/vps-deploy` (sync → CI → restart → health → stamp). The
-  stages themselves are carried unchanged; rewriting 1,100 lines of live
-  deploy zsh without a host to run it on would have been a claim, not a
-  port.
+- `MASTER/bin/operator vps deploy <app|group|all> --remote` is the one deploy
+  door. It hands off to the proven serial stages in `OPENBSD/bin/vps-deploy`
+  (sync → CI → restart → health → stamp), carried unchanged from pub4. The
+  Ruby adapter `OPENBSD/bin/deploy` and the deploy aliases around it were
+  removed on 2026-11-26.
 - `OPENBSD/dev/githooks/` is gone: the hooks live at the root `.githooks/`.
 - `dev/` workstation helpers and the operator scripts are carried.
 
