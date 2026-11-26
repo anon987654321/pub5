@@ -16,7 +16,6 @@ module Master
         TOKEN_KILO_THRESHOLD = 1000
         TOKEN_MEGA_THRESHOLD = 1_000_000
         PROMPT_PATH_MAX = 44
-        PROMPT_MODEL_MAX = 36
         PROMPT_GIT_CACHE_S = 0.25
         PROMPT_MAX_CHARS = Master::Face::Contract.prompt_max
         PROMPT_MEASURE_CH = Master::Face::Contract.prompt_measure
@@ -151,26 +150,13 @@ module Master
           lane = prompt_model_segment(lane[:model], lane[:credit])
           git = git_prompt_segment
           path = prompt_path(suffix_length: git.length + lane.length + 4)
-          [path, git, lane, "$"].reject(&:empty?).join(" ") + " "
+          Master::Face::Contract.format_shell_prompt(path, git:, lane:)
         end
 
         # The id as the provider spells it, version and :free tag included,
         # without the owner prefix; bounded so the path keeps its room.
         def prompt_model_segment(model, credit)
-          name = model.to_s.scrub.gsub(ANSI_ESCAPE, "").sub(/\Aweb-chat:/, "").split("/").last.to_s
-          name = name.gsub(/[^A-Za-z0-9._:+-]/, "")
-          return "" if name.empty?
-
-          tag = name[/:[A-Za-z0-9]+\z/].to_s
-          name = name[0, PROMPT_MODEL_MAX - tag.length] + tag if name.length > PROMPT_MODEL_MAX
-
-          "[#{[name, credit_label(credit)].compact.join(" ")}]"
-        end
-
-        def credit_label(credit)
-          return unless credit.is_a?(Numeric) && credit.finite?
-
-          credit.negative? ? format("-$%.2f", -credit) : format("$%.2f", credit)
+          Master::Face::Contract.prompt_model_segment(model, credit)
         end
 
         def operator_state(phase, last_ok, destination:, focused:, last_outcome: nil)
