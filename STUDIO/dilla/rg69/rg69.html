@@ -199,7 +199,7 @@ button,select{border:0;border-radius:6px;background:var(--panel);min-height:44px
 <div class="styles is-hidden" id="moods"></div></details><details><summary>Modulation</summary><fieldset><label for="note-routing">Note routing</label><select id="note-routing"><option value="0">Sustained harmony</option><option value="1">Hocket · alternating notes</option><option value="2">Hocket · alternating phrases</option><option value="3">Hocket · seeded scatter</option></select><label for="pitch-rhythm">Pitch / rhythm</label><select id="pitch-rhythm"><option value="0">Original arrangement</option><option value="1">Pitch bag · 3 in 8</option><option value="2">Pitch bag · 5 in 16</option><option value="3">Pitch bag · offbeat</option></select><label for="lfo-morph">LFO morph <output id="lfo-morph-o">35</output></label><input id="lfo-morph" type="range" min="0" max="100" value="35"><label for="lfo-depth">LFO depth <output id="lfo-depth-o">100</output></label><input id="lfo-depth" type="range" min="0" max="100" value="100"><label for="lfo-rate">LFO rate <output id="lfo-rate-o">20</output></label><input id="lfo-rate" type="range" min="0" max="100" value="20"></fieldset></details>
 </details>
 <details id="sampler" data-view="library"><summary>Sampler</summary>
-<div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div>
+<div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-compose" type="button">Compose &amp; chop</button><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div>
 </details>
 <details id="session-panel" data-view="song"><summary>Session</summary><button id="song-mode" type="button" aria-pressed="true" title="Switch between arranged song and loop">Song</button>  <svg class="pony" viewBox="0 0 180 144" aria-hidden="true" focusable="false"><use href="#pony-art"/></svg>
 <div class="transport-actions"><button id="theme" type="button" aria-label="Toggle theme" title="Toggle theme (T)">Theme</button>
@@ -484,7 +484,7 @@ const names=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","ha
 function select(id){id=validDrumMachine(id);if(id===current)return;if(bank)for(const voice of Object.values(bank)){voice.releaseAll(ctx.currentTime);voice.dispose();}bank=createDrumBank(ctx,profile,connect,id);current=id;for(const name of names)bank[name].connect(outputs[name]);}
 select(initial);return Object.fromEntries(names.map(name=>[name,{connect:dest=>connect(outputs[name],dest),triggerAttackRelease:(...args)=>bank[name].triggerAttackRelease(...args),releaseAll:at=>bank[name].releaseAll(at),setMachine:select}]));
 }
-function createPatchVoice(ctx,patch,lane){
+function createPatchVoice(ctx,patch,lane,connect=Tone.connect){
 const output=ctx.createGain(),active=new Set(),limit=lane==="p"?20:16;
 output.gain.value=(lane==="p"?.43:.48)*(patch.level||.7);
 const gain=value=>{const node=ctx.createGain();node.gain.value=value;return node;};
@@ -601,7 +601,7 @@ envelope.gain.setValueAtTime(amp*sustain,end);envelope.gain.linearRampToValueAtT
 for(const source of sources){source.start(at);source.stop(end+release+.01);}
 if(sources.length)sources[0].onended=()=>{active.delete(voice);for(const source of sources)source.disconnect();for(const node of nodes)node.disconnect();};
 }
-return {connect:dest=>Tone.connect(output,dest),triggerAttackRelease(notes,duration,time,velocity){for(const note of [notes].flat())trigger(note,duration,time,velocity);},releaseAll(at){for(const voice of active)stop(voice,Math.max(ctx.currentTime,at));active.clear();}};
+return {connect:dest=>connect(output,dest),triggerAttackRelease(notes,duration,time,velocity){for(const note of [notes].flat())trigger(note,duration,time,velocity);},releaseAll(at){for(const voice of active)stop(voice,Math.max(ctx.currentTime,at));active.clear();}};
 }
 function createPatchRouter(original,id,lane){
 const output=new Tone.Gain(1),ctx=Tone.getContext().rawContext,voices={original};
@@ -2345,6 +2345,28 @@ if(duration-time>.04&&slices.every(t=>Math.abs(t-time)>.07))slices.push(time);
 }
 return slices.length>=4?slices.sort((a,b)=>a-b):Array.from({length:n},(_,i)=>i*duration/n);
 }
+function adoptSample(buffer,name,settings=null){
+const reversed=Tone.getContext().rawContext.createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);
+for(let ch=0;ch<buffer.numberOfChannels;ch++){const src=buffer.getChannelData(ch),dst=reversed.getChannelData(ch);for(let i=0;i<src.length;i++)dst[i]=src[src.length-1-i];}
+pushHistory();const same=sampleSettings.name===name&&Math.abs(sampleSettings.duration-buffer.duration)<.001;
+sampleAudio={name,buffer,reversed};
+if(settings||!same)sampleSettings={name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:64},(_,i)=>i%4===0?Math.floor((i%16)/4):null),pitch:0,reverse:false,gate:100,offset:0,copies:0,...settings};
+refreshSampler();saveSession();log("sample loaded: "+name,"k");
+}
+async function composeSample(){
+if(st_.exporting||st_.composing||mediaRecorder)return;
+const row=HARMONIES[pat_.k];if(!row){log("choose a catalogue harmony first","w");return;}
+if(sampleAudio&&!confirm("Replace the loaded sample with an original performance?"))return;
+st_.composing=true;$id("sample-compose").disabled=true;
+try{
+const rate=44100,step=60/aud_.bpm/4,segments=row.segments.slice(0,8),seconds=segments.reduce((n,c)=>n+c.steps*step,0),ctx=new OfflineAudioContext(2,Math.ceil((seconds+3)*rate),rate);
+const connect=(a,b)=>a.connect(b),keys=createPatchVoice(ctx,PATCH_CATALOGUE[pat_.keysVoice]||PATCH_CATALOGUE.rhodes_mark1,"keys",connect),pads=createPatchVoice(ctx,PATCH_CATALOGUE[pat_.padsVoice]||PATCH_CATALOGUE.juno_106,"p",connect);
+const sum=ctx.createGain(),ceiling=ctx.createWaveShaper();sum.gain.value=.65;ceiling.curve=Float32Array.from({length:2049},(_,i)=>Math.tanh((i/1024-1)*1.4)/Math.tanh(1.4));keys.connect(sum);pads.connect(sum);sum.connect(ceiling);ceiling.connect(ctx.destination);
+let at=.03;const slices=[];for(const chord of segments){slices.push(at);const duration=chord.steps*step;chord.keys.forEach((note,i)=>keys.triggerAttackRelease(note,duration*.8,at+i*.012,.62));pads.triggerAttackRelease(chord.pads,duration*.98,at,.34);keys.triggerAttackRelease(chord.keys.slice(-2),duration*.25,at+duration*.64,.33);at+=duration;}
+const buffer=await ctx.startRendering(),pattern=Array.from({length:64},(_,i)=>[0,6,11,14].includes(i%16)?[0,2,1,3,4,6,5,7][Math.floor(i/4)%8]%slices.length:null);
+adoptSample(buffer,row.title+" / original chop",{slices,pattern,pitch:-3,gate:72,copies:0});log("composition rendered into sampler","k");
+}catch(error){console.error("compose sample",error);log("compose sample: "+error.message,"e");}finally{st_.composing=false;$id("sample-compose").disabled=false;}
+}
 async function loadSample(file){
 if(!file)return;
 try{
@@ -2352,13 +2374,7 @@ if(file.size>32*1024*1024)throw Error("Sample exceeds 32 MB");
 await startToneFromGesture();
 const context=Tone.getContext().rawContext,buffer=await context.decodeAudioData(await file.arrayBuffer());
 if(buffer.duration>180||buffer.duration<.08)throw Error("Sample must be 0.08–180 seconds");
-const reversed=context.createBuffer(buffer.numberOfChannels,buffer.length,buffer.sampleRate);
-for(let ch=0;ch<buffer.numberOfChannels;ch++){const src=buffer.getChannelData(ch),dst=reversed.getChannelData(ch);for(let i=0;i<src.length;i++)dst[i]=src[src.length-1-i];}
-pushHistory();
-const same=sampleSettings.name===file.name&&Math.abs(sampleSettings.duration-buffer.duration)<.001;
-sampleAudio={name:file.name,buffer,reversed};
-if(!same)sampleSettings={name:file.name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:64},(_,i)=>i%4===0?Math.floor((i%16)/4):null),pitch:0,reverse:false,gate:100,offset:0,copies:0};
-refreshSampler();saveSession();log("sample loaded: "+file.name,"k");
+adoptSample(buffer,file.name);
 }catch(error){log("sample: "+error.message,"e");}
 }
 function refreshSampler(){
@@ -3116,6 +3132,7 @@ syncUIFromState();saveSession();log("all tracks unmuted; default mixer restored"
 });
 $id('random').addEventListener('click',randomize);
 $id('export').addEventListener('click',exportWAV);
+$id("sample-compose").addEventListener("click",composeSample);
 $id('export-midi').addEventListener('click',exportMIDI);
 $id('record').addEventListener('click',toggleRecord);
 $id('layout').addEventListener('click',()=>{
@@ -3218,7 +3235,7 @@ const n=parseFloat(args[0]);
 const PARAMS={swing:1,drive:1,tape:1,comp:1,width:1,reverb:1,delay:1,filter:1,wobble:1,vinyl:1,crackle:1};
 
 switch(cmd){
-case'help':case'?':TERM_CMDS.forEach(l=>log(l));log('audio / diagnose / voice keys|pads <id>');break;
+case'help':case'?':TERM_CMDS.forEach(l=>log(l));log('audio / diagnose / voice keys|pads <id> / compose (original sample)');break;
 case'audio':testAudio();break;
 case'diagnose':logAudioState();break;
 case'voice':{const key=args[0]==='pads'?'padsVoice':'keysVoice',id=args[1];if(id==='original'||Object.hasOwn(PATCH_CATALOGUE,id)){pushHistory();pat_[key]=id;syncUIFromState();saveSession();log('voice: '+patchName(id),'k');}else log('voices: original '+Object.keys(PATCH_CATALOGUE).join(' '));break;}
@@ -3231,6 +3248,7 @@ case'undo':undo();break;
 case'redo':redo();break;
 case'random':case'rnd':randomize();break;
 case'export':case'wav':case'render':exportWAV();break;
+case'compose':case'chop':composeSample();break;
 case'record':case'rec':toggleRecord();break;
 case'theme':toggleTheme();break;
 case'tap':tapTempo();break;
