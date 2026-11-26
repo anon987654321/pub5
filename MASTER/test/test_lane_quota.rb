@@ -415,4 +415,19 @@ end
     Quota.note("a:x", reply)
     assert_equal 30, Quota.raw["probe:a"], "the next guess starts from the first rung again"
   end
+
+  # One quota file per operator, under the state base, not one per checkout.
+  def test_the_default_quota_file_is_the_operators_not_the_checkouts
+    Dir.mktmpdir("quota-state") do |state|
+      saved = ENV.to_h.slice("MASTER_LANE_QUOTA_PATH", "MASTER_STATE_DIR")
+      ENV.delete("MASTER_LANE_QUOTA_PATH")
+      ENV["MASTER_STATE_DIR"] = state
+      Quota.path = nil
+
+      assert_equal File.join(state, "lane_quota.yml"), Quota.path
+    ensure
+      ENV.delete("MASTER_STATE_DIR")
+      saved.each { |key, value| ENV[key] = value }
+    end
+  end
 end

@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
 require "yaml"
+require "fileutils"
 require_relative "atomic_write"
+require_relative "../boot/paths"
 require_relative "lane_reply"
 
 module Master
@@ -12,7 +14,7 @@ module Master
     # twelve calls at a time, because LaneSilence counts failures and cannot read
     # a reply. One such reply is enough here: the lane is dead until now plus the
     # stated wait (an hour when none is stated, eight days at most) and the
-    # deadline is written under .master so a new process starts knowing.
+    # deadline is written under ~/.master so a new process starts knowing.
     #
     # `dead?` is the one reader. It folds in the hand-kept `dead:` list of
     # data/lanes.yml, so LaneSelection, the dispatcher door and failover all ask
@@ -65,7 +67,23 @@ module Master
 
       attr_writer :clock, :path
 
-      def path = @path || ENV["MASTER_LANE_QUOTA_PATH"] || File.expand_path("../../.master/lane_quota.yml", __dir__)
+      # Provider accounts are the operator's, not one checkout's: a plan spent from one
+      # worktree is spent from all. Per-checkout files let the main checkout retry agy
+      # while pub5-deploy knew it was parked until 3 December (2026-11-26).
+      CHECKOUT_FILE = File.expand_path("../../.master/lane_quota.yml", __dir__)
+
+      def path = @path || ENV["MASTER_LANE_QUOTA_PATH"] || operator_file
+
+      # The checkout file this replaced is adopted once, so a deadline recorded before
+      # the move still holds.
+      def operator_file
+        shared = MasterPaths.state("lane_quota.yml")
+        if !File.exist?(shared) && File.file?(CHECKOUT_FILE)
+          FileUtils.mkdir_p(File.dirname(shared))
+          FileUtils.cp(CHECKOUT_FILE, shared)
+        end
+        shared
+      end
 
       # One cooldown lane per actual quota boundary. CLI ids use `provider:model`;
       # API ids use `vendor/model`. OpenRouter's :free models share a daily
