@@ -812,6 +812,8 @@ Object.assign(PATCH_CATALOGUE,{"rhodes_mark_ii":{"name":"Rhodes Mark II","type":
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
+{n:'Dust & Space',m:['Groovy','Mysterious','Spacious'],d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash',bpm:[76,92],sw:[25,40],dr:[25,45],tm:[50,70]},
+{n:'Astral Soul',m:['Spiritual','Calm','Lush'],d:'ambient-click',b:'ambientbass',k:'neosoul',p:'choir',bpm:[68,84],sw:[12,28],dr:[8,24],tm:[30,55]},
 {n:'Industrial',m:['Aggressive','Dark'],d:'hate-pummel',b:'industrialbass',k:'indstab',p:'industrialdrone',bpm:[140,160],sw:[0,5],dr:[60,90],tm:[20,38]},
 {n:'Hard Techno',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'darkchrom',p:'noisewash',bpm:[145,160],sw:[0,3],dr:[70,95],tm:[22,42]},
 {n:'HATE Style',m:['Aggressive','Dark'],d:'hate-grind',b:'dronebass',k:'acid',p:'noisewash',bpm:[150,165],sw:[0,5],dr:[80,98],tm:[28,48]},
@@ -1160,7 +1162,9 @@ Tone.connect(source,dry);dry.connect(output);Tone.connect(source,antiAlias);
 const nativeSampler=gain(1),workletSampler=gain(0);
 let samplerNode=null;
 if(sampled){antiAlias.connect(quantize);quantize.connect(nativeSampler);nativeSampler.connect(trim);workletSampler.connect(trim);}else antiAlias.connect(trim);
-trim.connect(head);head.connect(tape);tape.connect(playback);playback.connect(dc);dc.connect(wet);wet.connect(output);
+const vinylComp=ctx.createDynamicsCompressor(),recordDry=gain(1),recordWet=gain(0),recordSum=gain(1);
+vinylComp.threshold.value=-22;vinylComp.knee.value=18;vinylComp.ratio.value=3;vinylComp.attack.value=.004;vinylComp.release.value=.18;
+trim.connect(head);head.connect(tape);tape.connect(recordDry);recordDry.connect(recordSum);tape.connect(vinylComp);vinylComp.connect(recordWet);recordWet.connect(recordSum);recordSum.connect(playback);playback.connect(dc);dc.connect(wet);wet.connect(output);
 let lastBits=-1,latest=null;
 const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.035);};
 const stage={output,update(aud){
@@ -1172,6 +1176,7 @@ if(sampled&&bits!==lastBits){const levels=2**(bits-1);quantize.curve=Float32Arra
 smooth(dry.gain,1-blend);smooth(wet.gain,blend);smooth(trim.gain,1+.22*wear);
 smooth(antiAlias.frequency,sampled?20000-11000*amount:20000);
 smooth(head.gain,(lane==="bass"?1.4:2.2)*wear);
+const crush=sampled?amount*.35:0;smooth(recordDry.gain,1-crush);smooth(recordWet.gain,crush);
 smooth(playback.frequency,18000-(musical?7500:4500)*wear);
 if(samplerNode){smooth(samplerNode.parameters.get("amount"),amount);smooth(samplerNode.parameters.get("color"),0);}
 }};
@@ -1449,12 +1454,14 @@ const hz=tempo/60*cycles[Math.max(0,Math.min(7,Math.round(rate*7)))]*(target.ind
 target.osc.frequency.setTargetAtTime(hz,now,.08);target.ampOsc.frequency.setTargetAtTime(hz*.5,now,.08);
 target.filter.frequency.setTargetAtTime(18000-10000*depth,now,.08);target.depth.gain.setTargetAtTime((target.index%2?-1:1)*2400*depth,now,.08);
 target.amp.gain.setTargetAtTime(1-.035*depth,now,.08);target.trem.gain.setTargetAtTime(.035*depth,now,.08);
+target.panDepth.gain.setTargetAtTime((target.index%2?1:-1)*.12*depth,now,.08);
 }
 return {insert(source){
 const osc=ctx.createOscillator(),ampOsc=ctx.createOscillator(),filter=ctx.createBiquadFilter(),depth=ctx.createGain(),amp=ctx.createGain(),trem=ctx.createGain();
 filter.type="lowpass";filter.frequency.value=18000;filter.Q.value=.65;depth.gain.value=0;trem.gain.value=0;amp.gain.value=1;
 Tone.connect(source,filter);filter.connect(amp);osc.connect(depth);depth.connect(filter.frequency);ampOsc.connect(trem);trem.connect(amp.gain);
-const target={osc,ampOsc,filter,depth,amp,trem,index:targets.length,lastMorph:-1};targets.push(target);updateTarget(target,latest);osc.start(ctx.currentTime);ampOsc.start(ctx.currentTime);if(offline&&duration>ctx.currentTime){osc.stop(duration);ampOsc.stop(duration);}return amp;
+const pan=ctx.createStereoPanner(),panDepth=ctx.createGain();panDepth.gain.value=0;amp.connect(pan);ampOsc.connect(panDepth);panDepth.connect(pan.pan);
+const target={osc,ampOsc,filter,depth,amp,trem,panDepth,index:targets.length,lastMorph:-1};targets.push(target);updateTarget(target,latest);osc.start(ctx.currentTime);ampOsc.start(ctx.currentTime);if(offline&&duration>ctx.currentTime){osc.stop(duration);ampOsc.stop(duration);}return pan;
 },update(settings){latest=settings;for(const target of targets)updateTarget(target,settings);}};
 }
 // Radix-2 FFT shared by the sample freeze and spectral subtraction paths.
@@ -1575,7 +1582,7 @@ const revSend=new Tone.Gain(0);
 const dlySend=new Tone.Gain((aud.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
 const rev=new Tone.Reverb(1+profileReverbDecay());
 const dly=new Tone.FeedbackDelay(30/aud.bpm,rg69AudioProfile.rig.delay.feedback+(aud.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
-const dlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
+const dlyFlt=new Tone.Filter(Math.min(6500,rg69AudioProfile.rig.delay.lowpass),'lowpass');
 rev.wet.value=1;
 dly.wet.value=1;
 tape.wet.value=aud.tape/100*.25;
@@ -1607,7 +1614,7 @@ updateMasterGlue(glue,aud);
 const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);const glueOut=ctx.createGain(),programmeGlue=createProgrammeGlue(ctx,hfRestore,glueOut,glue,aud);const masterColor=createMasterColor(ctx,glueOut,finalLimiter,aud);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
-rev.connect(masterG);
+const roomTone=new Tone.Filter(5400,"lowpass");rev.connect(roomTone);roomTone.connect(masterG);
 dly.connect(dlyFlt);
 dlyFlt.connect(masterG);
 const vinylNoise=new Tone.Noise('brown').start();
@@ -1704,7 +1711,7 @@ if(dlySend)dlySend.gain.value=(aud_.delay/100)*profile.rig.delay.throw_chords;
 if(fxRev)fxRev.wet.value=reverbReady?1:0;
 if(!reverbReady&&revSend)revSend.gain.value=0;
 if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud_.delay/100)*profile.effects.delay_feedback_range;fxDly.delayTime.rampTo(30/aud_.bpm,.05);}
-if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
+if(fxDlyFlt)fxDlyFlt.frequency.value=Math.min(6500,profile.rig.delay.lowpass);
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
 if(tapeSat)smooth(tapeSat.wet,liveGraph?.analog?0:aud_.tape/100*.65);
 if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
