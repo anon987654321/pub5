@@ -39,6 +39,15 @@ class TestTriangleOwnership < Minitest::Test
     refute_equal File.join(app.fetch(:dir), "tmp", "pids", "server.pid"), Deploy::Triangle.rails_pid_file(app)
   end
 
+  def test_triangle_up_reports_each_startup_stage
+    events = []
+    app = { name: "brgen", port: 38_182, dir: "/missing" }
+
+    Deploy::Triangle.stub(:selected, [app]) { Deploy::Triangle.up(["brgen"]) { |event| events << event } }
+
+    assert_equal ["inspect"], events.map { |event| event.fetch(:stage) }
+  end
+
   # A server left behind by a killed /fix run answers /up like a live one. The
   # triangle has to know whose tree it was started in before trusting it.
   def test_listener_reports_the_directory_the_server_was_started_in

@@ -30,6 +30,7 @@ class TestVisualRuntime < Minitest::Test
       @up_calls.concat(names)
       names.each do |name|
         app = apps.find { |row| row[:name] == name }
+        yield(app: name, stage: "prepare", port: app[:port]) if block_given?
         File.write(pid_file(app), "#{@pid}\n")
         @serving[name] = @healthy_after_boot
       end

@@ -234,40 +234,62 @@ module Deploy
       apps.select { |app| names.include?(app[:name]) }
     end
 
-    def self.up(names = [])
+    def self.up(names = [], &progress)
       failed = []
-      selected(names).each do |app|
-        if listening?(app[:port])
-          foreign = foreign_listener(app)
-          if foreign && !reap_sibling(app, foreign)
-            warn "triangle: #{app[:name]} port #{app[:port]} is held by pid #{foreign[:pid]} running from #{foreign[:cwd]}, not this checkout"
-            failed << app[:name]
-            next
-          end
-          unless foreign
-            puts "triangle: #{app[:name]} already up on #{app[:port]}"
-            next
-          end
-        end
-        unless File.directory?(app[:dir])
-          warn "triangle: #{app[:name]} has no directory at #{app[:dir]}"
-          failed << app[:name]
-          next
-        end
-
-        unless migrate(app)
-          failed << app[:name]
-          next
-        end
-        boot(app)
-        if wait_for(app)
-          puts "triangle: #{app[:name]} up on #{app[:port]}"
-        else
-          warn "triangle: #{app[:name]} did not answer /up within #{BOOT_TIMEOUT}s - see #{log_file(app)}"
-          failed << app[:name]
-        end
-      end
+      selected(names).each { |app| failed << app[:name] unless boot_one(app, progress:) }
       failed
+    end
+
+    def self.boot_one(app, progress:)
+      report_stage(progress, app, "inspect")
+      server = existing_server(app)
+      return true if server == :already_running
+      return false if server == :blocked
+      return missing_app(app) unless File.directory?(app[:dir])
+
+      report_stage(progress, app, "prepare")
+      return false unless migrate(app)
+
+      report_stage(progress, app, "boot")
+      boot(app)
+      report_stage(progress, app, "wait", timeout: BOOT_TIMEOUT)
+      return ready(app, progress) if wait_for(app)
+
+      report_stage(progress, app, "timeout", timeout: BOOT_TIMEOUT)
+      warn "triangle: #{app[:name]} did not answer /up within #{BOOT_TIMEOUT}s - see #{log_file(app)}"
+      false
+    end
+
+    def self.existing_server(app)
+      return :none unless listening?(app[:port])
+
+      foreign = foreign_listener(app)
+      return already_running(app) unless foreign
+      return :none if reap_sibling(app, foreign)
+
+      warn "triangle: #{app[:name]} port #{app[:port]} held by pid #{foreign[:pid]} " \
+           "from #{foreign[:cwd]}, not this checkout"
+      :blocked
+    end
+
+    def self.already_running(app)
+      puts "triangle: #{app[:name]} already up on #{app[:port]}"
+      :already_running
+    end
+
+    def self.missing_app(app)
+      warn "triangle: #{app[:name]} has no directory at #{app[:dir]}"
+      false
+    end
+
+    def self.ready(app, progress)
+      report_stage(progress, app, "ready")
+      puts "triangle: #{app[:name]} up on #{app[:port]}"
+      true
+    end
+
+    def self.report_stage(progress, app, stage, **detail)
+      progress&.call(app: app[:name], stage:, port: app[:port], **detail)
     end
 
     def self.status

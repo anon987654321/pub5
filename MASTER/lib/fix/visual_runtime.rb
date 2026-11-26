@@ -39,47 +39,17 @@ module Master
         return success("no visual app servers requested", []) if names.empty?
 
         manager = triangle
-        indexed = manager.apps.to_h { |app| [app.fetch(:name).to_s, app] }
-        unknown = names - indexed.keys
-        return failure("unknown visual app server(s): #{unknown.join(', ')}") if unknown.any?
-
-        apps = names.map { |name| indexed.fetch(name) }
+        apps = requested_apps(manager, names)
+        return apps if apps.is_a?(Result)
         already_running = apps.select { |app| manager.listening?(app.fetch(:port)) }
         missing = apps - already_running
         return success("visual app servers already running", already_running.map { |app| app[:name] }) if missing.empty?
 
-        if (reason = unsafe_boot_reason)
-          return failure("visual server startup refused: #{reason}; rendered evidence is INCONCLUSIVE")
-        end
+        return failure(unsafe_boot_message) if unsafe_boot_message
+        return failure(occupied_port_message(missing)) if occupied_port_message(missing)
 
-        occupied = missing.select { |app| @tcp_checker.call(app.fetch(:port)) }
-        if occupied.any?
-          labels = occupied.map { |app| "#{app[:name]}:#{app[:port]}" }
-          return failure("port accepts TCP but /up is not healthy (#{labels.join(', ')}); refusing to boot over an unknown process")
-        end
-
-        prior_pids = missing.to_h { |app| [app[:name].to_s, read_pid(manager.pid_file(app))] }
-        failed = manager.up(missing.map { |app| app.fetch(:name).to_s })
-        missing.each do |app|
-          name = app.fetch(:name).to_s
-          pid_path = manager.pid_file(app)
-          current_pid = read_pid(pid_path)
-          next unless current_pid && current_pid != prior_pids[name]
-
-          # Register ownership even when /up never turns healthy; otherwise the
-          # failed boot can leak a server process that no later fix pass owns.
-          @owned[name] = { app:, pid: current_pid, pid_path: }
-          ServerLeases.hold(self, pid_path:, pid: current_pid)
-          @started << name unless @started.include?(name)
-        end
-
-        unhealthy = missing.reject { |app| manager.listening?(app.fetch(:port)) }
-        if failed.any? || unhealthy.any?
-          names_failed = (Array(failed).map(&:to_s) + unhealthy.map { |app| app[:name].to_s }).uniq
-          detail = "could not start healthy app server(s): #{names_failed.join(', ')}"
-          publish(:inconclusive, apps: names, started: @started.dup, reason: detail)
-          return failure(detail)
-        end
+        failed = start_missing(manager:, missing:, names:)
+        return failed if failed.is_a?(Result)
 
         publish(:ready, apps: names, started: @started.dup, already_running: already_running.map { |app| app[:name] })
         success("visual app servers ready", already_running.map { |app| app[:name] })
@@ -131,6 +101,58 @@ module Master
       end
 
       private
+
+      def requested_apps(manager, names)
+        indexed = manager.apps.to_h { |app| [app.fetch(:name).to_s, app] }
+        unknown = names - indexed.keys
+        return failure("unknown visual app server(s): #{unknown.join(', ')}") if unknown.any?
+
+        names.map { |name| indexed.fetch(name) }
+      end
+
+      def unsafe_boot_message
+        reason = unsafe_boot_reason
+        "visual server startup refused: #{reason}; rendered evidence is INCONCLUSIVE" if reason
+      end
+
+      def occupied_port_message(missing)
+        occupied = missing.select { |app| @tcp_checker.call(app.fetch(:port)) }
+        return if occupied.empty?
+
+        labels = occupied.map { |app| "#{app[:name]}:#{app[:port]}" }
+        "port accepts TCP but /up is not healthy (#{labels.join(', ')}); refusing to boot over an unknown process"
+      end
+
+      def start_missing(manager:, missing:, names:)
+        prior = missing.to_h { |app| [app[:name].to_s, read_pid(manager.pid_file(app))] }
+        wanted = missing.map { |app| app.fetch(:name).to_s }
+        failed = manager.up(wanted) { |event| publish(:startup, apps: names, **event) }
+        register_owned(manager:, missing:, prior:)
+        unhealthy = missing.reject { |app| manager.listening?(app.fetch(:port)) }
+        return unless failed.any? || unhealthy.any?
+
+        failed_start(names:, failed:, unhealthy:)
+      end
+
+      def register_owned(manager:, missing:, prior:)
+        missing.each do |app|
+          name = app.fetch(:name).to_s
+          pid_path = manager.pid_file(app)
+          pid = read_pid(pid_path)
+          next unless pid && pid != prior[name]
+
+          @owned[name] = { app:, pid:, pid_path: }
+          ServerLeases.hold(self, pid_path:, pid:)
+          @started << name unless @started.include?(name)
+        end
+      end
+
+      def failed_start(names:, failed:, unhealthy:)
+        broken = (Array(failed).map(&:to_s) + unhealthy.map { |app| app[:name].to_s }).uniq
+        detail = "could not start healthy app server(s): #{broken.join(', ')}"
+        publish(:inconclusive, apps: names, started: @started.dup, reason: detail)
+        failure(detail)
+      end
 
       def triangle
         return @triangle if @triangle
