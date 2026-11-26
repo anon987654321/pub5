@@ -176,7 +176,7 @@ body[data-density=compact] .step{min-height:28px}
 <div class="styles" id="styles"></div>
 <div class="styles is-hidden" id="moods"></div>
 </details>
-<details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><div id="sample-pattern" class="steps-grid"></div></div></details>
+<details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div></details>
 <details>
 <summary>Sound / tape &amp; vinyl</summary>
 <fieldset><legend>Recording chain</legend><label for="console">Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label for="phase">Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label for="sample-wear">Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label for="motion">Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><label for="duck">Ducking <output id="duck-o">20</output></label><input id="duck" type="range" min="0" max="100" value="20"><button id="clean-chain" type="button">Clean / color</button></fieldset>
@@ -199,6 +199,7 @@ body[data-density=compact] .step{min-height:28px}
 </div>
 </details>
 <details>
+<summary>Atmosphere / background</summary><fieldset><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset></details><details>
 <summary>Mix</summary>
 <fieldset>
 <label for="drum-vol">Drums <output id="drum-vol-o">80</output></label><input id="drum-vol" type="range" min="0" max="100" value="80">
@@ -526,6 +527,25 @@ osc.connect(amp);amp.connect(dest);sources.push(osc);nodes.push(amp);return {osc
 const type=patch.type,decay=patch.decay||2,attack=patch.attack??(type==="pad"?.4:.005);
 let sustain=.58,release=Math.min(2.4,Math.max(.12,decay*.25));
 switch(type){
+case "terrain":{
+const variant=patch.variant||0,carrier=oscillator("sine",1,.72),mod=oscillator("sine",variant===1?1.501:variant===2?2:1,.0,0,carrier.osc.frequency);
+mod.amp.gain.value=freq*(variant===1?1.4:.65);
+const orbit=ctx.createOscillator(),depth=gain(freq*.28);orbit.frequency.value=.19+variant*.071;orbit.connect(depth);depth.connect(mod.amp.gain);sources.push(orbit);nodes.push(depth);
+oscillator("sine",variant===2?3:2,.16,-4);sustain=.8;release=1.8;break;
+}
+case "petals":{
+const variant=patch.variant||0,ratios=variant===1?[1,2,3,4,5,6,7]:variant===2?[1,1,1,1,2,.5,1]:[1,1,2,1.5,3,.5,1];
+for(let i=0;i<7;i++){const petal=oscillator(["sine","triangle","sine","triangle","sine","sine","triangle"][i],ratios[i],.15/(1+i*.22),(i-3)*3);const lfo=ctx.createOscillator(),depth=gain(.035/(1+i*.15));lfo.frequency.value=.11+i*.061;lfo.connect(depth);depth.connect(petal.amp.gain);sources.push(lfo);nodes.push(depth);}
+sustain=.82;release=2;break;
+}
+case "modal":{
+const ratios=patch.variant===1?[1,2.76,5.4,8.93]:patch.variant===2?[1,2.002,3.009,4.023]:[1,2.01,3.02,4.16,6.3];
+ratios.forEach((ratio,i)=>{const level=.65/(1+i*1.5),part=oscillator("sine",ratio,level);part.amp.gain.setValueAtTime(level,at);part.amp.gain.exponentialRampToValueAtTime(.0001,at+Math.max(.06,decay/(1+i*.7)));});
+sustain=.52;release=.7;break;
+}
+case "fold":{
+const fold=ctx.createWaveShaper();fold.curve=Float32Array.from({length:2049},(_,i)=>Math.sin((i/1024-1)*Math.PI*1.8));fold.oversample="2x";fold.connect(filter);nodes.push(fold);oscillator("sine",1,.68,0,fold);oscillator("sine",.5,.22);sustain=.72;release=1.2;break;
+}
 case "rhodes":{
 const carrier=oscillator("sine",1,.82),bell=oscillator("sine",1,.18,0);
 bell.osc.frequency.value=freq*2.01;
@@ -740,6 +760,20 @@ function harmonyPatternName(id){const row=HARMONIES[id];return row?row.title:id;
 
 // Browser patches share the Ruby voice catalogue. These are procedural models.
 const PATCH_CATALOGUE={"rhodes_mark1":{"name":"Rhodes Mark I","type":"rhodes","decay":2.6,"brightness":0.62,"tremolo":0.12,"pan":-0.1,"level":0.9},"rhodes_dusty":{"name":"Rhodes · dusty","type":"rhodes","decay":2.2,"brightness":0.38,"tremolo":0.2,"pan":0.12,"level":0.9},"tape_strings":{"name":"Tape strings","type":"pad","attack":0.6,"decay":8,"brightness":0.4,"pan":0.05,"level":0.5},"music_box":{"name":"Music box","type":"musicbox","decay":1.4,"brightness":0.7,"pan":-0.18,"level":0.62},"glass_pad":{"name":"Glass pad","type":"pad","attack":1.2,"decay":10,"brightness":0.3,"pan":0,"level":0.42},"church_organ":{"name":"Church organ","type":"organ","decay":4,"brightness":0.5,"pan":0.08,"level":0.5},"prophet_5":{"name":"Prophet-5","type":"prophet","decay":3.8,"brightness":0.58,"pan":-0.05,"level":0.82},"juno_106":{"name":"Juno-106","type":"juno","decay":6.5,"brightness":0.42,"ensemble":0.09,"ensemble_rate":0.21,"pan":0.08,"level":0.68},"minimoog_solo":{"name":"Minimoog","type":"minimoog","decay":1.05,"cutoff":2350,"brightness":0.62,"pan":0.12,"level":0.72},"wurlitzer_200a":{"name":"Wurlitzer 200A","type":"wurlitzer","decay":1.8,"brightness":0.55,"pan":-0.1,"level":0.82},"fm_glass":{"name":"FM glass","type":"fm","decay":0.82,"fm_ratio":2.71,"fm_index":4.3,"brightness":0.88,"pan":0,"level":0.4}};
+Object.assign(PATCH_CATALOGUE,{
+dream_terrain:{name:"Dream terrain · wave scan",type:"terrain",attack:.12,decay:6,brightness:.58,level:.72,variant:0},
+moon_terrain:{name:"Moon terrain · glass relief",type:"terrain",attack:.4,decay:8,brightness:.42,level:.7,variant:1},
+velvet_terrain:{name:"Velvet terrain · rose relief",type:"terrain",attack:.08,decay:5,brightness:.34,level:.76,variant:2},
+seven_petals:{name:"Seven petals · multitimbral",type:"petals",attack:.14,decay:7,brightness:.5,level:.74},
+prism_petals:{name:"Prism petals · harmonic",type:"petals",attack:.02,decay:4,brightness:.7,level:.72,variant:1},
+cloud_petals:{name:"Cloud petals · soft unison",type:"petals",attack:.6,decay:9,brightness:.32,level:.7,variant:2},
+modal_rose:{name:"Modal rose · struck resonators",type:"modal",attack:.003,decay:4,brightness:.66,level:.76},
+celestial_bell:{name:"Celestial bell · inharmonic",type:"modal",attack:.004,decay:6,brightness:.8,level:.68,variant:1},
+felt_dream:{name:"Felt dream · damped piano",type:"modal",attack:.008,decay:3.5,brightness:.42,level:.9,variant:2},
+silk_fold:{name:"Silk fold · wavefolded sine",type:"fold",attack:.04,decay:4,brightness:.55,level:.7},
+pearl_chorus:{name:"Pearl chorus · detuned ensemble",type:"juno",attack:.24,decay:7,brightness:.46,level:.8},
+rose_brass:{name:"Rose brass · soft poly",type:"prophet",attack:.09,decay:5,brightness:.34,level:.8}
+});
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
@@ -823,7 +857,7 @@ const bootStylePool=bootStyleCandidates.filter(style=>style.n==="Boom Bap");
 const bootStyle=bootStylePool[0]||bootStyleCandidates.find(style=>/dilla|hip.hop|lo.fi/i.test(style.n))||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,tape:100,wobble:100,vinyl:100,crackle:100};
-let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,drift:0.05};
+let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,drift:0.05};
 let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
 let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106'};
 let seq_={};
@@ -898,7 +932,7 @@ const newSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 let sessionSeed=newSeed(),fxSeed=null;
 const SESSION_KEY="rg69_session_v3";
 let sampleAudio=null;
-let sampleSettings={name:"",duration:0,slices:[],pattern:Array(64).fill(null),pitch:0,reverse:false,gate:100,offset:0};
+let sampleSettings={name:"",duration:0,slices:[],pattern:Array(64).fill(null),pitch:0,reverse:false,gate:100,offset:0,copies:0};
 function drumEdits(){
 const original=JSON.parse(ORIGINAL_DRUMS);
 return Object.fromEntries(Object.entries(DRUM_PATTERNS).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(original[key])));
@@ -911,7 +945,7 @@ if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))t
 const pat=data.pat||data.pat_,aud=data.aud||data.aud_,mix=data.mix||data.mix_;
 for(const [key,table] of Object.entries(PATTERN_TABLES))if(pat&&Object.hasOwn(table,pat[key]))pat_[key]=pat[key];
 if(pat){pat_.keysVoice=validPatch(pat.keysVoice);pat_.padsVoice=validPatch(pat.padsVoice);}
-for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:100,aud_[key]);
+for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:key==="ambience"?9:100,aud_[key]);
 for(const key of Object.keys(mix_))if(mix&&Object.hasOwn(mix,key))mix_[key]=clamp(mix[key],0,100,mix_[key]);
 for(const [key,pattern] of Object.entries(JSON.parse(ORIGINAL_DRUMS))){
 const incoming=data.drums&&Object.hasOwn(data.drums,key)?data.drums[key]:null;
@@ -924,7 +958,7 @@ const valid=n=>typeof n==="string"&&/^[A-G][#b]?[0-8]$/.test(n);
 const note=lane==="b"&&valid(x.note)?x.note:["keys","p"].includes(lane)&&Array.isArray(x.note)&&x.note.length>0&&x.note.length<=6&&x.note.every(valid)?x.note.slice():undefined;
 seq_[lane][i]={v:clamp(x.v,0,1,1),t:clamp(x.t,-25,25,0),p:clamp(x.p,0,100,100),r:[1,2,4].includes(x.r)?x.r:1,g:clamp(x.g,.05,2,1),cond:[1,2,3,4].includes(x.cond)?x.cond:1,pitch:Math.round(clamp(x.pitch,-24,24,0)),off:!!x.off,...(Number.isFinite(x.hit)?{hit:clamp(x.hit,0,1,0)}:{}),...(note?{note}:{})};
 }
-if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:64},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&(sampleAudio.name!==sampleSettings.name||Math.abs(sampleAudio.buffer.duration-sampleSettings.duration)>.001))sampleAudio=null;}
+if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:64},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,copies:Math.round(clamp(x.copies??0,0,3,0)),gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&(sampleAudio.name!==sampleSettings.name||Math.abs(sampleAudio.buffer.duration-sampleSettings.duration)>.001))sampleAudio=null;}
 if(data.mute)for(const lane of LANES)st_.muteState[lane]=data.mute[lane]?1:0;
 if(STEP_COUNTS.includes(data.steps))st_.stepCount=data.steps;
 if(typeof data.song==='boolean')st_.song=data.song;
@@ -1006,6 +1040,7 @@ function syncUIFromState(){
 showSongPosition(st_.tick??-1);
 $id('bank').textContent='Bank '+String.fromCharCode(65+st_.bank);$id('bank').disabled=st_.stepCount<=16;
 refreshSampler();
+$id("ambience").value=String(Math.round(aud_.ambience));$id("ambience-level").value=aud_.ambienceLevel;$id("ambience-level-o").textContent=Math.round(aud_.ambienceLevel);
 for(const key of ['console','phase','sampler','motion','duck']){const id=key==='sampler'?'sample-wear':key;$id(id).value=aud_[key];$id(key+'-o').textContent=Math.round(aud_[key]);}
 $id('pocket').value=aud_.pocket;$id('pocket-o').textContent=Math.round(aud_.pocket);
 $id('steps').textContent=st_.stepCount+' steps';
@@ -1257,6 +1292,48 @@ finally{if(url)URL.revokeObjectURL(url);}
 return {update,ready};
 }
 
+// Deterministic procedural soundscapes; no downloads or microphone access.
+function atmosphereBuffer(ctx,kind){
+const seconds=24,length=Math.round(ctx.sampleRate*seconds),buffer=ctx.createBuffer(2,length,ctx.sampleRate);
+for(let ch=0;ch<2;ch++){
+const out=buffer.getChannelData(ch);let seed=0x6969+kind*131+ch*997,low=0,slow=0,pink=0,impulse=0;
+const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+for(let i=0;i<length;i++){
+const t=i/ctx.sampleRate,w=rand()*2-1;
+low+=(w-low)*.009;slow+=(w-slow)*.0004;pink=.965*pink+.035*w;
+if(rand()<(kind===9?.0018:.007))impulse+=(rand()-.5)*.8;impulse*=.91;
+const wave=.5+.5*Math.sin(2*Math.PI*t/6+ch*.18),wind=.5+.5*Math.sin(2*Math.PI*t/12+ch*.3);
+let v=0;
+switch(kind){
+case 1:v=.17*w+.6*pink+.24*impulse;break;
+case 2:v=(.28*pink+1.5*low+.12*w)*(.22+.78*wave);break;
+case 3:v=(1.2*low+.18*pink)*(.25+.75*wind)+.022*Math.sin(2*Math.PI*(1200*t+15*Math.sin(t*2)))*Math.pow(Math.max(0,Math.sin(t*1.7+ch)),18);break;
+case 4:v=.09*pink+1.8*slow+.34*impulse+.009*Math.sin(2*Math.PI*50*t);break;
+case 5:v=.12*w+.6*pink+.9*low;break;
+case 6:v=2.5*low+2*slow;break;
+case 7:v=.24*w;break;
+case 8:v=2.8*slow*Math.pow(wind,3)+.32*low+.015*w;break;
+case 9:v=.65*impulse+.65*low+.025*w;break;
+}
+const edge=Math.min(1,i/(ctx.sampleRate*.025),(length-1-i)/(ctx.sampleRate*.025));
+out[i]=Math.max(-.9,Math.min(.9,v))*edge;
+}
+}
+return buffer;
+}
+function createAtmosphere(ctx,destination,aud,offline,duration){
+const output=ctx.createGain();output.gain.value=0;Tone.connect(output,destination);
+let active=null,current=-1;
+return {update(settings){
+const kind=Math.round(Math.max(0,Math.min(9,settings.ambience??0))),now=ctx.currentTime;
+output.gain.setTargetAtTime((settings.ambienceLevel??32)/100*.16,now,.08);
+if(kind===current)return;current=kind;
+if(active){const old=active;old.gain.gain.setTargetAtTime(0,now,.06);try{old.source.stop(now+.3);}catch(error){}active=null;}
+if(!kind)return;
+const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=atmosphereBuffer(ctx,kind);source.loop=true;gain.gain.value=0;source.connect(gain);gain.connect(output);source.onended=()=>{source.disconnect();gain.disconnect();};source.start(now);gain.gain.setTargetAtTime(1,now,.08);if(offline&&duration>now)source.stop(duration);active={source,gain};
+}};
+}
+
 function createAudioGraph(aud,mix,seed,{offline=false,duration=0,patches={}}={}){
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
@@ -1380,8 +1457,9 @@ let analog=null;
 try{analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfile,aud,mix,offline,duration);
 tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
+const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1407,6 +1485,7 @@ if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar){compPar.ratio.value=1+aud_.comp/100*2;compPar.release.value=Math.min(.5,60/aud_.bpm*.5);}
 if(liveGraph?.glue)liveGraph.glue.release.value=Math.min(.5,30/aud_.bpm);
 if(widener)widener.width.value=aud_.width/100;
+liveGraph?.atmosphere?.update(aud_);
 for(const stage of liveGraph?.recordingStages||[])stage.update(aud_);
 for(const strip of liveGraph?.consoleStrips||[])strip.update(aud_);
 if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
@@ -1950,7 +2029,7 @@ for(let ch=0;ch<buffer.numberOfChannels;ch++){const src=buffer.getChannelData(ch
 pushHistory();
 const same=sampleSettings.name===file.name&&Math.abs(sampleSettings.duration-buffer.duration)<.001;
 sampleAudio={name:file.name,buffer,reversed};
-if(!same)sampleSettings={name:file.name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:64},(_,i)=>i%4===0?Math.floor((i%16)/4):null),pitch:0,reverse:false,gate:100,offset:0};
+if(!same)sampleSettings={name:file.name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:64},(_,i)=>i%4===0?Math.floor((i%16)/4):null),pitch:0,reverse:false,gate:100,offset:0,copies:0};
 refreshSampler();saveSession();log("sample loaded: "+file.name,"k");
 }catch(error){log("sample: "+error.message,"e");}
 }
@@ -1961,13 +2040,15 @@ sampleSettings.slices.forEach((t,i)=>{const option=document.createElement("optio
 select.value=String(Math.min(selected,Math.max(0,sampleSettings.slices.length-1)));
 $id("sample-status").textContent=sampleAudio?sampleSettings.name+" / "+sampleSettings.slices.length+" slices":sampleSettings.name?"Reload "+sampleSettings.name+" to hear the sample":"No sample loaded";
 for(const key of ["pitch","gate","offset"]){$id("sample-"+key).value=sampleSettings[key];$id("sample-"+key+"-o").textContent=sampleSettings[key];}
-$id("sample-reverse").checked=sampleSettings.reverse;
+$id("sample-reverse").checked=sampleSettings.reverse;$id("sample-copies").value=String(sampleSettings.copies??0);
 for(const [i,button] of Array.from($id("sample-pattern").children).entries()){
 const index=i+st_.bank*16,slice=sampleSettings.pattern[index];button.textContent=slice==null?"·":String(slice+1).padStart(2,"0");
 button.setAttribute("aria-pressed",String(slice!=null));button.disabled=index>=st_.stepCount;
 }
 }
 function buildSampler(){
+$id("ambience").addEventListener("change",e=>{pushHistory();aud_.ambience=Number(e.target.value);applyFX();saveSession();});
+$id("ambience-level").addEventListener("input",e=>{aud_.ambienceLevel=Number(e.target.value);$id("ambience-level-o").textContent=aud_.ambienceLevel;applyFX();saveSession();});
 const change=fn=>{pushHistory();fn();refreshSampler();saveSession();};
 $id("sample-file").addEventListener("change",e=>{loadSample(e.target.files[0]);e.target.value="";});
 const drop=$id("sample-drop");drop.addEventListener("dragover",e=>e.preventDefault());drop.addEventListener("drop",e=>{e.preventDefault();loadSample(e.dataTransfer.files[0]);});
@@ -1975,6 +2056,7 @@ for(const [id,mode] of [["sample-equal","equal"],["sample-transients","transient
 $id("sample-clear").addEventListener("click",()=>change(()=>{sampleSettings.pattern.fill(null);}));
 for(const key of ["pitch","gate","offset"])$id("sample-"+key).addEventListener("change",e=>change(()=>{sampleSettings[key]=Number(e.target.value);}));
 $id("sample-reverse").addEventListener("change",e=>change(()=>{sampleSettings.reverse=e.target.checked;}));
+$id("sample-copies").addEventListener("change",e=>change(()=>{sampleSettings.copies=Number(e.target.value);}));
 for(let i=0;i<16;i++){const button=document.createElement("button");button.type="button";button.setAttribute("aria-label","Sample step "+(i+1));button.addEventListener("click",()=>change(()=>{const slice=Number($id("sample-slice").value);const index=i+st_.bank*16;if(sampleSettings.slices[slice]!==undefined)sampleSettings.pattern[index]=sampleSettings.pattern[index]===slice?null:slice;}));$id("sample-pattern").append(button);}
 refreshSampler();
 }
@@ -1991,8 +2073,13 @@ const duration=Math.min(length,end-begin-trim)/rate;
 if(duration<=.005)return;
 const aud=opts.session?.aud||aud_;
 const at=Math.max(0,time+swingOffsetSeconds(index,opts.sixteenth||60/aud.bpm/4,aud.swing*(aud.pocket??68)/100,true));
-const voice=new Tone.ToneBufferSource({url:settings.reverse?audio.reversed:audio.buffer,playbackRate:rate,fadeIn:.002,fadeOut:Math.min(.005,duration/4),onended:node=>{if(!opts.session)node.dispose();}});
-voice.connect(opts.sampleGraph.sampleG);voice.start(at,offset,duration,.8);
+const copies=[[],[[.5,false,.34,.014]],[[.5,true,.25,.018],[2,true,.18,.037]],[[.5,false,.25,.012],[.75,true,.2,.029],[2,false,.13,.047]]][settings.copies??0]||[];
+for(const [speed,flip,level,lag] of [[1,false,copies.length?.58:.8,0],...copies]){
+const backwards=Boolean(settings.reverse)!==flip,copyOffset=backwards?audio.buffer.duration-end+trim:begin+trim;
+const copyRate=rate*speed,copyDuration=Math.min(length,end-begin-trim)/copyRate;
+const voice=new Tone.ToneBufferSource({url:backwards?audio.reversed:audio.buffer,playbackRate:copyRate,fadeIn:.002,fadeOut:Math.min(.009,copyDuration/4),onended:node=>{if(!opts.session)node.dispose();}});
+voice.connect(opts.sampleGraph.sampleG);voice.start(at+lag,copyOffset,copyDuration,level);
+}
 }
 
 function downloadBytes(bytes,name,type){
