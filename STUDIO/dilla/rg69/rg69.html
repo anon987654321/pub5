@@ -1657,6 +1657,29 @@ return true;
 }
 }
 registerProcessor("rg69-wear",Wear);
+class TapeMemory extends AudioWorkletProcessor {
+static get parameterDescriptors(){return [{name:"wear",defaultValue:0,minValue:0,maxValue:1,automationRate:"k-rate"}];}
+constructor(){super();this.state=[];}
+process(inputs,outputs,params){
+const input=inputs[0],output=outputs[0],wear=params.wear[0],relax=1-Math.exp(-1/(sampleRate*.00018)),envRate=1-Math.exp(-1/(sampleRate*.035));
+for(let c=0;c<output.length;c++){
+const x=input[c]||input[0],other=input[1-c]||x,y=output[c],s=this.state[c]||={mag:0,env:0,noise:0,seed:0x6911a+c*7919};
+for(let i=0;i<y.length;i++){
+const v=x?.[i]||0,neighbor=other?.[i]||0;
+s.env+=(Math.abs(v)-s.env)*envRate;
+const drive=1+wear*.85,field=v*drive+s.mag*.32*wear;
+s.mag+=(Math.tanh(field)-s.mag)*relax;
+const shaped=Math.tanh(field)/drive;
+s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;
+const white=s.seed/2147483648-1;s.noise+=(white-s.noise)*.18;
+const modulationNoise=(white-s.noise)*Math.min(.18,s.env)*.045*wear;
+y[i]=v*(1-wear*.65)+shaped*wear*.65+(neighbor-v)*wear*.012+modulationNoise;
+}
+}
+return true;
+}
+}
+registerProcessor("rg69-tape-memory",TapeMemory);
 }
 
 function createAnalogRig(ctx,master,output,dryMaster,wetMaster,profile,aud,mix,offline,duration){
@@ -1672,12 +1695,15 @@ shape.oversample="2x";
 compression.threshold.value=-13;compression.knee.value=18;compression.ratio.value=1.6;compression.attack.value=.018;compression.release.value=.16;
 const rolloff=filter("lowpass",15000),delay=ctx.createDelay(.04),returnGain=gain(0);
 const sampler=ctx.createWaveShaper(),samplerDry=gain(1),samplerWet=gain(0),samplerOut=gain(1);
-let worklet=null,workletWet=null,latest=aud,latestMix=mix,lastBits=-1;
-rolloff.connect(samplerDry);samplerDry.connect(samplerOut);rolloff.connect(sampler);sampler.connect(samplerWet);samplerWet.connect(samplerOut);samplerOut.connect(delay);
-delay.delayTime.value=.0018;
+let worklet=null,workletWet=null,tapeMemory=null,memoryWet=null,latest=aud,latestMix=mix,lastBits=-1;
+const memoryDry=gain(1),memoryOut=gain(1);
+rolloff.connect(samplerDry);samplerDry.connect(samplerOut);rolloff.connect(sampler);sampler.connect(samplerWet);samplerWet.connect(samplerOut);samplerOut.connect(memoryDry);memoryDry.connect(memoryOut);memoryOut.connect(delay);
+delay.delayTime.value=.0045;
 input.connect(head);head.connect(bias);bias.connect(shape);shape.connect(deemphasis);deemphasis.connect(dc);dc.connect(compression);head.connect(lowBand);lowBand.connect(lowShape);lowShape.connect(lowReturn);lowReturn.connect(compression);compression.connect(rolloff);delay.connect(returnGain);
 const wow=ctx.createOscillator(),flutter=ctx.createOscillator(),wowDepth=gain(0),flutterDepth=gain(0);
 wow.frequency.value=.5556;flutter.frequency.value=5.3;
+const drift=ctx.createOscillator(),driftDepth=gain(0),scrape=ctx.createOscillator(),scrapeDepth=gain(0);
+drift.frequency.value=.137;scrape.frequency.value=13.71;drift.connect(driftDepth);driftDepth.connect(delay.delayTime);scrape.connect(scrapeDepth);scrapeDepth.connect(delay.delayTime);
 wow.connect(wowDepth);flutter.connect(flutterDepth);wowDepth.connect(delay.delayTime);flutterDepth.connect(delay.delayTime);
 // Noise beds are independent, repeatable buffers, not a constant crackle oscillator.
 const length=Math.round(ctx.sampleRate*12),hiss=ctx.createBuffer(1,length,ctx.sampleRate),crackle=ctx.createBuffer(1,length,ctx.sampleRate);
@@ -1709,15 +1735,16 @@ smooth(dryMaster.gain,1-wet);smooth(wetMaster.gain,0);
 smooth(returnGain.gain,wet);
 smooth(input.gain,1+.85*tape);smooth(head.gain,3.2*tape);smooth(bias.gain,5*tape);smooth(deemphasis.gain,-5*tape);smooth(lowReturn.gain,.15*tape);smooth(compression.release,Math.min(.35,15/aud.bpm));
 smooth(rolloff.frequency,17000-9500*tape);
-smooth(wowDepth.gain,.0020*wobble);smooth(flutterDepth.gain,.00032*wobble);
+smooth(wowDepth.gain,.0020*wobble);smooth(flutterDepth.gain,.00032*wobble);smooth(driftDepth.gain,.0011*wobble);smooth(scrapeDepth.gain,.000075*wobble);
+if(tapeMemory){smooth(tapeMemory.parameters.get("wear"),tape);smooth(memoryDry.gain,1-tape);smooth(memoryWet.gain,tape);}
 smooth(wow.frequency,.5556+motion*.025);smooth(flutter.frequency,4.8+motion*1.3);
 const level=mix.master/100;
 smooth(hissGain.gain,level*(.16*tape+.19*vinyl)*Math.min(2,Math.max(.5,profile.rig.vinyl.level/.05)));
 smooth(dustGain.gain,level*.65*crackle*Math.min(2,Math.max(.5,profile.rig.vinyl.crackle/.3)));
 };
 Tone.connect(master,input);Tone.connect(returnGain,output);Tone.connect(hissGain,output);Tone.connect(dustGain,output);
-const start=ctx.currentTime;wow.start(start);flutter.start(start);hissSource.start(start);dustSource.start(start);
-if(offline&&duration>start){for(const source of [wow,flutter,hissSource,dustSource])source.stop(duration);}
+const start=ctx.currentTime;wow.start(start);flutter.start(start);drift.start(start);scrape.start(start);hissSource.start(start);dustSource.start(start);
+if(offline&&duration>start){for(const source of [wow,flutter,drift,scrape,hissSource,dustSource])source.stop(duration);}
 update(aud,mix);
 const ready=(async()=>{
 if(!ctx.audioWorklet||typeof AudioWorkletNode!=='function'||typeof URL.createObjectURL!=='function')return false;
@@ -1727,6 +1754,8 @@ url=URL.createObjectURL(new Blob(["("+wearProcessor.toString()+")();"],{type:'te
 await ctx.audioWorklet.addModule(url);
 const node=new AudioWorkletNode(ctx,'rg69-wear',{outputChannelCount:[2]}),blend=gain(0);
 rolloff.connect(node);node.connect(blend);blend.connect(samplerOut);worklet=node;workletWet=blend;
+const memory=new AudioWorkletNode(ctx,"rg69-tape-memory",{outputChannelCount:[2]}),memoryBlend=gain(0);
+samplerOut.connect(memory);memory.connect(memoryBlend);memoryBlend.connect(memoryOut);tapeMemory=memory;memoryWet=memoryBlend;
 update(latest,latestMix);return true;
 }catch(error){log('wear0: native sampler fallback ('+error.message+')','w');return false;}
 finally{if(url)URL.revokeObjectURL(url);}
