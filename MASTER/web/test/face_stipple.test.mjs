@@ -112,8 +112,8 @@ test("live stipple keeps one deterministic solid carrier near the left eye", () 
   assert.equal(JSON.stringify(samples), JSON.stringify(stipple.defaultSamples(512)), "the new geometry remains deterministic");
 });
 
-test("fingerprint ridges and radial signal waves stay inside the bounded fixed-size field", () => {
-  assert.match(tokens, /fingerprint:\s*\n\s+enabled: true\s*\n\s+spacing: 22\.0\s*\n\s+strength: 0\.48/);
+test("fingerprint ornament is disabled while radial signal waves remain bounded", () => {
+  assert.match(tokens, /fingerprint:\s*\n\s+enabled: false\s*\n\s+spacing: 22\.0\s*\n\s+strength: 0\.48/);
   assert.match(tokens, /intro_wave_strength: 0\.28/);
   assert.match(tokens, /desktop_points: 10800\s*\n\s+mobile_points: 3200/);
   assert.match(system, /function fingerprintConfiguration\(\)/);
@@ -1138,6 +1138,11 @@ test("sculpture surfaces are distinct, deterministic and bounded", async () => {
     const points = Array.from({ length: 512 }, (_, index) => masks.sample(profile.id, index));
     assert.equal(JSON.stringify(points[40]), JSON.stringify(masks.sample(profile.id, 40)));
     assert.ok(points.every(point => point.every(value => Number.isFinite(value) && Math.abs(value) < 0.8)));
+    for (let i = 0; i < points.length; i++) {
+      for (let j = i + 1; j < points.length; j++) {
+        assert.ok(Math.hypot(...points[i].map((v, axis) => v - points[j][axis])) > .009, profile.id + ' crowded prefix');
+      }
+    }
     fingerprints.add(JSON.stringify(points));
   }
   assert.equal(fingerprints.size, 21);
@@ -1154,7 +1159,6 @@ test("sculptural articulation uses bounded event-driven movement, not human anat
   assert.match(faceSource, /uSculpture \* uSculptureMotion \* travel/);
   assert.match(faceSource, /float pulse = clamp\(uJaw \* 0\.4/);
   assert.match(faceWorld, /sculptureUniform\.value = semanticDescriptor\?\.maskProfile && nativeSubjectField/);
-
 });
 
 test("mask geometry has enough projected coverage to read at terminal size", () => {
@@ -1194,7 +1198,22 @@ test("mask correspondence uses bounded stable spatial ordering", () => {
   assert.match(faceWorld, /const MASK_PRIMARY_SCALE = \.92/);
   assert.match(faceWorld, /function orderMaskPoints/);
   assert.match(faceWorld, /new Uint32Array\(4096\)/);
-  assert.match(faceWorld, /const morton = \(x, y, z\)/);
+  assert.match(faceWorld, /function spatialOrder\(positions, scale, axes\)/);
+  assert.match(faceWorld, /function matchSubject\(from, positions, stages\)/);
+});
+
+test("adaptive correspondence preserves carriers and cannot increase travel", () => {
+  const begin = faceWorld.indexOf("  function spatialOrder(");
+  const end = faceWorld.indexOf("  function buildSemanticSubjectGeometry(");
+  const match = runInNewContext(faceWorld.slice(begin, end) + "\nmatchSubject;");
+  const from = Float32Array.of(-.4,0,.2, .1,.4,0, .4,-.2,-.2, 0,-.3,.4);
+  const target = Float32Array.of(.4,-.2,-.2, 0,-.3,.4, -.4,0,.2, .1,.4,0);
+  const stages = Float32Array.of(.1,.2,.3,.4);
+  const result = match(from, target, stages);
+  assert.ok(result);
+  assert.deepEqual(Array.from(result.positions), Array.from(from));
+  assert.deepEqual(Array.from(result.stages), [stages[2], stages[3], stages[0], stages[1]]);
+  assert.equal(match(from, from, stages), null);
 });
 
 test("sculptures use uniform ink and fixed footprints", () => {
