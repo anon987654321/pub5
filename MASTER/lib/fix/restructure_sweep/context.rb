@@ -48,7 +48,7 @@ module Master
         def self.dead_subtree_findings(target)
           return [] unless File.basename(target.to_s) == "MASTER"
 
-          source = production_files(target)
+          source = reference_files(target).reject { |path| Master.binary_file?(path) }
           subtrees = Dir.glob(File.join(target.to_s, "lib", "**", "*")).select { |path| File.directory?(path) }.filter_map do |dir|
             dead_subtree(dir, target, source)
           end
@@ -66,7 +66,7 @@ module Master
           return if all.size < 3
 
           needles = all.flat_map { |path| names_in_file(path) }.uniq
-          return if referenced_outside?(source - all, needles)
+          return if needles.empty? || referenced_outside?(source - all, needles)
 
           first = all.first
           [first, "DEAD_SUBTREE", "#{relative_static(first, target)} subtree has #{all.size} production source files and no production references from outside the subtree", all]
@@ -95,9 +95,9 @@ module Master
 
         def self.cross_file_findings(target)
           rows = Master::Fix::Scan::CrossFileAnalysis.new(root: target).call(production_files(target))
-          findings = rows.flat_map { |_path, result| result.value_or([]) }
+          findings = rows.flat_map { |_path, result| result.value! }
           findings.filter_map do |finding|
-            next unless %w[PARALLEL_HIERARCHY CYCLIC_DEPENDENCY].include?(finding[:law].to_s)
+            next unless %w[PARALLEL_HIERARCHY CYCLIC_DEPENDENCY DRY COPY_PASTE_BLOCK SCATTERED_CONFIG].include?(finding[:law].to_s)
 
             related = finding[:impact_radius].is_a?(Hash) ? Array(finding[:impact_radius][:files]) : []
             path = related.first
@@ -128,7 +128,9 @@ module Master
           out, status = Master::Io::Exec.capture2e("git", "-C", root.to_s, "ls-files", "-z")
           raise "git ls-files failed for #{root}" unless status.success?
 
-          out.split("\0").map { |path| File.join(root.to_s, path) }.select { |path| File.file?(path) && !File.symlink?(path) }
+          out.split("\0").map { |path| File.join(root.to_s, path) }.select do |path|
+            File.file?(path) && !File.symlink?(path) && !Master::Core::World.secret?(path)
+          end
         end
 
         # Reverse-reference audits include dependency manifests and lockfiles,

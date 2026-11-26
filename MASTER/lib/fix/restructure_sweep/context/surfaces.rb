@@ -3,22 +3,19 @@
 module Master
   module Fix
     class RestructureSweep
-      # Repository-surface findings on the re-opened Context, split out of
-      # context.rb: retired-topology stale references, duplicated prose, route
-      # helpers, config.x assignments and command surfaces.
+      # Structural duplication across prose, commands, routes and configuration.
       class Context
         def self.surface_findings(target)
           stale_reference_findings(target) + prose_findings(target) + command_surface_findings(target) + route_surface_findings(target) + config_surface_findings(target)
         end
 
         def self.stale_reference_findings(target)
-          rows = repository_files(target).filter_map do |path|
+          rows = reference_files(target).reject { |path| Master.binary_file?(path) }.filter_map do |path|
             text = File.read(path, encoding: "UTF-8")
             matches = STALE_PATHS.select { |needle| text.include?(needle) }
             matches.empty? ? nil : [path, matches]
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.stale_reference", path:)
-            nil
+            raise "structural stale_reference scan failed for #{path}: #{e.class}: #{e.message}"
           end
           rows.filter_map do |path, matches|
             related = rows.select { |_other, other_matches| (matches & other_matches).any? }
@@ -37,7 +34,7 @@ module Master
               paragraphs[normalized] << path
             end
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.prose", path:)
+            raise "structural prose scan failed for #{path}: #{e.class}: #{e.message}"
           end
           paragraphs.filter_map do |_paragraph, paths|
             paths = paths.uniq
@@ -57,8 +54,7 @@ module Master
 
             [path, "ROUTE_SURFACE_DUPLICATION", "route helper(s) declared more than once: #{duplicates.join(", ")}", []]
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.routes", path:)
-            nil
+            raise "structural routes scan failed for #{path}: #{e.class}: #{e.message}"
           end
         end
 
@@ -74,8 +70,7 @@ module Master
 
             [path, "CONFIG_SURFACE_DUPLICATION", "config.x setting(s) assigned more than once: #{duplicates.join(", ")}", []]
           rescue StandardError => e
-            Master::Ground::Swallow.log(e, context: "restructure.config", path:)
-            nil
+            raise "structural config scan failed for #{path}: #{e.class}: #{e.message}"
           end
         end
 
@@ -107,8 +102,7 @@ module Master
 
           [path, commands]
         rescue StandardError => e
-          Master::Ground::Swallow.log(e, context: "restructure.commands", path:)
-          nil
+          raise "structural commands scan failed for #{path}: #{e.class}: #{e.message}"
         end
 
         private_class_method :surface_findings, :stale_reference_findings, :prose_findings

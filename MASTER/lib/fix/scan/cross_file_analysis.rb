@@ -36,22 +36,21 @@ module Master
         private
 
         def readable_files(paths)
-          paths.select { |path| File.file?(path) && !Master.binary_file?(path) }
-               .to_h { |path| [path, File.read(path, encoding: "UTF-8")] }
-        rescue Encoding::UndefinedConversionError, Encoding::InvalidByteSequenceError => e
-          Master::Ground::Swallow.log(e, context: "CrossFileAnalysis.readable_files")
-          {}
+          paths.select { |path| File.file?(path) && !Master.binary_file?(path) }.to_h do |path|
+            text = File.read(path, encoding: "UTF-8")
+            raise Encoding::InvalidByteSequenceError, path unless text.valid_encoding?
+
+            [path, text]
+          end
         end
 
-        # One expression written in MIN_FILES files or more. The three callers
-        # differ only in what they match and what they advise, so the sweep is
-        # written once and they pass the sentence in.
+        # Repeated expressions are ownership signals, not proof of duplication.
         def spread(files, pattern, rule)
           group_occurrences(files, pattern).filter_map do |value, occurrences|
             count = distinct_files(occurrences)
             next unless count >= MIN_FILES
 
-            build(rule, yield(value, count))
+            build(rule, yield(value, count), impact_radius: { files: occurrences.map(&:first).uniq })
           end
         end
 
@@ -147,7 +146,8 @@ module Master
           grouped.values.filter_map do |occurrences|
             next unless distinct_files(occurrences) >= MIN_FILES
 
-            build("COPY_PASTE_BLOCK", "same #{BLOCK_LINES}+ line block recurs in #{distinct_files(occurrences)} files - extract a module or template")
+            build("COPY_PASTE_BLOCK", "same #{BLOCK_LINES}+ line block recurs in #{distinct_files(occurrences)} files - verify shared ownership before consolidation",
+                  impact_radius: { files: occurrences.map(&:first).uniq })
           end
         end
 
@@ -182,7 +182,8 @@ module Master
             next if files_hit.size < CLONE_MIN_FILES
 
             names = sites.map(&:last).uniq.first(3).join(", ")
-            build("DRY", "#{sites.size} methods share one structure (#{names}) across #{files_hit.size} files - extract the shared shape")
+            build("DRY", "#{sites.size} methods share one structure (#{names}) across #{files_hit.size} files - verify common semantics before consolidation",
+                  impact_radius: { files: files_hit })
           end
         end
 

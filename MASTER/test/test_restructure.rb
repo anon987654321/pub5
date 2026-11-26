@@ -358,6 +358,11 @@ class TestRestructure < Minitest::Test
     end
   end
 
+  def test_failed_structural_inventory_is_not_a_clean_tree
+    context = Master::Fix::RestructureSweep::Context
+    assert_raises(RuntimeError) { context.repository_files(File.join(@repo, "missing")) }
+  end
+
   def test_cross_file_architecture_is_restructure_evidence
     write_user_hierarchy
     sh("git", "add", "-A", chdir: @repo)

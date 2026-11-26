@@ -73,7 +73,9 @@ module Master
         evidence, compare distinct target paths, and never pad the candidate set with paraphrases. Apply one operation,
         verify it, and only then use its result as the next step's baseline.
         The transformation policy below supplies triggers, vetoes, the DRY/KISS decision table, scorecard, and proof.
-        Similarity alone never justifies consolidation. Behaviour, meaning, import paths, and public contracts must not change.
+        Similarity alone never justifies consolidation. Compare ownership, reasons to change, caller complexity and native alternatives.
+        Prefer deletion or direct native calls to a shallow wrapper; distinct semantics stay separate.
+        Behaviour, meaning, import paths, and public contracts must not change.
 
         %<transformations>s
 
@@ -213,12 +215,13 @@ module Master
 
           round_kept, terminal = run_round(target, "#{run_id}-#{round}", kept, attempts:, keeps:, attempted:)
           kept.concat(round_kept)
+          attempted.clear unless round_kept.empty? # accepted edits invalidate earlier candidate judgments
           break if terminal
 
           Master::Trace::Dmesg.status("restructure0", "round #{round + 1}, kept #{round_kept.size}, total #{kept.size}")
           terminal = :limit_reached if kept.size >= keeps || round == rounds - 1
         end
-        terminal = terminal_state(target, run_id, terminal, kept)
+        terminal = :done if terminal == :limit_reached && candidates(target, "#{run_id}-final").empty?
         Master::Trace::Dmesg.status("restructure0", "terminal=#{terminal} kept=#{kept.size}")
         @bus&.publish("fix_loop:restructure_exit", target: relative(target), state: terminal.to_s.upcase, kept: kept.size)
         kept
@@ -268,14 +271,6 @@ module Master
         else
           :plateau
         end
-      end
-
-      # A sweep that stopped on its budget still ends cleanly when a final
-      # read-only scan finds nothing left to restructure.
-      def terminal_state(target, run_id, terminal, _kept)
-        return :done if terminal == :limit_reached && candidates(target, "#{run_id}-final").empty?
-
-        terminal
       end
 
       def ask(prompt)

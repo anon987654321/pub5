@@ -92,6 +92,18 @@ class TestProblemGraph < Minitest::Test
     assert_includes problem.candidate_operations, "simplify"
   end
 
+  def test_cross_file_duplication_has_a_shared_repair_route
+    rows = [
+      finding("MASTER/lib/a.rb", "DRY", "shared semantics", ["MASTER/lib/b.rb"]),
+      finding("MASTER/lib/b.rb", "COPY_PASTE_BLOCK", "duplicate implementation", ["MASTER/lib/a.rb"]),
+    ]
+
+    problem = @graph.call(rows).fetch(0)
+    assert_equal 2, problem.size
+    assert_includes problem.candidate_operations, "simplify"
+    assert_includes problem.candidate_operations, "merge"
+  end
+
   def test_retired_size_only_laws_have_no_structural_operation
     %w[SMALL_FILES JS_MODULE_SIZE].each do |id|
       refute Master::Fix::ProblemGraph::LAW_OPERATIONS.key?(id)
