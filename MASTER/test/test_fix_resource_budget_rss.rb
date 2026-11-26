@@ -62,4 +62,50 @@ class TestFixResourceBudgetRss < Minitest::Test
       end
     end
   end
+
+  # The load ceiling reads /proc/loadavg, and in a shared container that number
+  # is the node's other tenants: the 2026-11-26 /fix RAILS/bsdports pass
+  # deferred every model call at "load 44 is over 3.0" while the container
+  # idled at under 1% of its two CPUs. When the kernel exposes this cgroup's
+  # own CPU accounting, load is what the container demands, differenced between
+  # measurements on the same scale a load average reports.
+  def test_the_first_cpu_usage_reading_has_no_window_and_reports_nothing
+    assert_nil budget(memory_mb: 4096).send(:load_from_cpu_usage, 1_000_000_000.0)
+  end
+
+  def test_load_from_cpu_usage_is_the_cpus_this_container_demands
+    resource = budget(memory_mb: 4096)
+    ticks = [100.0, 102.0]
+    usages = [1_000_000_000.0, 3_800_000_000.0] # 2.8s of CPU over the 2s window
+    resource.stub(:clock_now, -> { ticks.shift }) do
+      assert_nil resource.send(:load_from_cpu_usage, usages.shift)
+      assert_in_delta 1.4, resource.send(:load_from_cpu_usage, usages.shift), 0.01
+    end
+  end
+
+  def test_container_load_ignores_the_node_load_average_once_accounting_exists
+    resource = budget(memory_mb: 4096)
+    ticks = [10.0, 12.0]
+    usages = [1_000_000_000.0, 3_800_000_000.0]
+    resource.stub(:own_cpu_usage_ns, -> { usages.shift }) do
+      resource.stub(:clock_now, -> { ticks.shift }) do
+        File.stub(:read, ->(_path) { "44.00 43.00 42.00 1/2 1\n" }) do
+          assert_in_delta 44.0, resource.send(:load_average), 0.01 # priming read falls back
+          assert_in_delta 1.4, resource.send(:load_average), 0.01  # ours, not the node's 44
+        end
+      end
+    end
+  end
+
+  def test_cpu_usage_accounting_answers_wherever_the_kernel_exposes_it
+    resource = budget(memory_mb: 4096)
+    exposed = ["/sys/fs/cgroup/cpu.stat",
+               "/sys/fs/cgroup/cpu,cpuacct/cpuacct.usage",
+               "/sys/fs/cgroup/cpuacct/cpuacct.usage"].any? { |path| File.file?(path) }
+    if exposed
+      assert_operator resource.send(:own_cpu_usage_ns), :>=, 0.0
+    else
+      assert_nil resource.send(:own_cpu_usage_ns)
+    end
+  end
 end

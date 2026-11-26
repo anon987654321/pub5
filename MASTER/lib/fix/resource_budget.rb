@@ -37,6 +37,7 @@ module Master
         @platform = platform.to_s[/darwin|openbsd|linux/]
         @last_measurement_at = nil
         @last_measurement = nil
+        @last_cpu_sample = nil
       end
 
       def measure
@@ -268,11 +269,58 @@ module Master
           out, status = Master::Io::Exec.capture2e(sysctl, "-n", "vm.loadavg")
           return out.to_s[/\d+(?:\.\d+)?/]&.to_f if status.success?
         end
-        return File.read("/proc/loadavg").to_f if File.file?("/proc/loadavg")
-
-        nil
+        # Inside a container /proc/loadavg is the shared node's load, not this
+        # process's pressure: the 2026-11-26 /fix RAILS/bsdports pass watched
+        # the model gate defer every call at "load 44 is over 3.0" while the
+        # container itself idled at under 1% of its two CPUs — the 44 was the
+        # node's other tenants. When the kernel exposes this cgroup's own CPU
+        # accounting, load is what we demand (average CPUs used over the
+        # window since the last measurement, the same scale a load average
+        # reports, so the configured ceilings keep their meaning); a first
+        # reading has no window to difference against and falls back to
+        # /proc/loadavg once. Hosts without cgroup accounting — macOS,
+        # OpenBSD, a VM with no controllers mounted — keep loadavg everywhere.
+        if (usage_ns = own_cpu_usage_ns)
+          load_from_cpu_usage(usage_ns) || File.read("/proc/loadavg").to_f
+        else
+          File.read("/proc/loadavg").to_f if File.file?("/proc/loadavg")
+        end
       rescue StandardError
         nil
+      end
+
+      # The container's own CPU time in nanoseconds, one accounting file per
+      # cgroup generation. Inside the container /sys/fs/cgroup is already
+      # namespaced to this cgroup, so the root file is our own usage; a
+      # dedicated Linux host reports the whole machine there, which is the
+      # pressure a load average was measuring anyway.
+      def own_cpu_usage_ns
+        v2 = "/sys/fs/cgroup/cpu.stat"
+        if File.file?(v2)
+          File.read(v2)[/usage_usec (\d+)/, 1]&.to_f&.*(1000)
+        else
+          ["/sys/fs/cgroup/cpu,cpuacct/cpuacct.usage", "/sys/fs/cgroup/cpuacct/cpuacct.usage"]
+            .filter_map { |path| File.read(path).to_f if File.file?(path) }
+            .first
+        end
+      rescue StandardError
+        nil
+      end
+
+      def load_from_cpu_usage(usage_ns)
+        now = clock_now
+        previous = @last_cpu_sample
+        @last_cpu_sample = [usage_ns, now]
+        return nil unless previous
+
+        elapsed = now - previous[1]
+        return nil unless elapsed.positive?
+
+        ((usage_ns - previous[0]) / 1e9 / elapsed).clamp(0.0, nil)
+      end
+
+      def clock_now
+        Process.clock_gettime(@clock)
       end
 
       def rss_mb
