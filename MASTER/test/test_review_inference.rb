@@ -38,16 +38,16 @@ class TestThroughInference < Minitest::Test
   def test_the_only_flag_is_parsed_in_both_spellings
     registry = Master::CLI::CommandRegistry
 
-    assert_equal [nil, nil, true, "fix", "lib/io"], registry.parse_pass_flags("--only fix lib/io")
-    assert_equal [nil, nil, true, "critique", "lib"], registry.parse_pass_flags("--only=critique lib")
-    assert_equal [nil, nil, true, "fix", "lib"], registry.parse_pass_flags("--only=Fix lib")
+    assert_equal [true, nil, true, "fix", "lib/io"], registry.parse_pass_flags("--only fix lib/io")
+    assert_equal [true, nil, true, "critique", "lib"], registry.parse_pass_flags("--only=critique lib")
+    assert_equal [true, nil, true, "fix", "lib"], registry.parse_pass_flags("--only=Fix lib")
     assert_equal [false, nil, true, "fix", "../RAILS/amber"],
                  registry.parse_pass_flags("--only fix --no-autofix ../RAILS/amber")
-    assert_equal [nil, nil, true, nil, "MASTER"],
+    assert_equal [true, nil, true, nil, "MASTER"],
                  registry.parse_pass_flags("--trace MASTER")
-    assert_equal [nil, nil, true, nil, "MASTER"],
+    assert_equal [true, nil, true, nil, "MASTER"],
                  registry.parse_pass_flags("--verbose MASTER")
-    assert_equal [nil, nil, true, nil, "MASTER"],
+    assert_equal [true, nil, true, nil, "MASTER"],
                  registry.parse_pass_flags("--quiet MASTER")
   end
 
@@ -119,13 +119,13 @@ class TestThroughInference < Minitest::Test
     assert_equal "lib/cli", kept[:args]
   end
 
-  def test_fix_is_read_only_by_default_and_keeps_review_stages_read_only
+  def test_fix_writes_by_default_and_keeps_review_stages_read_only
     registry = Master::CLI::CommandRegistry
-    refute registry.writes_requested?(apply: nil, only: nil)
+    assert registry.writes_requested?(apply: true, only: nil)
     assert registry.writes_requested?(apply: true, only: nil)
     assert registry.writes_requested?(apply: true, only: "fix")
     refute registry.writes_requested?(apply: false, only: nil)
-    refute registry.writes_requested?(apply: nil, only: "critique,map")
+    refute registry.writes_requested?(apply: true, only: "critique,map")
   end
 
   def test_deterministic_autofix_defaults_to_on_with_a_bounded_write_budget

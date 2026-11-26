@@ -304,23 +304,21 @@ class TestPipeline < Minitest::Test
     assert_operator timings.fetch("observe"), :>=, 0.0
   end
 
-  def test_fix_writes_only_after_explicit_apply_authorization
+  def test_fix_writes_by_default_with_a_named_target
     registry = Master::CLI::CommandRegistry
 
-    refute registry.writes_requested?(apply: nil, only: nil)
+    assert registry.writes_requested?(apply: true, only: nil)
     refute registry.writes_requested?(apply: false, only: nil)
     refute registry.writes_requested?(apply: true, only: "critique")
     assert registry.writes_requested?(apply: true, only: nil)
   end
 
-  def test_mutating_fix_requires_an_explicit_mode_and_named_target
+  def test_mutating_fix_requires_a_named_target
     registry = Master::CLI::CommandRegistry
 
-    missing_mode = registry.send(:fix_dispatch_options, "--apply MASTER", nil)
-    missing_target = registry.send(:fix_dispatch_options, "--mode=repair --apply", nil)
-    authorized = registry.send(:fix_dispatch_options, "--mode=repair --apply MASTER", nil)
+    missing_target = registry.send(:fix_dispatch_options, "--apply", nil)
+    authorized = registry.send(:fix_dispatch_options, "MASTER", nil)
 
-    assert_match(/explicit --mode/, missing_mode.fetch(:mode_error))
     assert_match(/named repository target/, missing_target.fetch(:mode_error))
     assert_nil authorized[:mode_error]
     assert_equal "repair", authorized.fetch(:mode)
@@ -332,7 +330,7 @@ class TestPipeline < Minitest::Test
     assert_equal true, host_read.fetch(:host_evidence)
     assert_includes host_read.fetch(:raw), "--host-evidence"
     assert_equal "OPENBSD", host_read.fetch(:target)
-    refute registry.writes_requested?(apply: host_read.fetch(:apply), only: host_read.fetch(:only))
+    assert registry.writes_requested?(apply: host_read.fetch(:apply), only: host_read.fetch(:only))
 
     host_write = registry.send(:fix_dispatch_options, "--mode=repair --apply OPENBSD --host-evidence", nil)
     assert_nil host_write[:mode_error]

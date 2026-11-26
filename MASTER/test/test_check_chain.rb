@@ -51,9 +51,9 @@ class TestCheckChain < Minitest::Test
 
     assert_includes everything, "source"
 
-    ENV["MASTER_FIX_CHECK_STAGES"] = "lexical, sprawl"
+    ENV["MASTER_FIX_CHECK_STAGES"] = "sprawl"
 
-    assert_equal %w[lexical sprawl], G.verification_stages("RAILS").map(&:name)
+    assert_equal %w[sprawl], G.verification_stages("RAILS").map(&:name)
     refute_includes G.verification_stages("RAILS").map(&:name), "source"
   ensure
     previous ? ENV["MASTER_FIX_CHECK_STAGES"] = previous : ENV.delete("MASTER_FIX_CHECK_STAGES")

@@ -297,9 +297,9 @@ module Master
         if host_evidence && !target.to_s.strip.casecmp?("OPENBSD")
           return { mode_error: "--host-evidence requires the exact OPENBSD target; it is never inferred for another tree" }
         end
-        if apply == true && fix_stage_selected?(only) && (!mode_explicit || target.to_s.strip.empty?)
+        if apply == true && fix_stage_selected?(only) && target.to_s.strip.empty?
           return {
-            mode_error: "mutating /fix requires explicit --mode=repair|elevate|all and a named repository target; use --dry-run to preview"
+            mode_error: "mutating /fix requires a named repository target; use --dry-run to preview"
           }
         end
         cancellation = ctx.cancellation if ctx.respond_to?(:cancellation)
@@ -1048,9 +1048,8 @@ module Master
         Array(only.to_s.split(",")).map(&:strip).any? { |stage| %w[fix converge].include?(stage.downcase) }
       end
 
-      # A repair writes only when the caller explicitly authorizes it.
-      # Read-only defaults are deliberate: a slash command, boot or retry is
-      # not consent to mutate a repository.
+      # A named /fix is the repair command. Read-only operation is explicit so
+      # an operator does not pay an entire inspection pass and receive no repair.
       def writes_requested?(apply:, only:)
         apply == true && fix_stage_selected?(only)
       end
@@ -1173,7 +1172,7 @@ module Master
       end
 
       def parse_pass_flags(raw)
-        flags = { apply: nil, critique: nil, aesthetic: true, only: nil }
+        flags = { apply: true, critique: nil, aesthetic: true, only: nil }
         explicit_read_only = false
         path_bits = []
         joined_only(raw.split(/\s+/)).each do |token|

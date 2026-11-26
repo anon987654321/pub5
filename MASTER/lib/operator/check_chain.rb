@@ -345,10 +345,14 @@ module Operator
     def verification_stages(target, stale_ok: false)
       trees = trees_for_target(target)
       selected = stages(scan_only: true, trees:, stale_ok:).reject { |stage| stage.name == "council" }
-      # The /fix pass proves these trees itself, before and after its repair: MASTER and OPENBSD
-      # with their suites (Pass's proof), RAILS with the source stage, which owns the complete
-      # Rails premerge proof. Running the suites here as well ran them four times per /fix.
-      selected = selected.reject { |stage| stage.name == "suites" } if (trees - PASS_PROVEN_TREES).empty?
+      # The /fix pass owns lexical observation, repair and re-observation itself.
+      # Calling the lexical ladder here starts another /fix preview, which then
+      # builds a second full scanner before the first pass can repair anything.
+      # Keep one lexical owner: FixLoop. The remaining verification stages prove
+      # the surfaces FixLoop does not measure directly.
+      if (trees - PASS_PROVEN_TREES).empty?
+        selected = selected.reject { |stage| %w[lexical suites].include?(stage.name) }
+      end
       # The visual lane's own sweep, taken before its repairs and again after them, is its proof;
       # the source stage would render the same routes twice more around it.
       selected = selected.reject { |stage| stage.name == "source" } if Master::Fix::WorkLane.visual?
