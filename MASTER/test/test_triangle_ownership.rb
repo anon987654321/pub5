@@ -11,6 +11,16 @@ class TestTriangleOwnership < Minitest::Test
     assert_equal Operator::RubyRunner.bundle_cmd, Deploy::Triangle::BUNDLE
   end
 
+  # MASTER's dependency manager sets BUNDLE_FROZEN and BUNDLE_DEPLOYMENT for its own bundle;
+  # inherited, they stopped every app at db:prepare during /fix run 7 (2026-11-26).
+  def test_an_app_boots_without_masters_frozen_bundler_state
+    app = Deploy::Triangle.apps.find { |row| row.fetch(:name) == "brgen" }
+    env = Deploy::Triangle.env_for(app)
+
+    %w[BUNDLE_FROZEN BUNDLE_DEPLOYMENT BUNDLE_PATH GEM_HOME].each { |key| assert_nil env.fetch(key), key }
+    assert_equal File.join(app.fetch(:dir), "Gemfile"), env.fetch("BUNDLE_GEMFILE")
+  end
+
   def test_triangle_tracks_every_live_app_inventory_entry
     registry = YAML.safe_load_file(File.join(Deploy::Triangle::RAILS_ROOT, "apps.yml")).fetch("apps")
     apps = Deploy::Triangle.apps

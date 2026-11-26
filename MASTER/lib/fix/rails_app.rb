@@ -102,10 +102,18 @@ module Master
       # bundle; nil unsets them, and the app's bin/rails finds its own Gemfile. MT_NO_PLUGINS is
       # MASTER's test setting: Rails' test runner is a minitest plugin, and with it off
       # `bin/rails test a_test.rb b_test.rb` ran 0 tests and exited 0.
+      #
+      # The one list of MASTER's bundler state a child app must not inherit; the deploy
+      # canary and the triangle read it too. BUNDLE_FROZEN and BUNDLE_DEPLOYMENT are here
+      # because the dependency manager sets them for MASTER: an app given either refused
+      # to boot ("Bundler is unlocking ruby ... frozen mode"), as every app did when
+      # /fix run 7 brought them up on 2026-11-26.
       FOREIGN_BUNDLE = %w[
-        GEM_HOME GEM_PATH RUBYOPT RUBYLIB BUNDLE_GEMFILE BUNDLE_LOCKFILE BUNDLE_PATH BUNDLE_APP_CONFIG
-        BUNDLE_USER_CONFIG BUNDLE_DISABLE_SHARED_GEMS BUNDLE_FROZEN BUNDLE_BIN_PATH BUNDLER_VERSION BUNDLER_SETUP
-        MT_NO_PLUGINS
+        BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_BIN_PATH BUNDLE_DEPLOYMENT BUNDLE_DISABLE_SHARED_GEMS
+        BUNDLE_FROZEN BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
+        BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG BUNDLE_USER_HOME
+        BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT BUNDLER_SETUP BUNDLER_VERSION
+        GEM_HOME GEM_PATH MT_NO_PLUGINS RUBYOPT RUBYLIB
       ].freeze
 
       def self.env(root)

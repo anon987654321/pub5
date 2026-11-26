@@ -23,6 +23,7 @@ require "net/http"
 require_relative "../../lib/io/exec"
 require "yaml"
 require_relative "../../lib/operator/ruby_runner"
+require_relative "../../lib/fix/rails_app"
 require_relative "../../lib/fix/server_leases"
 
 module Deploy
@@ -60,12 +61,11 @@ module Deploy
     # An app then resolved its lockfile against MASTER's bundle and died on GemNotFound
     # naming gems MASTER never installs. Dropping the restore handles keeps the nils true.
     def self.env_for(app)
-      env = { "RAILS_ENV" => "development", "PORT" => app[:port].to_s,
-              "RAILS_LOG_LEVEL" => ENV.fetch("RAILS_LOG_LEVEL", "info"),
-              "BUNDLE_GEMFILE" => File.join(app[:dir], "Gemfile"),
-              "BUNDLE_BIN_PATH" => nil, "BUNDLER_SETUP" => nil, "BUNDLER_VERSION" => nil, "RUBYOPT" => nil, "RUBYLIB" => nil,
-              "GEM_HOME" => nil, "GEM_PATH" => nil, "BUNDLE_PATH" => nil, "BUNDLE_APP_CONFIG" => nil,
-              "BUNDLE_USER_CONFIG" => nil, "BUNDLE_DISABLE_SHARED_GEMS" => nil, "BUNDLE_LOCKFILE" => nil }
+      env = Master::Fix::RailsApp::FOREIGN_BUNDLE.to_h { |key| [key, nil] }.merge(
+        "RAILS_ENV" => "development", "PORT" => app[:port].to_s,
+        "RAILS_LOG_LEVEL" => ENV.fetch("RAILS_LOG_LEVEL", "info"),
+        "BUNDLE_GEMFILE" => File.join(app[:dir], "Gemfile"),
+      )
       ENV.each_key { |key| env[key] = nil if key.start_with?("BUNDLER_ORIG_") }
       env
     end

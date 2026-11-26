@@ -6,6 +6,7 @@ require "optparse"
 require "rbconfig"
 require "socket"
 require "yaml"
+require_relative "../fix/rails_app"
 require_relative "../fix/routes_manifest"
 require_relative "../io/exec"
 require_relative "../io/ssrf_guard"
@@ -303,13 +304,7 @@ module Operator
 
     # Bundler exports BUNDLE_LOCKFILE for the bundle it activated. Clearing only
     # BUNDLE_GEMFILE made each app compare its own Gemfile with MASTER's lock.
-    FOREIGN_BUNDLE_ENV = %w[
-      BUNDLE_APP_CONFIG BUNDLE_BIN BUNDLE_BIN_PATH BUNDLE_DEPLOYMENT BUNDLE_DISABLE_SHARED_GEMS
-      BUNDLE_FROZEN BUNDLE_GEMFILE BUNDLE_IGNORE_CONFIG BUNDLE_JOBS BUNDLE_LOCKFILE
-      BUNDLE_ONLY BUNDLE_PATH BUNDLE_RETRY BUNDLE_USER_CONFIG BUNDLE_USER_HOME
-      BUNDLE_VERSION BUNDLE_WITH BUNDLE_WITHOUT BUNDLER_SETUP BUNDLER_VERSION
-      GEM_HOME GEM_PATH MT_NO_PLUGINS RUBYOPT RUBYLIB
-    ].freeze
+    FOREIGN_BUNDLE_ENV = Master::Fix::RailsApp::FOREIGN_BUNDLE
 
     module_function
 
