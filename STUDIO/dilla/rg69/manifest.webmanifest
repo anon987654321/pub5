@@ -1,0 +1,25 @@
+{
+  "id": "./",
+  "name": "RG-69 — Ragnhild’s Dream Machine",
+  "short_name": "RG-69",
+  "description": "A pocket music studio",
+  "start_url": "./rg69.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBF6F8",
+  "theme_color": "#FBF6F8",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
