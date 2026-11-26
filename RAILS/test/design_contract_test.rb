@@ -304,11 +304,16 @@ def test_brgen_old_dialect_outranks_the_social_stack
       notifications/_notification.html.erb
       shared/_newsletter_cta.html.erb
       shared/_messenger_artifacts.html.erb
+      shared/_live_search_form.html.erb
+      shared/_master_invite.html.erb
     ].each do |partial|
       source = File.read(File.join(SHARED, "app", "views", partial), encoding: "UTF-8")
       refute_includes source, "button-small",
                       "#{partial} names a size; size it from where the button sits"
     end
+
+    helper = File.read(File.join(SHARED, "app", "helpers", "shared", "stimulus_form_helper.rb"), encoding: "UTF-8")
+    refute_includes helper, "button-small"
 
     # Ratchet: the files still naming the size only shrink. Raise this ceiling
     # never; retire a site by naming its container in the app's compact

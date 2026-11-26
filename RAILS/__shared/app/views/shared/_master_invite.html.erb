@@ -1,6 +1,7 @@
 <% unless invited %>
   <%= button_to t("messages.invite_master"), path, method: :post,
-                class: "button button-ghost button-small",
+                class: "button button-ghost",
+                form_class: "button_to messenger-master-invite",
                 data: { turbo: true } %>
 <% else %>
   <span class="messenger-master-present" aria-label="<%= t("messages.master_present") %>">

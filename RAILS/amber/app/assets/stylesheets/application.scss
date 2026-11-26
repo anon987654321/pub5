@@ -1305,8 +1305,6 @@
   }
 
   .button:focus-visible,
-  .button-small:focus-visible,
-  .button.button-small:focus-visible,
   .item-card-actions :is(a, button):focus-visible,
   .profile-creator-link .button:focus-visible {
     outline: 2px solid var(--accent);
@@ -1316,14 +1314,9 @@
   /* inline-flex so the label sits in the middle of the 44px it is given; as an
      inline link the height grows below the text and "Sign in" hugs the top. A
      wardrobe card sizes its actions here by where they sit, not by a class. */
-  /* The size-class leads stay only for the markup that still names a size
-     pending its per-site rendered check (shared-010): the two
-     shared partials whose containers also hold full-size buttons
-     (_live_search_form, _master_invite). Every other compact button sizes from
-     where it sits; each context here held only compact buttons at the
-     2026-11-07 tree-wide sweep. */
-  .button-small,
-  .button.button-small,
+  .search-form > .button,
+  .messenger-master-invite .button,
+  .password-field .button,
   .creator-profile-header > .button,
   .creator-showcase-list .button,
   .overdue-challenges .button,

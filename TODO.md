@@ -456,4 +456,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-010 Amber declutter/index, declutter/review and items/show now size action buttons through semantic list and navigation contexts. Focused source regression authored; rendered proof NOT_RUN. Shared partials and Brgen remain open.
 
+- 2026-11-26: shared-010 shared search, MASTER invite and password toggle no longer name button size; Amber, Brgen and BSDPorts stylesheet contexts updated. Amber legacy selectors removed. Source contracts authored; runtime and rendering NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

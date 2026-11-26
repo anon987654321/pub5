@@ -32,7 +32,7 @@ module Shared
           form.password_field(method, **opts),
           tag.button(
             type: "button",
-            class: "button button-ghost button-small password-toggle",
+            class: "button button-ghost password-toggle",
             data: { action: "password-visibility#toggle" },
             aria: { label: I18n.t("auth.toggle_password_visibility") },
           ) do

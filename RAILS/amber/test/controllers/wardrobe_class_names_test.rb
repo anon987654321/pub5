@@ -47,7 +47,7 @@ class WardrobeClassNamesTest < ActionDispatch::IntegrationTest
   test "the stylesheet sizes the card's actions by where they sit" do
     scss = Rails.root.join("app/assets/stylesheets/application.scss").read
     # The rule sits inside @layer base, so its selectors are indented.
-    compact = scss[/^[ \t]*\.button-small,\n[ \t]*\.button\.button-small,\n(?:.*,\n)*.*\{[^}]*\}/]
+    compact = scss[/^[ \t]*\.search-form > \.button,\n(?:.*,\n)*.*\{[^}]*\}/]
     assert compact, "the compact button rule is gone"
     assert_includes compact, ".item-card-actions :is(a, button)"
     assert_includes compact, "min-height: var(--tap-min)"
