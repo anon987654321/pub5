@@ -2213,13 +2213,13 @@ if(st_.exporting||mediaRecorder){log('Finish the current recording/export first'
 st_.exporting=true;
 let context=null,resume=false;
 try{
-await startToneFromGesture();context=Tone.getContext();
+context=Tone.getContext();
 resume=st_.playing;if(resume){pauseClock();outputGate.gain.rampTo(0,.015);}
 $id('export').disabled=true;
 rg69AudioProfileLocked=true;
 const take=session(),aud_=take.aud,mix_=take.mix,sampleTake=sampleAudio;
 take.drums[take.pat.d]=deepClone(DRUM_PATTERNS[take.pat.d]);
-const bars=take.song?SONG_BARS:8,leadIn=.05,len=bars*4*(60/aud_.bpm),tail=rg69AudioProfile.tone.pads.release+1;
+const bars=take.song?SONG_BARS:Math.max(8,Math.ceil((HARMONIES[take.pat.k]?.segments.reduce((n,c)=>n+c.steps,0)||0)/16)),leadIn=.05,len=bars*4*(60/aud_.bpm),tail=Math.max(4,rg69AudioProfile.tone.pads.release+1);
 $id('progress-wrap').style.display='block';
 $id('progress-pct').textContent='0%';
 $id('progress-fill').style.width='0%';
@@ -2262,12 +2262,12 @@ URL.revokeObjectURL(url);
 $id('progress-wrap').style.display='none';
 log("WAV exported","k");
 }catch(err){
-log("export failed: "+err.message,"e");
+console.error("RG-69 export failed",err);log("export failed: "+err.message,"e");
 $id('progress-wrap').style.display='none';
 }finally{
 if(context&&Tone.getContext()!==context)Tone.setContext(context);
 st_.exporting=false;st_.offlineRendering=false;document.body.inert=false;$id("export").disabled=false;
-if(resume)await startPlayback().catch(reportAudioStartupFailure);
+if(resume){await startPlayback().catch(reportAudioStartupFailure);}
 }
 }
 
