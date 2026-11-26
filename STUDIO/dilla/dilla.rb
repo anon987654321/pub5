@@ -558,7 +558,7 @@ module Dilla
       rest = m[3]
       quality, modifiers, bass = split_quality(rest)
       table = theory.fetch("qualities")
-      intervals = table[quality]
+      intervals = quality == "13sus" ? [0, 5, 7, 10, 14, 21] : table[quality]
       unless intervals.is_a?(Array) && !intervals.empty?
         raise ArgumentError,
               "unknown chord quality #{quality.inspect} in #{symbol.inspect}; supported: #{table.keys.sort.join(', ')}"
@@ -617,7 +617,6 @@ module Dilla
                 when "mMaj", "mM" then "mMaj7"
                 when "mMaj7", "mM9" then rest == "mM9" ? "mMaj9" : "mMaj7"
                 when "mMaj9", "mmaj9" then "mMaj9"
-                when "13sus" then "7sus4"
                 else rest
                 end
       [quality, modifiers, bass]
@@ -1167,7 +1166,17 @@ module Dilla
     def build_melodic(plan, loop_bars, bar_count)
       voicer = Voicer.new(Dilla.theory)
       parsed = @progress["chords"].map { |sym| Dilla::ChordParser.parse(sym, Dilla.theory) }
-      voiced = voicer.voice(parsed, @rng)
+      authored = Array(@progress["browser_segments"])
+      voiced = if authored.length == parsed.length
+                 authored.map do |segment|
+                   segment.fetch("keys").map do |note|
+                     match = /\A([A-G][#b]?)([0-8])\z/.match(note) or raise ArgumentError, "invalid authored note #{note.inspect}"
+                     Dilla.theory.fetch("keys").fetch(match[1]) + (match[2].to_i + 1) * 12
+                   end
+                 end
+               else
+                 voicer.voice(parsed, @rng)
+               end
       feel = @progress["feel"] || {}
       out = { chord: [], bass: [], melody: [] }
 
