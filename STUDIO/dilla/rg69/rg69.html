@@ -9,6 +9,26 @@
 <meta name="description" content="RG-69 analog beat machine. Single HTML file sequencer with Tone.js.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎹</text></svg>">
 <title>RG-69 | Beat Machine</title>
+<script id="console-bridge">
+(function(){
+const entries=[];
+const format=value=>{
+if(value instanceof Error)return value.stack||value.message;
+if(typeof value==="string")return value;
+try{return JSON.stringify(value)||String(value);}catch{return String(value);}
+};
+window.rg69Console=entries;
+for(const level of ["log","info","warn","error","debug"]){
+const original=console[level].bind(console);
+console[level]=(...args)=>{
+original(...args);
+const entry={level,message:args.map(format).join(" ")};
+entries.push(entry);if(entries.length>120)entries.shift();
+window.rg69ConsoleSink?.(entry);
+};
+}
+})();
+</script>
 <script id="tone-vendor">
 /*
 MIT License
@@ -635,7 +655,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
     <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
     <button id="record" data-kind="danger" title="Record">Record</button>
     <button id="shareBtn" title="Copy share link">Share</button><button id="save-session">Save</button><button id="load-session">Load</button><input id="session-file" type="file" accept="application/json,.json" hidden>
-    <button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
+    <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
     <button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
     <button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button>
   </div>
@@ -703,7 +723,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
 <details>
 <summary>Terminal</summary>
 <div id="trace-wrap">
-<aside id="trace" aria-label="Terminal output" role="log" aria-live="polite"></aside>
+<aside id="trace" aria-label="Terminal output" role="log" aria-live="polite"></aside><button id="copy-log" type="button">Copy log</button>
 <div class="term-input-row">
 <span class="term-prompt">$</span>
 <input id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="help" aria-label="Terminal command">
@@ -823,6 +843,10 @@ const log=(message,level="i")=>{
   while(trace.children.length>PARAMS.TRACE_MAX_LINES)trace.removeChild(trace.firstChild);
   trace.scrollTop=trace.scrollHeight;
 };
+function mirrorConsole(entry){
+log("console "+entry.level+": "+entry.message,entry.level==="error"?"e":entry.level==="warn"?"w":"i");
+if(entry.level==="error"||entry.level==="warn")trace.closest("details").open=true;
+}
 const st=s=>{const node=$id("status");node.textContent=`status: ${s}`;node.dataset.state=s.split(/[ —]/,1)[0].toLowerCase();};
 const tp=(a,t)=>Array.isArray(a)?a:Array(t||16).fill(a);
 const tpP=object=>Object.fromEntries(Object.entries(object).map(([key,value])=>[key,tp(value)]));
@@ -847,6 +871,9 @@ const PARAMS={
   PADS_LP_HZ:3500,
   INSTANCE_TTL_MS:8000,
 };
+
+window.rg69ConsoleSink=mirrorConsole;
+for(const entry of window.rg69Console||[])mirrorConsole(entry);
 
 const RG69_AUDIO_FALLBACK={
 name:"RG-69 embedded sound fallback",
@@ -1388,9 +1415,14 @@ const graph=liveGraph=createAudioGraph(aud_,mix_,fxSeed);
 ({masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,revSend,dlySend,hatFlt,openFlt}=graph);
 ({kick:kickN,kickSub,kickClk,kickBody,snare:snareN,snareRing:snareRng,clap:clapN,hat:hatN,open:openN,bass:bassN,bassSub,keys:keysN,pads:padsN}=graph.instruments);
 ({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=graph.effects);
-outputGate.connect(analyser=new Tone.Analyser({type:'waveform',size:128,channels:2}));
+analyser=new Tone.Analyser({type:'waveform',size:256,channels:2});
+Tone.connect(graph.finalLimiter,analyser);
+graph.drumMeter=new Tone.Analyser({type:'waveform',size:256});
+drumG.connect(graph.drumMeter);
+graph.masterMeter=new Tone.Analyser({type:'waveform',size:256});
+masterG.connect(graph.masterMeter);
 reverbReady=false;
-graph.ready.then(ok=>{reverbReady=ok;applyFX();});
+graph.ready.then(ok=>{reverbReady=ok;applyFX();}).catch(error=>console.error('reverb update:',error));
 st_.randomizeFxPending=false;
 applyFX();log("audio0: shared graph ready","k");
 }
@@ -1422,7 +1454,15 @@ flt.connect(tape);
 tape.connect(comp);
 comp.connect(widener);
 widener.connect(limiter);
-const outputGate=new Tone.Gain(offline?1:0);limiter.connect(outputGate);outputGate.toDestination();
+// Preserve a direct dry master feed even if an optional stereo effect fails.
+const outputGate=new Tone.Gain(offline?1:0);
+const dryMaster=new Tone.Gain(.72),wetMaster=new Tone.Gain(.28);
+masterG.connect(dryMaster);dryMaster.connect(outputGate);
+limiter.connect(wetMaster);wetMaster.connect(outputGate);
+// Use the actual context destination, not a second Tone destination chain.
+const ctx=Tone.getContext().rawContext,finalLimiter=ctx.createDynamicsCompressor();
+finalLimiter.threshold.value=-3;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
+outputGate.connect(finalLimiter);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
 rev.connect(masterG);
@@ -1485,7 +1525,7 @@ installLaneFX(routes,effects);
 
 const sampleG=new Tone.Gain(.65);sampleG.connect(masterG);sampleG.connect(revSend);sampleG.connect(dlySend);
 const ready=rev.ready.then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1978,15 +2018,15 @@ try{
 if(!st_.started){log("start engine first","w");return;}
 if(mediaRecorder){if(mediaRecorder.state==="recording")mediaRecorder.stop();return;}
 const dest=Tone.getContext().rawContext.createMediaStreamDestination();
-outputGate.connect(dest);
+liveGraph.finalLimiter.connect(dest);
 const types=["audio/webm;codecs=opus","audio/mp4","audio/ogg;codecs=opus"];
 const mimeType=types.find(type=>MediaRecorder.isTypeSupported(type));
 let recorder;
 try{recorder=new MediaRecorder(dest.stream,mimeType?{mimeType}:undefined);}
-catch(error){outputGate.disconnect(dest);dest.stream.getTracks().forEach(t=>t.stop());throw error;}
+catch(error){liveGraph.finalLimiter.disconnect(dest);dest.stream.getTracks().forEach(t=>t.stop());throw error;}
 mediaRecorder=recorder;
 const chunks=[],button=$id("record");
-const cleanup=()=>{outputGate.disconnect(dest);dest.stream.getTracks().forEach(t=>t.stop());mediaRecorder=null;button.textContent="Record";button.setAttribute("aria-pressed","false");};
+const cleanup=()=>{liveGraph.finalLimiter.disconnect(dest);dest.stream.getTracks().forEach(t=>t.stop());mediaRecorder=null;button.textContent="Record";button.setAttribute("aria-pressed","false");};
 recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
 recorder.onerror=()=>{cleanup();log("recording failed","e");};
 recorder.onstop=()=>{
@@ -2472,7 +2512,9 @@ let fileClockConfigured=false;
 function startToneFromGesture(){
 if(st_.offlineRendering)return Promise.reject(Error('WAV export in progress'));
 if((!httpPage||location.origin==="null")&&!fileClockConfigured){
-Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));
+const NativeContext=window.AudioContext||window.webkitAudioContext;
+const native=new NativeContext({latencyHint:"interactive"});
+Tone.setContext(new Tone.Context({context:native,clockSource:"timeout",lookAhead:.15,updateInterval:.025}));
 fileClockConfigured=true;
 }
 Tone.getContext();
@@ -2506,9 +2548,11 @@ startClock();
 st('playing');
 $id('play').textContent='⏸ Pause';
 log('playback started','k');
+logAudioState();
 }
 
 function reportAudioStartupFailure(error) {
+  console.error('audio startup:',error);
   pauseClock();
   const detail = String(error?.message || error || "unknown error").slice(0, 180);
   const playButton = $id("play");
@@ -2572,6 +2616,47 @@ document.querySelectorAll('.step').forEach(el=>el.classList.remove('playing'));
 st('stopped');
 $id('play').setAttribute('aria-pressed','false');
 log("playback stopped");
+});
+function peakDb(meter){
+try{const data=meter?.getValue();if(!data)return "-";let peak=0;
+for(const channel of Array.isArray(data)?data:[data])for(const sample of channel)peak=Math.max(peak,Math.abs(sample));
+return peak>0?(20*Math.log10(peak)).toFixed(1)+" dBFS":"silent";
+}catch(error){return "meter error: "+error.message;}
+}
+function logAudioState(){
+const ctx=Tone.getContext().rawContext;
+log("audio0: context="+ctx.state+" time="+ctx.currentTime.toFixed(3)+" s rate="+ctx.sampleRate+" Hz");
+log("mix0: "+JSON.stringify(mix_)+" mute="+JSON.stringify(st_.muteState));
+log("clock0: "+(st_.playing?"running":"stopped")+" tick="+(st_.tick??-1)+" tempo="+Math.round(aud_.bpm)+" pattern="+pat_.d);
+if(liveGraph){log("signal0: drums="+peakDb(liveGraph.drumMeter)+" master="+peakDb(liveGraph.masterMeter)+" output="+peakDb(analyser)+" gate="+outputGate.gain.value);log("voices0: "+JSON.stringify(st_.playedVoices||{})+" errors="+JSON.stringify(st_.audioErrors||{}));}
+}
+async function testAudio(){
+trace.closest("details").open=true;
+try{
+await startToneFromGesture();
+const ctx=Tone.getContext().rawContext;
+log("audio test: direct 440 Hz tone, then kick/hat through mixer","k");
+logAudioState();
+const tone=ctx.createOscillator(),gain=ctx.createGain(),at=ctx.currentTime+.02;
+tone.frequency.value=440;gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.12,at+.01);gain.gain.setValueAtTime(.12,at+.18);gain.gain.linearRampToValueAtTime(0,at+.23);
+tone.connect(gain);gain.connect(ctx.destination);tone.onended=()=>{tone.disconnect();gain.disconnect();};tone.start(at);tone.stop(at+.24);
+if(!st_.started){await initAudio(Promise.resolve());st_.started=true;}
+const wasPlaying=st_.playing;
+if(!wasPlaying){outputGate.gain.cancelScheduledValues(audioTime());outputGate.gain.setValueAtTime(1,audioTime());}
+const base=audioTime()+.35;
+for(let i=0;i<4;i++){
+liveGraph.instruments.kick.triggerAttackRelease(rg69AudioProfile.notes.kick,.15,base+i*.2,.9);
+liveGraph.instruments.hat.triggerAttackRelease(rg69AudioProfile.notes.hat,.05,base+i*.2,.8);
+}
+setTimeout(()=>logAudioState(),480);
+setTimeout(()=>{if(!st_.playing&&st_.started)outputGate.gain.setValueAtTime(0,audioTime());},1500);
+}catch(error){console.error("audio test:",error);}
+}
+$id('audio-test').addEventListener('click',testAudio);
+$id('copy-log').addEventListener('click',async()=>{
+const content=trace.innerText;
+try{await navigator.clipboard.writeText(content);log("log copied","k");}
+catch{const range=document.createRange();range.selectNodeContents(trace);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);log("log selected; press Cmd+C or Ctrl+C");}
 });
 $id('reset-mix').addEventListener('click',()=>{
 pushHistory();Object.assign(mix_,{drum:80,bass:70,keys:60,pads:50,master:75});
@@ -2681,7 +2766,9 @@ const n=parseFloat(args[0]);
 const PARAMS={swing:1,drive:1,tape:1,comp:1,width:1,reverb:1,delay:1,filter:1,wobble:1,vinyl:1,crackle:1};
 
 switch(cmd){
-case'help':case'?':TERM_CMDS.forEach(l=>log(l));break;
+case'help':case'?':TERM_CMDS.forEach(l=>log(l));log('audio / diagnose');break;
+case'audio':testAudio();break;
+case'diagnose':logAudioState();break;
 case'clear':case'cls':$id('trace').replaceChildren();break;
 case'play':case'p':$id('play').click();break;
 case'stop':$id('stop').click();break;
