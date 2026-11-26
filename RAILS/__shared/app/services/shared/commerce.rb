@@ -65,7 +65,6 @@ module Shared
     # Payment providers and checkout remain on their existing paths until their
     # contracts can be unified without changing live money movement.
     module Ledger
-      ENTRY_TYPES = Shared::CommerceLedgerEntry::ENTRY_TYPES
       IDEMPOTENCY_KEY = /\A[a-z0-9][a-z0-9:._-]{2,159}\z/
       METADATA_KEYS = %w[vertical].freeze
       COMPARISON_FIELDS = %i[
@@ -103,7 +102,7 @@ module Shared
         raise ArgumentError, "invalid ledger idempotency key" unless key.match?(IDEMPOTENCY_KEY)
 
         type = entry_type.to_s
-        raise ArgumentError, "unknown ledger entry type" unless ENTRY_TYPES.include?(type)
+        raise ArgumentError, "unknown ledger entry type" unless Shared::CommerceLedgerEntry::ENTRY_TYPES.include?(type)
 
         source_type, source_id = source_identity(source)
         amount = amount_minor.nil? ? nil : Integer(amount_minor)
