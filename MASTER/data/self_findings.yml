@@ -12135,7 +12135,6 @@ finding_members:
   - OMIT_NEEDLESS_WORDS MASTER/tools/css_coverage_lint.rb:113
   - OMIT_NEEDLESS_WORDS MASTER/tools/css_coverage_lint.rb:584
   - OMIT_NEEDLESS_WORDS MASTER/tools/importmap_preload_audit.rb:36
-  - OMIT_NEEDLESS_WORDS MASTER/tools/rails/generate_face_root_css.rb:7
   - OMIT_NEEDLESS_WORDS MASTER/tools/rails/operator/model_contract_lint.rb:27
   - OMIT_NEEDLESS_WORDS MASTER/tools/reader_singularity.rb:18
   - OMIT_NEEDLESS_WORDS OPENBSD/mirror/lib/ci_lock.sh:48

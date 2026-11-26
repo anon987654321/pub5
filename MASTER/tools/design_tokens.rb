@@ -9,6 +9,7 @@ module DesignTokens
   ROOT = File.expand_path("../..", __dir__)
   SOURCE = File.join(ROOT, "MASTER", "data", "tokens.yml")
   ARTIFACT = File.join(ROOT, "RAILS", "__shared", "design_tokens.yml")
+  FACE_CSS = File.join(ROOT, "MASTER", "web", "public", "face.css")
   FACE_ORDER = %w[c_text c_accent c_danger c_code].freeze
   DIALECT_PATH = File.join(ROOT, "RAILS", "__shared", "app", "assets", "stylesheets", "_dialect_tokens.scss")
 
@@ -464,13 +465,25 @@ module DesignTokens
   def dialect_token_drift = reconcile_dialect_maps(sync: false)
 end
 
+# ruby MASTER/tools/design_tokens.rb                         regenerate RAILS/__shared/design_tokens.yml
+# ruby MASTER/tools/design_tokens.rb sync_dialect_tokens     also the vertical accents and dialect maps
+# ruby MASTER/tools/design_tokens.rb generate_face_root_css  rewrite face.css's generated :root block
+# ruby MASTER/tools/design_tokens.rb --type-spec             print the type specification
 if $PROGRAM_NAME == __FILE__
-  if ARGV.include?("--type-spec")
-    puts DesignTokens.type_spec_markdown
-  else
-    Master::Trace::Dmesg.status(
-      "design0",
-      DesignTokens.sync_design_artifact! ? "generated from MASTER/data/tokens.yml" : "already in sync",
-    )
+  changes =
+    case ARGV.first
+    when "--type-spec" then puts(DesignTokens.type_spec_markdown) || []
+    when "generate_face_root_css"
+      DesignTokens.sync_face_css!(DesignTokens::FACE_CSS) ? ["face.css :root regenerated"] : []
+    when "sync_dialect_tokens"
+      [("design_tokens.yml regenerated" if DesignTokens.sync_design_artifact!),
+       ("vertical accent block regenerated" if DesignTokens.sync_vertical_accents!),
+       *DesignTokens.sync_dialect_tokens!].compact
+    when nil then DesignTokens.sync_design_artifact! ? ["design_tokens.yml regenerated"] : []
+    else abort "design_tokens: unknown command #{ARGV.first.inspect}"
+    end
+  unless ARGV.first == "--type-spec"
+    summary = changes.empty? ? "already in sync with MASTER/data/tokens.yml" : changes.join(", ")
+    Master::Trace::Dmesg.status("design0", summary)
   end
 end

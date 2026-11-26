@@ -1,6 +1,6 @@
 
 
-/* Not generated tokens. generate_face_root_css.rb owns the block above, so a
+/* Not generated tokens. design_tokens.rb generate_face_root_css owns the block above, so a
    hand-added line inside it is drift the deploy check stops. The brand face is
    the one sans family the owner set for every surface, so rules read the
    family block's --font directly rather than an alias of it. Helvetica Neue
