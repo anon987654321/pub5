@@ -43,7 +43,7 @@ class AvailabilityLadderTest < Minitest::Test
       health.record(model: "cloud-model", status: :success, at: now - 121)
 
       assert health.observed?("cloud-model")
-      assert_in_delta 121, health.age_seconds("cloud-model"), 0.01
+      assert_in_delta 121, health.send(:age_seconds, "cloud-model"), 0.01
       refute health.fresh?("cloud-model", max_age_s: 120)
       assert health.stale?("cloud-model", max_age_s: 120)
       assert_equal :unknown, health.freshness("never-seen", max_age_s: 120)
