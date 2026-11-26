@@ -20,7 +20,7 @@ class TestCliLaneCost < Minitest::Test
   end
 
   def test_a_free_tier_lane_costs_nothing_per_call
-    assert_in_delta 0.0, estimate("nvidia/nemotron-3-super-120b-a12b:free")
+    assert_in_delta 0.0, estimate("nvidia/nemotron-3-ultra-550b-a55b:free")
   end
 
   def test_a_local_lane_costs_nothing_per_call

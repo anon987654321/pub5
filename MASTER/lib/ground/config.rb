@@ -36,14 +36,14 @@ module Master
         # This was the prior automatic selection. The new catalogue declares
         # Replicate GPT-5.2 as primary; a deliberate post-migration /model choice
         # is kept because only this exact legacy value is migrated once.
-        "claude-opus-5-5" => "nvidia/nemotron-3-super-120b-a12b:free",
+        "claude-opus-5-5" => "nvidia/nemotron-3-ultra-550b-a55b:free",
       }.freeze
 
       DEFAULTS = {
         # The fallback model when routing is disabled and the last resort in
         # ModelRouter#fallback_chain. It is a free model, so the repo works
         # with or without an OpenRouter balance.
-        "model" => "nvidia/nemotron-3-super-120b-a12b:free",
+        "model" => "nvidia/nemotron-3-ultra-550b-a55b:free",
         "model_preference_migrated" => false,
         "web_host" => "127.0.0.1",
         "web_public_url" => "https://ai.brgen.no",

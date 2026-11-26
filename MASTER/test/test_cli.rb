@@ -800,14 +800,14 @@ end
   def test_model_list_shows_the_pool_and_model_refuses_what_it_cannot_reach
     router = Object.new
     def router.unreachable_reason(id, wait: false) = id == "gemini-2.5-flash" || id == "o3" ? "set GEMINI_API_KEY" : nil
-    def router.pool(wait: false) = %w[nvidia/nemotron-3-super-120b-a12b:free google/gemini-2.5-flash]
+    def router.pool(wait: false) = %w[nvidia/nemotron-3-ultra-550b-a55b:free google/gemini-2.5-flash]
     def router.pool_growth(wait: false) = ["set GEMINI_API_KEY"]
     def router.lane_label(_id) = "free"
-    agent = Struct.new(:model, :model_router).new("nvidia/nemotron-3-super-120b-a12b:free", router)
+    agent = Struct.new(:model, :model_router).new("nvidia/nemotron-3-ultra-550b-a55b:free", router)
     config = Struct.new(:saved) { def save! = self.saved = true }.new
 
     listing = Master::CLI::CommandRegistry.list_models(root: Master::ROOT, metrics: nil, agent:)
-    assert_match(/^-> nvidia\/nemotron-3-super-120b-a12b:free +openrouter_primary/, listing)
+    assert_match(/^-> nvidia\/nemotron-3-ultra-550b-a55b:free +openrouter_primary/, listing)
     assert_match(/^more with:\n  set GEMINI_API_KEY/, listing)
 
     output = Master::CLI::CommandRegistry.dispatch_model(agent:, config:, metrics: nil, root: Master::ROOT, arg: "gemini-2.5-flash")
@@ -838,7 +838,7 @@ end
   def test_model_pick_uses_tty_prompt_arrows_filter_and_only_the_live_pool
     router = Object.new
     def router.unreachable_reason(_id, wait: false) = nil
-    def router.pool(wait: false) = %w[google/gemini-2.5-flash nvidia/nemotron-3-super-120b-a12b:free]
+    def router.pool(wait: false) = %w[google/gemini-2.5-flash nvidia/nemotron-3-ultra-550b-a55b:free]
     def router.lane_label(_id) = "live"
     agent = Struct.new(:model, :model_router).new("google/gemini-2.5-flash", router)
     config = Struct.new(:saved) { def save! = self.saved = true }.new
@@ -862,11 +862,12 @@ end
       end
     end
 
-    assert_equal "model: nvidia/nemotron-3-super-120b-a12b:free", output
-    assert_equal "nvidia/nemotron-3-super-120b-a12b:free", agent.model
+    assert_equal "model: nvidia/nemotron-3-ultra-550b-a55b:free", output
+    assert_equal "nvidia/nemotron-3-ultra-550b-a55b:free", agent.model
     assert config.saved
+
     assert_equal "Choose a reachable model", prompt_state.fetch(:question)
-    assert_equal %w[google/gemini-2.5-flash nvidia/nemotron-3-super-120b-a12b:free],
+    assert_equal %w[google/gemini-2.5-flash nvidia/nemotron-3-ultra-550b-a55b:free],
                  prompt_state.fetch(:choices).map { |choice| choice.fetch(:value) }
     assert_match(/\(current\)\z/, prompt_state.fetch(:choices).first.fetch(:name))
     assert_equal prompt_state.fetch(:choices).first.fetch(:name), prompt_state.fetch(:options).fetch(:default)
@@ -1021,7 +1022,7 @@ assert_empty topics - rows, "documented commands missing from the summary"
 # nothing but its writes. Now it prints what the model does, as dmesg units:
 # each call, file and request attaches and reports; scan chatter stays out.
 def publish_a_call_and_a_fetch(bus)
-  model = "nvidia/nemotron-3-super-120b-a12b:free"
+  model = "nvidia/nemotron-3-ultra-550b-a55b:free"
   bus.publish("scan:pass", pass: "lexical", rule_count: 131)
   bus.publish("error:swallowed", context: "anything")
   bus.publish("llm:send", model:)
@@ -1107,7 +1108,7 @@ def test_a_turn_prints_its_units_and_nothing_else
 
   lines = (out + err).split(/[\r\n]/).map { |line| line.delete_prefix("\e[K") }.reject(&:empty?)
   assert_equal [
-    "llm0 at master0: nvidia/nemotron-3-super-120b-a12b",
+    "llm0 at master0: nvidia/nemotron-3-ultra-550b-a55b",
     "llm0: 900 tokens in, 40 out, 2.1s",
     "net0 at master0: network",
     "fetch0 at net0: target redacted (24 bytes)",

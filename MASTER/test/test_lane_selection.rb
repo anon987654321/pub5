@@ -22,7 +22,7 @@ class TestLaneSelection < Minitest::Test
   AGY = "agy:auto"
   LOCAL = "ollama:gemma3:4b"
   LLAMA_LOCAL = "llama-cli:gguf"
-  NEMOTRON = "nvidia/nemotron-3-super-120b-a12b:free"
+  NEMOTRON = "nvidia/nemotron-3-ultra-550b-a55b:free"
   NANO = "nvidia/nemotron-3.5-lightning:free"
   LLM7 = "llm7:DeepSeek-V4-Flash-0731"
   DEEPSEEK = "deepseek-chat"

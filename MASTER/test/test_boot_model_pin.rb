@@ -98,7 +98,7 @@ class TestBootModelPin < Minitest::Test
   end
 
   def test_a_saved_free_model_never_leads_a_live_subscription_chain
-    agent = FakeAgent.new(saved: "nvidia/nemotron-3-super-120b-a12b:free", router: FakeRouter.new(reachable: true))
+    agent = FakeAgent.new(saved: "nvidia/nemotron-3-ultra-550b-a55b:free", router: FakeRouter.new(reachable: true))
     agent.chain = %w[grok-cli:opus deepseek-chat]
 
     assert_equal %w[grok-cli:opus deepseek-chat], agent.routed_models

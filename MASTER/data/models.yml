@@ -122,8 +122,8 @@ model_defs:
     id: google/gemini-2.5-flash
     <<: *model_defaults
     score: { quality: 0.90, speed: 0.60, cost: 0.92 }
-  nemotron_super: &nemotron_super
-    id: nvidia/nemotron-3-super-120b-a12b:free
+  nemotron_ultra: &nemotron_ultra
+    id: nvidia/nemotron-3-ultra-550b-a55b:free
     <<: *model_defaults
     score: { quality: 0.90, speed: 0.05, cost: 1.0 }
   gpt_4o: &gpt_4o
@@ -258,7 +258,7 @@ models:
   # OpenRouter's keyless free fallback head. Subscription CLIs belong to
   # their declared model tiers; they are never smuggled into this API list.
   openrouter_primary:
-    - *nemotron_super
+    - *nemotron_ultra
   keyless:
     - *web_chat_grok
     - *web_chat_chatgpt
@@ -282,7 +282,7 @@ models:
     - *deepseek_chat
     - *agy_auto
     - *grok_cli_auto
-    - *nemotron_super
+    - *nemotron_ultra
     - *gemini_flash_openrouter
     # Local recovery stays behind remote lanes. Ollama requires its explicit opt-in;
     # llama.cpp requires llama-cli plus a readable file in MASTER_LLAMA_MODEL.
@@ -304,7 +304,7 @@ models:
     - *claude_sonnet
     - *gemini_flash
     - *agy_auto
-    - *nemotron_super
+    - *nemotron_ultra
     - *ollama_gemma
     - *llama_cli_gguf
   strong:
@@ -343,7 +343,7 @@ models:
     - *gemini_flash_openrouter
     - *mistral_large
     - *grok_4_3
-    - *nemotron_super
+    - *nemotron_ultra
     - *command_r_plus
   cheap:
     - *gemini_flash_openrouter
@@ -367,7 +367,7 @@ models:
     # provider's opinion answers in zero milliseconds of network roulette.
     - *ollama_gemma
     - *sandbox_gateway
-    - *nemotron_super
+    - *nemotron_ultra
   local:
     - *ollama_gemma
     - *llama_cli_gguf
@@ -524,7 +524,7 @@ openrouter:
   # Recorded so no future pass adds a dead provider to a fallback chain —
   # the failure mode model_catalog_check.rb exists to catch.
   free_latest:
-    - nvidia/nemotron-3-super-120b-a12b:free
+    - nvidia/nemotron-3-ultra-550b-a55b:free
 
 # Free browser fallback via Ferrum, limited to ChatGPT and Grok. It auto-activates
 # only when no API keys are configured; opt in explicitly with MASTER_WEB_CHAT=1

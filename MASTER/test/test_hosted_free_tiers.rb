@@ -32,7 +32,7 @@ class TestHostedFreeTiers < Minitest::Test
   def test_an_endpoint_without_a_cap_and_a_free_slug_keep_their_rules
     Master.stub(:models_config, CONFIG) do
       refute Quota.trackable?("nvidia:z-ai/glm-5.3-flash"), "no documented cap, no guessed one"
-      assert_equal 50, Quota.daily_limit_for("nvidia/nemotron-3-super-120b-a12b:free")
+      assert_equal 50, Quota.daily_limit_for("nvidia/nemotron-3-ultra-550b-a55b:free")
     end
   end
 

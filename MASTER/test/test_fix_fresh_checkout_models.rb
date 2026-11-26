@@ -21,7 +21,7 @@ class TestFixFreshCheckoutModels < Minitest::Test
     ENV["MASTER_NO_OLLAMA"] = "1"
     ENV["MASTER_NO_POOL_PROBES"] = "1"
     @router = Master::CLI::Routing::ModelRouter.new(
-      config: Master::TestSupport::FakeConfig.new(model: "nvidia/nemotron-3-super-120b-a12b:free"),
+      config: Master::TestSupport::FakeConfig.new(model: "nvidia/nemotron-3-ultra-550b-a55b:free"),
       root: Master::ROOT,
     )
   end

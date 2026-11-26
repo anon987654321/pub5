@@ -64,12 +64,12 @@ class ProviderCatalogIndexSpec < Minitest::Test
   # provider snapshot refresh must not erase the measurement.
   def test_records_and_answers_a_free_latency_measurement
     with_index do |index, dir|
-      import_openrouter_row(index, dir, "nvidia/nemotron-3-super-120b-a12b:free")
-      assert_nil index.free_latency_s("nvidia/nemotron-3-super-120b-a12b:free")
+      import_openrouter_row(index, dir, "nvidia/nemotron-3-ultra-550b-a55b:free")
+      assert_nil index.free_latency_s("nvidia/nemotron-3-ultra-550b-a55b:free")
 
-      index.record_free_latency(source: "openrouter", id: "nvidia/nemotron-3-super-120b-a12b:free", seconds: 12.5)
+      index.record_free_latency(source: "openrouter", id: "nvidia/nemotron-3-ultra-550b-a55b:free", seconds: 12.5)
 
-      assert_in_delta 12.5, index.free_latency_s("nvidia/nemotron-3-super-120b-a12b:free")
+      assert_in_delta 12.5, index.free_latency_s("nvidia/nemotron-3-ultra-550b-a55b:free")
       assert_in_delta 12.5, index.search("nemotron").first["free_latency_s"]
       assert_raises(ArgumentError) do
         index.record_free_latency(source: "openrouter", id: "x:free", seconds: -1)
@@ -79,12 +79,12 @@ class ProviderCatalogIndexSpec < Minitest::Test
 
   def test_a_snapshot_refresh_carries_the_measured_latency_across
     with_index do |index, dir|
-      import_openrouter_row(index, dir, "nvidia/nemotron-3-super-120b-a12b:free")
-      index.record_free_latency(source: "openrouter", id: "nvidia/nemotron-3-super-120b-a12b:free", seconds: 9.0)
+      import_openrouter_row(index, dir, "nvidia/nemotron-3-ultra-550b-a55b:free")
+      index.record_free_latency(source: "openrouter", id: "nvidia/nemotron-3-ultra-550b-a55b:free", seconds: 9.0)
 
-      import_openrouter_row(index, dir, "nvidia/nemotron-3-super-120b-a12b:free")
+      import_openrouter_row(index, dir, "nvidia/nemotron-3-ultra-550b-a55b:free")
 
-      actual = index.free_latency_s("nvidia/nemotron-3-super-120b-a12b:free")
+      actual = index.free_latency_s("nvidia/nemotron-3-ultra-550b-a55b:free")
       # The refresh replaces the row; this checkout's measurement survives it.
       assert_in_delta 9.0, actual
     end

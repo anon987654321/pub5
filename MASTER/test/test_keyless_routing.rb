@@ -142,7 +142,7 @@ class TestKeylessRouting < Minitest::Test
       config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT,
     )
 
-    assert_equal "nvidia/nemotron-3-super-120b-a12b:free", Master.free_primary_model
+    assert_equal "nvidia/nemotron-3-ultra-550b-a55b:free", Master.free_primary_model
     assert_empty router.primary_models,
                  "OpenRouter credentials must not be mistaken for direct xAI credentials"
     refute_includes router.fallback_chain(task_type: :code_generation), "grok-cli:auto"
@@ -184,7 +184,7 @@ class TestKeylessRouting < Minitest::Test
     )
     refute router.keyless_mode?
     chain = router.fallback_chain(task_type: :exploration)
-    assert_includes chain, "nvidia/nemotron-3-super-120b-a12b:free"
+    assert_includes chain, "nvidia/nemotron-3-ultra-550b-a55b:free"
     assert_equal chain, router.send(:priority_fallback_order, chain)
   end
 
@@ -403,7 +403,7 @@ class TestKeylessRouting < Minitest::Test
     router = Master::CLI::Routing::ModelRouter.new(config: FakeConfig.new(model: Master.free_primary_model), root: Master::ROOT)
     router.define_singleton_method(:probe_value) { |name, wait:| name == "openrouter_credits" ? false : nil }
 
-    assert router.reachable?("nvidia/nemotron-3-super-120b-a12b:free")
+    assert router.reachable?("nvidia/nemotron-3-ultra-550b-a55b:free")
     assert_match(/credit is spent/, router.unreachable_reason("anthropic/claude-opus-4.1"))
   end
 

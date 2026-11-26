@@ -16,7 +16,7 @@ module Master::Core
     # grok-4-fast is deprecated by xAI (confirmed 2026-07-11: 404 "xAI
     # recommends switching to Grok 4.3"). Free model so this works without
     # requiring a funded OpenRouter account.
-    DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
+    DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
     # Deterministic proposals share the same constitutional execution spine.
     # A recipe is not permission, and its observations are never cached as proof.

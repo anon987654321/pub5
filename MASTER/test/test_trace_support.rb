@@ -674,15 +674,15 @@ class TestTraceSupport < Minitest::Test
   def test_console_reports_a_failed_model_call_and_a_failed_tool
     console = Master::Trace::Dmesg::Console.new
     lines = [
-      { event: "llm:send", model: "nvidia/nemotron-3-super-120b-a12b:free" },
-      { event: "llm:provider_outcome", model: "nvidia/nemotron-3-super-120b-a12b:free", status: :provider_error,
+      { event: "llm:send", model: "nvidia/nemotron-3-ultra-550b-a55b:free" },
+      { event: "llm:provider_outcome", model: "nvidia/nemotron-3-ultra-550b-a55b:free", status: :provider_error,
         error: "Upstream error from Nvidia: Service temporarily overloaded" },
       { event: "tool:call", tool: "read_file", subject: "missing.rb" },
       { event: "tool:return", tool: "read_file", ok: false, error: "no such file" },
     ].flat_map { |payload| console.lines(payload) }
 
     assert_equal [
-      "llm0 at master0: nvidia/nemotron-3-super-120b-a12b",
+      "llm0 at master0: nvidia/nemotron-3-ultra-550b-a55b",
       # Provider text stays out of the terminal since 1ac838c8e; the category still shows.
       "llm0: provider_error, diagnostic details redacted",
       "io0 at master0: files and commands",

@@ -17,7 +17,7 @@ class TestLanePool < Minitest::Test
   GROK = "grok-cli:auto"
   DEEPSEEK = "deepseek-chat"
   LOCAL = "ollama:gemma3:4b"
-  SUPER = "nvidia/nemotron-3-super-120b-a12b:free"
+  SUPER = "nvidia/nemotron-3-ultra-550b-a55b:free"
   LIGHTNING = "nvidia/nemotron-3.5-lightning:free"
   ULTRA = "nvidia/nemotron-3-ultra-550b-a55b:free"
   GEMMA = "google/gemma-4-31b-it:free"
