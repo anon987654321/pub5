@@ -5,12 +5,15 @@ require "shellwords"
 require "timeout"
 require "fileutils"
 require "json"
+require "base64"
 
 URL = ARGV[0] || "http://localhost:53187/"
 WAIT = Integer(ENV.fetch("PROBE_WAIT", "12"))
 BROWSER_TIMEOUT = Integer(ENV.fetch("PROBE_BROWSER_TIMEOUT", "20"))
 STRICT_MASKS = ENV["PROBE_MASKS"] == "1"
 FORCE = ENV["PROBE_FORCE_BROWSER"] == "1" || STRICT_MASKS
+VIEWPORT = ENV.fetch("PROBE_VIEWPORT", "1280,900")
+raise ArgumentError, "invalid PROBE_VIEWPORT" unless VIEWPORT.match?(/\A[1-9]\d{2,3},[1-9]\d{2,3}\z/)
 CHROME_PATHS = [
   ENV["CHROME_PATH"],
   "/usr/local/bin/chromium",
@@ -40,6 +43,7 @@ def build_browser(path)
     process_timeout: BROWSER_TIMEOUT,
     browser_options: {
       "headless" => "new",
+      "window-size" => VIEWPORT,
       "no-sandbox" => nil,
       "disable-gpu" => nil,
       "disable-dev-shm-usage" => nil,
@@ -155,38 +159,113 @@ begin
     profiles = browser.evaluate("window.MASTER_FACE_MASKS.profiles.map(p => p.id)")
     original = browser.evaluate("window.MASTER_FACE_MASKS.current().id")
     receipts = []
+    angles = { "front" => 0, "three-quarter" => Math::PI / 4, "profile" => Math::PI / 2, "rear" => Math::PI }
+    failures << "empty sculpture catalogue" if profiles.empty?
+    expected_points = nil
     profiles.each do |profile|
       selected = browser.evaluate("window.MASTER_FACE_MASKS.select(#{profile.to_json})")
-      deadline = Time.now + 8
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 12
       settled = false
-      until Time.now > deadline
-        settled = browser.evaluate("window.MASTER_FACE?.morphCurrent <= 0.02 && document.documentElement.dataset.faceSubjectRenderer === 'primary-points'")
+      until Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+        settled = browser.evaluate("Math.abs(window.MASTER_FACE?.morphCurrent) <= 0.002 && document.documentElement.dataset.faceSubjectRenderer === 'primary-points'")
         break if settled
         sleep 0.1
       end
       receipt = browser.evaluate(<<~JS)
         (() => {
+          const master = window.MASTER_FACE;
           const face = document.getElementById('face');
           const log = document.getElementById('chat-shell');
           const f = face.getBoundingClientRect(), l = log.getBoundingClientRect();
+          const gl = master.renderer?.getContext();
           return { profile: document.documentElement.dataset.maskProfile,
-            points: (window.MASTER_FACE.faceScatter?.length || 0) / 3,
+            points: (master.faceScatter?.length || 0) / 3,
             fps: window.MasterRenderPolicy?.snapshot?.().fps ?? null,
-            sculpture: (window.MASTER_FACE.faceMat?.uniforms?.uSculpture?.value === 1),
-            gpu: window.MASTER_FACE.faceMat?.isShaderMaterial === true,
-            width: f.width, height: f.height, disjoint: f.bottom <= l.top + 1 };
+            sculpture: master.faceMat?.uniforms?.uSculpture?.value === 1,
+            gpu: master.faceMat?.isShaderMaterial === true,
+            context_lost: !gl || gl.isContextLost(),
+            width: f.width, height: f.height, disjoint: f.bottom <= l.top + 1,
+            viewport: [innerWidth, innerHeight], dpr: devicePixelRatio,
+            reduced_motion: matchMedia('(prefers-reduced-motion: reduce)').matches };
         })()
       JS
       receipt["settled"] = settled
       receipt["selected"] = selected
-      receipts << receipt
-      failures << "mask #{profile} failed projection" unless selected && settled && receipt["profile"] == profile &&
-        receipt["points"].to_i.positive? && receipt["disjoint"] && receipt["sculpture"] && receipt["gpu"]
+      expected_points ||= receipt["points"]
+      failures << "sculpture #{profile} failed integration" unless selected && settled &&
+        receipt["profile"] == profile && receipt["points"].to_i.positive? &&
+        receipt["points"] == expected_points && receipt["disjoint"] &&
+        receipt["sculpture"] && receipt["gpu"] && !receipt["context_lost"]
       browser.screenshot(path: File.join(target, "#{profile}.png"))
+
+      # Capture the real production scene and shader from controlled viewpoints,
+      # synchronously before the next frame can overwrite the rotation.
+      receipt["angles"] = angles.map do |name, yaw|
+        capture = browser.evaluate(<<~JS)
+          (() => {
+            const { renderer, scene, camera, head, faceMat } = window.MASTER_FACE;
+            const rotation = head.rotation.clone(), cameraPosition = camera.position.clone();
+            const cameraRotation = camera.quaternion.clone(), scale = head.scale.clone();
+            const motion = faceMat.uniforms.uSculptureMotion;
+            const priorMotion = motion.value, autoClear = renderer.autoClear;
+            const gl = renderer.getContext();
+            try {
+              motion.value = 0;
+              head.rotation.set(0, #{yaw}, 0);
+              head.scale.setScalar(1);
+              camera.position.set(0, 0, cameraPosition.length());
+              camera.lookAt(0, 0, 0);
+              renderer.autoClear = true;
+              const start = performance.now();
+              renderer.render(scene, camera);
+              gl.finish();
+              const render_ms = performance.now() - start;
+              const canvas = renderer.domElement, copy = document.createElement('canvas');
+              copy.width = canvas.width; copy.height = canvas.height;
+              const ctx = copy.getContext('2d', { willReadFrequently: true });
+              ctx.drawImage(canvas, 0, 0);
+              const pixels = ctx.getImageData(0, 0, copy.width, copy.height).data;
+              let ink = 0, chromatic = 0, min = 255, max = 0;
+              for (let i = 0; i < pixels.length; i += 4) {
+                const r = pixels[i], g = pixels[i+1], b = pixels[i+2];
+                const high = Math.max(r,g,b), low = Math.min(r,g,b);
+                if (high < 32) continue;
+                ink++;
+                if (high-low > 2) chromatic++;
+                min = Math.min(min,low); max = Math.max(max,high);
+              }
+              return { png: copy.toDataURL('image/png').split(',')[1],
+                ink, chromatic, min, max, render_ms, gl_error: gl.getError(),
+                width: copy.width, height: copy.height,
+                drawn_points: renderer.info?.render?.points ?? null };
+            } finally {
+              motion.value = priorMotion;
+              head.rotation.copy(rotation); head.scale.copy(scale);
+              camera.position.copy(cameraPosition); camera.quaternion.copy(cameraRotation);
+              renderer.autoClear = autoClear;
+            }
+          })()
+        JS
+        File.binwrite(File.join(target, "#{profile}-#{name}.png"), Base64.strict_decode64(capture.delete("png")))
+        capture["angle"] = name
+        coverage = capture["ink"].to_f / [capture["width"] * capture["height"], 1].max
+        capture["coverage"] = coverage
+        failures << "sculpture #{profile}/#{name} failed pixel check" unless
+          coverage.between?(0.0002, 0.35) && capture["chromatic"].zero? &&
+          capture["max"] - capture["min"] <= 3 && capture["gl_error"].zero?
+        if capture["drawn_points"] && capture["drawn_points"] != expected_points
+          failures << "sculpture #{profile}/#{name} draws competing carriers"
+        end
+        capture
+      end
+      receipts << receipt
     end
     browser.evaluate("window.MASTER_FACE_MASKS.select(#{original.to_json})")
+    failures << "late JS errors present" unless browser.evaluate("window._errs || []").empty?
+    failures << "late network errors present" unless network_errors.empty?
+    failures << "shader compilation errors present" if console_msgs.any? { |line| line.match?(/shader error|VALIDATE_STATUS false|GL_INVALID_OPERATION/i) }
     File.write(File.join(target, "receipts.json"), JSON.pretty_generate(receipts) + "\n")
-    puts "mask probe: #{receipts.size} captures, #{target}"
+    puts "mask probe: #{'#{receipts.size}'} sculptures, #{'#{receipts.sum { |r| r.fetch("angles").size }}'} viewpoints, #{'#{target}'}"
   end
 
   puts "\n=== console log tail ==="
