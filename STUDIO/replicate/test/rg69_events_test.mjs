@@ -162,3 +162,17 @@ assert(bypass.every((x,i)=>x===input[i]),"glue zero bypass");
 return {samples:input.length,finite:true,zeroBypass:true,tape:"passed",programmeGlue:"passed"};
 `);
 console.log(JSON.stringify(wearTest(assert),null,2));
+
+const wavTest=new Function("assert",extract("function encodeWav16(","async function exportWAV(")+`
+const left=Float32Array.from([-2,-1,0,.5,1,2,NaN,Infinity]),right=Float32Array.from([1,.5,0,-.5,-1,-2,Infinity,NaN]);
+for(const sampleRate of [44100,48000,96000]){
+const wav=encodeWav16({numberOfChannels:2,length:left.length,sampleRate,getChannelData:c=>c?right:left});
+const v=new DataView(wav);
+assert(v.byteLength===76&&v.getUint32(4,true)===68&&v.getUint32(40,true)===32,"WAV lengths");
+assert(v.getUint16(22,true)===2&&v.getUint32(24,true)===sampleRate&&v.getUint32(28,true)===sampleRate*4,"WAV format");
+assert(v.getInt16(44,true)===-32768&&v.getInt16(46,true)===32767,"PCM clipping and interleave");
+assert(v.getInt16(68,true)===0&&v.getInt16(70,true)===0&&v.getInt16(72,true)===0&&v.getInt16(74,true)===0,"nonfinite silence");
+}
+return {wavRates:[44100,48000,96000],headers:true,clipping:true,interleave:true,nonfinite:true};
+`);
+console.log(JSON.stringify(wavTest(assert),null,2));
