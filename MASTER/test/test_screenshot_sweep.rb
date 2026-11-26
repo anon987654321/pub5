@@ -174,6 +174,16 @@ class TestScreenshotSweep < Minitest::Test
     end
   end
 
+  def test_sweep_reports_a_page_before_its_capture_completes
+    page = Master::Fix::ScreenshotSweep::Plan::Page.new(
+      app: "brgen", host: "brgen.no", path: "/", route: "root"
+    )
+    output, error = capture_io { Master::Fix::ScreenshotSweep.allocate.send(:progress_start, 7, page) }
+
+    assert_empty output
+    assert_equal "shots0: 7 brgen brgen.no/ capture\n", error
+  end
+
   def test_partial_standing_sweep_never_replaces_the_tracked_review_set
     Dir.mktmpdir("screenshot-root") do |root|
       rails = File.join(root, "RAILS")

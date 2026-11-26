@@ -93,7 +93,9 @@ module Master
         visit = Visit.new(camera:, port:, frontier: Frontier.new(@plan, app), dialogs:)
         max_pages.times do
           page = visit.frontier.next_page or break
-          rows << capture(page, visit).tap { |row| progress(rows.size + 1, row) }
+          count = rows.size + 1
+          progress_start(count, page)
+          rows << capture(page, visit).tap { |row| progress(count, row) }
         end
         visit.frontier.unresolved
       end
@@ -107,7 +109,12 @@ module Master
         failed(page, "#{e.class.name.split("::").last}: #{e.message}")
       end
 
-      # One line per page as it lands, so a long sweep is watchable and a failure shows at once.
+      # The start and result pair makes a long page observable without a polling
+      # dashboard. Completion still names its rendered evidence or failure.
+      def progress_start(count, page)
+        warn("shots0: #{count} #{page.app} #{page.host}#{page.path} capture")
+      end
+
       def progress(count, row)
         warn("shots0: #{count} #{row.app} #{row.host}#{row.path} HTTP #{row.status || "?"} #{row.verdict}")
       end
