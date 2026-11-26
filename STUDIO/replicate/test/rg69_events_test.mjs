@@ -45,10 +45,10 @@ assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
 console.log("profile origin checks: "+origins.length);
 
  // Strict graph mock: reject undefined instrument and connection endpoints.
-const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["function createDefaultFX(","const DENSITIES="],["function createAnalogRig(","function applyFX("]];
+const graphRanges=[["const PARAMS=","window.rg69ConsoleSink="],["const RG69_AUDIO_FALLBACK=","function resolveRG69AudioProfile"],["function createDrumBank(","const DRUM_PATTERNS="],["const PATCH_CATALOGUE=","const STYLES="],["function createDefaultFX(","const DENSITIES="],["function createAnalogRig(","function applyFX("]];
 const graphFixture=`
 const edges=[];
-const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
+const param=()=>({audioParam:true,value:0,rampTo(){},setValueAtTime(v){this.value=v;},linearRampToValueAtTime(v){this.value=v;},exponentialRampToValueAtTime(v){this.value=v;},cancelScheduledValues(){},setTargetAtTime(v){this.value=v;}});
 class Node {
 constructor(){for(const key of ["gain","wet","frequency","detune","volume","Q","attack","ratio","width","threshold","knee","release","feedback","delayTime","pan","playbackRate"])this[key]=param();this.ready=Promise.resolve();}
 connect(to){assert(to instanceof Node||to?.audioParam===true,"undefined or invalid connection destination");edges.push([this,to]);return this;}
@@ -61,6 +61,7 @@ const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>n
 const Tone=Object.fromEntries("Gain Filter Distortion Compressor StereoWidener Limiter Reverb FeedbackDelay Noise LFO Chebyshev Chorus Tremolo Panner Synth MonoSynth FMSynth PolySynth".split(" ").map(name=>[name,Node]));
 Object.assign(Tone,{getContext:()=>({rawContext:raw}),mtof:n=>440*2**((n-69)/12),connect:(from,to)=>from.connect(to)});
 const log=()=>{};
+const noteHz=note=>440;
 `;
 const graphCheck=`
 const rg69AudioProfile=finalizeRG69AudioProfile(RG69_AUDIO_FALLBACK);
@@ -74,8 +75,9 @@ graph.analog.update({...aud,tape:100,wobble:100,vinyl:100,crackle:100},mix);
 graph.analog.update({...aud,tape:0,wobble:0,vinyl:0,crackle:0},mix);
 assert(JSON.stringify(Object.keys(graph.instruments).sort())===JSON.stringify(expected.slice().sort()),"instrument registry disagrees with scheduler");
 for(const name of expected)assert(typeof graph.instruments[name].triggerAttackRelease==="function","missing "+name);
+for(const id of Object.keys(PATCH_CATALOGUE))for(const lane of ["keys","pads"]){graph.instruments[lane].setPatch(id);graph.instruments[lane].triggerAttackRelease(["C4","Eb4","G4"],.2,.1,.8);graph.instruments[lane].setPatch("original");}
 }
-return {graphs:2,voices:expected.length,connections:edges.length,analog:"constructed and extremes applied"};
+return {graphs:2,voices:expected.length,connections:edges.length,patches:Object.keys(PATCH_CATALOGUE).length,analog:"constructed and extremes applied"};
 `;
 const graphResult=new Function("assert",graphFixture+graphRanges.map(([a,b])=>extract(a,b)).join("\n")+graphCheck)(assert);
 console.log(JSON.stringify(graphResult,null,2));
