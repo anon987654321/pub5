@@ -241,6 +241,11 @@ module Studio
         raise ArgumentError, "usage: lora.rb frames VIDEO NEW_DIRECTORY [--count N]" unless argv.size == 2
 
         result = Studio::ReplicateClient::Motion.sample_frames(argv[0], directory: argv[1], count:)
+        require_relative "review"
+        sheet = File.join(File.expand_path(argv[1]), "contact-sheet.jpg")
+        Studio::Lora::Review.write_contact_sheet([], result.fetch("frames").map { |frame| frame.fetch("path") },
+                                               sheet, render_label: "FRAME")
+        result["contact_sheet"] = sheet
         puts JSON.pretty_generate(result)
         0
       end
