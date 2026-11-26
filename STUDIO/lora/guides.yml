@@ -1149,3 +1149,44 @@ scenario_composer:
     "fjord shoreline": ["candlelight","practical","neon","projector"]
     "birch woodland": ["neon","projector","underwater"]
     "Bergen street corner": ["candlelight","firelight","underwater"]
+
+# Recovered scene grammar from pub4 video_chain and the sourced motion guide.
+# New authored scene examples are hypotheses, not recovered successful renders.
+cinematic_craft:
+  sources:
+    scene_beats: https://github.com/anon987654321/pub4/commit/479133f6ad0fde539209e4b21cd4a93d84cf29c5
+    motion: https://github.com/anon987654321/pub4/commit/3f3a2a68bebbbb63141d2d86d77a431f4789c722
+    first_frame: https://github.com/anon987654321/pub4/commit/8e266fbdd2280a5f6dc4c92372e15388dd416587
+  rules:
+    - The first frame establishes the visual world, identity and light.
+    - Build a believable event rather than a pose; every object serves the scene.
+    - Describe movement separately from appearance.
+    - One plausible gesture and one motivated camera move per clip.
+    - Draft within authorized spend; compare actual frames before final selection.
+    - Treat identity drift, motion blur and temporal artifacts as capture faults.
+    - Preserve original frames and develop selected stills once.
+  beats:
+    - name: quiet_introduction
+      scene: A person pauses beside a rain-streaked train window, absorbed in the landscape, soft lateral daylight, layered reflections, eyes in focus, intimate head-and-shoulders framing, camera two metres away, 85mm
+      motion: A small glance toward the window; camera holds steady.
+      preset: house
+    - name: passing_gesture
+      scene: A person at a small cafe table reacting to a companion just outside the frame, cheeks lifted just after a laugh, warm practical light and soft window fill, chest-up framing, camera two metres away, 50mm
+      motion: A brief natural laugh settles into a warm expression; camera holds steady.
+      preset: golden_age
+    - name: emotional_closeup
+      scene: A person listening intently in a quiet room, a warm half-smile and relaxed jaw, one broad window shaping the far cheek, rectangular catchlights, close framing with deliberate headroom, camera three metres away, 105mm
+      motion: A small breath and gentle change of expression; slow push in.
+      preset: portrait
+    - name: establishing
+      scene: A person on a coastal ferry deck in pale sea fog, wind catching the coat, the figure small within the open horizon, soft sky light, natural stance, environmental framing, camera five metres away, 35mm
+      motion: Wind moves the coat as the person looks out; camera holds steady.
+      preset: reportage
+    - name: layered_frame
+      scene: A person seen through the edge of a rain-wet cafe window, face clear between reflections, amused gaze just past the lens, cool daylight and warm interior practical, head-and-shoulders framing, camera three metres away, 85mm
+      motion: A slight turn toward the light; camera drifts gently sideways.
+      preset: pastel_portrait
+    - name: iconic_final
+      scene: A person at the threshold of an old building, a fleeting grin at the camera, one diagonal strip of daylight separating the face from the shaded interior, chest-up framing, camera two metres away, 50mm
+      motion: The grin settles; camera holds steady.
+      preset: silver_gelatin
