@@ -12,50 +12,23 @@ export default class extends Controller {
     if (this.hasStepsTarget) this.stepsTarget.hidden = false
     this.sync = () => this.update()
     this.trackTarget.addEventListener("scroll", this.sync, { passive: true })
+    this.resize = new ResizeObserver(this.sync)
+    this.resize.observe(this.trackTarget)
     this.update()
   }
 
   disconnect() {
     this.trackTarget.removeEventListener("scroll", this.sync)
+    this.resize?.disconnect()
   }
 
   previous() { this.step(-1) }
   next() { this.step(1) }
 
-  key(event) {
-    const direction = { ArrowLeft: -1, ArrowRight: 1 }[event.key]
-    if (!direction) return
-    event.preventDefault()
-    this.step(direction)
-  }
-
   step(direction) {
     const carousel = this.application.getControllerForElementAndIdentifier(this.trackTarget, "carousel")
-    if (carousel?.swiper) {
-      direction > 0 ? carousel.swiper.slideNext() : carousel.swiper.slidePrev()
-      return
-    }
-    const slides = Array.from(this.trackTarget.children)
-    const current = this.currentIndex(slides)
-    const target = slides[Math.min(Math.max(current + direction, 0), slides.length - 1)]
-    if (!target) return
-    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
-    this.trackTarget.scrollTo({ left: this.offsetOf(target), behavior: reduced ? "auto" : "smooth" })
-  }
-
-  // The slide whose start is nearest the track's scroll position.
-  currentIndex(slides) {
-    const left = this.trackTarget.scrollLeft
-    let best = 0
-    slides.forEach((slide, index) => {
-      if (Math.abs(this.offsetOf(slide) - left) < Math.abs(this.offsetOf(slides[best]) - left)) best = index
-    })
-    return best
-  }
-
-  offsetOf(slide) {
-    const first = this.trackTarget.firstElementChild
-    return slide.offsetLeft - first.offsetLeft
+    if (!carousel?.swiper) return
+    direction > 0 ? carousel.swiper.slideNext() : carousel.swiper.slidePrev()
   }
 
   update() {

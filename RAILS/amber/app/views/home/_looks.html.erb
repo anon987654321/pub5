@@ -15,9 +15,8 @@
              role="group"
              aria-label="<%= t("home.looks.swipe", name: name) %>"
              data-controller="carousel"
-             data-carousel-options-value='{"preserveSizing":true,"keyboard":false}'
-             data-look-track-target="track"
-             data-action="keydown->look-track#key">
+             data-carousel-options-value='{"preserveSizing":true}'
+             data-look-track-target="track">
           <% slides.each_with_index do |caption, position| %>
             <figure class="amber-look-slide">
               <% if position.zero? && look.image.present? %>

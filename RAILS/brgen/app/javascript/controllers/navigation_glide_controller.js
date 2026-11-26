@@ -50,7 +50,7 @@ export default class extends Controller {
       ["pointerdown", (event) => this.pointerDown(event)],
       ["pointermove", (event) => this.pointerMove(event)],
       ["pointerup", (event) => this.pointerUp(event)],
-      ["pointercancel", (event) => this.pointerUp(event)],
+      ["pointercancel", (event) => this.pointerCancel(event)],
       // Ease the edge glide out; a fling already in flight keeps settling.
       ["pointerleave", () => { this.glideTarget = 0 }],
       ["click", (event) => this.click(event), { capture: true }],
@@ -100,6 +100,7 @@ export default class extends Controller {
     if (event.pointerType !== "mouse" || event.button !== 0 || this.room <= 1) return
 
     this.stopGlide()
+    this.swallowClick = false
     this.drag = { x: event.clientX, left: this.element.scrollLeft, moved: false, id: event.pointerId,
                   lastX: event.clientX, lastT: event.timeStamp, velocity: 0 }
   }
@@ -111,6 +112,7 @@ export default class extends Controller {
       return
     }
 
+    if (this.drag.id !== event.pointerId) return
     const distance = event.clientX - this.drag.x
     if (!this.drag.moved) {
       if (Math.abs(distance) < DRAG_THRESHOLD) return
@@ -131,7 +133,7 @@ export default class extends Controller {
   }
 
   pointerUp(event) {
-    if (!this.drag) return
+    if (!this.drag || this.drag.id !== event.pointerId) return
 
     const drag = this.drag
     this.drag = null
@@ -150,9 +152,17 @@ export default class extends Controller {
     if (!this.frame) this.frame = requestAnimationFrame(this.step)
   }
 
+  pointerCancel(event) {
+    if (!this.drag || this.drag.id !== event.pointerId) return
+    this.drag = null
+    this.swallowClick = false
+    if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId)
+    this.stopGlide()
+  }
+
   // A drag ends on a link; the click it produces is the drag's, not a choice.
   click(event) {
-    if (!this.swallowClick) return
+    if (!this.swallowClick || event.detail === 0) return
 
     this.swallowClick = false
     event.preventDefault()

@@ -38,8 +38,11 @@ export default class extends Controller {
     window.addEventListener("touchstart", this.onStart, { passive: true })
     window.addEventListener("touchmove", this.onMove, { passive: true })
     window.addEventListener("touchend", this.onEnd, { passive: true })
+    window.addEventListener("touchcancel", this.onEnd, { passive: true })
     window.addEventListener("pointerdown", this.onStart, { passive: true })
+    window.addEventListener("pointermove", this.onMove, { passive: true })
     window.addEventListener("pointerup", this.onEnd, { passive: true })
+    window.addEventListener("pointercancel", this.onEnd, { passive: true })
     document.addEventListener("click", this.onAway, true)
     document.addEventListener("keydown", this.onKey)
   }
@@ -48,8 +51,11 @@ export default class extends Controller {
     window.removeEventListener("touchstart", this.onStart)
     window.removeEventListener("touchmove", this.onMove)
     window.removeEventListener("touchend", this.onEnd)
+    window.removeEventListener("touchcancel", this.onEnd)
     window.removeEventListener("pointerdown", this.onStart)
+    window.removeEventListener("pointermove", this.onMove)
     window.removeEventListener("pointerup", this.onEnd)
+    window.removeEventListener("pointercancel", this.onEnd)
     document.removeEventListener("click", this.onAway, true)
     document.removeEventListener("keydown", this.onKey)
   }
@@ -76,6 +82,13 @@ export default class extends Controller {
   }
 
   onStart(e) {
+    // Touch events own touch gestures; pointer events supply the mouse fallback.
+    if (e.pointerType && e.pointerType !== "mouse") return
+    if (e.pointerType === "mouse" && e.button !== 0) return
+    this.onEnd()
+    if (e.touches && e.touches.length !== 1) return
+    if (e.target?.closest?.("[data-controller~=carousel], [data-controller~=swipe], [data-swipe-ignore], input, textarea, select, button, a, [contenteditable]")) return
+    if (this.revealed && !this.rootTarget.contains(e.target)) return
     const pos = this._pos(e)
     if (pos === null) return
     if (!this.revealed && this._nearEdge(pos)) { this.tracking = true; this.startPos = pos }
@@ -83,6 +96,8 @@ export default class extends Controller {
   }
 
   onMove(e) {
+    if (e.pointerType && e.pointerType !== "mouse") return
+    if (e.touches && e.touches.length !== 1) return this.onEnd()
     if (!this.tracking || this.startPos === null) return
     const pos = this._pos(e)
     if (pos === null) return
@@ -91,7 +106,11 @@ export default class extends Controller {
     else if (this.revealed && delta < -this.threshold) { this.hide(); this.tracking = false }
   }
 
-  onEnd() { this.tracking = false; this.startPos = null }
+  onEnd(e) {
+    if (e?.pointerType && e.pointerType !== "mouse") return
+    this.tracking = false
+    this.startPos = null
+  }
 
   onAway(e) {
     if (this.revealed && !this.rootTarget.contains(e.target)) this.hide()

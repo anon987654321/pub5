@@ -9,10 +9,14 @@ export default class extends Controller {
     this.options = { ...this.defaultOptions, ...this.optionsValue }
     this.axis = this.options.direction === "vertical" ? "y" : "x"
     this.styles = new Map()
-    this.setStyle(this.element, this.axis === "y" ? "overflow-y" : "overflow-x", "auto")
-    this.setStyle(this.element, "scroll-snap-type", this.options.scrollSnapType || `${this.axis} mandatory`)
+    if (this.options.manageStyles !== false) {
+      this.setStyle(this.element, this.axis === "y" ? "overflow-y" : "overflow-x", "auto")
+      this.setStyle(this.element, "scroll-snap-type", this.options.scrollSnapType || `${this.axis} mandatory`)
+    }
     this.motion = window.matchMedia?.("(prefers-reduced-motion: reduce)")
-    this.syncMotion = () => this.setStyle(this.element, "scroll-behavior", this.behavior())
+    this.syncMotion = () => {
+      if (this.options.manageStyles !== false) this.setStyle(this.element, "scroll-behavior", this.behavior())
+    }
     this.syncMotion()
     this.motion?.addEventListener?.("change", this.syncMotion)
     if (this.options.spaceBetween != null) this.setStyle(this.element, "gap", `${this.options.spaceBetween}px`)
@@ -26,7 +30,7 @@ export default class extends Controller {
     }
     this.refresh()
     this.observer = new MutationObserver(() => this.refresh())
-    this.observer.observe(this.element, { childList: true })
+    this.observer.observe(this.element, { childList: true, subtree: Boolean(this.options.slideSelector) })
     this.onKey = event => this.key(event)
     if (this.options.keyboard !== false) this.element.addEventListener("keydown", this.onKey)
   }
@@ -52,11 +56,11 @@ export default class extends Controller {
 
   refresh() {
     if (!this.swiper) return
-    const slides = Array.from(this.element.children)
+    const slides = Array.from(this.options.slideSelector ? this.element.querySelectorAll(this.options.slideSelector) : this.element.children)
     for (const node of this.styles.keys()) {
       if (node !== this.element && !slides.includes(node)) this.restore(node)
     }
-    slides.forEach(slide => {
+    if (this.options.manageStyles !== false) slides.forEach(slide => {
       this.setStyle(slide, "scroll-snap-align", this.options.scrollSnapAlign || "start")
       if (!this.options.preserveSizing) this.setStyle(slide, "flex", this.options.slidesPerView === "auto" ? "0 0 auto" : "0 0 100%")
     })
@@ -83,7 +87,7 @@ export default class extends Controller {
     const positions = slides.map(slide => this.position(slide))
     const target = direction > 0
       ? positions.find(position => position > offset + 1)
-      : positions.findLast(position => position < offset - 1)
+      : positions.slice().reverse().find(position => position < offset - 1)
     if (target == null) return
     this.element.scrollTo({ [top ? "top" : "left"]: target, behavior: this.behavior() })
   }

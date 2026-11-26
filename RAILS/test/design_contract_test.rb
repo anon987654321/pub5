@@ -357,9 +357,9 @@ def test_brgen_old_dialect_outranks_the_social_stack
 
     splash_padding = %r{
       padding:\s*
-      max\(var\(--space-8\),\s*env\(safe-area-inset-top\)\)\s+
+      max\(4svh,\s*env\(safe-area-inset-top\)\)\s+
       var\(--space-4\)\s+
-      max\(var\(--space-6\),\s*env\(safe-area-inset-bottom\)\)
+      max\(2svh,\s*env\(safe-area-inset-bottom\)\)
     }x
     discover_padding = %r{
       padding:\s*
