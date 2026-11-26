@@ -2,7 +2,7 @@
 /* FACE_RUNTIME_SOURCES = [
   "face.part1.txt?v=6b94074351",
   "face.part2.txt?v=f0ceba9584",
-  "face.part3.txt?v=800f4ec486",
+  "face.part3.txt?v=c46aa90b1c",
   "face_speech_runtime.js?v=1d92dfa106",
   "face_speech_playback.js?v=e410f0afef",
   "face.part5.txt?v=570a568a06"
@@ -1545,7 +1545,7 @@ function frame(t) {
       head.rotation.x += nodImpulse;
       const microOrbit = Math.sin(sec * 0.157) * 0.022 * composureFactor;
       head.rotation.z = -0.021 + microOrbit * 0.3;
-      head.scale.setScalar(breath);
+      head.scale.setScalar(State.pinchScale);
       if (State.shake > 0.01 && isRichMotionProfile()) {
         // Seeded per 60 Hz frame so the shake is deterministic like the orbital field.
         const shakeFrame = Math.floor(sec * 60);
