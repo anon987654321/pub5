@@ -65,6 +65,13 @@ class BestOfNTest < Minitest::Test
     assert_equal small, rank(big, small)
   end
 
+  def test_diff_size_counts_repeated_lines_and_reordering
+    assert_equal 0, B.diff_size("a\n", "a\n")
+    assert_equal 1, B.diff_size("a\n", "a\na\n")
+    assert_equal 2, B.diff_size("a\nb\n", "b\na\n")
+    assert_equal 2, B.diff_size("a\n", "a")
+  end
+
   def test_empty_unchanged_and_duplicate_candidates_are_ignored
     assert_nil rank("", @original, "  ")
   end
