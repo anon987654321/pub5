@@ -6,6 +6,5 @@ schema: 1
 dead:
   - codex-cli
   - gemini
-  # Replicate stays for media; its LLM models are off for now (operator, 2026-11-26).
-  - replicate:openai/
-  - replicate:anthropic/
+  # Replicate is off for now, LLM and media alike (operator, 2026-11-26).
+  - replicate
