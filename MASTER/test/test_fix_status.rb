@@ -83,6 +83,14 @@ class TestFixStatus < Minitest::Test
     assert_equal "#{beat}\nbudget0: spent\n", out.string
   end
 
+  def test_status_does_not_present_a_dead_active_record_as_running
+    write("fix_runs.json", JSON.generate("runs" => [run_record("RAILS", pid: 0)]))
+
+    rendered = Operator::FixStatus.new(root: @root).render(detail: true)
+
+    refute_includes rendered, "fix0: active tree=RAILS"
+  end
+
   def test_status_exposes_terminal_reason_and_bounded_convergence_receipt
     run = run_record("RAILS", state: "validation_failed", pid: 0).merge(
       "message" => "validation failed:\nrendered output differs",

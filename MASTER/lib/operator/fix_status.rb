@@ -147,7 +147,7 @@ module Operator
         end
       end
 
-      active = data[:runs].select { |row| row[:state] == "active" }
+      active = data[:runs].select { |row| row[:state] == "active" && row[:alive] }
       visible_runs = active.empty? ? data[:runs].last(1) : active
       if visible_runs.empty?
         journal_error = data[:read_errors][JOURNAL]
@@ -215,17 +215,17 @@ module Operator
     end
 
     def run_row(run)
-      passes = Array(run["passes"])
       assessment_details = assessment_proof_details(run)
+      state, alive = run_state(run)
       {
         id: run["id"].to_s[0, 8],
-        state: run["state"].to_s,
+        state:,
         tree: relative(run["target"]),
-        pass: passes.map { |row| row["pass"].to_i }.max.to_i,
+        pass: run_pass(run),
         max_passes: run["max_passes"].to_i,
         files: Array(run["files"]).size,
         pid: run["pid"],
-        alive: run["state"] == "active" && alive?(run["pid"]),
+        alive:,
         started: run["started_at"].to_s,
         finished: run["finished_at"].to_s,
         message: run["message"].to_s.gsub(/\s+/, " ").strip[0, 180],
@@ -236,6 +236,13 @@ module Operator
         assessment_details:,
       }
     end
+
+    def run_state(run)
+      active = run["state"] == "active" && alive?(run["pid"])
+      [active || run["state"] != "active" ? run["state"].to_s : "interrupted", active]
+    end
+
+    def run_pass(run) = Array(run["passes"]).map { |row| row["pass"].to_i }.max.to_i
 
     # Assessment integrity is read through the same verifier that /fix uses
     # before DONE. Preserve structured details for JSON/API consumers as well.
@@ -422,6 +429,8 @@ module Operator
     end
 
     def alive?(pid)
+      return false unless pid.to_i.positive?
+
       Process.kill(0, pid.to_i)
       true
     rescue Errno::ESRCH, Errno::EPERM, RangeError, TypeError
