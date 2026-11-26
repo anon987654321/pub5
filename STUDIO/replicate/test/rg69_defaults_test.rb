@@ -548,7 +548,7 @@ class TestRg69PlaybackRecovery < Minitest::Test
     assert_includes css, 'border-radius: 0;'
     assert_includes css, 'min-height: 40px;'
     assert_includes css, 'button:focus-visible'
-    assert_includes css, '@media (max-width: 640px)'
+    assert_match(/@media\s*\(max-width:\s*640px\)/, css)
     assert_includes css, 'grid-template-columns: repeat(2, minmax(0, 1fr));'
   end
 end
