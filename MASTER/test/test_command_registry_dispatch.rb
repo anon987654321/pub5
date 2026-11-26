@@ -1217,6 +1217,11 @@ class TestCommandRegistryDispatch < Minitest::Test
     assert_equal "all", overrides[:lane]
   end
 
+  def test_a_multi_tree_fix_uses_the_full_lane_unless_the_operator_selects_one
+    assert_equal "all", Registry.send(:execution_overrides, "MASTER RAILS OPENBSD STUDIO BIZ").fetch(:lane)
+    assert_equal "code", Registry.send(:execution_overrides, "MASTER RAILS --lane=code").fetch(:lane)
+  end
+
   # A `*_commands` method is a table of verbs. Only control_commands exists,
   # and build merges it; slash_commands is the help list, not a table.
   def test_no_command_table_is_left_unmerged

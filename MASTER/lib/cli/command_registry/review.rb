@@ -1020,9 +1020,10 @@ module Master
       end
 
       # `bin/master /fix MASTER RAILS OPENBSD STUDIO` names every tree of the
-      # checkout: a whole-checkout run is an improvement run, so it takes the
-      # elevate lane unless an explicit --lane= was given. Single-tree runs keep
-      # the default lane; convergence first, elevation alongside.
+      # checkout needs code, semantic and rendered proof together. The elevate
+      # lane deliberately skips browser and screenshot evidence, which made a
+      # whole-checkout /fix claim broad improvement while leaving its web
+      # surfaces unmeasured. An explicit --lane still wins.
       def multi_tree_run?(raw)
         Master::CLI::Pipeline::TreeTarget.list?(raw)
       end
@@ -1131,7 +1132,7 @@ module Master
         raw = lane_flag_joined(raw)
         tokens = raw.to_s.split(/\s+/).map(&:downcase)
         lane = tokens.filter_map { |token| token[LANE_FLAG, 1] }.last ||
-               (multi_tree_run?(raw) ? "elevate" : Master::Fix::WorkLane.default_lane(first_target_word(raw)).to_s)
+               (multi_tree_run?(raw) ? "all" : Master::Fix::WorkLane.default_lane(first_target_word(raw)).to_s)
         {
           autofix_mode: nil, max_files: nil, blockers: false, lane:,
           plan: tokens.include?("--plan"), until_checks: tokens.include?("--until-checks"),
