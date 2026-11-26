@@ -1,49 +1,41 @@
-# laws.yml - the canonical, ordered Law catalogue and MASTER policy.
+# laws.yml - canonical, ordered Law catalogue and MASTER policy.
 #
-# Authority and ownership:
-# * Statement rows own Law identity, normative text, parentage and root/node.
-# * law_catalogue.entries owns executable Law policy: mode, lifecycle,
-#   autofix, language/surface reach and negative path exclusions.
-# * Ruby Law definitions own executable detectors, semantic prompts, fixtures
-#   and positive path constraints.
-# * law_catalogue.defaults are merged first; an entry overrides its defaults.
-#   Parent links organize the Law tree; they do not inherit executable policy.
-#   A parent's top-level severity can satisfy the presence-only hygiene check,
-#   but it does not become the child's effective execution severity.
+# Find a Law by its exact ID. Search NAME: for its statement, then
+# law_catalogue.entries for effective execution policy and definition_sources.
+# law_map is the principle reference, not a second executable catalogue.
 #
-# The file order is deliberate: axiom; nine constitutional invariants;
-# constitutional support; named principles; remaining universal Laws;
-# transformations; then kinds, ratchets, lints and metadata.
+# Reading order (not execution precedence):
+#   1. Axiom                     APPLICATION_IS_UNIFORM
+#   2. Constitutional invariants  TRUTHFUL_STATUS through OPERATOR_RENDERED
+#   3. Constitutional support     SACRED_AUTHORSHIP, design and evidence
+#   4. Named principles           KISS, DRY (under SINGULARITY), SOLID, typography
+#   5. Universal Laws             proportion, reach, accessibility, stewardship
+#   6. Transformations            simplify, remove, merge, reflow, restructure
+#   7. Metadata                   kinds, ratchets, lints, catalogue, law map
 #
-# An executable catalogue entry without a top-level statement row takes its
-# semantic question and repair contract from its Ruby definition source.
+# For layout reviews, useful existing entrypoints are PROXIMITY, LINEARITY,
+# DENSITY, FORM_FOLLOWS_FUNCTION, STYLE_FOLLOWS_STRUCTURE, GRID_STRUCTURE,
+# TYPE_HIERARCHY, ONE_PRIMARY_ACTION, ALIGNMENT_NEAR_MISS, REFLOW_AT_320,
+# FOCUS_NOT_OBSCURED, CSS_LAYER_STACK and TRUTHFUL_STATUS.
+# This index guides reading; applicability and every existing Law still apply.
 #
-# A top-level severity is the flat Law record's declared severity. Where the
-# same identity is executable, it must agree with the effective catalogue
-# severity; LawHygiene checks that cross-population contract. Runtime execution
-# takes its severity from law_catalogue. A top-level resolution describes the
-# Law's disposition; catalogue autofix separately controls automatic mutation.
+# Authority:
+# - Statement rows own identity, normative text, parentage and root/node.
+# - law_catalogue.entries owns executable policy (mode, lifecycle, autofix,
+#   language/surface reach and negative path exclusions).
+# - Ruby definitions own detectors, prompts, fixtures and positive path scope.
+#   Without a statement row, the Ruby definition supplies question and repair.
+# - Catalogue defaults merge first; entries override them. Parentage does not
+#   inherit executable policy. Parent severity only satisfies presence hygiene.
+#   Flat severity must agree with effective catalogue severity; runtime uses the
+#   catalogue. Flat resolution is disposition, not permission to autofix.
+# - All artifacts are considered; reach determines applicability, never silent
+#   exclusion. Preserve named principles and exact IDs; children name parents.
+# - Soul owns source authority; this file owns invariant node order. Master::Soul
+#   derives the graph. Modalities are lexical, semantic and visual; mechanical
+#   means deterministic enforcement, of which lexical is one technique.
 #
-# Applicability is not an exemption. Every artifact is considered for every
-# Law, and the runtime evaluates declared reach. Positive path scope belongs
-# beside the Ruby detector; languages, surfaces and narrow path_exclude
-# controls belong in law_catalogue. No path, kind or file may be silently
-# removed from the review population.
-#
-# Famous names are not renamed. DRY is DRY, KISS is KISS, SOLID is SOLID,
-# POLA is POLA. A child keeps its own Law ID and names its parent as data.
-#
-# Soul's source-authority hierarchy is declared in soul.yml. The nine
-# constitutional invariant Law nodes keep their order here; Master::Soul
-# exposes a derived graph view and does not restate source authority.
-#
-# The catalogue's modality vocabulary is lexical, semantic and visual.
-# "Mechanical" in an invariant row names a deterministic enforcement owner;
-# lexical detection is one deterministic technique, not the whole category.
-#
-# ==========================================================================
 # 1. THE AXIOM
-# ==========================================================================
 
 APPLICATION_IS_UNIFORM:
   question: "Which laws apply at each scale, and what evidence is missing?"
@@ -80,9 +72,7 @@ APPLICATION_IS_UNIFORM_constitution_self_governed:
   statement: "The law catalogue or its validator is treated as exempt from the laws it declares."
   resolution: never
 
-# ==========================================================================
 # 2. THE NINE CONSTITUTIONAL INVARIANTS
-# ==========================================================================
 
 TRUTHFUL_STATUS:
   node: truthful_status
@@ -920,9 +910,7 @@ INTER_MODEL_CONTRACT_simulated_concurrence:
   statement: "A peer turn repeated after invalidity reported as agreement."
   resolution: never
 
-# ==========================================================================
 # 3. CONSTITUTIONAL SUPPORT
-# ==========================================================================
 
 SACRED_AUTHORSHIP:
   root: least_authority
@@ -1354,9 +1342,7 @@ ATTESTATION_IS_NOT_FINDING_as_attestation:
   statement: "A finding presented as an attestation."
   resolution: never
 
-# ==========================================================================
 # 4. THE NAMED PRINCIPLES
-# ==========================================================================
 
 KISS:
   root: no_surplus
@@ -2050,9 +2036,7 @@ RAILS_DOCTRINE_whole_parachute:
   statement: "A layer adopted partially, so the reader must hold both the framework's shape and the shape it was meant to replace."
   resolution: review
 
-# ==========================================================================
 # 5. THE REMAINING UNIVERSAL LAWS
-# ==========================================================================
 
 BOUNDED_LOAD:
   root: bounded_load
@@ -2392,9 +2376,7 @@ DO_THE_WORK_NOW:
   mechanical: human
   semantic: human
 
-# ==========================================================================
 # 6. THE TRANSFORMATIONS
-# ==========================================================================
 
 DECOUPLE:
   root: abstraction
@@ -2491,9 +2473,7 @@ RECOMMEND:
   severity: info
   resolution: never
 
-# ==========================================================================
 # 7. DATA: KINDS, RATCHETS, LINTS, AND THE FILE'S OWN METADATA
-# ==========================================================================
 #
 # KIND_* records have two different resolution fields:
 # resolution governs the KIND Law record; default_resolution is the initial

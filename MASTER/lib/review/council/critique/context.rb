@@ -14,17 +14,20 @@ module Master
         class Context
           DOMAINS = {
             "ui_critique" => <<~CTX,
-              Review the exact rendered product surfaces attached to this critique.
-              The captures and caller-supplied product brief define the product:
-              do not assume the target is MASTER, Brgen, or any other particular app.
-              Respect the surface owner's current product contract and identity.
-              Critique CSS, JavaScript, HTML semantics, interaction, typography,
-              layout, hierarchy, accessibility, responsiveness and data-ink economy.
-              Compare representative user journeys with the surface's interaction references.
-              Extract useful mechanics, not visual skins, and check existing implementation first.
-              Prefer fewer unnecessary steps, native semantics, continuity, explicit feedback,
-              truthful state and reversible actions. Require before/after task evidence, including
-              keyboard and touch, errors and recovery; unmeasured behavior remains inconclusive.
+              Judge the rendered product in this order, using its own task and identity:
+              1. Purpose: identify the primary user task and the next useful action.
+              2. Structure: establish reading order, native semantics and content hierarchy.
+              3. Composition: inspect parent-owned grid/flex tracks, optical alignment,
+                 proportions, grouping, density and whitespace at each viewport.
+              4. Detail: refine type, contrast, media framing, affordance and control rhythm.
+              5. Behavior: exercise keyboard, touch, reflow, focus, errors and recovery.
+              Locate the winning computed declaration and its source owner before proposing CSS.
+              Fix the shared cause instead of layering another override; prefer deletion or reuse.
+              Compare a subtractive alternative, a structural alternative and the existing render.
+              Keep the existing design when no measured or perceptual improvement is supported.
+              Use product references for useful mechanics, not visual skins or universal pixel values.
+              Require the affected surface/viewport, observable defect, source anchor, applicable Law,
+              smallest reversible repair and before/after evidence. Unmeasured behavior is inconclusive.
               Never infer authority, feature completion or market rank from a competitor reference.
             CTX
             "sound_critique" => <<~CTX,

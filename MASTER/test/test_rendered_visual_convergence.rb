@@ -163,6 +163,18 @@ class TestRenderedVisualConvergence < Minitest::Test
     end
   end
 
+  def test_ui_critique_orders_design_review_and_traces_the_cascade
+    brief = Master::Review::Council::Critique::Context::DOMAINS.fetch("ui_critique")
+    stages = %w[Purpose Structure Composition Detail Behavior].map { |stage| brief.index(stage + ":") }
+
+    refute_includes stages, nil
+    assert_equal stages.sort, stages
+    assert_includes brief, "winning computed declaration"
+    assert_includes brief, "the existing render"
+    assert_includes brief, "Unmeasured behavior is inconclusive"
+    assert_includes brief, "its own task and identity"
+  end
+
   def test_ui_critique_excludes_judge_from_issue_numbering
     critic = Master::Review::Council::Critique.new(mode: :ui, agent: nil, files: [])
     feedback = [
