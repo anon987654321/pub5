@@ -325,18 +325,32 @@ class DeploySmokeFixtureTest < Minitest::Test
     failures
   end
 
-  def test_httpd_acme_only_contract_passes
-    source = <<~HTTPD
-      server "*" {
-        listen on 0.0.0.0 port 80
-        location "/.well-known/acme-challenge/*" {
-          root "/acme"
-          request strip 2
-        }
-      }
-    HTTPD
+  ACME_LOCATION = <<~HTTPD.gsub(/^/, "  ")
+    location "/.well-known/acme-challenge/*" {
+      root "/acme"
+      request strip 2
+    }
+  HTTPD
+  HTTPS_REDIRECT = <<~HTTPD.gsub(/^/, "  ")
+    location * {
+      block return 301 "https://$HTTP_HOST$REQUEST_URI"
+    }
+  HTTPD
 
-    assert_empty httpd_findings(source)
+  def httpd_server(*locations) = "server \"*\" {\n  listen on 0.0.0.0 port 80\n#{locations.join}}\n"
+
+  # The HSTS preload list requires port 80 to redirect (operator, 2026-11-26).
+  def test_httpd_acme_then_https_redirect_contract_passes
+    assert_empty httpd_findings(httpd_server(ACME_LOCATION, HTTPS_REDIRECT))
+  end
+
+  def test_httpd_without_the_redirect_or_with_it_ahead_of_acme_is_rejected
+    missing = httpd_findings(httpd_server(ACME_LOCATION)).join("\n")
+    assert_includes missing, "only the ACME location, then one catch-all redirect"
+    assert_includes missing, "the catch-all must be exactly a 301"
+
+    reversed = httpd_findings(httpd_server(HTTPS_REDIRECT, ACME_LOCATION)).join("\n")
+    assert_includes reversed, "only the ACME location, then one catch-all redirect"
   end
 
   def test_httpd_redirect_and_secondary_site_are_rejected
@@ -359,8 +373,7 @@ class DeploySmokeFixtureTest < Minitest::Test
 
     findings = httpd_findings(source)
     assert_includes findings.join("\\n"), "must have exactly one server block"
-    assert_includes findings.join("\\n"), "only /.well-known/acme-challenge/* may be served"
-    assert_includes findings.join("\\n"), "wildcard redirects and non-ACME content are forbidden"
+    assert_includes findings.join("\\n"), "non-ACME content is forbidden"
   end
 
   def test_a_warmup_that_needs_a_token_is_refused

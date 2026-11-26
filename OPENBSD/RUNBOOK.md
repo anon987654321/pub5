@@ -137,9 +137,10 @@ Runtime contract: TLS terminates at relayd; apps listen on loopback-only ports;
 Rails uses SQLite plus Solid Queue/Cache; secrets live in `/etc/*.env`; source
 of truth on the VPS is `/home/dev/pub5`; long deploys run under tmux.
 
-HTTP serving is intentionally narrower: `httpd` listens on port 80 solely for
-`/.well-known/acme-challenge/*` (HTTP-01). It does not redirect ordinary
-requests, host static sites or terminate TLS. `acme-client` writes challenge
+HTTP serving is intentionally narrow: `httpd` listens on port 80 for
+`/.well-known/acme-challenge/*` (HTTP-01) and answers everything else with a
+301 to HTTPS, which the HSTS preload list requires of brgen.no. It hosts no
+static sites and terminates no TLS. `acme-client` writes challenge
 files under `/var/www/acme`; certificate renewal restarts `relayd` only when a
 certificate actually changes. `relayd` terminates TLS on port 443 and forwards
 all application traffic to the registered Falcon loopback services. The former

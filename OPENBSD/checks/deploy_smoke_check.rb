@@ -42,41 +42,50 @@ def check_relayd(failures)
   end
 end
 
-# Port 80 is httpd's, and the part of it that matters is the ACME location:
+# Port 80 is httpd's: the ACME location, then a 301 to HTTPS for the rest.
+# The part that matters most is the ACME location:
 # acme-client writes HTTP-01 challenges to /var/www/acme, which is "/acme" inside
 # httpd's chroot. Lose the location and renewal fails without a word until every
 # certificate lapses.
 def check_httpd(failures, source = nil)
-  unless source
-    unless File.file?(HTTPD)
-      failures << "missing tracked httpd.conf"
-      return
-    end
-    source = File.read(HTTPD)
-  end
+  source ||= File.file?(HTTPD) ? File.read(HTTPD) : nil
+  return failures << "missing tracked httpd.conf" unless source
 
-  server_count = source.scan(/^\s*server\b/).length
-  failures << "httpd: must have exactly one server block for ACME only" unless server_count == 1
+  check_httpd_listener(failures, source)
+  check_httpd_locations(failures, source)
+  check_httpd_acme(failures, source)
+end
 
+def check_httpd_listener(failures, source)
+  failures << "httpd: must have exactly one server block for ACME only" unless source.scan(/^\s*server\b/).length == 1
   listeners = source.lines.grep(/^\s*listen\s/)
-  unless listeners.length == 1 && listeners.first.match?(/\A\s*listen on 0\.0\.0\.0 port 80\s*\z/)
-    failures << "httpd: only 0.0.0.0:80 may listen; TLS and app traffic belong to relayd"
-  end
+  return if listeners.length == 1 && listeners.first.match?(/\A\s*listen on 0\.0\.0\.0 port 80\s*\z/)
 
-  locations = source.lines.grep(/^\s*location\s/)
-  unless locations.length == 1 && locations.first.include?('"/.well-known/acme-challenge/*"')
-    failures << "httpd: only /.well-known/acme-challenge/* may be served"
-  end
+  failures << "httpd: only 0.0.0.0:80 may listen; TLS and app traffic belong to relayd"
+end
 
+HTTPD_LOCATIONS = ['location "/.well-known/acme-challenge/*" {', "location * {"].freeze
+HTTPD_REDIRECT = ['block return 301 "https://$HTTP_HOST$REQUEST_URI"'].freeze
+
+# ACME first, then the one catch-all redirect: httpd matches locations in
+# order, so a redirect ahead of ACME would answer challenges with a 301.
+def check_httpd_locations(failures, source)
+  unless source.lines.grep(/^\s*location\s/).map(&:strip) == HTTPD_LOCATIONS
+    failures << "httpd: only the ACME location, then one catch-all redirect, may be served"
+  end
+  unless source.scan(/\bblock\s+return\b.*$/).map(&:strip) == HTTPD_REDIRECT
+    failures << "httpd: the catch-all must be exactly a 301 to https://$HTTP_HOST$REQUEST_URI"
+  end
+  foreign = %r{\broot\s+(?!["']/acme["'])|port\s+6666|/postpro}i
+  failures << "httpd: non-ACME content is forbidden" if source.match?(foreign)
+end
+
+def check_httpd_acme(failures, source)
   acme = source[%r{location "/\.well-known/acme-challenge/\*" \{(.*?)\}}m, 1]
-  if acme.nil?
-    failures << "httpd: no /.well-known/acme-challenge/ location"
-  elsif !acme.include?('root "/acme"') || !acme.include?("request strip 2")
-    failures << "httpd: ACME location must map /var/www/acme through root \"/acme\" and request strip 2"
-  end
+  return failures << "httpd: no /.well-known/acme-challenge/ location" if acme.nil?
+  return if acme.include?('root "/acme"') && acme.include?("request strip 2")
 
-  failures << "httpd: wildcard redirects and non-ACME content are forbidden" if
-    source.match?(/\bblock\s+return\b|\broot\s+(?!["']\/acme["'])|port\s+6666|\/postpro/i)
+  failures << "httpd: ACME location must map /var/www/acme through root \"/acme\" and request strip 2"
 end
 
 MASTER_RC = File.join(ROOT, "OPENBSD", "mirror", "etc", "rc.d", "master")
