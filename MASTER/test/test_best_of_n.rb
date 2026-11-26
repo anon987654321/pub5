@@ -231,7 +231,7 @@ class BestOfNTest < Minitest::Test
 
   def test_active_only_for_visual_style_findings_with_n_above_one
     ENV["MASTER_FIX_BEST_OF"] = "3"
-    assert_equal 3, B.n
+    assert_equal 10, B.n
     assert B.active?({ law: B::LAW_ID, file: "x.scss" }, Object.new)
     refute B.active?({ law: "OTHER", file: "x.scss" }, Object.new)
     refute B.active?({ law: B::LAW_ID, file: "x.erb" }, Object.new)

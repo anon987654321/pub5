@@ -116,7 +116,8 @@ module Master
       # Whitespace-equivalent edits are duplicates; token overlap is a
       # conservative heuristic, not proof of semantic equivalence.
       def change_signature(original, source)
-        diff = UnifiedDiff.between(original, source, context: 0).to_s
+        diff = UnifiedDiff.between(original, source, context: 0)
+        raise SourceChanged, "candidate diff unavailable" unless diff
         # Keep hunk locations and multiplicity: identical text changed at two
         # different call sites is not necessarily the same repair.
         diff.lines.drop_while { |line| !line.start_with?("@@") }.filter_map do |line|
@@ -241,7 +242,9 @@ module Master
       end
 
       def rank(candidates, original:, surfaces:, root:, measurer:, read:, write:, rebuild:, anchors: [])
-        pool = candidates.map(&:to_s).reject { |c| c.strip.empty? || c == original }.uniq
+        pool = distinct_changes(candidates.map(&:to_s).reject { |c| c.strip.empty? || c == original }) do |source|
+          change_signature(original, source)
+        end
         scored = pool.each_with_index.map do |source, i|
           raise SourceChanged, "source changed before visual candidate trial" unless read.call == original
 

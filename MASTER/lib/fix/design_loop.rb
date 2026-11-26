@@ -128,7 +128,9 @@ module Master
           best = accepted.reduce { |left, right| prefer_candidate(left, right) }
           return give_up(number) unless best
 
-          keep(number, best)
+          result = keep(number, best)
+          @spent[@target[:surface].id] = 0 if result.outcome == :kept
+          result
         end
       end
 
@@ -205,7 +207,9 @@ module Master
       def candidate_signature(candidate)
         candidate.edits.flat_map do |edit|
           proposal = edit.proposal
-          BestOfN.change_signature(proposal.find, proposal.replace).map { |line| [edit.file, line] }
+          original = File.read(edit.file, encoding: "UTF-8")
+          revised = original.sub(proposal.find) { proposal.replace }
+          BestOfN.change_signature(original, revised).each_with_index.map { |line, index| [edit.file, index, line] }
         end.sort
       end
 
