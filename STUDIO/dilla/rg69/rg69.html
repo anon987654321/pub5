@@ -897,7 +897,7 @@ const PARAMS={
   DELAY_FB_MAX:0.55,
   FILTER_MAX_HZ:15950,
   FILTER_MIN_HZ:50,
-  COMP_RATIO_MAX:3,
+  COMP_RATIO_MAX:1.5,
   VU_BARS:10,
   VU_DECAY:0.85,
   TRACE_MAX_LINES:90,
@@ -1616,6 +1616,18 @@ smooth(phase.frequency,frequency*(.5+rotation*2));smooth(phase.Q,.5+rotation*.7)
 smooth(comp.release,Math.min(.4,60/aud.bpm*.5));
 }};
 }
+// Remove low-frequency side information without changing the mid signal.
+function connectBassMono(ctx,source,destination){
+if(!ctx.createChannelSplitter||!ctx.createChannelMerger){source.connect(destination);return false;}
+try{
+const split=ctx.createChannelSplitter(2),merge=ctx.createChannelMerger(2),side=ctx.createGain(),invert=ctx.createGain(),low=ctx.createBiquadFilter(),leftCorrection=ctx.createGain(),rightCorrection=ctx.createGain();
+invert.gain.value=-1;low.type="lowpass";low.frequency.value=90;low.Q.value=.5;
+leftCorrection.gain.value=-.5;rightCorrection.gain.value=.5;
+split.connect(merge,0,0);split.connect(merge,1,1);split.connect(side,0);split.connect(invert,1);invert.connect(side);side.connect(low);
+low.connect(leftCorrection);low.connect(rightCorrection);leftCorrection.connect(merge,0,0);rightCorrection.connect(merge,0,1);
+merge.connect(destination);Tone.connect(source,split);return true;
+}catch(error){source.connect(destination);log("master0: mono bass fallback "+error.message,"w");return false;}
+}
 function wearProcessor(){
 class Wear extends AudioWorkletProcessor {
 static get parameterDescriptors(){return [{name:"amount",defaultValue:.24,minValue:0,maxValue:1,automationRate:"k-rate"},{name:"color",defaultValue:.58,minValue:0,maxValue:1,automationRate:"k-rate"}];}
@@ -1723,7 +1735,7 @@ const masterG=new Tone.Gain(mix.master/100);
 const flt=new Tone.Filter(50+aud.filter/100*15950,'lowpass');
 const tape=new Tone.Distortion(0.08);
 const drumDrive=new Tone.Distortion(.65);drumDrive.wet.value=aud.drive/100*.75;
-const comp=new Tone.Compressor(-12,1+aud.comp/100*1.5);comp.attack.value=.025;comp.release.value=Math.min(.35,60/aud.bpm*.5);
+const comp=new Tone.Compressor(-12,1+aud.comp/100*PARAMS.COMP_RATIO_MAX);comp.attack.value=.025;comp.release.value=Math.min(.35,60/aud.bpm*.5);
 const widener=new Tone.StereoWidener(aud.width/100);
 const limiter=new Tone.Limiter(-1);
 const revSend=new Tone.Gain(0);
@@ -1747,7 +1759,7 @@ limiter.connect(wetMaster);wetMaster.connect(outputGate);
 // Use the actual context destination, not a second Tone destination chain.
 const ctx=Tone.getContext().rawContext,finalLimiter=ctx.createDynamicsCompressor();
 finalLimiter.threshold.value=-1.5;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
-outputGate.connect(finalLimiter);finalLimiter.connect(ctx.destination);
+const monoBass=connectBassMono(ctx,outputGate,finalLimiter);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
 rev.connect(masterG);
@@ -1825,7 +1837,7 @@ try{analog=createAnalogRig(ctx,masterG,outputGate,dryMaster,wetMaster,rg69AudioP
 vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,analog,consoleStrips,duck,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,analog,consoleStrips,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1848,7 +1860,7 @@ if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
 if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);
 if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
-if(compPar){compPar.ratio.value=1+aud_.comp/100*1.5;compPar.release.value=Math.min(.35,60/aud_.bpm*.5);}
+if(compPar){compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;compPar.release.value=Math.min(.35,60/aud_.bpm*.5);}
 if(widener)widener.width.value=aud_.width/100;
 for(const strip of liveGraph?.consoleStrips||[])strip.update(aud_);
 if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
@@ -2983,7 +2995,7 @@ const ctx=Tone.getContext().rawContext;
 log("audio0: context="+ctx.state+" time="+ctx.currentTime.toFixed(3)+" s rate="+ctx.sampleRate+" Hz protocol="+location.protocol);
 log("mix0: "+JSON.stringify(mix_)+" mute="+JSON.stringify(st_.muteState));
 log("clock0: "+(st_.playing?"running":"stopped")+" tick="+(st_.tick??-1)+" tempo="+Math.round(aud_.bpm)+" pattern="+pat_.d);
-if(liveGraph){log("signal0: drums="+peakDb(liveGraph.drumMeter)+" master="+peakDb(liveGraph.masterMeter)+" output="+peakDb(analyser)+" gate="+outputGate.gain.value);log("voices0: "+JSON.stringify(st_.playedVoices||{})+" errors="+JSON.stringify(st_.audioErrors||{}));}
+if(liveGraph){log("master0: "+(liveGraph.monoBass?"90 Hz low-side reduction":"direct")+" · console strips="+liveGraph.consoleStrips.length);log("signal0: drums="+peakDb(liveGraph.drumMeter)+" master="+peakDb(liveGraph.masterMeter)+" output="+peakDb(analyser)+" gate="+outputGate.gain.value);log("voices0: "+JSON.stringify(st_.playedVoices||{})+" errors="+JSON.stringify(st_.audioErrors||{}));}
 }
 async function testAudio(){
 trace.closest("details").open=true;
