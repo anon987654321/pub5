@@ -3,7 +3,6 @@
 // The web uses one volumetric WebGL renderer.
 const _dbgEl = document.getElementById('_dbg');
 const THREE = await import(new URL(window.MASTER_ASSET_PATHS.threeModule, document.baseURI).href);
-const _hasWebGL = true;
 const Color = THREE.Color;
 
 let cv = document.getElementById('face');
@@ -19,19 +18,6 @@ const FACE_CAMERA = FACE_SPATIAL.camera || {};
 const FACE_BUDGET = FACE_SPATIAL.budget || {};
 const FACE_CAMERA_FOV = Number(FACE_CAMERA.fov) || 38;
 const FACE_CAMERA_DISTANCE = Number(FACE_CAMERA.distance) || 4.6;
-const FACE_MORPHOLOGY = FACE_SPATIAL.morphology || {};
-const FACE_GENERATION = Number(FACE_MORPHOLOGY.generation) || 0;
-const FACE_ASYMMETRY = Math.max(0, Number(FACE_MORPHOLOGY.asymmetry) || 0);
-const FACE_ASYMMETRY_SEED = Number(FACE_MORPHOLOGY.asymmetry_seed) || 73421;
-function futureFeatureScale(name, fallback = 1) {
-  const raw = Number(FACE_MORPHOLOGY[name]);
-  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
-}
-function futureSideBias(side) {
-  const x = Math.sin((FACE_ASYMMETRY_SEED * 0.0001) + (side * 17.17) + FACE_GENERATION * 0.71);
-  return side * FACE_ASYMMETRY * x;
-}
-
 function faceRenderBudget() {
   return window.MASTER_FACE_STATE?.renderBudget?.() || {};
 }
@@ -46,7 +32,6 @@ function faceRenderDpr() {
     );
 }
 
-let FACE_PHOSPHOR_DECAY = 0.88;
 let FACE_RENDER_SCALE = 0.72;
 // The pixel grid is absolute, not a fraction of the display. Capping the render
 // buffer is what makes one drawn pixel mean the same thing on a phone, a CRT and
@@ -461,18 +446,6 @@ window.addEventListener('unhandledrejection', event => {
   enterDegradedTextUI(reason?.message ? `Degraded text mode: ${reason.message}` : 'Degraded text mode');
 });
 
-// Read the phosphor profile from CSS vars for theming/CRT profiles.
-// --face-particle-size and --face-glow-scale are gone: particle size is fixed at
-// one pixel by law, and there is no glow layer left to scale. A knob whose only
-// legal value is its default is not a knob.
-(function applyFaceCssVars() {
-  try {
-    const cs = getComputedStyle(rootBody);
-    const pd = parseFloat(cs.getPropertyValue('--face-phosphor-decay'));
-    if (pd >= 0 && pd < 1) FACE_PHOSPHOR_DECAY = pd;
-  } catch (err) { window.MASTER_LOG?.warn?.("face_runtime:apply_css_vars", err); }
-})();
-
 const STAR_FRAMES = ['|', '/', '-', '\\'];
 const STAR_INTERVAL_MS = 100;
 let _starTimer = null;
@@ -589,8 +562,8 @@ function markFaceReady() {
   window.dispatchEvent(new CustomEvent('master:face-ready'));
 }
 
-let renderer, scene, camera, phosphorFadeMesh, phosphorFadeScene, phosphorFadeCam;
-if (_hasWebGL && THREE) {
+let renderer, scene, camera;
+{
   try {
     // antialias: false, deliberately. Nothing here has an edge to smooth — the
     // scene is 1px points and one full-screen quad. Worse, MSAA is what stopped
@@ -609,26 +582,6 @@ if (_hasWebGL && THREE) {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(FACE_CAMERA_FOV, 1, 0.1, 100);
   camera.position.set(0, 0, FACE_CAMERA_DISTANCE);
-  phosphorFadeScene = new THREE.Scene();
-  phosphorFadeCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const fadeGeom = new THREE.PlaneGeometry(2, 2);
-  // Phosphor fade via a transparent BLACK quad at opacity (1 - decay) under
-  // default NormalBlending: dst*(1-a) + 0*a == dst*decay — the same math the
-  // old MultiplyBlending gray quad intended. In the custom three.face.module
-  // build that quad rendered opaque/additive instead (proved by GL draw-call
-  // bisection: skipping only this quad turned a saturated-white screen back
-  // to black), painting the whole framebuffer to white in two frames — THE
-  // long-standing "background lit up white, no face" bug. Normal alpha
-  // blending is the one mode every build and driver agrees on.
-  const fadeMat = new THREE.MeshBasicMaterial({
-    color: 0x000000,
-    transparent: true,
-    opacity: 1 - FACE_PHOSPHOR_DECAY,
-    depthTest: false,
-    depthWrite: false
-  });
-  phosphorFadeMesh = new THREE.Mesh(fadeGeom, fadeMat);
-  phosphorFadeScene.add(phosphorFadeMesh);
 }
 rootBody.dataset.faceRenderer = 'webgl';
 if (_dbgEl) _dbgEl.textContent = 'webgl ok';
@@ -678,322 +631,6 @@ if ('ResizeObserver' in window && cv) {
 // fuller neurocranial vault, more retracted lower face, reduced brow/nasal projection,
 // and a slightly stronger orbital field for visually mediated communication.
 // This is a design hypothesis, not a biological prediction.
-function generateFaceDepthMap(size) {
-  const cv = new OffscreenCanvas(size, size);
-  const ctx = cv.getContext('2d');
-  const W = size, H = size, cx = W * (0.5 + futureSideBias(1) * 0.18), cy = H * (0.46 - ((FACE_GENERATION * 0.0015)));
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, W, H);
-  let g;
-  // Base face — tall narrow oval (gracile, elongated stature trend)
-  g = ctx.createRadialGradient(cx, cy - H*0.10, 0, cx, cy, W * 0.36);
-  g.addColorStop(0,    'rgba(228,228,228,1)');
-  g.addColorStop(0.34, 'rgba(182,182,182,1)');
-  g.addColorStop(0.70, 'rgba(72, 72, 72, 1)');
-  g.addColorStop(1,    'rgba(0,  0,  0,  1)');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, W * 0.255 * futureFeatureScale('facial_projection', 0.82) * futureFeatureScale('cranial_width', 1.06), H * 0.48 * futureFeatureScale('cranium_scale', 1.18), 0, 0, Math.PI * 2);
-  ctx.fill();
-  // Jaw taper — pronounced reduction (smaller mandible, processed food)
-  for (const ex of [-0.215, 0.215]) {
-    g = ctx.createRadialGradient(cx + (ex * W * futureFeatureScale('lower_face_scale', 0.80)) + (futureSideBias(Math.sign(ex)) * W), cy + H*0.28, 0, cx + (ex * W * futureFeatureScale('lower_face_scale', 0.80)) + (futureSideBias(Math.sign(ex)) * W), cy + H*0.28, W*0.16 * futureFeatureScale('lower_face_scale', 0.80));
-    g.addColorStop(0,    'rgba(0,0,0,0.98)');
-    g.addColorStop(0.50, 'rgba(0,0,0,0.72)');
-    g.addColorStop(1,    'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Cranial vault — enlarged high forehead
-  g = ctx.createRadialGradient(cx, cy - H*(0.37 + 0.006*FACE_GENERATION), 0, cx, cy - H*(0.36 + 0.008*FACE_GENERATION), W*0.31 * futureFeatureScale('cranium_scale', 1.18) * futureFeatureScale('cranial_width', 1.06));
-  g.addColorStop(0,    'rgba(210,210,210,0.78)');
-  g.addColorStop(0.55, 'rgba(150,150,150,0.36)');
-  g.addColorStop(1,    'rgba(0,  0,  0,  0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Crown extension — tall skull cap above brows
-  g = ctx.createRadialGradient(cx, cy - H*0.44, 0, cx, cy - H*0.44, W*0.18);
-  g.addColorStop(0,    'rgba(198,198,198,0.55)');
-  g.addColorStop(0.62, 'rgba(118,118,118,0.18)');
-  g.addColorStop(1,    'rgba(0,  0,  0,  0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Temple recession — soft lateral concavity
-  for (const ex of [-0.20, 0.20]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy - H*0.28, 0, cx + ex*W, cy - H*0.28, W*0.09);
-    g.addColorStop(0,   'rgba(0,0,0,0.28)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Supraorbital ridge — nearly flat (reduced aggression selection)
-  for (const ex of [-0.112, 0.112]) {
-    g = ctx.createLinearGradient(cx + ex*W - W*0.08, cy - H*0.196, cx + ex*W + W*0.08, cy - H*0.186);
-    g.addColorStop(0,   'rgba(0,0,0,0)');
-    g.addColorStop(0.5, 'rgba(0,0,0,0.08)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(cx + ex*W - W*0.08, cy - H*0.206, W*0.16 * futureFeatureScale('brow_scale', 0.66), H*0.014);
-  }
-  // Brow shelf — minimal neotenic arch
-  for (const ex of [-0.112, 0.112]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy - H*0.168, 0, cx + ex*W, cy - H*0.168, W*0.078);
-    g.addColorStop(0,    'rgba(205,205,205,0.38)');
-    g.addColorStop(0.50, 'rgba(150,150,150,0.16)');
-    g.addColorStop(1,    'rgba(0,  0,  0,  0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Glabella — shallow, open expression
-  g = ctx.createRadialGradient(cx, cy - H*0.160, 0, cx, cy - H*0.160, W*0.022);
-  g.addColorStop(0,   'rgba(0,0,0,0.22)');
-  g.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Eye sockets — larger, rounder (screen/light-environment selection)
-  const eyeAlphas = [0.66, 0.62];
-  for (let ei = 0; ei < 2; ei++) {
-    const ex = (ei === 0 ? -0.118 : 0.118) * futureFeatureScale('orbital_scale', 1.10) + futureSideBias(ei === 0 ? -1 : 1) * 0.12;
-    ctx.save();
-    ctx.translate(cx + ex*W, cy - H*0.088);
-    ctx.scale(1.30 * futureFeatureScale('orbital_scale', 1.10), 1.03 * futureFeatureScale('orbital_scale', 1.10) * futureFeatureScale('orbital_vertical_scale', 1.06));
-    g = ctx.createRadialGradient(0, 0, 0, 0, 0, W*0.106);
-    g.addColorStop(0,    `rgba(0,0,0,${eyeAlphas[ei] * futureFeatureScale('orbital_scale', 1.10)})`);
-    g.addColorStop(0.45, 'rgba(0,0,0,0.70)');
-    g.addColorStop(0.80, 'rgba(0,0,0,0.24)');
-    g.addColorStop(1,    'rgba(0,0,0,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(0, 0, W*0.106, 0, Math.PI*2); ctx.fill();
-    ctx.restore();
-  }
-  // Corneal specular + iris ring — enlarged pupils
-  for (const ex of [-0.118, 0.118]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy - H*0.088, 0, cx + ex*W, cy - H*0.088, W*0.040 * futureFeatureScale('pupil_scale', 0.88));
-    g.addColorStop(0,   'rgba(185,185,185,0.42)');
-    g.addColorStop(0.55,'rgba(95,95,95,0.18)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    g = ctx.createRadialGradient(cx + ex*W + W*0.011, cy - H*0.102, 0, cx + ex*W + W*0.011, cy - H*0.102, W*0.026 * futureFeatureScale('pupil_scale', 0.88));
-    g.addColorStop(0,   'rgba(240,240,240,0.78)');
-    g.addColorStop(0.45,'rgba(190,190,190,0.30)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Nose bridge — fine, low projection
-  g = ctx.createLinearGradient(cx - W*0.012, 0, cx + W*0.012, 0);
-  g.addColorStop(0,   'rgba(0,0,0,0)');
-  g.addColorStop(0.5, 'rgba(205,205,205,0.52)');
-  g.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(cx - W*0.012, cy - H*0.02, W*0.024, H*0.12);
-  // Nose tip — small, soft
-  g = ctx.createRadialGradient(cx, cy + H*0.082, 0, cx, cy + H*0.082, W*0.058);
-  g.addColorStop(0,    'rgba(245,245,245,0.92)');
-  g.addColorStop(0.30, 'rgba(220,220,220,0.68)');
-  g.addColorStop(0.62, 'rgba(150,150,150,0.30)');
-  g.addColorStop(1,    'rgba(0,  0,  0,  0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Nose ala — subtle wings
-  for (const ex of [-0.048, 0.048]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy + H*0.100, 0, cx + ex*W, cy + H*0.100, W*0.022);
-    g.addColorStop(0,   'rgba(0,0,0,0.32)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Cheekbones — soft, low relief (gracile skeleton)
-  for (const ex of [-0.188, 0.188]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy + H*0.012, 0, cx + ex*W, cy + H*0.012, W*0.098);
-    g.addColorStop(0,   'rgba(190,190,190,0.38)');
-    g.addColorStop(0.60,'rgba(100,100,100, 0.14)');
-    g.addColorStop(1,   'rgba(0,  0,  0,  0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Nasolabial folds — faint (youthful neoteny)
-  for (const ex of [-0.068, 0.068]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy + H*0.142, 0, cx + ex*W, cy + H*0.142, W*0.042);
-    g.addColorStop(0,   'rgba(0,0,0,0.22)');
-    g.addColorStop(0.6, 'rgba(0,0,0,0.08)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Philtrum — shallow groove
-  g = ctx.createRadialGradient(cx, cy + H*0.158, 0, cx, cy + H*0.158, W*0.018);
-  g.addColorStop(0,   'rgba(0,0,0,0.26)');
-  g.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Upper lip — narrow mouth (smaller jaw/teeth)
-  ctx.save();
-  ctx.translate(cx, cy + H*0.198);
-  ctx.scale(1.85 * futureFeatureScale('mouth_scale', 0.84), 1.0);
-  g = ctx.createRadialGradient(0, 0, 0, 0, 0, W*0.050);
-  g.addColorStop(0,    'rgba(215,215,215,0.78)');
-  g.addColorStop(0.38, 'rgba(168,168,168,0.42)');
-  g.addColorStop(1,    'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(0, 0, W*0.050, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-  // Lower lip — compact
-  ctx.save();
-  ctx.translate(cx, cy + H*0.212);
-  ctx.scale(1.95 * futureFeatureScale('mouth_scale', 0.84), 1.0);
-  g = ctx.createRadialGradient(0, 0, 0, 0, 0, W*0.056);
-  g.addColorStop(0,    'rgba(205,205,205,0.72)');
-  g.addColorStop(0.38, 'rgba(158,158,158,0.38)');
-  g.addColorStop(1,    'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath(); ctx.arc(0, 0, W*0.056, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-  // Lip gap — narrow mouth slit
-  g = ctx.createLinearGradient(cx - W*0.062, 0, cx + W*0.062, 0);
-  g.addColorStop(0,    'rgba(0,0,0,0)');
-  g.addColorStop(0.10, 'rgba(0,0,0,0.34)');
-  g.addColorStop(0.5,  'rgba(0,0,0,0.42)');
-  g.addColorStop(0.90, 'rgba(0,0,0,0.34)');
-  g.addColorStop(1,    'rgba(0,0,0,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(cx - W*0.062, cy + H*0.206, W*0.124, H*0.007);
-  // Labiomental crease — soft chin-lip junction
-  g = ctx.createRadialGradient(cx, cy + H*0.238, 0, cx, cy + H*0.238, W*0.022);
-  g.addColorStop(0,   'rgba(0,0,0,0.30)');
-  g.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Chin — small, receding point
-  g = ctx.createRadialGradient(cx, cy + H*(0.318 * futureFeatureScale('lower_face_scale', 0.80)), 0, cx, cy + H*0.318, W*0.068);
-  g.addColorStop(0,   'rgba(155,155,155,0.52)');
-  g.addColorStop(0.58,'rgba(82, 82, 82, 0.20)');
-  g.addColorStop(1,   'rgba(0,  0,  0,  0)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  // Ear outlines — faint lateral indicators
-  for (const ex of [-0.36, 0.36]) {
-    g = ctx.createRadialGradient(cx + ex*W, cy - H*0.04, 0, cx + ex*W, cy + H*0.04, W*0.048);
-    g.addColorStop(0,   'rgba(90,90,90,0.10)');
-    g.addColorStop(1,   'rgba(0,0,0,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  }
-  // Neck column — slender, elongated
-  const neckGrad = ctx.createLinearGradient(0, cy + H*0.44, 0, H);
-  neckGrad.addColorStop(0,   'rgba(58,58,58,0.30)');
-  neckGrad.addColorStop(1,   'rgba(0,0,0,0)');
-  ctx.fillStyle = neckGrad;
-  ctx.fillRect(cx - W*0.032, cy + H*0.44, W*0.064, H - (cy + H*0.44));
-  return cv;
-}
-
-// Hex-grid topology: particles sit at lattice vertices projected onto face surface.
-// Edge list connects adjacent occupied cells — the wire mesh substrate.
-function sampleDepthMapGrid(canvas, cols, rows) {
-  const size = canvas.width;
-  const ctx = canvas.getContext('2d');
-  const px = ctx.getImageData(0, 0, size, size).data;
-  const positions = [], scatters = [], seeds = [], edgeIdx = [];
-  const cell = new Int32Array(rows * cols).fill(-1);
-
-  for (let row = 0; row < rows; row++) {
-    const hexShift = (row & 1) ? 0.5 : 0.0;
-    for (let col = 0; col < cols; col++) {
-      const u = (col + hexShift + 0.5) / cols;
-      const v = (row + 0.5) / rows;
-      const sx = Math.min(size - 1, (u * size) | 0);
-      const sy = Math.min(size - 1, (v * size) | 0);
-      const lum = px[(sy * size + sx) * 4] / 255;
-      if (lum < 0.08) continue;
-      const idx = (positions.length / 3) | 0;
-      cell[row * cols + col] = idx;
-      // Antigravity-inspired breathing room: keep the face topology, but
-      // break the rigid lattice with a bounded, coordinate-derived jitter.
-      // The field is repeatable, so reloads do not silently reshuffle the face.
-      const hash = Math.sin((row + 1) * 127.1 + (col + 1) * 311.7) * 43758.5453;
-      const seed = (hash - Math.floor(hash)) * 6.28318;
-      const jitter = 0.32;
-      const ju = Math.sin(seed * 1.7 + row * 0.31 + col * 0.17) * jitter / cols;
-      const jv = Math.cos(seed * 1.3 + row * 0.19 + col * 0.23) * jitter / rows;
-      const pxu = u + ju;
-      const pxv = v + jv;
-      const nx = (pxu * 2 - 1) * 0.62;
-      const ny = -((pxv * 2 - 1)) * 0.62;
-      const nz = lum * 0.78;
-      positions.push(nx, ny, nz);
-      scatters.push(nx, ny, 0);
-      seeds.push(seed);
-    }
-  }
-
-  for (let row = 0; row < rows; row++) {
-    for (let col = 0; col < cols; col++) {
-      const a = cell[row * cols + col]; if (a < 0) continue;
-      if (col + 1 < cols)       { const b = cell[row * cols + col + 1];              if (b >= 0) { edgeIdx.push(a, b); } }
-      if (row + 1 < rows)       { const b = cell[(row + 1) * cols + col];            if (b >= 0) { edgeIdx.push(a, b); } }
-      const dc = (row & 1) ? -1 : 1;
-      const nc = col + dc;
-      if (row + 1 < rows && nc >= 0 && nc < cols) { const b = cell[(row + 1) * cols + nc]; if (b >= 0) { edgeIdx.push(a, b); } }
-    }
-  }
-
-  const home = new Float32Array(positions);
-  const n = (home.length / 3) | 0;
-
-  // Per-vertex neighbor Z accumulator for curvature
-  const neighborZSum = new Float32Array(n);
-  const neighborCount = new Int32Array(n);
-  const edgeLengthArr = new Float32Array(edgeIdx.length / 2);
-  const edgeDepthDiffArr = new Float32Array(edgeIdx.length / 2);
-
-  for (let ei = 0; ei < edgeIdx.length; ei += 2) {
-    const a = edgeIdx[ei], b = edgeIdx[ei + 1];
-    const ai = a * 3, bi = b * 3;
-    const dx = home[ai] - home[bi], dy = home[ai+1] - home[bi+1], dz = home[ai+2] - home[bi+2];
-    const len = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    const dd = Math.abs(home[ai+2] - home[bi+2]);
-    edgeLengthArr[ei >> 1] = len;
-    edgeDepthDiffArr[ei >> 1] = dd;
-    neighborZSum[a] += home[bi+2]; neighborCount[a]++;
-    neighborZSum[b] += home[ai+2]; neighborCount[b]++;
-  }
-
-  const curvature = new Float32Array(n);
-  const boundary = new Float32Array(n);
-  let maxCurv = 0;
-  for (let i = 0; i < n; i++) {
-    const nc = neighborCount[i];
-    if (nc > 0) {
-      const avgNZ = neighborZSum[i] / nc;
-      curvature[i] = Math.abs(home[i*3+2] - avgNZ);
-    }
-    if (curvature[i] > maxCurv) maxCurv = curvature[i];
-    boundary[i] = nc < 4 ? 1.0 : 0.0;
-  }
-  if (maxCurv > 0) { for (let i = 0; i < n; i++) curvature[i] /= maxCurv; }
-
-  const zone = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const nx = home[i*3], ny = home[i*3+1];
-    const anx = Math.abs(nx);
-    // The depth map is painted in canvas space, where y grows downward, and
-    // the sampler above flips it. These bands were written as though it had
-    // not, so every feature landed on the wrong one: the painted lips sit at
-    // ny -0.196 and the chin at -0.345, all of which fell in zone 0.0, while
-    // the crown and cranial vault at +0.595 and +0.496 fell in zone 0.8 --
-    // the band the fragment shader reads as mouthRgn and the band
-    // initSemanticPools seeds the mouth pool from. Speech was driving the
-    // forehead. It survived because the result is a symmetric brightness
-    // modulation on a monochrome field, which looks plausible anywhere.
-    //
-    // Set from the painted centres rather than mirrored, because mirroring
-    // alone moves the mouth onto the lips but leaves eyeRgn peaking on the
-    // nose bridge. Measured, in this space: crown +0.60, vault +0.50, brows
-    // +0.26 at |nx| 0.13-0.15, eyes +0.16 at |nx| 0.14-0.16, nose bridge
-    // +0.07, cheeks +0.04 at |nx| 0.22-0.24, lips -0.20, chin -0.35. Only two
-    // consumers read zone: eyeRgn, which peaks at 0.5, and mouthRgn with
-    // initSemanticPools, which take >= 0.68. 0.25 is the inert bucket -- both
-    // regions evaluate to zero there.
-    if (ny < -0.14) zone[i] = 0.8;                                                   // lips, chin
-    else if (anx >= 0.09 && anx <= 0.20 && ny >= 0.10 && ny <= 0.21) zone[i] = 0.5;  // eyes
-    else if (anx >= 0.09 && anx <= 0.20 && ny > 0.21 && ny <= 0.34) zone[i] = 0.6;   // brows
-    else if (ny > 0.40) zone[i] = 0.0;                                               // crown, vault
-    else if (anx > 0.20) zone[i] = 0.2;                                              // cheeks
-    else if (anx < 0.09) zone[i] = 0.4;                                              // nose column
-    else zone[i] = 0.25;
-  }
-
-  // The edge list stays — curvature and boundary above are derived from it, and
-  // both feed the point shader's size. What is gone is the line geometry it used
-  // to also produce: the face draws no wires.
-  return { home, scatter: new Float32Array(scatters), seeds: new Float32Array(seeds), curvature, boundary, zone };
-}
-
 // Sample the selected solid directly, including its rear surfaces and cavities.
 function sculptParticleVolume(count) {
   const home = new Float32Array(count * 3), scatter = new Float32Array(count * 3);
@@ -1028,12 +665,8 @@ function particleScale() {
 // The primary field replaces the stipple population, rather than adding to it.
 const primaryCeiling = Math.max(1, Math.floor(Number(faceRenderBudget().stipple_points) ||
   (State.coarsePointer ? 2400 : 8100)));
-const primaryScale = Math.min(particleScale(),
-  Math.sqrt(primaryCeiling / (State.coarsePointer ? 26*32 : 40*52)));
-const FACE_GRID_COLS = Math.max(1, Math.floor((State.coarsePointer ? 26 : 40) * primaryScale));
-const FACE_GRID_ROWS = Math.max(1, Math.floor((State.coarsePointer ? 32 : 52) * primaryScale));
 const FACE_N_2D = Math.round(480 * particleScale());
 let faceHome, faceScatter, faceSeeds, faceCurvature, faceBoundary, faceZone;
 ({ home: faceHome, scatter: faceScatter, seeds: faceSeeds,
    curvature: faceCurvature, boundary: faceBoundary, zone: faceZone } =
-  sculptParticleVolume(Math.max(256, Math.min(primaryCeiling, State.coarsePointer ? 2400 : 6400))));
+  sculptParticleVolume(Math.min(primaryCeiling, State.coarsePointer ? 2400 : 6400)));
