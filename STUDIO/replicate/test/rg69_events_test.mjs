@@ -57,7 +57,7 @@ start(){return this;}
 stop(){return this;}
 triggerAttackRelease(){}
 }
-const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBiquadFilter:()=>new Node(),createWaveShaper:()=>new Node(),createDelay:()=>new Node(),createOscillator:()=>new Node(),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
+const raw={sampleRate:8000,currentTime:0,destination:new Node(),createGain:()=>new Node(),createStereoPanner:()=>new Node(),createDynamicsCompressor:()=>new Node(),createBufferSource:()=>new Node(),createBiquadFilter:()=>new Node(),createWaveShaper:()=>new Node(),createDelay:()=>new Node(),createOscillator:()=>new Node(),createChannelSplitter:()=>new Node(),createChannelMerger:()=>new Node(),createBuffer:(channels,length)=>({getChannelData:()=>new Float32Array(length)})};
 const Tone=Object.fromEntries("Gain Filter Distortion Compressor StereoWidener Limiter Reverb FeedbackDelay Noise LFO Chebyshev Chorus Tremolo Panner Synth MonoSynth FMSynth PolySynth".split(" ").map(name=>[name,Node]));
 Object.assign(Tone,{getContext:()=>({rawContext:raw}),mtof:n=>440*2**((n-69)/12),connect:(from,to)=>from.connect(to)});
 const log=()=>{};
@@ -72,6 +72,8 @@ const expected=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap",
 for(const graph of [g,offline]){
 assert(graph.analog&&typeof graph.analog.update==="function","native analogue rig must build");
 assert(graph.consoleStrips.length===5,"five console strips");
+assert(graph.monoBass,"low-side reduction connected");
+graph.duck(.25,.9,{bpm:150,duck:20});
 graph.analog.update({...aud,tape:100,wobble:100,vinyl:100,crackle:100},mix);
 graph.analog.update({...aud,tape:0,wobble:0,vinyl:0,crackle:0},mix);
 assert(JSON.stringify(Object.keys(graph.instruments).sort())===JSON.stringify(expected.slice().sort()),"instrument registry disagrees with scheduler");
@@ -122,3 +124,19 @@ const midi=midiBytes(take);assert(midi.length>1000,"full song MIDI");
 return {bars:SONG_BARS,sections:count,midiBytes:midi.length};
 `);
 console.log(JSON.stringify(songTest(assert),null,2));
+
+const wearTest=new Function("assert",extract("function wearProcessor()","function createAnalogRig(")+`
+let Processor;
+class AudioWorkletProcessor{}
+const sampleRate=44100,registerProcessor=(name,cls)=>{Processor=cls;};
+wearProcessor();
+const a=new Processor(),b=new Processor(),input=Float32Array.from({length:2048},(_,i)=>.7*Math.sin(i*.1));
+const output=new Float32Array(input.length),bypass=new Float32Array(input.length);
+a.process([[input]],[[output]],{amount:[.7],color:[.6]});
+b.process([[input]],[[bypass]],{amount:[0],color:[0]});
+assert(output.every(Number.isFinite),"finite wear output");
+assert(output.some((x,i)=>Math.abs(x-input[i])>.001),"wear changes signal");
+assert(bypass.every((x,i)=>x===input[i]),"zero controls bypass");
+return {samples:input.length,finite:true,zeroBypass:true};
+`);
+console.log(JSON.stringify(wearTest(assert),null,2));
