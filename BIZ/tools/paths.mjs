@@ -36,48 +36,30 @@ export const OUTPUT_DIR = resolve(
 // contract so the printer records it and the index verifies the same manifest.
 // Paths are relative to BIZ_ROOT; html inputs produce the document, pdf inputs
 // affect print output. The generated HTML/PDF/PNG are hashed in the receipt too.
+const buildInputs = ['tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'];
+const contentInputs = ['tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs'];
+const printInputs = ['tools/bp_print.mjs', 'tools/paths.mjs'];
+
+function printed(html) {
+  return { html, pdf: [...printInputs] };
+}
+
+function planInputs(plan) {
+  return printed([`tools/${plan}.html`, ...contentInputs, ...buildInputs]);
+}
+
 export const PUBLISHED_INPUTS = {
-  syre: {
-    html: ['tools/syre.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  nordvakt: {
-    html: ['tools/nordvakt.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  norwegianfinancial: {
-    html: ['tools/norwegianfinancial.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  ragnhild: {
-    html: ['tools/ragnhild.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  pubhealthcare: {
-    html: ['tools/pubhealthcare.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  govt_bergen: {
-    html: ['tools/govt_bergen.html', 'tools/plans_a.mjs', 'tools/plans_b.mjs', 'tools/content_add.mjs', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  future_healthcare_os: {
-    html: ['tools/future_healthcare_os.html', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  neolimb: {
-    html: ['tools/neolimb.html', 'tools/neolimb_proposal.md', 'tools/bp_build.mjs', 'tools/bp_retemplate.mjs', 'tools/bp_check.mjs', 'tools/paths.mjs'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
-  ragnhild_legater: {
-    html: ['ragnhild/ragnhild_legater.html'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
+  syre: planInputs('syre'),
+  nordvakt: planInputs('nordvakt'),
+  norwegianfinancial: planInputs('norwegianfinancial'),
+  ragnhild: planInputs('ragnhild'),
+  pubhealthcare: planInputs('pubhealthcare'),
+  govt_bergen: planInputs('govt_bergen'),
+  future_healthcare_os: printed(['tools/future_healthcare_os.html', ...buildInputs]),
+  neolimb: printed(['tools/neolimb.html', 'tools/neolimb_proposal.md', ...buildInputs]),
+  ragnhild_legater: printed(['ragnhild/ragnhild_legater.html']),
   speis: { html: ['tools/speis.html'], pdf: [] },
   future_nato_weapons: { html: ['tools/future_nato_weapons.html'], pdf: [] },
   norwegianhedge: { html: ['tools/norwegianhedge.html'], pdf: [] },
-  fetat: {
-    html: ['tools/fetat_build.rb', 'tools/fetat_image.jpg'],
-    pdf: ['tools/bp_print.mjs', 'tools/paths.mjs'],
-  },
+  fetat: printed(['tools/fetat_build.rb', 'tools/fetat_image.jpg']),
 };
