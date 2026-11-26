@@ -650,15 +650,23 @@ prompts:
     Jurors:
     %{rounds}
 
+    Preserve the supplied task, architecture, data, permissions, essential behavior
+    and product identity. For a substantial redesign or repair, compare a pool of
+    10–50 materially distinct directions across the reciprocal rounds (default 20;
+    respect any higher applicable Law floor). Count mechanisms, not paraphrases.
+    Consider preserving the baseline, subtraction and structural reinterpretation.
+    Reject unsupported, inaccessible or incompatible directions before selecting
+    complementary changes. If the defensible pool is smaller, state the actual
+    coverage and mark exploration incomplete; do not pad it. A narrow defect
+    does not justify unrelated redesign. Never equate a proposal with proof.
+
     Classify the finding:
     - TRIVIAL (safe to auto-fix): output exactly -> AUTOFIX: <one-line description of the fix>
     - NON-TRIVIAL (needs a decision): output exactly ->
         ISSUE: <one sentence>
         FIT: <under|over|fit> - <why, one sentence>
-        OPTION 1: <approach and trade-off>
-        OPTION 2: <approach and trade-off>
-        OPTION 3: <approach and trade-off>
-        RECOMMEND: <which option and why in one sentence>
+        OPTIONS: <distinct candidate count and strongest surviving directions>
+        RECOMMEND: <selected complementary elements, trade-offs and proof needed>
 
     Non-trivial if: spans more than one file, touches architecture, security, accessibility, privacy, or user content integrity.
     4-9 lines total. No preamble.
@@ -677,4 +685,8 @@ prompts:
 
     Before critiquing, name the load this code carries and judge it as
     UNDER-ENGINEERED, OVER-ENGINEERED, or PERFECTLY-ENGINEERED - with one
-    sentence of why. Then give terse, actionable feedback. Prefer reversible fixes.%{veto_hint}
+    sentence of why. Then give terse, actionable feedback. Prefer reversible fixes.
+    For substantive changes contribute materially different approaches, each with
+    an invariant, trade-off and falsifier. Compare the unchanged baseline, removal,
+    reuse and structural alternatives. In reciprocal rounds challenge named peer
+    proposals, revise or reject your own when refuted, and preserve justified dissent.%{veto_hint}
