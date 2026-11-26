@@ -51,6 +51,9 @@ ENV.delete("MASTER_LLM_READ_IDLE_S")
 
 LIVE_STATE_DIR = Dir.mktmpdir("master-test-lanes-")
 ENV["MASTER_LANE_QUOTA_PATH"] = File.join(LIVE_STATE_DIR, "lane_quota.yml")
+# The operator's shared ~/.config/master/config.yml must not decide what a test reads.
+ENV["XDG_CONFIG_HOME"] = File.join(LIVE_STATE_DIR, "config-home")
+ENV.delete("MASTER_CONFIG")
 ENV["MASTER_MODEL_QUOTA_PATH"] = File.join(LIVE_STATE_DIR, "model_quota.json")
 ENV["MASTER_PROVIDER_HEALTH_PATH"] = File.join(LIVE_STATE_DIR, "provider_health.ndjson")
 # The hosted-listing cache is routing state like the rest: a test must neither

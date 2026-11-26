@@ -47,4 +47,38 @@ class TestGroundConfig < Minitest::Test
       assert config.valid?, config.validate.join("; ")
     end
   end
+
+  # One config for every checkout: a shared file beside ~/.config/master/env wins over a
+  # checkout's .master/config.yml, MASTER_CONFIG wins over both, and migration moves the
+  # checkout file across verified, keeping the original as .migrated.
+  def test_the_shared_config_serves_every_checkout_once_migrated
+    Dir.mktmpdir("config_home") do |home|
+      with_env("XDG_CONFIG_HOME" => home) do
+        config_with("model: checkout-model\n") do |_config, _err, root|
+          assert_equal File.join(root, ".master", "config.yml"), MasterPaths.config_file(root:)
+
+          assert_match(/moved/, Master::Ground::Config.migrate_to_shared!(root))
+          assert_equal File.join(home, "master", "config.yml"), MasterPaths.config_file(root:)
+          assert_equal "checkout-model", Master::Ground::Config.new(root)["model"]
+          assert File.file?(File.join(root, ".master", "config.yml.migrated"))
+          assert_match(/already exists/, Master::Ground::Config.migrate_to_shared!(root))
+        end
+      end
+    end
+  end
+
+  def test_master_config_names_the_file_outright
+    Dir.mktmpdir("explicit") do |dir|
+      path = File.join(dir, "elsewhere.yml")
+      with_env("MASTER_CONFIG" => path) { assert_equal path, MasterPaths.config_file(root: dir) }
+    end
+  end
+
+  def with_env(pairs)
+    saved = pairs.keys.to_h { |key| [key, ENV[key]] }
+    pairs.each { |key, value| ENV[key] = value }
+    yield
+  ensure
+    saved.each { |key, value| ENV[key] = value }
+  end
 end

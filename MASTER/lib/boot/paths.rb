@@ -36,6 +36,26 @@ module MasterPaths
 
   def state(*parts) = File.join(state_base, *parts)
 
+  # Operator settings (model, budgets, web token) live in one file. MASTER_CONFIG names
+  # it outright. Otherwise a shared ~/.config/master/config.yml, beside env, serves every
+  # checkout and worktree once `bin/operator config migrate` has written it; a checkout
+  # without one keeps its .master/config.yml. vm23 keeps the checkout file on purpose:
+  # its web daemon and the dev shell are different users reading one checkout.
+  def config_home
+    base = ENV["XDG_CONFIG_HOME"].to_s.strip
+    File.join(base.empty? ? File.expand_path("~/.config") : File.expand_path(base), "master")
+  end
+
+  def shared_config = File.join(config_home, "config.yml")
+  def checkout_config(root) = File.join(File.expand_path(root), ".master", "config.yml")
+
+  def config_file(root:)
+    explicit = ENV["MASTER_CONFIG"].to_s.strip
+    return File.expand_path(explicit) unless explicit.empty?
+
+    File.file?(shared_config) ? shared_config : checkout_config(root)
+  end
+
   # One private /fix state family per canonical Git remote. Worktrees and
   # relocated clones of the same repository therefore share one lock and
   # journal, while unrelated repositories do not collide. A non-Git temporary

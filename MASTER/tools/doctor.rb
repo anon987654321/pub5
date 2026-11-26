@@ -13,6 +13,7 @@
 # --remote adds the one ssh probe to vm23 (read-only).
 
 require_relative "../lib/io/exec"
+require_relative "../lib/boot/paths"
 require_relative "../lib/io/lane_quota"
 require "json"
 require "etc"
@@ -139,11 +140,15 @@ def git_state
 end
 
 # --- model lanes: the thing /fix cannot do without -----------------------------------------
-def lanes
-  config = File.join(MASTER, ".master", "config.yml")
+def saved_model
+  config = MasterPaths.config_file(root: MASTER)
   pin = File.file?(config) ? File.read(config)[/^model:\s*(\S+)/, 1] : nil
-  say(pin ? :ok : :warn, "model", pin ? "saved model #{pin}" : "no saved model in MASTER/.master/config.yml: a fresh worktree has none; copy it or set MASTER_MODEL")
+  detail = pin ? "saved model #{pin}" : "no saved model in #{config}; the pool routes, or set MASTER_MODEL"
+  say(pin ? :ok : :warn, "model", detail)
+end
 
+def lanes
+  saved_model
   tags, ok = run("curl", "-s", "-m", "3", "http://127.0.0.1:11434/api/tags")
   models = ok ? JSON.parse(tags)["models"].to_a.map { |m| m["name"] } : []
   say(models.empty? ? :warn : :ok, "ollama", models.empty? ? "not answering on 11434: no local lane" : "#{models.size} models: #{models.first(4).join(', ')}")

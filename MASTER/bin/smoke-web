@@ -24,7 +24,8 @@ WARM_TIMEOUT_S = Integer(ENV.fetch("MASTER_SMOKE_WEB_WARM_S", "130"))
 POLL_INTERVAL_S = Integer(ENV.fetch("MASTER_SMOKE_WEB_POLL_S", "5"))
 READ_TIMEOUT_S = Integer(ENV.fetch("MASTER_SMOKE_WEB_READ_S", "20"))
 SKIP_WAIT = ARGV.include?("--no-wait")
-CONFIG_PATH = File.expand_path("../.master/config.yml", __dir__)
+require_relative "../lib/boot/paths"
+CONFIG_PATH = MasterPaths.config_file(root: File.expand_path("..", __dir__))
 
 JSON_ACCEPT = { "Accept" => "application/json" }.freeze
 WARMING_RE = /Starting up|warming up/i

@@ -64,7 +64,7 @@ module Master
 
       def initialize(root = Dir.pwd)
         @root = root
-        @path = File.join(root, ".master", "config.yml")
+        @path = MasterPaths.config_file(root:)
         @mutex = Mutex.new
         @settings = load_config
       end
@@ -88,6 +88,26 @@ module Master
         warn "config: validation issues before save: #{errs.join('; ')}" unless errs.empty?
         # config.yml may include web_token and web_secret_key_base.
         write_atomic(@path, @settings.to_yaml, fsync: true, mode: 0o600)
+      end
+
+      attr_reader :path
+
+      # Moves a checkout's .master/config.yml into the shared config, verified byte for
+      # byte, and keeps the original beside it as config.yml.migrated. Explicit, never at
+      # boot: on vm23 two users share one checkout and must keep reading the same file.
+      def self.migrate_to_shared!(root)
+        from = MasterPaths.checkout_config(root)
+        to = MasterPaths.shared_config
+        return "config: #{to} already exists; nothing moved" if File.file?(to)
+        return "config: no #{from} to move" unless File.file?(from)
+
+        FileUtils.mkdir_p(File.dirname(to), mode: 0o700)
+        FileUtils.cp(from, to)
+        File.chmod(0o600, to)
+        raise "config: #{to} does not match #{from}" unless FileUtils.identical?(from, to)
+
+        File.rename(from, "#{from}.migrated")
+        "config: moved #{from} to #{to}"
       end
 
       def reload!

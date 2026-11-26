@@ -3,6 +3,7 @@
 require "fileutils"
 require "yaml"
 require_relative "../configuration_guard"
+require_relative "../boot/paths"
 
 module Master
   module Ground
@@ -88,7 +89,7 @@ module Master
         end
 
         def check_config_readable(root)
-          path = File.join(root, ".master", "config.yml")
+          path = MasterPaths.config_file(root:)
           return ok("config_readable", "no config yet - defaults apply") unless File.exist?(path)
 
           YAML.safe_load_file(path, aliases: true)

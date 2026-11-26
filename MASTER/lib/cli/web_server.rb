@@ -38,7 +38,8 @@ module Master
         default_url = Master::Ground::Config::DEFAULTS.fetch("web_public_url", "http://#{host}:#{port}")
         base_url = config["web_public_url"] || default_url
         Master::Trace::Dmesg.status("web0", "#{base_url}, #{running ? "up" : "down - run: doas rcctl start master"}", io:)
-        Master::Trace::Dmesg.status("web0", "token set, see .master/config.yml", io:) if config["web_token"].to_s.length >= 8
+        token_set = config["web_token"].to_s.length >= 8
+        Master::Trace::Dmesg.status("web0", "token set in the saved config", io:) if token_set
       end
 
       def spawn_local(config:, host:, port:, io:)

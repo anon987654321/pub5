@@ -1018,6 +1018,11 @@ when "post-pull"
   exec(script, *ARGV)
 when "doctor"
   exec(RbConfig.ruby, File.join(ROOT, "MASTER", "tools", "doctor.rb"), *ARGV)
+when "config"
+  # Shares this checkout's .master/config.yml with every worktree (MasterPaths.config_file).
+  abort("usage: bin/operator config migrate") unless ARGV == ["migrate"]
+  require File.join(ROOT, "MASTER", "lib", "ground", "config")
+  puts Master::Ground::Config.migrate_to_shared!(File.join(ROOT, "MASTER"))
 when "triangle", "premerge", "ci", "coverage"
   # RAILS' own tooling, once RAILS/bin: boot the apps the live checks probe, the
   # premerge proof, every app's bin/ci, the coverage run. They sit with the other
