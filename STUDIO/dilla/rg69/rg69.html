@@ -587,7 +587,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
     <button id="stop" type="button" aria-label="Stop" title="Stop (S)">■ Stop</button>
     <label class="ctrl-bpm">BPM <input id="bpm" type="range" min="60" max="170" value="96"> <output id="bpm-o">96</output></label>
     <button id="tap" title="Tap tempo">Tap</button>
-    <button id="steps" type="button" aria-label="Change step count" title="Switch between 8 and 16 steps">16 steps</button>
+    <button id="steps" type="button" aria-label="Change step count" title="Cycle 8, 16, 32, 64 steps">16 steps</button><button id="bank" type="button" disabled>Bank A</button>
   </div>
   <div class="transport-actions" aria-label="Other actions">
     <button id="random" title="Randomize (R)">Randomize</button>
@@ -1102,13 +1102,13 @@ return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass
 });
 const bootStylePool=bootStyleCandidates.length?bootStyleCandidates:STYLES;
 const bootStyle=bootStylePool[Math.floor(Math.random()*bootStylePool.length)];
-let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
+let st_={started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'dark',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 let aud_={pocket:68,bpm:bootStyle.bpm[0]+Math.random()*(bootStyle.bpm[1]-bootStyle.bpm[0]),swing:bootStyle.sw[0]+Math.random()*(bootStyle.sw[1]-bootStyle.sw[0]),drive:72,tape:44,comp:78,width:52,reverb:34,delay:26,filter:62,wobble:8,vinyl:12,crackle:8,drift:0.05};
 let mix_={drum:80,bass:70,keys:60,pads:55,master:75};
 let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p};
 let seq_={};
-['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
-['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
+['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
+['b','keys','p'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
 
 let liveGraph;
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN;
@@ -1144,7 +1144,8 @@ function installLaneFX(routes,fx){
 for(const [lane,[input,target,...sends]] of Object.entries(routes))connectLaneFX(input,fx[lane],target,sends);
 }
 const DENSITIES=Object.freeze(["comfortable","compact"]);
-const LANES=["k","s","c","h","o","b","keys","p"],DRUM_LANES=LANES.slice(0,5);
+const LANES=["k","s","c","h","o","b","keys","p"],DRUM_LANES=LANES.slice(0,5),STEP_COUNTS=[8,16,32,64];
+const midiNote=n=>["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"][((n%12)+12)%12]+(Math.floor(n/12)-1);
 const noteMidi=note=>{const m=/^([A-G])([#b]?)([0-8])$/.exec(note);if(!m)return 60;return (+m[3]+1)*12+({C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]])+(m[2]==="#"?1:m[2]==="b"?-1:0);};
 const noteHz=note=>440*2**((noteMidi(note)-69)/12);
 const ORIGINAL_DRUMS=JSON.stringify(DRUM_PATTERNS);
@@ -1154,13 +1155,13 @@ const newSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 let sessionSeed=newSeed(),fxSeed=null;
 const SESSION_KEY="rg69_session_v1";
 let sampleAudio=null;
-let sampleSettings={name:"",duration:0,slices:[],pattern:Array(16).fill(null),pitch:0,reverse:false,gate:100,offset:0};
+let sampleSettings={name:"",duration:0,slices:[],pattern:Array(64).fill(null),pitch:0,reverse:false,gate:100,offset:0};
 function drumEdits(){
 const original=JSON.parse(ORIGINAL_DRUMS);
 return Object.fromEntries(Object.entries(DRUM_PATTERNS).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(original[key])));
 }
 function session(){
-return deepClone({version:1,seed:sessionSeed,fxSeed,pat:pat_,seq:seq_,aud:aud_,mix:mix_,drums:drumEdits(),sample:sampleSettings,mute:st_.muteState,steps:st_.stepCount});
+return deepClone({version:1,seed:sessionSeed,fxSeed,pat:pat_,seq:seq_,aud:aud_,mix:mix_,drums:drumEdits(),sample:sampleSettings,mute:st_.muteState,steps:st_.stepCount,lengths:st_.laneLengths,bank:st_.bank});
 }
 function restoreSession(data){
 if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))throw Error("Unsupported session");
@@ -1173,15 +1174,17 @@ const incoming=data.drums&&Object.hasOwn(data.drums,key)?data.drums[key]:null;
 for(const lane of DRUM_LANES)if(pattern[lane])pattern[lane]=pattern[lane].map((v,i)=>clamp(incoming?.[lane]?.[i]??v,0,1,v));
 DRUM_PATTERNS[key]=pattern;
 }
-for(const lane of LANES)for(let i=0;i<16;i++){
+for(const lane of LANES)for(let i=0;i<64;i++){
 const x=data.seq?.[lane]?.[i];if(!x)continue;
 const valid=n=>typeof n==="string"&&/^[A-G][#b]?[0-8]$/.test(n);
 const note=lane==="b"&&valid(x.note)?x.note:["keys","p"].includes(lane)&&Array.isArray(x.note)&&x.note.length>0&&x.note.length<=6&&x.note.every(valid)?x.note.slice():undefined;
-seq_[lane][i]={v:clamp(x.v,0,1,1),t:clamp(x.t,-25,25,0),p:clamp(x.p,0,100,100),r:[1,2,4].includes(x.r)?x.r:1,off:!!x.off,...(note?{note}:{})};
+seq_[lane][i]={v:clamp(x.v,0,1,1),t:clamp(x.t,-25,25,0),p:clamp(x.p,0,100,100),r:[1,2,4].includes(x.r)?x.r:1,g:clamp(x.g,.05,2,1),cond:[1,2,3,4].includes(x.cond)?x.cond:1,pitch:Math.round(clamp(x.pitch,-24,24,0)),off:!!x.off,...(Number.isFinite(x.hit)?{hit:clamp(x.hit,0,1,0)}:{}),...(note?{note}:{})};
 }
-if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:16},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&sampleAudio.name!==sampleSettings.name)sampleAudio=null;}
+if(data.sample){const x=data.sample;sampleSettings={name:typeof x.name==='string'?x.name.slice(0,200):'',duration:clamp(x.duration,0,180,0),slices:Array.isArray(x.slices)?x.slices.filter(v=>Number.isFinite(v)&&v>=0&&v<x.duration).slice(0,16).sort((a,b)=>a-b):[],pattern:Array.from({length:64},(_,i)=>Number.isInteger(x.pattern?.[i])&&x.pattern[i]>=0&&x.pattern[i]<16?x.pattern[i]:null),pitch:clamp(x.pitch,-24,24,0),reverse:!!x.reverse,gate:clamp(x.gate,5,100,100),offset:clamp(x.offset,0,90,0)};if(sampleAudio&&sampleAudio.name!==sampleSettings.name)sampleAudio=null;}
 if(data.mute)for(const lane of LANES)st_.muteState[lane]=data.mute[lane]?1:0;
-if([8,16].includes(data.steps))st_.stepCount=data.steps;
+if(STEP_COUNTS.includes(data.steps))st_.stepCount=data.steps;
+st_.bank=Math.floor(clamp(data.bank,0,Math.max(0,Math.ceil(st_.stepCount/16)-1),0));
+st_.laneLengths=Object.fromEntries(LANES.filter(l=>Number.isInteger(data.lengths?.[l])&&data.lengths[l]>=2&&data.lengths[l]<=64).map(l=>[l,data.lengths[l]]));
 if(Number.isInteger(data.seed))sessionSeed=data.seed>>>0;
 const previousFX=fxSeed;fxSeed=Number.isInteger(data.fxSeed)?data.fxSeed>>>0:null;
 if(st_.started&&previousFX!==fxSeed)refreshLaneFX();
@@ -1193,11 +1196,12 @@ let x=(seed^Math.imul(tick+1,0x9e3779b1)^Math.imul(LANES.indexOf(lane)+1,0x85ebc
 x=Math.imul(x^(x>>>16),0x7feb352d);x=Math.imul(x^(x>>>15),0x846ca68b);
 return ((x^(x>>>16))>>>0)/4294967296;
 }
+function drumHit(lane,index,pattern=DRUM_PATTERNS[pat_.d],seq=seq_){return seq[lane][index]?.hit??pattern?.[lane]?.[index%16]??0;}
 function laneNote(lane,index,pat=pat_,seq=seq_){
 const detail=seq[lane][index];
 if(detail.off)return null;
 if(detail.note)return detail.note;
-return lane==="b"?(BASS_PATS[pat.b]||"").split(",")[index]:lane==="keys"?KEYS_PATS[pat.k]?.[index]:PAD_PATS[pat.p]?.[index];
+return lane==="b"?(BASS_PATS[pat.b]||"").split(",")[index%16]:lane==="keys"?KEYS_PATS[pat.k]?.[index%16]:PAD_PATS[pat.p]?.[index%16];
 }
 
 const tpCache=new Map();
@@ -1245,10 +1249,11 @@ if(match){const chip=[...$id('styles').querySelectorAll('.style-chip')].find(c=>
 }
 
 function syncUIFromState(){
+$id('bank').textContent='Bank '+String.fromCharCode(65+st_.bank);$id('bank').disabled=st_.stepCount<=16;
 refreshSampler();
 $id('pocket').value=aud_.pocket;$id('pocket-o').textContent=Math.round(aud_.pocket);
 $id('steps').textContent=st_.stepCount+' steps';
-$id('steps').setAttribute('aria-pressed',String(st_.stepCount===8));
+$id('steps').setAttribute('aria-pressed',String(st_.stepCount!==16));
 $id('bpm').value=aud_.bpm;$id('bpm-o').textContent=Math.round(aud_.bpm);
 $id('swing').value=aud_.swing;$id('swing-o').textContent=Math.round(aud_.swing);
 $id('drive').value=aud_.drive;$id('drive-o').textContent=Math.round(aud_.drive);
@@ -1453,12 +1458,17 @@ function triggerNotes(stepIdx,baseTime,synths,opts){
 const take=opts.session,pat=take?.pat||pat_,seq=take?.seq||seq_,aud=take?.aud||aud_;
 const seed=take?.seed??sessionSeed,tick=opts.tick??stepIdx;
 const sixteenth=opts.sixteenth||60/aud.bpm/4;
-const swungTime=baseTime+swingOffsetSeconds(stepIdx,sixteenth,aud.swing,opts.addSwing);
 const pocket=(aud.pocket??68)/100,bias={k:7,s:-6,c:-4,h:-5,o:-3,b:4,keys:2,p:0};
-const offset=(lane,index)=>((bias[lane]||0)+seq[lane][index].t)*pocket;
-const noteTime=lane=>Math.max(0,swungTime+microtimingSeconds(offset(lane,stepIdx),sixteenth));
-const chance=lane=>!opts.applyProb||randomAt(seed,tick,lane)*100<(seq[lane][stepIdx].p??100);
-const accent=lane=>seq[lane][stepIdx].v*(1-pocket*.12*(stepIdx%4!==0));
+const lengths=take?.lengths||st_.laneLengths||{};
+const index=(lane,delta=0)=>lengths[lane]?(tick+delta)%lengths[lane]:(stepIdx+delta)%(opts.stepCount||16);
+const detail=lane=>seq[lane][index(lane)];
+const swing=(lane,i)=>swingOffsetSeconds(i,sixteenth,aud.swing*pocket*(DRUM_LANES.includes(lane)?1:.65),opts.addSwing);
+const offset=(lane,delta=0)=>((bias[lane]||0)+seq[lane][index(lane,delta)].t+(randomAt(seed,Math.floor((tick+delta)/16),lane,17)-.5)*4)*pocket;
+const noteTime=lane=>Math.max(0,baseTime+swing(lane,stepIdx)+microtimingSeconds(offset(lane),sixteenth));
+const chance=lane=>!opts.applyProb||(Math.floor(tick/(lengths[lane]||opts.stepCount||16))%(detail(lane).cond||1)===0&&randomAt(seed,tick,lane)*100<(detail(lane).p??100));
+const accent=lane=>detail(lane).v*(1-pocket*.12*(stepIdx%4!==0));
+const gate=lane=>detail(lane).g??1;
+const transpose=(lane,note)=>midiNote(clamp(noteMidi(note)+(detail(lane).pitch||0),12,119,60));
 // Resolve note lengths to seconds before scheduling. Tone's musical-time
 // parser consults Transport when given strings such as "8n"; doing that
 // inside a Transport callback causes timing warnings and extra work.
@@ -1471,51 +1481,53 @@ const pitch=rg69AudioProfile.notes;
 
 ['k','s','c','h','o'].forEach(v=>{
 if(opts.muteMap&&opts.muteMap[v])return;
-const vel=dp[v]?dp[v][stepIdx]:0;
+const vel=drumHit(v,index(v),dp,seq);
 if(vel>0&&chance(v)){
 const drift=opts.applyTranspose?(randomAt(seed,tick,v,11)-0.5)*5:0;
 const t=noteTime(v);
 const vl=vel*accent(v);
-const ratch=opts.applyRatchet?Math.max(1,Math.min(4,Math.round(Number(seq[v][stepIdx].r)||1))):1;
+const ratch=opts.applyRatchet?Math.max(1,Math.min(4,Math.round(Number(detail(v).r)||1))):1;
 const nextStep=(stepIdx+1)%(opts.stepCount||16);
-const nextTime=baseTime+sixteenth+swingOffsetSeconds(nextStep,sixteenth,aud.swing,opts.addSwing)+microtimingSeconds(offset(v,nextStep),sixteenth);
+const nextTime=baseTime+sixteenth+swing(v,nextStep)+microtimingSeconds(offset(v,1),sixteenth);
 // Preserve the first hit; fit ratchets before the next step instead of scheduling backwards.
 const ratchetSpan=Math.min(sixteenth,Math.max(0,nextTime-t));
 for(let r=0;r<ratch;r++){
 const rt=t+r*(ratchetSpan/ratch);
+const hitGate=duration=>Math.min(duration*gate(v),ratch>1?Math.max(.005,ratchetSpan/ratch*.9):Infinity);
+const pitchShift=2**((detail(v).pitch||0)/12);
 if(v==='k'){
-const kfreq=opts.applyTranspose?pitch.kick*2**(drift/1200):pitch.kick;
-const subfreq=opts.applyTranspose?pitch.kickSub*2**(drift/1200):pitch.kickSub;
-synths.kick.triggerAttackRelease(kfreq,eighth,rt,vl);
-synths.kickSub.triggerAttackRelease(subfreq,eighth,rt,vl*.7);
-synths.kickClk.triggerAttackRelease(thirtySecond,rt,vl*0.3);
-synths.kickBody.triggerAttackRelease(pitch.kickBody,thirtySecond,rt,vl*.2);
+const kfreq=pitch.kick*pitchShift*2**(drift/1200);
+const subfreq=pitch.kickSub*pitchShift*2**(drift/1200);
+synths.kick.triggerAttackRelease(kfreq,hitGate(eighth),rt,vl);
+synths.kickSub.triggerAttackRelease(subfreq,hitGate(eighth),rt,vl*.7);
+synths.kickClk.triggerAttackRelease(hitGate(thirtySecond),rt,vl*0.3);
+synths.kickBody.triggerAttackRelease(pitch.kickBody*pitchShift,hitGate(thirtySecond),rt,vl*.2);
 }
-else if(v==='s'){synths.snare.triggerAttackRelease(eighth,rt,vl);synths.snareRng.triggerAttackRelease(pitch.snareRing,sixteenthDuration,rt,vl*0.5)}
-else if(v==='c')synths.clap.triggerAttackRelease(sixteenthDuration,rt,vl);
+else if(v==='s'){synths.snare.triggerAttackRelease(hitGate(eighth),rt,vl);synths.snareRng.triggerAttackRelease(pitch.snareRing*pitchShift,hitGate(sixteenthDuration),rt,vl*0.5)}
+else if(v==='c')synths.clap.triggerAttackRelease(hitGate(sixteenthDuration),rt,vl);
 else if(v==='h'){
 // An offline MetalSynth cannot take a second start, so the export renders each
 // stroke through its own throwaway voice at the profile's tone. Live playback
 // keeps the single instrument, which is what the sliders and meters drive.
-synths.hat.triggerAttackRelease(pitch.hat,Math.min(sixteenthDuration*0.5,0.06),rt,vl);
+synths.hat.triggerAttackRelease(pitch.hat*pitchShift,hitGate(Math.min(sixteenthDuration*.5,.06)),rt,vl);
 }
 else if(v==='o'){
-synths.open.triggerAttackRelease(pitch.open,eighth,rt,vl);
+synths.open.triggerAttackRelease(pitch.open*pitchShift,hitGate(eighth),rt,vl);
 }
 }
 }
 });
-const nt=laneNote("b",stepIdx,pat,seq);
+const nt=laneNote("b",index("b"),pat,seq);
 if(nt&&!opts.muteMap?.b&&chance("b")){
 const drift=opts.applyTranspose?(randomAt(seed,tick,"b",11)-0.5)*2:0;
-const freq=noteHz(nt)*2**(drift/1200);
-synths.bass.triggerAttackRelease(freq,eighth,noteTime("b"),accent("b"));
-synths.bassSub.triggerAttackRelease(freq/2,eighth,noteTime("b"),accent("b")*.7);
+const freq=noteHz(transpose("b",nt))*2**(drift/1200);
+synths.bass.triggerAttackRelease(freq,eighth*gate("b"),noteTime("b"),accent("b"));
+synths.bassSub.triggerAttackRelease(freq/2,eighth*gate("b"),noteTime("b"),accent("b")*.7);
 }
-const ch=laneNote("keys",stepIdx,pat,seq);
-if(ch&&!opts.muteMap?.keys&&chance("keys"))synths.keys.triggerAttackRelease(ch,eighth,noteTime("keys"),accent("keys"));
-const pad=laneNote("p",stepIdx,pat,seq);
-if(Array.isArray(pad)&&!opts.muteMap?.p&&chance("p"))synths.pads.triggerAttackRelease(pad,half,noteTime("p"),accent("p")*.6);
+const ch=laneNote("keys",index("keys"),pat,seq);
+if(ch&&!opts.muteMap?.keys&&chance("keys"))synths.keys.triggerAttackRelease([ch].flat().map(n=>transpose("keys",n)),eighth*gate("keys"),noteTime("keys"),accent("keys"));
+const pad=laneNote("p",index("p"),pat,seq);
+if(Array.isArray(pad)&&!opts.muteMap?.p&&chance("p"))synths.pads.triggerAttackRelease(pad.map(n=>transpose("p",n)),half*gate("p"),noteTime("p"),accent("p")*.6);
 }
 const NOISE_VOICES=new Set(["kickClk","snare","clap"]);
 const VOICES=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
@@ -1550,9 +1562,8 @@ const scheduledTime=Number.isFinite(time)?time:Tone.now();
 // Update the small transport display on beats, not every sixteenth note.
 const posEl=$id('pos-display');
 if(st_.idx%4===0){
-const beat=Math.floor(st_.idx/4)+1;
-const bar=Math.floor((st_.barCount||0)/16)+1;
-if(st_.idx===0)st_.barCount=(st_.barCount||0)+16;
+const beat=Math.floor((st_.tick%16)/4)+1;
+const bar=Math.floor(st_.tick/16)+1;
 if(posEl)posEl.textContent=`${bar}.${beat}`;
 posEl?.classList.add('beat-active');
 }else{
@@ -1591,31 +1602,32 @@ let activeStepUiIndex=-1;
 function refreshStepGrid(){
 const pattern=DRUM_PATTERNS[pat_.d]||{};
 document.querySelectorAll('.step[data-track][data-step]').forEach(step=>{
-const lane=step.dataset.track,index=Number(step.dataset.step);
-const velocity=DRUM_LANES.includes(lane)?Number(pattern[lane]?.[index]||0)*seq_[lane][index].v:(laneNote(lane,index)?seq_[lane][index].v:0);
+const lane=step.dataset.track,index=Number(step.dataset.step)+st_.bank*16;
+const velocity=DRUM_LANES.includes(lane)?drumHit(lane,index,pattern)*seq_[lane][index].v:(laneNote(lane,index)?seq_[lane][index].v:0);
 const fill=step.querySelector('.vel-fill');
 if(fill)fill.style.height=velocity>0?`${Math.round(30+velocity*70)}%`:'0';
 step.setAttribute('aria-pressed',velocity>0?'true':'false');
 const detail=seq_[lane]?.[index];
-step.classList.toggle('inactive',index>=st_.stepCount);step.disabled=index>=st_.stepCount;
+const inactive=index>=Math.min(st_.stepCount,st_.laneLengths[lane]||64);step.classList.toggle('inactive',inactive);step.disabled=inactive;
 step.style.setProperty('--timing',String(detail?.t||0));step.title=lane.toUpperCase()+' '+(index+1)+' / '+(detail?.t||0).toFixed(1)+' ms';
 if(detail&&detail.p<100)step.dataset.prob=String(Math.round(detail.p));else delete step.dataset.prob;
 if(detail&&detail.r>1)step.dataset.ratchet=String(detail.r);else delete step.dataset.ratchet;
 });
+document.querySelectorAll('.track-ruler .steps-grid span').forEach((el,i)=>el.textContent=String(i+1+st_.bank*16).padStart(2,'0'));
 document.querySelectorAll('.track[data-track]').forEach(row=>{
 const lane=row.dataset.track,muted=Boolean(st_.muteState[lane]);
+const name=row.querySelector('.track-name');if(name)name.title='Lane length: '+(st_.laneLengths[lane]||st_.stepCount)+' steps (right-click to change)';
 row.classList.toggle('muted',muted);
 const button=row.querySelector('.track-btn');
 if(button){button.setAttribute('aria-pressed',muted?'true':'false');button.textContent=muted?'U':'M';button.title=`${muted?'Unmute':'Mute'} ${row.querySelector('.track-name')?.textContent||lane}`;button.style.background=muted?'var(--dng)':'';button.style.color=muted?'#fff':'';}
 });
 }
 function updateStepUI(){
-const next=st_.idx%16;
+const next=st_.idx>=0&&Math.floor(st_.idx/16)===st_.bank?st_.idx%16:-1;
 // The animation frame can run once before the first transport tick. At that
 // point idx is -1; leave the grid untouched until the scheduler chooses step 0.
-if(next<0||next>=stepUiByIndex.length)return;
 if(activeStepUiIndex>=0)stepUiByIndex[activeStepUiIndex].forEach(el=>el.classList.remove('playing'));
-stepUiByIndex[next].forEach(el=>el.classList.add('playing'));
+if(next>=0&&next<stepUiByIndex.length)stepUiByIndex[next].forEach(el=>el.classList.add('playing'));
 activeStepUiIndex=next;
 }
 
@@ -1790,7 +1802,7 @@ return wav;
 }
 
 async function exportWAV(){
-if(st_.exporting)return;
+if(st_.exporting||mediaRecorder){log('Finish the current recording/export first','w');return;}
 st_.exporting=true;
 let context=null,resume=false;
 try{
@@ -1805,6 +1817,7 @@ $id('progress-wrap').style.display='block';
 $id('progress-pct').textContent='0%';
 $id('progress-fill').style.width='0%';
 log("exporting WAV...","i");
+st_.offlineRendering=true;document.body.inert=true;
 const buf=await Tone.Offline(async()=>{
 const graph=createAudioGraph(aud_,mix_,take.fxSeed,{offline:true,duration:len+leadIn});
 await graph.ready;
@@ -1847,7 +1860,7 @@ log("export failed: "+err.message,"e");
 $id('progress-wrap').style.display='none';
 }finally{
 if(context&&Tone.getContext()!==context)Tone.setContext(context);
-st_.exporting=false;$id("export").disabled=false;
+st_.exporting=false;st_.offlineRendering=false;document.body.inert=false;$id("export").disabled=false;
 if(resume)await startPlayback().catch(reportAudioStartupFailure);
 }
 }
@@ -1911,7 +1924,7 @@ for(let ch=0;ch<buffer.numberOfChannels;ch++){const src=buffer.getChannelData(ch
 pushHistory();
 const same=sampleSettings.name===file.name&&Math.abs(sampleSettings.duration-buffer.duration)<.001;
 sampleAudio={name:file.name,buffer,reversed};
-if(!same)sampleSettings={name:file.name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:16},(_,i)=>i%4===0?Math.floor(i/4):null),pitch:0,reverse:false,gate:100,offset:0};
+if(!same)sampleSettings={name:file.name,duration:buffer.duration,slices:detectSlices(buffer),pattern:Array.from({length:64},(_,i)=>i%4===0?Math.floor((i%16)/4):null),pitch:0,reverse:false,gate:100,offset:0};
 refreshSampler();saveSession();log("sample loaded: "+file.name,"k");
 }catch(error){log("sample: "+error.message,"e");}
 }
@@ -1924,8 +1937,8 @@ $id("sample-status").textContent=sampleAudio?sampleSettings.name+" / "+sampleSet
 for(const key of ["pitch","gate","offset"]){$id("sample-"+key).value=sampleSettings[key];$id("sample-"+key+"-o").textContent=sampleSettings[key];}
 $id("sample-reverse").checked=sampleSettings.reverse;
 for(const [i,button] of Array.from($id("sample-pattern").children).entries()){
-const slice=sampleSettings.pattern[i];button.textContent=slice==null?"·":String(slice+1).padStart(2,"0");
-button.setAttribute("aria-pressed",String(slice!=null));button.disabled=i>=st_.stepCount;
+const index=i+st_.bank*16,slice=sampleSettings.pattern[index];button.textContent=slice==null?"·":String(slice+1).padStart(2,"0");
+button.setAttribute("aria-pressed",String(slice!=null));button.disabled=index>=st_.stepCount;
 }
 }
 function buildSampler(){
@@ -1936,11 +1949,11 @@ for(const [id,mode] of [["sample-equal","equal"],["sample-transients","transient
 $id("sample-clear").addEventListener("click",()=>change(()=>{sampleSettings.pattern.fill(null);}));
 for(const key of ["pitch","gate","offset"])$id("sample-"+key).addEventListener("change",e=>change(()=>{sampleSettings[key]=Number(e.target.value);}));
 $id("sample-reverse").addEventListener("change",e=>change(()=>{sampleSettings.reverse=e.target.checked;}));
-for(let i=0;i<16;i++){const button=document.createElement("button");button.type="button";button.setAttribute("aria-label","Sample step "+(i+1));button.addEventListener("click",()=>change(()=>{const slice=Number($id("sample-slice").value);if(sampleSettings.slices[slice]!==undefined)sampleSettings.pattern[i]=sampleSettings.pattern[i]===slice?null:slice;}));$id("sample-pattern").append(button);}
+for(let i=0;i<16;i++){const button=document.createElement("button");button.type="button";button.setAttribute("aria-label","Sample step "+(i+1));button.addEventListener("click",()=>change(()=>{const slice=Number($id("sample-slice").value);const index=i+st_.bank*16;if(sampleSettings.slices[slice]!==undefined)sampleSettings.pattern[index]=sampleSettings.pattern[index]===slice?null:slice;}));$id("sample-pattern").append(button);}
 refreshSampler();
 }
 function playSample(index,time,opts){
-const settings=opts.session?.sample||sampleSettings,audio=opts.sample||sampleAudio;
+const settings=opts.session?.sample||sampleSettings,audio=opts.session?opts.sample:sampleAudio;
 const slice=settings.pattern[index];
 if(!audio||audio.name!==settings.name||slice==null||settings.slices[slice]===undefined)return;
 const begin=settings.slices[slice],end=settings.slices[slice+1]??audio.buffer.duration;
@@ -2085,6 +2098,9 @@ muteBtn.addEventListener('click',()=>toggleTrackMute(trackKey));
 const name=document.createElement('div');
 name.className='track-name';
 name.textContent=nm;
+name.tabIndex=0;name.setAttribute('role','button');
+const lengthMenu=(x,y)=>showCtxMenu(x,y,[{label:'Follow pattern',action:()=>{pushHistory();delete st_.laneLengths[trackKey];refreshStepGrid();saveSession();}},...[3,4,5,7,8,12,16,32,64].map(length=>({label:length+' steps',action:()=>{pushHistory();st_.laneLengths[trackKey]=length;refreshStepGrid();saveSession();}}))]);
+name.addEventListener('contextmenu',e=>{e.preventDefault();lengthMenu(e.clientX,e.clientY);});name.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();const rect=name.getBoundingClientRect();lengthMenu(rect.left,rect.bottom);}});
 const grid=document.createElement('div');
 grid.className='steps-grid';
 for(let i=0;i<16;i++){
@@ -2096,6 +2112,7 @@ step.setAttribute('aria-pressed','false');
 step.setAttribute('aria-label',`${nm} step ${i+1}`);
 step.dataset.track=trackKey;
 step.dataset.step=i;
+const stepIndex=()=>i+st_.bank*16;
 stepUiByIndex[i].push(step);
 const velFill=document.createElement('div');
 velFill.className='vel-fill';
@@ -2108,9 +2125,9 @@ pushHistory();
 const dp=DRUM_PATTERNS[pat_.d];
 if(!dp)return;
 if(!DRUM_LANES.includes(trackKey)){
-const detail=seq_[trackKey][i];
-if(laneNote(trackKey,i))detail.off=true;
-else {detail.off=false;if(!laneNote(trackKey,i))detail.note=trackKey==="b"?"C2":trackKey==="keys"?["C4","Eb4","G4","Bb4"]:["C3","G3","Eb4"];}
+const detail=seq_[trackKey][stepIndex()];
+if(laneNote(trackKey,stepIndex()))detail.off=true;
+else {detail.off=false;if(!laneNote(trackKey,stepIndex()))detail.note=trackKey==="b"?"C2":trackKey==="keys"?["C4","Eb4","G4","Bb4"]:["C3","G3","Eb4"];}
 updateVelFill();saveSession();return;
 }
 if(!dp[trackKey])return;
@@ -2118,21 +2135,24 @@ if(e.shiftKey){
 const ratch=parseInt(step.dataset.ratchet||'1');
 const newR=ratch===1?2:ratch===2?4:1;
 step.dataset.ratchet=newR>1?newR:'';
-seq_[trackKey][i].r=newR;
+seq_[trackKey][stepIndex()].r=newR;
 refreshStepGrid();
 log(`${nm} step ${i+1} ratchet=${newR}`);
 }else{
-dp[trackKey][i]=dp[trackKey][i]>0?0:0.8;
+seq_[trackKey][stepIndex()].hit=drumHit(trackKey,stepIndex(),dp)>0?0:.8;
 updateVelFill();
 }
 saveSession();
 });
 const openStepMenu=(x,y)=>{
-const edit=(key,value)=>()=>{pushHistory();seq_[trackKey][i][key]=value;refreshStepGrid();saveSession();};
+const edit=(key,value)=>()=>{pushHistory();seq_[trackKey][stepIndex()][key]=value;refreshStepGrid();saveSession();};
 showCtxMenu(x,y,[
 ...[0,25,50,75,100].map(p=>({label:"Probability "+p+"%",action:edit("p",p)})),
 ...[.4,.7,1].map(v=>({label:"Velocity "+Math.round(v*100)+"%",action:edit("v",v)})),
-...[-15,-8,0,8,15].map(t=>({label:"Timing "+(t>0?"+":"")+t+" ms",action:edit("t",t)}))
+...[-15,-8,0,8,15].map(t=>({label:"Timing "+(t>0?"+":"")+t+" ms",action:edit("t",t)})),
+...[.25,.5,1,2].map(g=>({label:"Gate "+Math.round(g*100)+"%",action:edit("g",g)})),
+...[1,2,3,4].map(cond=>({label:"Every "+cond+" loop(s)",action:edit("cond",cond)})),
+...[-12,-2,0,2,12].map(pitch=>({label:"Pitch "+(pitch>0?"+":"")+pitch+" st",action:edit("pitch",pitch)}))
 ]);
 };
 step.addEventListener('contextmenu',e=>{e.preventDefault();openStepMenu(e.clientX,e.clientY);});
@@ -2164,7 +2184,7 @@ step.addEventListener('mouseenter',()=>{
 if(st_.paintMode&&DRUM_LANES.includes(trackKey)){
 pushHistory();
 const dp=DRUM_PATTERNS[pat_.d];
-dp[trackKey][i]=st_.paintState?0.8:0;
+seq_[trackKey][stepIndex()].hit=st_.paintState?.8:0;
 updateVelFill();saveSession();
 }
 });
@@ -2302,6 +2322,7 @@ log(`${trackKey} ${muted?'muted':'unmuted'}`);
 }
 
 function handleKeys(e){
+if(st_.exporting)return;
 const target=e.target;
 const tag=target?.tagName?.toUpperCase();
 const textEntry=target?.isContentEditable||tag==='TEXTAREA'||tag==='SELECT'||
@@ -2341,7 +2362,7 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 // first click plays music instead of only arming the engine.
 let fileClockConfigured=false;
 function startToneFromGesture(){
-if(st_.exporting&&Tone.getContext().isOffline)return Promise.reject(Error('WAV export in progress'));
+if(st_.offlineRendering)return Promise.reject(Error('WAV export in progress'));
 if(location.origin==="null"&&!fileClockConfigured){
 Tone.setContext(new Tone.Context({clockSource:"timeout"}));
 fileClockConfigured=true;
@@ -2460,12 +2481,11 @@ $id('theme').addEventListener('click',toggleTheme);
 $id('tap').addEventListener('click',tapTempo);
 $id('steps').addEventListener('click',()=>{
 pushHistory();
-st_.stepCount=st_.stepCount===16?8:16;
-$id('steps').textContent=`${st_.stepCount} steps`;
-$id('steps').setAttribute('aria-pressed',st_.stepCount===8?'true':'false');
-refreshStepGrid();refreshSampler();saveSession();
+st_.stepCount=STEP_COUNTS[(STEP_COUNTS.indexOf(st_.stepCount)+1)%STEP_COUNTS.length];st_.bank=0;
+syncUIFromState();saveSession();
 log(`steps: ${st_.stepCount}`);
 });
+$id('bank').addEventListener('click',()=>{st_.bank=(st_.bank+1)%Math.ceil(st_.stepCount/16);syncUIFromState();saveSession();});
 $id('undobtn').addEventListener('click',undo);
 // lock buttons
 document.querySelectorAll('.lock-btn').forEach(btn=>{
@@ -2573,8 +2593,8 @@ else log('usage: bpm <60-170>','e');
 break;
 case'steps':{
 const s=parseInt(args[0]);
-if(s===8||s===16){st_.stepCount=s;$id('steps').textContent=`${s} steps`;$id('steps').setAttribute('aria-pressed',s===8?'true':'false');document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('inactive',i%16>=s));log(`steps → ${s}`,'k');}
-else log('usage: steps <8|16>','e');
+if(STEP_COUNTS.includes(s)){st_.bank=0;st_.stepCount=s;$id('steps').textContent=`${s} steps`;$id('steps').setAttribute('aria-pressed',s===8?'true':'false');document.querySelectorAll('.step').forEach((el,i)=>el.classList.toggle('inactive',i%16>=s));log(`steps → ${s}`,'k');}
+else log('usage: steps <8|16|32|64>','e');
 break;}
 case'style':{
 const nm=args.join(' ');
