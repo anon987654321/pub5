@@ -21,11 +21,20 @@ module Studio
 
       def definitions = @definitions ||= YAML.safe_load_file(PATH) || {}
 
+      # A chain is a list of steps. `steps: []` inside a mapping is the one
+      # explicit way to declare a chain that develops nothing; a bare empty list
+      # stays an error because it is far more likely to be a broken file.
       def definition(name)
-        steps = definitions.fetch(name.to_s) { raise ArgumentError, "unknown chain: #{name}" }
-        raise ArgumentError, "chain #{name} has no steps" if Array(steps).empty?
+        node = definitions.fetch(name.to_s) { raise ArgumentError, "unknown chain: #{name}" }
+        if node.is_a?(Hash)
+          steps = node.fetch("steps") { raise ArgumentError, "chain #{name} declares no steps key" }
+          raise ArgumentError, "chain #{name} steps must be a list" unless steps.is_a?(Array)
 
-        Array(steps)
+          return steps
+        end
+        raise ArgumentError, "chain #{name} has no steps" if Array(node).empty?
+
+        Array(node)
       end
 
       # Returns the developed frame's path and the provenance of every step.

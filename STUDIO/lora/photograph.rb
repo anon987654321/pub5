@@ -173,6 +173,7 @@ def studio_photograph_options(argv)
     # Compatibility flag; earlier stills are always retained.
     parser.on("--keep", "compatibility flag; prior generated stills are always retained") { options[:keep] = true }
     parser.on("--engine NAME", "render with a model from STUDIO/replicate/models.yml") { |value| options[:engine] = value }
+    parser.on("--chain NAME", "development chain: stills (default) or native (deliver the frame as generated)") { |value| options[:chain] = value }
     parser.on("--inference-profile NAME", "LoRA profile from training_standards.yml (identity, balanced, detail, draft)") { |value| options[:inference_profile] = value }
     parser.on("--film-engine NAME", "animate with a model from image_to_video (default minimax/h3-highspeed)") { |value| options[:film_engine] = value }
     parser.on("--film-resolution RES", "H3 Lite resolution: 480P (default) or 768P") { |value| options[:film_resolution] = value }
@@ -305,7 +306,8 @@ if $PROGRAM_NAME == __FILE__
       Studio::ReplicateClient::Models.engine(options[:engine]) if options[:engine]
       Studio::Visual::SelfieSeries.new(
         subject: options[:subject], engine: options[:engine], inference_profile: options[:inference_profile],
-        direction: options.fetch(:direction, "varied")
+        direction: options.fetch(:direction, "varied"),
+        chain: options[:chain] || Studio::Lora::Craft::STILL_CHAIN
       ).run(
         count: options[:count] || 4
       )

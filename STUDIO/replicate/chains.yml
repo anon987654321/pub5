@@ -33,3 +33,13 @@ stills:
       prompt_strength: 0.3
       aspect_ratio: "3:4"
       output_format: png
+
+# Delivers the frame exactly as generated. Every step in `stills` is a generative
+# model: repair redraws, the face-aware upscaler invents detail at 2x, and
+# analog-film re-renders at 30% strength. Stacked on a fresh FLUX frame they are
+# what makes a still read as a digital image wearing a grain filter. With native
+# the film look comes from the local house grade alone, at delivery size, where
+# grain sits on the detail the model actually drew.
+native:
+  # Declared, not merely empty: a bare empty list is refused as a broken file.
+  steps: []

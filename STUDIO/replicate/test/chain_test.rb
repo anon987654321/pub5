@@ -62,6 +62,19 @@ class TestStudioReplicateChain < Minitest::Test
                  @client.predictions.map { |call| call.fetch("model") }
   end
 
+  # native is the escape from three generative passes stacked on a fresh frame.
+  # It must hand back the frame it was given and call no model.
+  def test_the_native_chain_delivers_the_frame_untouched
+    result = Studio::ReplicateClient::Chain.run(
+      client: @client, frame: @frame, definition: "native", subject: "probe", directory: @dir
+    )
+
+    assert_empty result.fetch("steps")
+    assert_empty @client.predictions
+    assert_empty @client.uploads
+    assert_equal File.binread(@frame), File.binread(result.fetch("path"))
+  end
+
   def test_each_step_hands_its_output_to_the_next
     result = Studio::ReplicateClient::Chain.run(
       client: @client, frame: @frame, definition: "stills", subject: "probe", directory: @dir
@@ -164,9 +177,8 @@ class TestStudioReplicateChain < Minitest::Test
   end
 
   def test_every_chain_step_names_a_model_the_catalogue_knows_with_an_image_input
-    Studio::ReplicateClient::Chain.definitions.each do |name, steps|
-      refute_empty steps, "#{name} has no steps"
-      steps.each do |step|
+    Studio::ReplicateClient::Chain.definitions.each_key do |name|
+      Studio::ReplicateClient::Chain.definition(name).each do |step|
         inputs = Studio::ReplicateClient::Models.any_inputs_for(step.fetch("model"))
         assert Studio::ReplicateClient::Chain::IMAGE_INPUTS.any? { |key| inputs.include?(key) },
                "#{name}: #{step.fetch("model")} declares no image input"
@@ -185,8 +197,8 @@ class TestStudioReplicateChain < Minitest::Test
   # A step that names an input its model does not take fails at the API, after
   # the frame has already been rendered and uploaded. Catch it offline.
   def test_every_declared_step_input_exists_on_its_model
-    Studio::ReplicateClient::Chain.definitions.each do |name, steps|
-      steps.each do |step|
+    Studio::ReplicateClient::Chain.definitions.each_key do |name|
+      Studio::ReplicateClient::Chain.definition(name).each do |step|
         model = step.fetch("model")
         declared = Studio::ReplicateClient::Models.any_inputs_for(model)
         (step["inputs"] || {}).each_key do |key|
