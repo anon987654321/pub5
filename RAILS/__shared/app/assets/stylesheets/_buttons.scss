@@ -121,7 +121,7 @@ $legacy-small: false !default;
 }
 }
 
-$compact-list: null;
+$compact-list: ".sortable-keyboard-controls > .button";
 @each $context in $compact-contexts {
   @if $compact-list == null {
     $compact-list: "#{$context} .button";

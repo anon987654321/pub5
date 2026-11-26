@@ -312,6 +312,10 @@ def test_brgen_old_dialect_outranks_the_social_stack
                       "#{partial} names a size; size it from where the button sits"
     end
 
+    sortable = File.read(File.join(SHARED, "vendor", "javascript", "@stimulus-components--sortable.js"), encoding: "UTF-8")
+    refute_includes sortable, "button-small"
+    assert_includes buttons, ".sortable-keyboard-controls > .button"
+
     helper = File.read(File.join(SHARED, "app", "helpers", "shared", "stimulus_form_helper.rb"), encoding: "UTF-8")
     refute_includes helper, "button-small"
 
