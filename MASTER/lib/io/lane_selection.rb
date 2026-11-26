@@ -2,6 +2,7 @@
 
 require "yaml"
 require "socket"
+require "uri"
 require_relative "lane_quota"
 require_relative "lane_health"
 require_relative "lane_state"
@@ -146,9 +147,10 @@ module Master
         return false unless (base = cfg.dig("ollama", "default_base_url"))
 
         addr = URI(base)
-        TCPSocket.new(addr.host || "localhost", addr.port || 11_434).close
-        true
-      rescue SystemCallError, IOError, SocketError, URI::InvalidURIError
+        return false unless addr.is_a?(URI::HTTP) && !addr.hostname.to_s.empty? && addr.port.between?(1, 65_535)
+
+        Socket.tcp(addr.hostname, addr.port, connect_timeout: 1, resolv_timeout: 1) { true }
+      rescue SystemCallError, IOError, SocketError, URI::InvalidURIError, ArgumentError
         false
       end
 

@@ -147,6 +147,25 @@ class TestLaneSelection < Minitest::Test
     assert_nil Selection.nsfw_model_id
   end
 
+  def test_local_daemon_probe_bounds_resolution_and_connect_and_handles_ipv6
+    cfg = { "ollama" => { "default_base_url" => "http://[::1]:11434" } }
+    seen = nil
+    dial = lambda do |host, port, **options, &block|
+      seen = [host, port, options]
+      block.call
+    end
+    Socket.stub(:tcp, dial) { assert Selection.api_listening?(cfg) }
+    assert_equal ["::1", 11_434, { connect_timeout: 1, resolv_timeout: 1 }], seen
+  end
+
+  def test_local_daemon_probe_refuses_invalid_endpoints_without_connecting
+    Socket.stub(:tcp, ->(*) { flunk "invalid endpoint attempted a connection" }) do
+      [nil, "http://localhost:99999", "file:///tmp/example", "http://", "invalid"].each do |url|
+        refute Selection.api_listening?({ "ollama" => { "default_base_url" => url } }), url.inspect
+      end
+    end
+  end
+
   def test_zero_key_probe_serves_a_reachable_local_brain_only_without_keys
     ENV.delete("MASTER_OLLAMA_ENABLED")
     cfg = { "ollama" => { "probe" => true, "default_base_url" => "http://localhost:11434" } }
