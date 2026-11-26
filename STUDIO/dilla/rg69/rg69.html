@@ -891,7 +891,9 @@ return finalizeRG69AudioProfile({name:config.name,tone:config.tone,kit,voice,rig
 }
 let rg69AudioProfile=finalizeRG69AudioProfile(RG69_AUDIO_FALLBACK);
 let rg69AudioProfileLocked=false;
-const rg69AudioProfileReady=location.origin==="null"
+// file:// may report "file://" as location.origin even though fetch sees an opaque origin.
+const httpPage=location.protocol==="http:"||location.protocol==="https:";
+const rg69AudioProfileReady=!httpPage||location.origin==="null"
 ?Promise.resolve().then(()=>{log("local page: embedded Dilla sound profile","k");return rg69AudioProfile;})
 :fetch("../data/dilla.json",{cache:"force-cache"})
 .then(response=>{if(!response.ok)throw new Error("Dilla catalogue request failed: "+response.status);return response.json();})
@@ -2444,7 +2446,7 @@ else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.
 let fileClockConfigured=false;
 function startToneFromGesture(){
 if(st_.offlineRendering)return Promise.reject(Error('WAV export in progress'));
-if(location.origin==="null"&&!fileClockConfigured){
+if((!httpPage||location.origin==="null")&&!fileClockConfigured){
 Tone.setContext(new Tone.Context({clockSource:"timeout",lookAhead:.15,updateInterval:.025}));
 fileClockConfigured=true;
 }
