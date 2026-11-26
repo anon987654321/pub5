@@ -82,7 +82,7 @@ tokens:
           - "Random holes without a semantic cause."
           - "Filling every void to make the interface appear busy."
       tree_translations:
-        MASTER: "An original monochrome face assembled from discrete carriers; meaning-driven signal, fingerprint-like contours and legible negative space."
+        MASTER: "An original monochrome face assembled from discrete carriers; meaning-driven signal, structural apertures and legible negative space."
         RAILS: "Clear editorial hierarchy and coherent content groups; preserve each product's established visual dialect, card grammar and real media."
         OPENBSD: "Plain, truthful, chronological operational signals; no decorative animation in place of status, evidence or recovery."
         STUDIO: "Use signal, rhythm, fragmentation and reconstruction as original cinematic or musical composition tools; preserve source-media fidelity and operator-owned grades."
@@ -540,16 +540,14 @@ tokens:
       activity: 0.14
       risk: 0.0
     sculpture:
-      interior_fraction: 0.40
-      rear_fraction: 0.24
       rest_yaw: 0.18
     # How the stipple layer looks in each state in `modes` above; the web face
     # reads this through MASTER_FACE_CONTRACT and Ruby through Face::Contract.
     stipple:
       intro_duration_ms: 5200
-      # Fingerprint ridges stay legible within the same greyscale point field.
+      # Legacy material laboratory only; never ornament the sculpture.
       fingerprint:
-        enabled: true
+        enabled: false
         spacing: 22.0
         strength: 0.48
         center: [0.08, 0.06]
