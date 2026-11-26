@@ -98,11 +98,11 @@ test("with ?primer=1 the first tap fires and a second tap does nothing", () => {
 
 test("early activation waits for the parsed shell before importing the face", () => {
   const { runAutostart, documentListeners, transitions, sandbox, primer } = loadPrimer({ readyState: "loading" });
+  sandbox.document.readyState = "interactive";
   runAutostart();
   assert.deepEqual(transitions, ["PRIMER"]);
   assert.equal(sandbox.__MASTER_FACE_IMPORT__, undefined);
   assert.equal(primer.added.includes("gone"), false);
-  sandbox.document.readyState = "interactive";
   documentListeners.DOMContentLoaded();
   assert.deepEqual(transitions, ["PRIMER", "ASSETS"]);
   assert.equal(sandbox.__MASTER_FACE_IMPORT__, true);
