@@ -32,3 +32,14 @@ st_.playing=true;startClock();assert(callback,"restart must arm clock");
 return {clock:"passed",steps,failures};
 `);
 console.log(JSON.stringify(clockTest(assert),null,2));
+
+const profileSource=extract("const httpPage=","function createToneInstruments");
+const loadProfile=new Function("location","fetch","let rg69AudioProfile={name:'embedded'},rg69AudioProfileLocked=false;const log=()=>{},resolveRG69AudioProfile=x=>x;"+profileSource+"\nreturn rg69AudioProfileReady;");
+const origins=[["file:","file://",0],["file:","null",0],["data:","null",0],["about:","null",0],["https:","null",0],["http:","http://localhost",1],["https:","https://example.com",1]];
+for(const [protocol,origin,expected] of origins){
+let calls=0;
+const profile=await loadProfile({protocol,origin},()=>{calls++;return Promise.resolve({ok:true,json:async()=>({name:"catalogue"})});});
+assert(calls===expected,"unexpected fetch "+protocol+" "+origin);
+assert(profile.name===(expected?"catalogue":"embedded"),"incorrect profile");
+}
+console.log("profile origin checks: "+origins.length);
