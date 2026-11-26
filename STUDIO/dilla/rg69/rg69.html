@@ -139,7 +139,7 @@ button,select{border:0;border-radius:6px;background:var(--panel);min-height:44px
 @media(max-width:420px){.knob-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.mix-fx .knob-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.module-heading label{min-width:100px}.step{min-height:44px}.steps-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.track-ruler .steps-grid{display:none}.performance-pads{grid-template-columns:repeat(5,minmax(0,1fr))}}
 #terminal-panel{margin-top:20px;border-top:1px solid var(--brd)}#trace{background:transparent;padding:8px 0;font:12px/1.6 var(--mono);max-height:200px}#terminal-panel summary{font:600 13px var(--mono)}#term-input{background:transparent;border:0;border-radius:0;font:14px var(--mono)}.term-input-row{border-top:1px solid var(--brd)}#copy-log{background:transparent}#install-app{margin-left:auto;background:var(--acc);color:var(--ink)}
 </style>
-<link rel="manifest" href="./manifest.webmanifest">
+
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute"><symbol id="pony-art" viewBox="0 0 180 144"><path d="M12 112a73 73 0 0 1 146 0" fill="none" stroke="#e7a9cb" stroke-width="8"/><path d="M23 112a62 62 0 0 1 124 0" fill="none" stroke="#c4a7e7" stroke-width="7"/><path d="M34 112a51 51 0 0 1 102 0" fill="none" stroke="#a9d5d7" stroke-width="7"/><g stroke="#853661" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M58 92Q29 71 28 101Q30 122 50 113Q35 109 43 100L62 110" fill="#bd92e0"/><path d="M60 83Q74 70 94 82L104 65L126 73L122 94L126 124H114L109 103L88 105L85 124H73L73 105L66 124H54L58 103Q49 95 60 83Z" fill="#f9bbd9"/><path d="M95 66Q85 46 101 32L103 14L115 28Q144 23 150 47L163 57Q166 71 151 75L132 75L121 86Q103 82 95 66Z" fill="#ffd9eb"/><path d="M108 26L122 5L125 28" fill="#f8d995"/><path d="M102 31Q84 30 81 48Q76 66 92 75Q84 89 100 101Q119 98 110 80Q123 72 110 60Q99 49 118 41Q136 43 143 33Q127 19 102 31Z" fill="#c39be7"/><path d="M92 45Q98 30 114 33" fill="none" stroke="#ffe0f3" stroke-width="5"/><ellipse cx="138" cy="51" rx="8" ry="11" fill="#fff"/><ellipse cx="140" cy="53" rx="4" ry="7" fill="#50305f"/><circle cx="141" cy="49" r="2" fill="#fff" stroke="none"/><path d="M149 66q5 3 9-1" fill="none"/><path d="M78 88q-6-6-10 0q-3 5 10 12q13-7 10-12q-4-6-10 0Z" fill="#e45c9a" stroke="none"/></g><g fill="#d77eb4"><path d="M23 30l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><path d="M160 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="44" cy="20" r="3"/><circle cx="159" cy="93" r="3"/></g></symbol></svg>
@@ -1331,7 +1331,8 @@ registerProcessor("rg69-programme-glue",ProgrammeGlue);
 const wearModules=new WeakMap();
 function loadWearModule(ctx){
 if(!wearModules.has(ctx))wearModules.set(ctx,(async()=>{
-if(!ctx.audioWorklet||typeof AudioWorkletNode!=="function"||typeof URL.createObjectURL!=="function")return false;
+// Opaque file origins cannot reliably load blob-backed worklets. Use native DSP.
+if(!httpPage||location.origin==="null"||!ctx.audioWorklet||typeof AudioWorkletNode!=="function"||typeof URL.createObjectURL!=="function")return false;
 let url;
 try{url=URL.createObjectURL(new Blob(["("+wearProcessor.toString()+")();"],{type:"text/javascript"}));await ctx.audioWorklet.addModule(url);return true;}
 catch(error){log("wear0: native fallback ("+error.message+")","w");return false;}
@@ -3264,7 +3265,8 @@ else if(e.key==='ArrowDown'){e.preventDefault();if(termHistIdx>0){termHistIdx--;
 // ────────────────────────────────────────────────────────────────────────────
 
 // Installation is optional; the standalone file needs no service worker.
-if(location.protocol==="https:"||location.hostname==="localhost"){
+if(location.protocol==="https:"||location.hostname==="localhost"||location.hostname==="127.0.0.1"){
+const manifest=document.createElement("link");manifest.rel="manifest";manifest.href="./manifest.webmanifest";document.head.append(manifest);
 const install=$id("install-app");let prompt=null;
 window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();prompt=event;install.hidden=false;});
 install.addEventListener("click",async()=>{if(!prompt)return;const request=prompt;prompt=null;install.hidden=true;await request.prompt();});
