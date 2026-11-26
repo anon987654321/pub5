@@ -212,17 +212,12 @@ volatile_selectors:
   # with the same box-keeping visibility rule as the clocks above, per canvas
   # actually observed in the served page (probed 2026-11-07, guest, 390px):
   # #cognition-ecology (agent spirits, recreated by cognition_ecology.js),
-  # #face (the head; the 2D runtime repurposes it and leaves it zero-sized),
-  # #master-gravity-field (gravity_field.js particles), the 2D ASCII-at-rest
-  # and phosphor-trail layers of face_2d_fallback.js and face_phosphor_trail.js,
-  # and canvas:not([id]) for the one canvas the face's boot stack creates that
-  # never takes an id - direct child of body, persistent, painting.
+  # #face (the volumetric head), #master-gravity-field (gravity particles),
+  # and #face-phosphor-trail (the temporal afterimage layer).
   - "#face"
   - "#cognition-ecology"
   - "#master-gravity-field"
-  - "#face-2d-fallback"
   - "#face-phosphor-trail"
-  - "body > canvas:not([id])"
 
 # Images the golden-screenshot settle step waits for as part of loading: an img
 # matching the selector is settled when it is complete and its src equals the

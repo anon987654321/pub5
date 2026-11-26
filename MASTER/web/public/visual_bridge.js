@@ -163,7 +163,7 @@
   // setTimeout, guarded by `if (window.MASTER_FACE?.tts) return` — so it ran
   // only when the face runtime was absent, which is exactly when every listener
   // for tts:viseme is absent too: face_semantics.js and face_vision_c.js are
-  // face modules, and face_2d_fallback.js has no mouth. It emitted into an empty
+  // face modules. It emitted into an empty
   // room on timers that outlived the condition they were armed under. The plan
   // itself still forwards below, as every other named runtime event does.
 

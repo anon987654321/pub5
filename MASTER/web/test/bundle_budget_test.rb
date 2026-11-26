@@ -25,7 +25,7 @@ class BundleBudgetTest < Minitest::Test
   end
 
   def test_the_heavy_face_bundles_have_budgets
-    %w[three.face.module.js face_ascii.js face_vision.bundle.js].each do |name|
+    %w[three.face.module.js face.modules.bundle.js face_vision.bundle.js].each do |name|
       assert_kind_of Integer, budgets[name], "#{name} has no gzip budget"
     end
   end
@@ -40,15 +40,15 @@ class BundleBudgetTest < Minitest::Test
   def test_the_build_report_stops_on_a_bundle_over_budget
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "config"))
-      File.write(File.join(dir, "config", "bundle_budgets.yml"), { "face_ascii.js" => 100 }.to_yaml)
+      File.write(File.join(dir, "config", "bundle_budgets.yml"), { "face.modules.bundle.js" => 100 }.to_yaml)
 
-      output, status = report(File.join(ROOT, "public", "face_ascii.js"), root: dir)
+      output, status = report(File.join(ROOT, "public", "face.modules.bundle.js"), root: dir)
       refute status.success?, output
       assert_includes output, "over its 100-byte budget"
 
-      output, status = report(File.join(ROOT, "public", "face_ascii.js"), root: ROOT)
+      output, status = report(File.join(ROOT, "public", "face.modules.bundle.js"), root: ROOT)
       assert status.success?, output
-      assert_includes output, "budget=#{budgets.fetch('face_ascii.js')}"
+      assert_includes output, "budget=#{budgets.fetch('face.modules.bundle.js')}"
     end
   end
 end

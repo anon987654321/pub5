@@ -8,7 +8,7 @@ module Master
       # (data/tokens.yml, face_interface.ascii.masks) laid over the human
       # head's morphology; nothing here stores or names an object. The mesh is
       # the head's own grid, vertex for vertex, so a morph moves vertices and
-      # never adds or drops one. The web face ports every line (face_ascii.js).
+      # never adds or drops one.
       module Masks
         CONFIG = Glyphs::CONFIG.fetch("masks").freeze
         ARCHIVE = Master.load_yaml(Master.data_path("face_masks.yml"), default: {}) || {}

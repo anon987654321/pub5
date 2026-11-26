@@ -4,10 +4,8 @@ require "minitest/autorun"
 require "digest"
 require "yaml"
 
-# The browser defaults to the 3D point-cloud face; the terminal and explicit web mode
-# share the ASCII renderer. These contracts hold mode choice, fallback, point shading,
-# generated runtime digests, manifest order and shell typography in one place.
-class MasterWebAsciiFaceContractTest < Minitest::Test
+# The browser has one WebGL particle renderer; the CLI retains its ASCII face.
+class MasterWebFaceContractTest < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   WEB = File.join(ROOT, "MASTER", "web")
   PUBLIC = File.join(WEB, "public")
@@ -32,22 +30,17 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     assert_includes runtime, "do not edit by hand"
   end
 
-  def test_the_ascii_script_loads_before_the_fallback_and_after_the_boot_script
-    early = manifest.fetch("shell_early")
-
-    assert_equal "face_ascii.js", early.first
-    assert_operator early.index("face_ascii.js"), :<, early.index("face_2d_fallback.js")
-    boot = view.index('asset_path("face_primer.js")')
-    ascii_tag = view.index('asset_path("face_ascii.js")')
-    fallback_tag = view.index('asset_path("face_2d_fallback.js")')
-
-    assert_operator boot, :<, ascii_tag
-    assert_operator ascii_tag, :<, fallback_tag
-    assert_match(/<script src="<%= asset_path\("face_ascii\.js"\) %>" defer><\/script>/, view)
+  def test_retired_renderers_are_absent_from_the_browser
+    %w[face_ascii.js face_2d_fallback.js].each do |name|
+      refute File.exist?(File.join(PUBLIC, name)), name
+      refute_includes view, name
+      refute_includes manifest.values.flatten, name
+    end
+    refute_includes view, 'id="ascii-star"'
   end
 
   def test_particle_kernel_still_leads_every_face_consumer_and_ascii_is_not_an_eager_module
-    assert_equal ["particle_kernel.js"], manifest.fetch("shell_blocking")
+    assert_equal "particle_kernel.js", manifest.fetch("shell_blocking").first
     assert_operator view.index('asset_path("particle_kernel.js")'), :<, view.index('id="primer"')
     refute_includes manifest.fetch("face_eager"), "face_ascii.js", "it is a shell script; the bundle is not rebuilt for it"
     bundle = read(PUBLIC, "face.modules.bundle.js")
@@ -59,31 +52,24 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     assert_includes read(PUBLIC, "face.part5.txt"), "window.MASTER_FACE = {"
     runtime = SOURCES.map { |name| read(PUBLIC, name) }.join
     refute_match(/MASTERFace\b/, runtime)
-    refute_match(/MASTERFace\b/, read(PUBLIC, "face_ascii.js"))
   end
 
-  def test_browser_defaults_to_3d_and_ascii_is_opt_in_with_a_safe_fallback
+  def test_browser_uses_one_webgl_renderer_and_requires_rendered_points
     part1 = read(PUBLIC, "face.part1.txt")
     part3 = read(PUBLIC, "face.part3.txt")
-
-    assert_match(/get\('face_mode'\) \|\| '3d'/, part1)
-    assert_match(/_wantsAscii = _faceModeParam === 'ascii'/, part1)
-    assert_includes part1, "?face_mode=ascii"
-    assert_match(/let _hasWebGL = !_wantsAscii && /, part1)
-    assert_includes part1, "webgl_import_failed_using_ascii"
-    assert_includes part1, "await waitForAsciiRenderer()"
-    assert_includes part1, "face unavailable"
-    assert_match(/if \(_asciiEngine && cv && !renderer\)/, part1)
-    assert_match(/!renderer && !asciiView/, part3)
-    assert_match(/if \(asciiView\) \{\n    drawAsciiFace\(t\);/, part3)
-    refute_match(/getElementById\(["']face["']\)\s*\.getContext/, read(PUBLIC, "face_2d_fallback.js"))
+    assert_includes part1, "new THREE.WebGLRenderer("
+    assert_includes part1, "renderer.info.render.points"
+    assert_includes part3, "renderer.render(scene, camera)"
+    assert_includes part3, "markFaceReady();"
+    refute_match(/drawAsciiFace|waitForAsciiRenderer|_wantsAscii/, part1 + part3)
+    refute_includes read(PUBLIC, "face_semantics.js"), "start2D"
   end
 
   def test_the_particle_head_uses_uniform_fixed_bitmap_points
     part2 = read(PUBLIC, "face.part2.txt")
 
-    assert_includes part2, "gl_PointSize=3.0"
-    assert_includes part2, "vColor=vec3(0.9333333);"
+    assert_match(/gl_PointSize\s*=\s*1\.0;/, part2)
+    assert_includes part2, "vColor = vec3(clamp("
     assert_includes part2, "transparent: false, depthWrite: true, depthTest: true"
     refute_includes part2, "vec3(0.74,0.66,0.58)"
     refute_includes part2, "vec3(1.0,0.98,0.94)"
@@ -97,53 +83,13 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     assert_includes part3, "frameRequest !== null"
   end
 
-  def test_the_configured_face_shortcuts_control_laws_and_overlay_separately
-    source = read(PUBLIC, "face_ascii.js")
-    handler = source[/function onKeydown\(event\) \{.*?^  \}/m]
-    refute_nil handler, "the configured face shortcuts must have a testable handler"
-    law_handler = handler[/if \(pressed === lawKey\) \{.*?^    \}/m]
-    refute_nil law_handler, "the law shortcut must have its own branch"
-
-    assert_includes view, "window.MASTER_FACE_LAW_FIELD"
-    assert_includes source, "lawFieldVisible = lawFieldConfig.enabled !== false"
-    assert_includes law_handler, "setLawField(!lawFieldVisible)"
-    assert_includes law_handler, "Constitutional law glyphs visible"
-    assert_includes law_handler, "Constitutional law glyphs hidden"
-    assert_includes law_handler, "field.laws"
-    assert_includes law_handler, "in priority order"
-    assert_includes law_handler, "status.textContent"
-    assert_includes source, 'getElementById("ui-status")',
-                     "the law shortcut must announce its change through an existing live region"
-    refute_includes law_handler, "setGlyphMode",
-                     "the law key must not change the whole ASCII overlay mode"
-    refute_includes law_handler, "update(",
-                     "the law key must not create a second overlay canvas"
-    assert_includes handler, "field.overlay_toggle_key"
-    assert_includes handler, "setGlyphMode(!glyphMode)"
-    assert_includes handler, "ASCII face mode enabled"
-    assert_includes handler, "ASCII face overlay enabled"
+  def test_cli_glyph_contract_remains_printable_ascii
+    assert_match(/\A[\x20-\x7e]{2,}\z/, ascii.fetch("chars"))
+    assert_equal ascii.fetch("chars").chars.sort, ascii.fetch("ink").keys.sort
   end
 
-  def test_the_renderer_and_its_frames_are_plain_ascii_without_braille
-    source = read(PUBLIC, "face_ascii.js")
-
-    refute_match(/[\u2800-\u28ff]/, source)
-    assert_match(/\A[\t\n\x20-\x7e]*\z/, source, "face_ascii.js holds only printable ASCII")
-    assert_match(/\A[\x20-\x7e]{2,}\z/, ascii.fetch("chars"), "the ramp is printable ASCII")
-    assert_equal ascii.fetch("chars").chars.sort, ascii.fetch("ink").keys.sort, "every ramp glyph has a measured ink density"
-  end
-
-  def test_every_number_the_view_needs_is_in_the_contract_the_page_receives
-    # json_escape keeps a "</script>" inside a token from closing the script element.
-    contract = /window\.MASTER_FACE_CONTRACT = <%= raw json_escape\(/
-    assert_match(/#{contract}Master\.tokens\.fetch\("face_interface", \{\}\)\.to_json\) %>/, view)
-    web = ascii.fetch("web")
-
-    assert_kind_of Integer, web.fetch("rows")
-    assert_equal 3, web.fetch("tone").size
-    assert_equal 2, web.fetch("font").size
-    source = read(PUBLIC, "face_ascii.js")
-    %w[rows font tone].each { |key| assert_includes source, "web.#{key}" }
+  def test_browser_receives_the_face_contract_and_render_budget
+    assert_includes view, 'window.MASTER_FACE_CONTRACT = <%= raw json_escape(Master.tokens.fetch("face_interface", {}).to_json) %>'
     budget = tokens.dig("tokens", "face_interface", "spatial", "budget")
     %w[active_fps idle_fps reduced_motion_fps].each { |key| assert_includes budget.keys, key }
   end

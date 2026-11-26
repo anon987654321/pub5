@@ -406,36 +406,20 @@ There is no `face.part4.txt` — the two speech files sit in its place, and
 that is where TTS, the browser-voice default and the STT duck live. Reading
 this list as `face.part*.txt` sends you looking for that code in a part file
 that does not contain it.
-`RAILS/test/master_web_ascii_face_contract_test.rb` checks that
+`RAILS/test/master_web_face_contract_test.rb` checks that
 `face.runtime.js` names each of the six by its current digest and fails on
 any drift, naming the task to run.
 
-### The browser defaults to the 3D point-cloud face; ASCII stays supported
+### The browser uses one volumetric WebGL face
 
-The browser's absent `face_mode` parameter (and `face_mode=auto`) selects
-the 3D particle head. Use `?face_mode=ascii` to request the plain-ASCII
-renderer explicitly. The CLI remains ASCII-first. The runtime probes WebGL
-on a disposable canvas only after `go()` activates the face; it never binds
-`#face` to 2D and later attempts WebGL on that same canvas. If WebGL is
-unavailable or the THREE module cannot import, the runtime waits briefly for
-the shared ASCII renderer and uses it on `#face`. If both paths are
-unavailable, the runtime reports that state and the independent
-`face_2d_fallback.js` canvas remains available instead of treating the
-failure as success.
+The CLI retains its ASCII renderer. The browser has no ASCII or secondary
+2D face. The primer imports the ordered face modules and starts the runtime
+once. Readiness requires rendered points from the WebGL renderer, not merely
+a successful import. If rendering fails, report the failure without
+substituting another face; text interaction remains available.
 
-`public/face_ascii.js` remains the renderer ported from
-`MASTER/lib/cli/face/`. It reads the face contract in
-`MASTER/data/tokens.yml`, reconstructs the head from the depth map and
-morphology, rasterises and lights it on the CPU, and draws characters on
-`#face` with a 2D context. The Ruby renderer and browser renderer share the
-fixture `MASTER/test/fixtures/face_ascii_frames.json`;
-`MASTER/web/test/face_ascii.test.mjs` holds browser frames to it character
-for character. `face_2d_fallback.js` draws the same head at rest on its own
-canvas until the runtime takes over. The primary 3D head remains a single
-crisp point-cloud surface: one-pixel points, neutral grayscale depth and
-normal-driven sculpting, with no wireframe edges or added glow. Secondary
-orbit particles are deterministic and dimmer than the face, so the identity
-remains the focal point.
+The primary head uses one-pixel points, neutral grayscale depth and
+sculptural geometry, without wireframe edges or added glow.
 
 The face's slow transitions are its timing, not debt. `face.css` fades a
 reveal over 1.2s, and `chat_upload.css` steps over .42s;
