@@ -199,7 +199,7 @@ body[data-density=compact] .step{min-height:28px}
 </div>
 </details>
 <details>
-<summary>Atmosphere / background</summary><fieldset><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset></details><details>
+<summary>Dream circuitry / modulation</summary><fieldset><label for="note-routing">Note routing</label><select id="note-routing"><option value="0">Sustained harmony</option><option value="1">Hocket · alternating notes</option><option value="2">Hocket · alternating phrases</option><option value="3">Hocket · seeded scatter</option></select><label for="pitch-rhythm">Pitch / rhythm</label><select id="pitch-rhythm"><option value="0">Original arrangement</option><option value="1">Pitch bag · 3 in 8</option><option value="2">Pitch bag · 5 in 16</option><option value="3">Pitch bag · offbeat</option></select><label for="lfo-morph">LFO morph <output id="lfo-morph-o">35</output></label><input id="lfo-morph" type="range" min="0" max="100" value="35"><label for="lfo-depth">LFO depth <output id="lfo-depth-o">100</output></label><input id="lfo-depth" type="range" min="0" max="100" value="100"><label for="lfo-rate">LFO rate <output id="lfo-rate-o">20</output></label><input id="lfo-rate" type="range" min="0" max="100" value="20"></fieldset></details><details><summary>Atmosphere / background</summary><fieldset><label for="ambience">Environment</label><select id="ambience"><option value="0">Off</option><option value="1">Rain on glass</option><option value="2">Ocean at night</option><option value="3">Forest wind</option><option value="4">Vinyl room</option><option value="5">Pink noise</option><option value="6">Brown noise</option><option value="7">White noise</option><option value="8">Distant thunder</option><option value="9">Fireplace</option></select><label for="ambience-level">Atmosphere <output id="ambience-level-o">32</output></label><input id="ambience-level" type="range" min="0" max="100" value="32"></fieldset></details><details>
 <summary>Mix</summary>
 <fieldset>
 <label for="drum-vol">Drums <output id="drum-vol-o">80</output></label><input id="drum-vol" type="range" min="0" max="100" value="80">
@@ -857,7 +857,7 @@ const bootStylePool=bootStyleCandidates.filter(style=>style.n==="Boom Bap");
 const bootStyle=bootStylePool[0]||bootStyleCandidates.find(style=>/dilla|hip.hop|lo.fi/i.test(style.n))||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
 const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,tape:100,wobble:100,vinyl:100,crackle:100};
-let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,drift:0.05};
+let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,drift:0.05};
 let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
 let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106'};
 let seq_={};
@@ -945,7 +945,7 @@ if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))t
 const pat=data.pat||data.pat_,aud=data.aud||data.aud_,mix=data.mix||data.mix_;
 for(const [key,table] of Object.entries(PATTERN_TABLES))if(pat&&Object.hasOwn(table,pat[key]))pat_[key]=pat[key];
 if(pat){pat_.keysVoice=validPatch(pat.keysVoice);pat_.padsVoice=validPatch(pat.padsVoice);}
-for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:key==="ambience"?9:100,aud_[key]);
+for(const key of Object.keys(aud_))if(aud&&Object.hasOwn(aud,key))aud_[key]=clamp(aud[key],key==="bpm"?60:0,key==="bpm"?170:key==="drift"?1:key==="ambience"?9:["noteRouting","pitchRhythm"].includes(key)?3:100,aud_[key]);
 for(const key of Object.keys(mix_))if(mix&&Object.hasOwn(mix,key))mix_[key]=clamp(mix[key],0,100,mix_[key]);
 for(const [key,pattern] of Object.entries(JSON.parse(ORIGINAL_DRUMS))){
 const incoming=data.drums&&Object.hasOwn(data.drums,key)?data.drums[key]:null;
@@ -1040,6 +1040,7 @@ function syncUIFromState(){
 showSongPosition(st_.tick??-1);
 $id('bank').textContent='Bank '+String.fromCharCode(65+st_.bank);$id('bank').disabled=st_.stepCount<=16;
 refreshSampler();
+for(const [id,key] of [["note-routing","noteRouting"],["pitch-rhythm","pitchRhythm"],["lfo-morph","lfoMorph"],["lfo-depth","lfoDepth"],["lfo-rate","lfoRate"]]){$id(id).value=String(Math.round(aud_[key]));if($id(id+"-o"))$id(id+"-o").textContent=Math.round(aud_[key]);}
 $id("ambience").value=String(Math.round(aud_.ambience));$id("ambience-level").value=aud_.ambienceLevel;$id("ambience-level-o").textContent=Math.round(aud_.ambienceLevel);
 for(const key of ['console','phase','sampler','motion','duck']){const id=key==='sampler'?'sample-wear':key;$id(id).value=aud_[key];$id(key+'-o').textContent=Math.round(aud_[key]);}
 $id('pocket').value=aud_.pocket;$id('pocket-o').textContent=Math.round(aud_.pocket);
@@ -1334,6 +1335,29 @@ const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=atmosp
 }};
 }
 
+// A continuous sine-to-triangle-to-pulse morph using band-limited Fourier coefficients.
+function morphCoefficients(value){
+const m=Math.max(0,Math.min(1,value)),real=new Float32Array(17),imag=new Float32Array(17);
+for(let k=1;k<17;k++){
+const sine=k===1?1:0,triangle=k%2?8/(Math.PI*Math.PI*k*k)*(-1)**((k-1)/2):0,pulse=k%2?4/(Math.PI*k):0;
+imag[k]=m<=.5?sine+(triangle-sine)*m*2:triangle+(pulse-triangle)*(m*2-1);
+}
+return {real,imag};
+}
+function createDreamLFO(ctx,aud,offline,duration){
+const osc=ctx.createOscillator(),targets=[];let lastMorph=-1;
+const start=ctx.currentTime;osc.start(start);if(offline&&duration>start)osc.stop(duration);
+return {insert(source){
+const filter=ctx.createBiquadFilter(),depth=ctx.createGain();
+filter.type="lowpass";filter.frequency.value=6500;filter.Q.value=.65;depth.gain.value=0;
+Tone.connect(source,filter);osc.connect(depth);depth.connect(filter.frequency);targets.push({filter,depth});return filter;
+},update(settings){
+const now=ctx.currentTime,morph=(settings.lfoMorph??35)/100,depth=(settings.lfoDepth??100)/100,rate=(settings.lfoRate??20)/100;
+if(morph!==lastMorph){const {real,imag}=morphCoefficients(morph);osc.setPeriodicWave(ctx.createPeriodicWave(real,imag));lastMorph=morph;}
+osc.frequency.setTargetAtTime(.035*2**(rate*7),now,.08);
+for(const target of targets){target.filter.frequency.setTargetAtTime(18000-11500*depth,now,.08);target.depth.gain.setTargetAtTime(3000*depth,now,.08);}
+}};
+}
 function createAudioGraph(aud,mix,seed,{offline=false,duration=0,patches={}}={}){
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
 // Create isolated audio graph for offline rendering - never touch global synth variables
@@ -1449,17 +1473,18 @@ const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
 installLaneFX(routes,effects);
 
 const sampleG=new Tone.Gain(.65);sampleG.connect(masterG);sampleG.connect(revSend);sampleG.connect(dlySend);
-const consoleStrips=[],recordingStages=[];
+const consoleStrips=[],recordingStages=[],dreamLFO=createDreamLFO(ctx,aud,offline,duration);
 for(const [source,lane] of [[drumG,'drum'],[bassG,'bass'],[panners.keys,'keys'],[panners.pads,'pads'],[sampleG,'sample']]){
-try{const recording=createRecordingStage(ctx,source,lane);recording.update(aud);const strip=createConsoleStrip(ctx,recording.output,masterG,lane);strip.update(aud);source.disconnect(masterG);recordingStages.push(recording);consoleStrips.push(strip);}catch(error){log('console0 '+lane+': '+error.message,'w');}
+try{const recording=createRecordingStage(ctx,lane==="keys"||lane==="pads"?dreamLFO.insert(source):source,lane);recording.update(aud);const strip=createConsoleStrip(ctx,recording.output,masterG,lane);strip.update(aud);source.disconnect(masterG);recordingStages.push(recording);consoleStrips.push(strip);}catch(error){log('console0 '+lane+': '+error.message,'w');}
 }
+dreamLFO.update(aud);
 let analog=null;
 try{analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfile,aud,mix,offline,duration);
 tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,dreamLFO,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1485,7 +1510,7 @@ if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar){compPar.ratio.value=1+aud_.comp/100*2;compPar.release.value=Math.min(.5,60/aud_.bpm*.5);}
 if(liveGraph?.glue)liveGraph.glue.release.value=Math.min(.5,30/aud_.bpm);
 if(widener)widener.width.value=aud_.width/100;
-liveGraph?.atmosphere?.update(aud_);
+liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
 for(const stage of liveGraph?.recordingStages||[])stage.update(aud_);
 for(const strip of liveGraph?.consoleStrips||[])strip.update(aud_);
 if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
@@ -1509,6 +1534,27 @@ const limit=Math.min(.025,sixteenth/4);
 return Math.max(-limit,Math.min(limit,(Number(offsetMs)||0)/1000));
 }
 
+function harmonyAt(row,tick){
+if(!row?.segments?.length)return null;
+let at=tick%row.segments.reduce((sum,chord)=>sum+chord.steps,0);
+for(const chord of row.segments){if(at<chord.steps)return chord;at-=chord.steps;}
+return null;
+}
+function pitchBagHit(mode,tick){
+const rhythms=[[],[0,3,6],[0,3,6,10,13],[2,6,10,14]];
+const cycle=mode===1?8:16,positions=rhythms[mode]||[];
+const slot=positions.indexOf(tick%cycle);
+return slot<0?-1:Math.floor(tick/cycle)*positions.length+slot;
+}
+function routeHarmony(notes,mode,tick,seed,available){
+const lanes=available.filter(Boolean),out={keys:[],p:[]};
+if(!lanes.length)return out;
+for(let i=0;i<notes.length;i++){
+const index=mode===2?Math.floor(tick/16):mode===3?Math.floor(randomAt(seed,tick,"keys",i+93)*lanes.length):i+Math.floor(tick/16);
+out[lanes[index%lanes.length]].push(notes[i]);
+}
+return out;
+}
 function triggerNotes(stepIdx,baseTime,synths,opts){
 const take=opts.session,pat=take?.pat||pat_,seq=take?.seq||seq_,aud=take?.aud||aud_;
 const seed=take?.seed??sessionSeed,tick=opts.tick??stepIdx;
@@ -1583,10 +1629,21 @@ const freq=noteHz(transpose("b",nt))*2**(drift/1200);
 synths.bass.triggerAttackRelease(freq,eighth*gate("b"),noteTime("b"),accent("b"));
 synths.bassSub.triggerAttackRelease(freq/2,eighth*gate("b"),noteTime("b"),accent("b")*.7);
 }
-const ch=laneNote("keys",index("keys"),pat,seq,tick);
-if(ch&&allowed("keys")&&chance("keys"))synths.keys.triggerAttackRelease([ch].flat().map(n=>transpose("keys",n)),harmonyDuration("keys"),noteTime("keys"),accent("keys"));
-const pad=laneNote("p",index("p"),pat,seq,tick);
-if(Array.isArray(pad)&&allowed("p")&&chance("p"))synths.pads.triggerAttackRelease(pad.map(n=>transpose("p",n)),harmonyDuration("p"),noteTime("p"),accent("p")*.95);
+const ch=laneNote("keys",index("keys"),pat,seq,tick),pad=laneNote("p",index("p"),pat,seq,tick);
+const routing=Math.round(aud.noteRouting??0),bag=Math.round(aud.pitchRhythm??0);
+const keysAllowed=allowed("keys")&&chance("keys"),padsAllowed=allowed("p")&&chance("p");
+if(!routing&&!bag){
+if(ch&&keysAllowed)synths.keys.triggerAttackRelease([ch].flat().map(n=>transpose("keys",n)),harmonyDuration("keys"),noteTime("keys"),accent("keys"));
+if(Array.isArray(pad)&&padsAllowed)synths.pads.triggerAttackRelease(pad.map(n=>transpose("p",n)),harmonyDuration("p"),noteTime("p"),accent("p")*.95);
+}else{
+const hit=bag?pitchBagHit(bag,tick):-1;
+const row=HARMONIES[pat.k],chord=harmonyAt(row,tick);
+const pool=chord?.keys||[ch].flat().filter(Boolean);
+const notes=bag?(hit>=0&&pool.length?[pool[hit%pool.length]]:[]):[...new Set([...([ch].flat().filter(Boolean)),...(Array.isArray(pad)?pad:[])])];
+const active=[keysAllowed?"keys":null,padsAllowed?"p":null];
+const routed=routing?routeHarmony(notes,routing,tick,seed,active):{keys:keysAllowed?notes:[],p:!keysAllowed&&padsAllowed?notes:[]};
+for(const lane of ["keys","p"]){if(!routed[lane].length)continue;const voice=lane==="keys"?"keys":"pads";synths[voice].triggerAttackRelease(routed[lane].map(n=>transpose(lane,n)),bag?sixteenth*2.6*gate(lane):harmonyDuration(lane),noteTime(lane),accent(lane)*(lane==="p"?.95:1));}
+}
 }
 const NOISE_VOICES=new Set(["kickClk","snare","clap"]);
 const VOICES=["kick","kickSub","kickClk","kickBody","snare","snareRng","clap","hat","open","bass","bassSub","keys","pads"];
@@ -2047,6 +2104,7 @@ button.setAttribute("aria-pressed",String(slice!=null));button.disabled=index>=s
 }
 }
 function buildSampler(){
+for(const [id,key] of [["note-routing","noteRouting"],["pitch-rhythm","pitchRhythm"],["lfo-morph","lfoMorph"],["lfo-depth","lfoDepth"],["lfo-rate","lfoRate"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);if($id(id+"-o"))$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 $id("ambience").addEventListener("change",e=>{pushHistory();aud_.ambience=Number(e.target.value);applyFX();saveSession();});
 $id("ambience-level").addEventListener("input",e=>{aud_.ambienceLevel=Number(e.target.value);$id("ambience-level-o").textContent=aud_.ambienceLevel;applyFX();saveSession();});
 const change=fn=>{pushHistory();fn();refreshSampler();saveSession();};
