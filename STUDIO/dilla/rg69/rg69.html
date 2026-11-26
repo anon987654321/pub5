@@ -178,6 +178,7 @@ body[data-density=compact] .step{min-height:28px}
 </details>
 <details id="sampler"><summary>Sampler / local audio</summary><div id="sample-drop"><label>Load audio <input id="sample-file" type="file" accept="audio/*,.wav,.aif,.aiff"></label><output id="sample-status">No sample loaded</output><button id="sample-equal">Equal slices</button><button id="sample-transients">Find transients</button><button id="sample-clear">Clear</button><label>Slice <select id="sample-slice"></select></label><label>Pitch <input id="sample-pitch" type="range" min="-24" max="24" value="0"><output id="sample-pitch-o">0</output></label><label>Gate <input id="sample-gate" type="range" min="5" max="100" value="100"><output id="sample-gate-o">100</output></label><label>Start <input id="sample-offset" type="range" min="0" max="90" value="0"><output id="sample-offset-o">0</output></label><label><input id="sample-reverse" type="checkbox"> Reverse</label><label>Copy layers <select id="sample-copies"><option value="0">Original</option><option value="1">Octave shadow</option><option value="2">Reverse constellation</option><option value="3">Four-speed dream</option></select></label><div id="sample-pattern" class="steps-grid"></div></div></details>
 <details>
+<summary>Drum coloration</summary><fieldset><legend>Dedicated percussion chain</legend><label for="drum-sonitex">Record &amp; sampler wear <output id="drum-sonitex-o">100</output></label><input id="drum-sonitex" type="range" min="0" max="100" value="100"><label for="drum-vcs">Console &amp; phase <output id="drum-vcs-o">100</output></label><input id="drum-vcs" type="range" min="0" max="100" value="100"></fieldset></details><details>
 <summary>Sound / tape &amp; vinyl</summary>
 <fieldset><legend>Recording chain</legend><label for="console">Console <output id="console-o">58</output></label><input id="console" type="range" min="0" max="100" value="58"><label for="phase">Phase <output id="phase-o">28</output></label><input id="phase" type="range" min="0" max="100" value="28"><label for="sample-wear">Sampler <output id="sampler-o">24</output></label><input id="sample-wear" type="range" min="0" max="100" value="24"><label for="motion">Motion <output id="motion-o">32</output></label><input id="motion" type="range" min="0" max="100" value="32"><label for="duck">Ducking <output id="duck-o">20</output></label><input id="duck" type="range" min="0" max="100" value="20"><button id="clean-chain" type="button">Clean / color</button></fieldset>
 <div class="two-col">
@@ -856,7 +857,7 @@ const industrialBoot=bootStyleCandidates.filter(style=>['Industrial','Hard Techn
 const bootStylePool=bootStyleCandidates.filter(style=>style.n==="Boom Bap");
 const bootStyle=bootStylePool[0]||bootStyleCandidates.find(style=>/dilla|hip.hop|lo.fi/i.test(style.n))||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
-const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,tape:100,wobble:100,vinyl:100,crackle:100};
+const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,drumSonitex:100,drumVcs:100,tape:100,wobble:100,vinyl:100,crackle:100};
 let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,drift:0.05};
 let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
 let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106'};
@@ -1037,6 +1038,7 @@ $id("song-mode").textContent=st_.song?"Song":"Loop";
 $id("song-mode").setAttribute("aria-pressed",String(!!st_.song));
 }
 function syncUIFromState(){
+for(const [id,key] of [["drum-sonitex","drumSonitex"],["drum-vcs","drumVcs"]]){ $id(id).value=aud_[key];$id(id+"-o").textContent=Math.round(aud_[key]);}
 showSongPosition(st_.tick??-1);
 $id('bank').textContent='Bank '+String.fromCharCode(65+st_.bank);$id('bank').disabled=st_.stepCount<=16;
 refreshSampler();
@@ -1136,6 +1138,30 @@ smooth(playback.frequency,18000-(musical?7500:4500)*wear);
 }};
 }
 
+// Drum-only record wear followed by a phase-colouring console strip.
+function createDrumColor(ctx,source){
+const gain=value=>{const n=ctx.createGain();n.gain.value=value;return n;};
+const filter=(type,hz,q=.707)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;n.Q.value=q;return n;};
+const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.025);};
+const dry=gain(1),wet=gain(0),sum=gain(1),pre=gain(1),hp=filter("highpass",24),shelf=filter("highshelf",4500),sat=ctx.createWaveShaper(),band=filter("lowpass",15000),quant=ctx.createWaveShaper(),playback=filter("lowpass",14000),noise=gain(0);
+sat.oversample="2x";sat.curve=Float32Array.from({length:4097},(_,i)=>{const x=i/2048-1;return Math.tanh(1.9*(x+.12*x*x))/1.9;});
+Tone.connect(source,dry);dry.connect(sum);Tone.connect(source,hp);hp.connect(pre);pre.connect(shelf);shelf.connect(sat);sat.connect(band);band.connect(quant);quant.connect(playback);playback.connect(wet);wet.connect(sum);noise.connect(sum);
+const clean=gain(1),colored=gain(0),output=gain(1),phase1=filter("allpass",115,.7),phase2=filter("allpass",940,.85),low=filter("lowshelf",95),mid=filter("peaking",360,.9),high=filter("highshelf",6500),drive=gain(1),transformer=ctx.createWaveShaper(),dc=filter("highpass",16),comp=ctx.createDynamicsCompressor(),trim=gain(1);
+transformer.oversample="2x";transformer.curve=Float32Array.from({length:4097},(_,i)=>{const x=i/2048-1;return Math.tanh(1.45*(x+.09*x*x))/1.45;});
+comp.knee.value=12;comp.attack.value=.024;
+sum.connect(clean);clean.connect(output);sum.connect(phase1);phase1.connect(phase2);phase2.connect(low);low.connect(mid);mid.connect(high);high.connect(drive);drive.connect(transformer);transformer.connect(dc);dc.connect(comp);comp.connect(trim);trim.connect(colored);colored.connect(output);
+const length=Math.ceil(ctx.sampleRate*.24),dust=ctx.createBuffer(1,length,ctx.sampleRate),samples=dust.getChannelData(0);
+let seed=0x126069,previous=0,slow=0,click=0,lastBits=-1,amount=0;
+for(let i=0;i<length;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const white=seed/2147483648-1;slow+=(white-slow)*.025;if((seed&1023)===0)click=white*.8;click*=.86;samples[i]=(.16*(white-previous)+.4*slow+click)*Math.exp(-i/(ctx.sampleRate*.045));previous=white;}
+return {output,update(aud){
+amount=Math.max(0,Math.min(1,(aud.drumSonitex??100)/100));const color=Math.max(0,Math.min(1,(aud.drumVcs??100)/100));
+const bits=16-Math.round(5*amount);if(bits!==lastBits){const levels=2**(bits-1);quant.curve=Float32Array.from({length:8193},(_,i)=>Math.round((i/4096-1)*levels)/levels);lastBits=bits;}
+smooth(dry.gain,1-.72*amount);smooth(wet.gain,.72*amount);smooth(pre.gain,1+.42*amount);smooth(shelf.gain,2*amount);smooth(band.frequency,18000-6500*amount);smooth(playback.frequency,16000-7200*amount);smooth(noise.gain,.15*amount);
+smooth(clean.gain,1-.8*color);smooth(colored.gain,.8*color);smooth(phase1.frequency,90+70*color);smooth(phase2.frequency,700+480*color);smooth(low.gain,2.2*color);smooth(mid.gain,-1.6*color);smooth(high.gain,-1.8*color);smooth(drive.gain,1+.32*color);smooth(comp.threshold,-12-4*color);smooth(comp.ratio,1+1.3*color);smooth(comp.release,Math.min(.32,20/aud.bpm));smooth(trim.gain,1+.1*color);
+},hit(at,velocity){
+if(amount<=0)return;const src=ctx.createBufferSource(),level=gain(Math.min(1,velocity)*.36);src.buffer=dust;src.connect(level);level.connect(noise);src.onended=()=>{src.disconnect();level.disconnect();};src.start(Math.max(ctx.currentTime,at));
+}};
+}
 function createConsoleStrip(ctx,source,destination,lane){
 const gain=value=>{const n=ctx.createGain();n.gain.value=value;return n;};
 const filter=(type,hz)=>{const n=ctx.createBiquadFilter();n.type=type;n.frequency.value=hz;n.Q.value=.707;return n;};
@@ -1424,7 +1450,7 @@ const snareN=instruments.snare,snareRng=instruments.snareRng,clapN=instruments.c
 const bassN=instruments.bass,bassSub=instruments.bassSub,keysN=instruments.keys,padsN=instruments.pads;
 const bassDuck=new Tone.Gain(1),keysDuck=new Tone.Gain(1),padsDuck=new Tone.Gain(1);
 function duck(at,velocity,settings){
-const depth=(settings.duck??20)/100*Math.min(1,velocity),release=Math.min(.35,60/settings.bpm*.47);
+const depth=.32*(settings.duck??20)/100*Math.min(1,velocity),release=Math.min(.35,60/settings.bpm*.47);
 for(const [node,weight] of [[bassDuck,.52],[keysDuck,1],[padsDuck,.85]]){
 const p=node.gain;p.cancelScheduledValues(at);p.setValueAtTime(1-depth*weight,at+.004);p.linearRampToValueAtTime(1,at+Math.max(.025,release));
 }
@@ -1466,15 +1492,16 @@ keysDrive.connect(keysDuck);keysDuck.connect(keysG);keysG.connect(keysTexture);k
 keysLP.connect(panners.keys);panners.keys.connect(masterG);panners.keys.connect(revSend);panners.keys.connect(dlySend);
 padsN.connect(padsFlt);padsFlt.connect(padsDuck);padsDuck.connect(padsG);padsG.connect(padsBW);padsBW.connect(padsSat);
 padsSat.connect(panners.pads);panners.pads.connect(masterG);panners.pads.connect(revSend);panners.pads.connect(dlySend);
+const drumColor=createDrumColor(ctx,drumG);drumColor.update(aud);
 const drumFXSend=new Tone.Gain(.2),bassFXSend=new Tone.Gain(.15);
-drumG.connect(masterG);drumG.connect(drumFXSend);bassG.connect(masterG);bassG.connect(bassFXSend);
+drumColor.output.connect(masterG);drumColor.output.connect(drumFXSend);bassG.connect(masterG);bassG.connect(bassFXSend);
 const routes={drum:[drumFXSend,masterG,revSend,dlySend],bass:[bassFXSend,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
 const effects=seed==null?createDefaultFX(aud.bpm):createRandomFX(seed,aud.bpm);
 installLaneFX(routes,effects);
 
 const sampleG=new Tone.Gain(.65);sampleG.connect(masterG);sampleG.connect(revSend);sampleG.connect(dlySend);
 const consoleStrips=[],recordingStages=[],dreamLFO=createDreamLFO(ctx,aud,offline,duration);
-for(const [source,lane] of [[drumG,'drum'],[bassG,'bass'],[panners.keys,'keys'],[panners.pads,'pads'],[sampleG,'sample']]){
+for(const [source,lane] of [[drumColor.output,'drum'],[bassG,'bass'],[panners.keys,'keys'],[panners.pads,'pads'],[sampleG,'sample']]){
 try{const recording=createRecordingStage(ctx,lane==="keys"||lane==="pads"?dreamLFO.insert(source):source,lane);recording.update(aud);const strip=createConsoleStrip(ctx,recording.output,masterG,lane);strip.update(aud);source.disconnect(masterG);recordingStages.push(recording);consoleStrips.push(strip);}catch(error){log('console0 '+lane+': '+error.message,'w');}
 }
 dreamLFO.update(aud);
@@ -1484,7 +1511,7 @@ tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
-return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,dreamLFO,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
+return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,atmosphere,dreamLFO,drumColor,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
 function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
@@ -1510,7 +1537,7 @@ if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar){compPar.ratio.value=1+aud_.comp/100*2;compPar.release.value=Math.min(.5,60/aud_.bpm*.5);}
 if(liveGraph?.glue)liveGraph.glue.release.value=Math.min(.5,30/aud_.bpm);
 if(widener)widener.width.value=aud_.width/100;
-liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
+liveGraph?.drumColor?.update(aud_);liveGraph?.atmosphere?.update(aud_);liveGraph?.dreamLFO?.update(aud_);
 for(const stage of liveGraph?.recordingStages||[])stage.update(aud_);
 for(const strip of liveGraph?.consoleStrips||[])strip.update(aud_);
 if(liveGraph?.analog){try{liveGraph.analog.update(aud_,mix_);}catch(error){console.warn("analog0 update:",error);}}
@@ -1661,7 +1688,7 @@ const events=compileStep(index,time,opts);
 for(const event of events){
 const {voice,args}=event;
 try{
-synths[voice].triggerAttackRelease(...args);if(voice==='kick')opts.sampleGraph?.duck?.(event.time,args.at(-1),opts.session?.aud||aud_);opts.onNote?.(voice);
+synths[voice].triggerAttackRelease(...args);if(['kick','snare','clap','hat','open'].includes(voice))opts.sampleGraph?.drumColor?.hit(event.time,args.at(-1));if(voice==='kick')opts.sampleGraph?.duck?.(event.time,args.at(-1),opts.session?.aud||aud_);opts.onNote?.(voice);
 }catch(error){if(!opts.onError)throw error;opts.onError(voice,error);}
 }
 if(opts.sampleGraph){try{playSample(index,time,opts);}catch(error){if(!opts.onError)throw error;opts.onError('sample',error);}}
@@ -2104,6 +2131,7 @@ button.setAttribute("aria-pressed",String(slice!=null));button.disabled=index>=s
 }
 }
 function buildSampler(){
+for(const [id,key] of [["drum-sonitex","drumSonitex"],["drum-vcs","drumVcs"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 for(const [id,key] of [["note-routing","noteRouting"],["pitch-rhythm","pitchRhythm"],["lfo-morph","lfoMorph"],["lfo-depth","lfoDepth"],["lfo-rate","lfoRate"]])$id(id).addEventListener("input",e=>{aud_[key]=Number(e.target.value);if($id(id+"-o"))$id(id+"-o").textContent=aud_[key];applyFX();saveSession();});
 $id("ambience").addEventListener("change",e=>{pushHistory();aud_.ambience=Number(e.target.value);applyFX();saveSession();});
 $id("ambience-level").addEventListener("input",e=>{aud_.ambienceLevel=Number(e.target.value);$id("ambience-level-o").textContent=aud_.ambienceLevel;applyFX();saveSession();});
