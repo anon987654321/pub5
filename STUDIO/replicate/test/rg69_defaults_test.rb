@@ -181,8 +181,8 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "synths.snareRng.triggerAttackRelease(pitch.snareRing*pitchShift,hitGate(sixteenthDuration),rt,vl*0.5)"
     assert_includes js, "synths.hat.triggerAttackRelease(pitch.hat*pitchShift,hitGate(Math.min(sixteenthDuration*.5,.06)),rt,vl)"
     assert_includes js, "synths.open.triggerAttackRelease(pitch.open*pitchShift,hitGate(eighth),rt,vl)"
-    assert_includes js, "hat:new Tone.MetalSynth("
-    assert_includes js, "open:new Tone.MetalSynth("
+    assert_includes js, "function createDrumBank(ctx,profile,connect)"
+    assert_includes js, "...createDrumBank(Tone.getContext().rawContext,p,Tone.connect)"
   end
 
   def test_keyboard_shortcuts_work_from_welcome_and_range_controls
@@ -368,7 +368,7 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "profile.rig.vinyl.crackle"
     assert_includes js, "vinylFlt.connect(masterG)"
     assert_includes js, "crackleFlt.connect(masterG)"
-    assert_includes js, "instruments[lane].volume.value=20*Math.log10(level)"
+    assert_includes js, "out.gain.value=Math.max(.001,Number(level)||1)"
   end
   def test_master_gain_stays_a_gain_and_audio_boot_does_not_block_on_fetch
     assert_includes js, "const masterG=new Tone.Gain(mix.master/100);"
@@ -380,7 +380,7 @@ class TestRg69Defaults < Minitest::Test
     assert_includes js, "limiter.connect(outputGate);"
     assert_includes js, "if(masterG)smooth(masterG.gain,mix_.master/100);"
     assert_includes js, "if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);"
-    assert_includes js, "if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100);"
+    assert_includes js, "if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);"
     assert_includes js, "drumDrive.connect(drumG);"
     assert_includes js, "rg69AudioProfileLocked=true;"
     refute_includes js, "await rg69AudioProfileReady"
@@ -406,15 +406,26 @@ class TestRg69Defaults < Minitest::Test
   end
 
   def test_live_and_offline_hats_keep_profile_metal_tone_with_short_envelopes
-    assert_includes js, "hat:new Tone.MetalSynth("
-    assert_includes js, "open:new Tone.MetalSynth("
-    assert_includes js, "modulationIndex:t.hat.modulation_index"
-    assert_includes js, "resonance:openResonance"
-    assert_includes js, "hatFlt=new Tone.Filter(7600,'highpass')"
-    assert_includes js, "openFlt=new Tone.Filter(6200,'highpass')"
+    assert_includes js, "function createDrumBank(ctx,profile,connect)"
+    assert_includes js, "...createDrumBank(Tone.getContext().rawContext,p,Tone.connect)"
+    assert_includes js, "const metal=[1,1.483,1.932,2.546,2.63,3.897];"
+    assert_includes js, "hat:[k.hat.decay,t.hat.attack,n.hat"
+    assert_includes js, "open:[k.openhat.decay,t.openhat.attack,n.open"
+    assert_includes js, "hatFlt=new Tone.Filter(5500,'highpass')"
+    assert_includes js, "openFlt=new Tone.Filter(4200,'highpass')"
     assert_includes js, "hatN.connect(hatFlt)"
     assert_includes js, "openN.connect(openFlt)"
     assert_includes js, "hitGate(Math.min(sixteenthDuration*.5,.06))"
+  end
+
+  def test_percussion_uses_independent_one_shots_and_permanent_dry_routes
+    assert_includes js, "const source=ctx.createBufferSource()"
+    assert_includes js, "source.start(at);source.stop(end);"
+    assert_includes js, "drumClean.connect(drumG);"
+    assert_includes js, "drumG.connect(masterG);drumG.connect(drumFXSend);"
+    assert_includes js, "bassG.connect(masterG);bassG.connect(bassFXSend);"
+    assert_includes js, 'id="reset-mix"'
+    refute_includes js, "oneShotMetal("
   end
 
   def test_closed_hat_gate_finishes_before_the_next_humanized_sixteenth
