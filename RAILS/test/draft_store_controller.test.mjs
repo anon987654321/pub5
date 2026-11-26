@@ -31,6 +31,10 @@ test("a draft keeps what was written and leaves the CSRF token behind", () => {
       { name: "authenticity_token", type: "hidden", value: "old-token" },
       { name: "post[content]", type: "textarea", value: "Hei Bergen" },
       { name: "post[image]", type: "file", value: "" },
+      { name: "user[password]", type: "password", value: "private" },
+      { name: "post[api_key]", type: "text", value: "private" },
+      { name: "post[secret]", type: "hidden", value: "private" },
+      { name: "post[ignored]", disabled: true, type: "text", value: "ignored" },
     ],
   }
 
@@ -101,4 +105,80 @@ test("an HTTP error does not discard a queued submission", async () => {
   await controller.flushQueue()
   assert.deepEqual(await get("retry", "queue"), [queued])
   controller.disconnect()
+})
+
+const autosaveSource = await readFile(new URL("../__shared/frontend/autosave_controller.js", import.meta.url), "utf8")
+const autosaveFile = join(dir, "autosave_controller.mjs")
+await writeFile(autosaveFile, autosaveSource
+  .replace(/^import \{ Controller \}.*$/m, "class Controller {}")
+  .replace(/^import \{ get, set, del \}.*$/m, "import { get, set, del } from './draft_store_controller.mjs'"))
+const { default: Autosave } = await import(pathToFileURL(autosaveFile).href)
+
+function autosave(key) {
+  const controller = new Autosave()
+  const field = { name: "post[content]", type: "textarea", value: "First" }
+  Object.assign(controller, {
+    keyValue: key, hasUrlValue: true, urlValue: "/drafts/" + key,
+    active: true, dirty: true, revision: 1,
+    savedValue: "Saved", savedLocallyValue: "Local", failedValue: "Failed", savingValue: "Saving",
+    element: { dataset: {}, querySelectorAll: () => [field] },
+    hasStatusTarget: true, statusTarget: { textContent: "" }
+  })
+  globalThis.document = { querySelector: () => null }
+  return { controller, field }
+}
+
+test("offline autosave remains pending for reconnection", async () => {
+  Object.defineProperty(globalThis.navigator, "onLine", { value: false, configurable: true })
+  const { controller } = autosave("reconnect")
+  await controller.flush()
+  assert.equal(controller.dirty, true)
+  assert.equal(controller.statusTarget.textContent, "Local")
+  Object.defineProperty(globalThis.navigator, "onLine", { value: true, configurable: true })
+  globalThis.fetch = async () => ({ ok: true })
+  await controller.flush()
+  assert.equal(controller.dirty, false)
+  assert.equal(controller.statusTarget.textContent, "Saved")
+})
+
+test("autosave serializes writes and never acknowledges a newer edit", async () => {
+  Object.defineProperty(globalThis.navigator, "onLine", { value: true, configurable: true })
+  const { controller, field } = autosave("revision")
+  let finish
+  let requests = 0
+  globalThis.fetch = () => {
+    requests += 1
+    return new Promise(resolve => { finish = resolve })
+  }
+  const first = controller.flush()
+  assert.equal(controller.flush(), first)
+  await new Promise(resolve => setImmediate(resolve))
+  field.value = "Second"
+  controller.markDirty()
+  finish({ ok: true })
+  await first
+  assert.equal(requests, 1)
+  assert.equal(controller.dirty, true)
+  assert.equal(controller.statusTarget.textContent, "Saving")
+  globalThis.fetch = async () => ({ ok: true })
+  await controller.flush()
+  assert.equal(controller.dirty, false)
+  assert.equal((await get("revision", "autosave"))["post[content]"], "Second")
+})
+
+test("a redirected autosave is not a confirmed server write", async () => {
+  const { controller } = autosave("redirect")
+  globalThis.fetch = async () => ({ ok: true, redirected: true })
+  await controller.flush()
+  assert.equal(controller.dirty, true)
+  assert.equal(controller.statusTarget.textContent, "Local")
+})
+
+test("confirmed submission removes an obsolete autosave", async () => {
+  const { controller } = autosave("submitted")
+  globalThis.fetch = async () => ({ ok: true })
+  await controller.flush()
+  controller.submittedRevision = controller.revision
+  await controller.clearSubmitted()
+  assert.equal(await get("submitted", "autosave"), undefined)
 })

@@ -134,6 +134,7 @@ nb:
     saving: "Lagrer…"
     saved: "Lagret"
     saved_locally: "Lagret lokalt"
+    save_failed: "Ikke lagret"
     restored: "Gjenopprettet"
     loading_more: "Laster mer…"
     load_more: "Last inn flere"

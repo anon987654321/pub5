@@ -64,9 +64,13 @@ export default class extends Controller {
 
   async restore() {
     const revision = this.revision
-    const saved = await get(this.keyValue, STORE)
-    if (!saved || revision !== this.revision) return
-    this.applySnapshot(saved)
+    try {
+      const saved = await get(this.keyValue, STORE)
+      if (!saved || revision !== this.revision) return
+      this.applySnapshot(saved)
+    } catch (error) {
+      console.warn("draft-store restore:", error)
+    }
   }
 
   save(payload = this.snapshot()) {
@@ -91,7 +95,8 @@ export default class extends Controller {
   snapshot() {
     const fields = {}
     this.element.querySelectorAll("input, textarea, select").forEach(field => {
-      if (!field.name || field.type === "file" || field.name === "authenticity_token") return
+      if (!field.name || field.disabled || /^(file|password|submit|button|reset)$/i.test(field.type) ||
+          /(?:^|[^a-z0-9])(?:password|password_confirmation|token|secret|api_key|private_key|otp|authenticity)(?:$|[^a-z0-9])/i.test(field.name)) return
       if (field.type === "checkbox") {
         fields[field.name] = field.checked ? "1" : "0"
         return

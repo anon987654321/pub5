@@ -135,6 +135,7 @@ en:
     saving: "Saving…"
     saved: "Saved"
     saved_locally: "Saved locally"
+    save_failed: "Not saved"
     restored: "Restored"
     loading_more: "Loading more…"
     load_more: "Load more"

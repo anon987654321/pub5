@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import { get, set } from "idb-keyval"
+import { get, set, del } from "idb-keyval"
 
 const STORE = "autosave"
 
@@ -11,13 +11,22 @@ export default class extends Controller {
     saving: { type: String, default: "Saving…" },
     saved: { type: String, default: "Saved" },
     savedLocally: { type: String, default: "Saved locally" },
-    restored: { type: String, default: "Restored" }
+    restored: { type: String, default: "Restored" },
+    failed: { type: String, default: "Not saved" }
   }
 
   static targets = ["status"]
 
   connect() {
     this.dirty = false
+    this.revision = (this.revision || 0) + 1
+    this.active = true
+    this.onSubmitStart = () => { this.submittedRevision = this.revision }
+    this.onSubmitEnd = (event) => {
+      if (event.detail?.success === true) this.clearSubmitted()
+    }
+    this.element.addEventListener("turbo:submit-start", this.onSubmitStart)
+    this.element.addEventListener("turbo:submit-end", this.onSubmitEnd)
     this.onInput = this.markDirty.bind(this)
     this.onOnline = this.flush.bind(this)
     this.element.addEventListener("input", this.onInput)
@@ -33,6 +42,9 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.active = false
+    this.element.removeEventListener("turbo:submit-start", this.onSubmitStart)
+    this.element.removeEventListener("turbo:submit-end", this.onSubmitEnd)
     this.element.removeEventListener("input", this.onInput)
     this.element.removeEventListener("change", this.onInput)
     window.removeEventListener("online", this.onOnline)
@@ -56,52 +68,77 @@ export default class extends Controller {
   }
 
   markDirty() {
+    this.revision += 1
     this.dirty = true
     this.setStatus(this.savingValue)
   }
 
   async restore() {
-    const saved = await get(this.keyValue, STORE)
-    if (!saved) return
-    this.applySnapshot(saved)
-    this.setStatus(this.restoredValue)
+    const revision = this.revision
+    try {
+      const saved = await get(this.keyValue, STORE)
+      if (!saved || !this.active || revision !== this.revision) return
+      // The draft-store saves every keystroke and owns restoration when present.
+      if (this.element.dataset.controller?.split(/\s+/).includes("draft-store")) return
+      this.applySnapshot(saved)
+      this.setStatus(this.restoredValue)
+    } catch (error) {
+      console.warn("autosave restore:", error)
+    }
   }
 
-  async flush() {
-    if (!this.dirty) return
+  flush() {
+    if (this.inFlight || !this.dirty) return this.inFlight
+    const revision = this.revision
+    this.inFlight = this.persist(this.snapshot(), revision)
+      .finally(() => { this.inFlight = null })
+    return this.inFlight
+  }
 
-    const snapshot = this.snapshot()
-    await set(this.keyValue, snapshot, STORE)
+  async persist(snapshot, revision) {
+    const local = await set(this.keyValue, snapshot, STORE)
+      .then(() => true).catch(() => false)
 
-    if (!navigator.onLine || !this.hasUrlValue) {
-      this.dirty = false
-      this.setStatus(this.savedLocallyValue)
-      return
+    let remote = false
+    if (navigator.onLine && this.hasUrlValue) {
+      const headers = {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || ""
+      }
+      const response = await fetch(this.urlValue, {
+        method: "PATCH",
+        headers,
+        credentials: "same-origin",
+        body: new URLSearchParams(snapshot)
+      }).catch(() => null)
+      remote = response?.ok === true && !response.redirected
     }
 
-    const headers = {
-      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-      "X-CSRF-Token": document.querySelector('meta[name="csrf-token"]')?.content || ""
-    }
-    const response = await fetch(this.urlValue, {
-      method: "PATCH",
-      headers: headers,
-      credentials: "same-origin",
-      body: new URLSearchParams(snapshot)
-    }).catch(() => null)
+    if (revision !== this.revision || !this.active) return
+    // Offline writes with a server destination remain dirty for reconnection.
+    this.dirty = !(remote || (local && !this.hasUrlValue))
+    this.setStatus(remote ? this.savedValue : local ? this.savedLocallyValue : this.failedValue)
+  }
 
-    if (response?.ok) {
-      this.dirty = false
-      this.setStatus(this.savedValue)
-    } else {
-      this.setStatus(this.savedLocallyValue)
+  async clearSubmitted() {
+    const revision = this.submittedRevision
+    if (revision == null || revision !== this.revision) return
+    this.dirty = false
+    await this.inFlight
+    if (revision !== this.revision) return
+    this.dirty = false
+    try {
+      await del(this.keyValue, STORE)
+    } catch (error) {
+      console.warn("autosave clear:", error)
     }
   }
 
   snapshot() {
     const fields = {}
     this.element.querySelectorAll("input, textarea, select").forEach(field => {
-      if (!field.name || field.type === "file") return
+      if (!field.name || field.disabled || /^(file|password|submit|button|reset)$/i.test(field.type) ||
+          /(?:^|[^a-z0-9])(?:password|password_confirmation|token|secret|api_key|private_key|otp|authenticity)(?:$|[^a-z0-9])/i.test(field.name)) return
       if (field.type === "checkbox") {
         fields[field.name] = field.checked ? "1" : "0"
         return

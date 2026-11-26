@@ -115,6 +115,7 @@ module Shared
         "autosave-saved-value": t("status.saved"),
         "autosave-saved-locally-value": t("status.saved_locally"),
         "autosave-restored-value": t("status.restored"),
+        "autosave-failed-value": t("status.save_failed"),
       }
     end
 
