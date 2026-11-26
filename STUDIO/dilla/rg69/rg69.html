@@ -1352,8 +1352,8 @@ const industrialBoot=bootStyleCandidates.filter(style=>['Industrial','Hard Techn
 const bootStylePool=bootStyleCandidates.filter(style=>style.n==="Boom Bap");
 const bootStyle=bootStylePool[0]||bootStyleCandidates.find(style=>/dilla|hip.hop|lo.fi/i.test(style.n))||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
-const textureDefaults={console:72,phase:28,sampler:30,motion:48,duck:12,tape:82,wobble:60,vinyl:66,crackle:42};
-let aud_={pocket:76,bpm:88,swing:18,drive:32,...textureDefaults,comp:18,width:58,reverb:34,delay:26,filter:76,drift:0.05};
+const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,tape:100,wobble:100,vinyl:100,crackle:100};
+let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,drift:0.05};
 let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
 let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106'};
 let seq_={};
@@ -1426,7 +1426,7 @@ const PATTERN_TABLES={d:DRUM_PATTERNS,b:BASS_PATS,k:KEYS_PATS,p:PAD_PATS};
 const clamp=(n,min,max,fallback)=>Number.isFinite(Number(n))?Math.max(min,Math.min(max,Number(n))):fallback;
 const newSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
 let sessionSeed=newSeed(),fxSeed=null;
-const SESSION_KEY="rg69_session_v2";
+const SESSION_KEY="rg69_session_v3";
 let sampleAudio=null;
 let sampleSettings={name:"",duration:0,slices:[],pattern:Array(64).fill(null),pitch:0,reverse:false,gate:100,offset:0};
 function drumEdits(){
