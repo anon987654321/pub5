@@ -1664,15 +1664,18 @@ const gain=value=>{const node=ctx.createGain();node.gain.value=value;return node
 const filter=(type,frequency)=>{const node=ctx.createBiquadFilter();node.type=type;node.frequency.value=frequency;return node;};
 const smooth=(param,value)=>{const now=ctx.currentTime;param.cancelScheduledValues(now);param.setTargetAtTime(value,now,.035);};
 const input=gain(1),head=filter("lowshelf",65),shape=ctx.createWaveShaper(),compression=ctx.createDynamicsCompressor();
+const bias=filter("highshelf",3200),deemphasis=filter("highshelf",3200),dc=filter("highpass",15);
+const lowBand=filter("lowpass",180),lowShape=ctx.createWaveShaper(),lowReturn=gain(0);
+lowBand.Q.value=.5;lowShape.curve=Float32Array.from({length:2049},(_,i)=>Math.tanh(2.1*(i/1024-1))/2.1);lowShape.oversample="2x";
 shape.curve=Float32Array.from({length:2049},(_,i)=>Math.tanh(1.65*(i/1024-1))/1.65);
 shape.oversample="2x";
-compression.threshold.value=-18;compression.knee.value=14;compression.ratio.value=2;compression.attack.value=.008;compression.release.value=.12;
+compression.threshold.value=-13;compression.knee.value=18;compression.ratio.value=1.6;compression.attack.value=.018;compression.release.value=.16;
 const rolloff=filter("lowpass",15000),delay=ctx.createDelay(.04),returnGain=gain(0);
 const sampler=ctx.createWaveShaper(),samplerDry=gain(1),samplerWet=gain(0),samplerOut=gain(1);
 let worklet=null,workletWet=null,latest=aud,latestMix=mix,lastBits=-1;
 rolloff.connect(samplerDry);samplerDry.connect(samplerOut);rolloff.connect(sampler);sampler.connect(samplerWet);samplerWet.connect(samplerOut);samplerOut.connect(delay);
 delay.delayTime.value=.0018;
-input.connect(head);head.connect(shape);shape.connect(compression);compression.connect(rolloff);delay.connect(returnGain);
+input.connect(head);head.connect(bias);bias.connect(shape);shape.connect(deemphasis);deemphasis.connect(dc);dc.connect(compression);head.connect(lowBand);lowBand.connect(lowShape);lowShape.connect(lowReturn);lowReturn.connect(compression);compression.connect(rolloff);delay.connect(returnGain);
 const wow=ctx.createOscillator(),flutter=ctx.createOscillator(),wowDepth=gain(0),flutterDepth=gain(0);
 wow.frequency.value=.5556;flutter.frequency.value=5.3;
 wow.connect(wowDepth);flutter.connect(flutterDepth);wowDepth.connect(delay.delayTime);flutterDepth.connect(delay.delayTime);
@@ -1699,12 +1702,12 @@ const amount=(aud.sampler??24)/100,color=(aud.console??58)/100,motion=(aud.motio
 const wet=Math.max(.95*tape,.68*wobble,.40*amount,.25*color);
 const bits=15-Math.round(amount*7);
 if(bits!==lastBits){const levels=2**bits;sampler.curve=Float32Array.from({length:8193},(_,i)=>Math.round((i/4096-1)*levels)/levels);lastBits=bits;}
-const digital=Math.max(amount,color)*.55;
+const digital=amount*.55;
 smooth(samplerDry.gain,1-(worklet?digital:amount*.55));smooth(samplerWet.gain,worklet?0:amount*.55);
 if(worklet){smooth(worklet.parameters.get("amount"),amount);smooth(worklet.parameters.get("color"),color);smooth(workletWet.gain,digital);}
 smooth(dryMaster.gain,1-wet);smooth(wetMaster.gain,0);
 smooth(returnGain.gain,wet);
-smooth(input.gain,1+1.15*tape);smooth(head.gain,4.5*tape);
+smooth(input.gain,1+.85*tape);smooth(head.gain,3.2*tape);smooth(bias.gain,5*tape);smooth(deemphasis.gain,-5*tape);smooth(lowReturn.gain,.15*tape);smooth(compression.release,Math.min(.35,15/aud.bpm));
 smooth(rolloff.frequency,17000-9500*tape);
 smooth(wowDepth.gain,.0020*wobble);smooth(flutterDepth.gain,.00032*wobble);
 smooth(wow.frequency,.5556+motion*.025);smooth(flutter.frequency,4.8+motion*1.3);
@@ -1752,7 +1755,7 @@ const dly=new Tone.FeedbackDelay(30/aud.bpm,rg69AudioProfile.rig.delay.feedback+
 const dlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 rev.wet.value=1;
 dly.wet.value=1;
-tape.wet.value=0;
+tape.wet.value=aud.tape/100*.25;
 const mixSum=new Tone.Gain(1);
 mixSum.connect(flt);
 flt.connect(tape);
@@ -1768,12 +1771,16 @@ limiter.connect(outputGate);
 const ctx=Tone.getContext().rawContext,finalLimiter=ctx.createDynamicsCompressor();
 finalLimiter.threshold.value=-1.5;finalLimiter.knee.value=0;finalLimiter.ratio.value=20;finalLimiter.attack.value=.003;finalLimiter.release.value=.08;
 const masteringInput=ctx.createGain(),masterHP=ctx.createBiquadFilter(),harsh=ctx.createBiquadFilter(),warm=ctx.createBiquadFilter(),matte=ctx.createBiquadFilter(),glue=ctx.createDynamicsCompressor();
+const hf=ctx.createBiquadFilter(),hfComp=ctx.createDynamicsCompressor(),hfRestore=ctx.createBiquadFilter();
+hf.type="highshelf";hf.frequency.value=5500;hf.gain.value=5;hfRestore.type="highshelf";hfRestore.frequency.value=5500;hfRestore.gain.value=-5;
+hfComp.threshold.value=-14;hfComp.knee.value=18;hfComp.ratio.value=1.35;hfComp.attack.value=.003;hfComp.release.value=.075;
+
 masterHP.type="highpass";masterHP.frequency.value=24;masterHP.Q.value=.707;
 harsh.type="peaking";harsh.frequency.value=4100;harsh.Q.value=1.25;harsh.gain.value=-1.4;
 warm.type="lowshelf";warm.frequency.value=125;warm.gain.value=.8;
 matte.type="highshelf";matte.frequency.value=7800;matte.gain.value=-1.6;
 glue.threshold.value=-10;glue.knee.value=12;glue.ratio.value=1.5;glue.attack.value=.03;glue.release.value=Math.min(.5,30/aud.bpm);
-const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(glue);glue.connect(finalLimiter);finalLimiter.connect(ctx.destination);
+const monoBass=connectBassMono(ctx,outputGate,masteringInput);masteringInput.connect(masterHP);masterHP.connect(harsh);harsh.connect(warm);warm.connect(matte);matte.connect(hf);hf.connect(hfComp);hfComp.connect(hfRestore);hfRestore.connect(glue);glue.connect(finalLimiter);finalLimiter.connect(ctx.destination);
 revSend.connect(rev);
 dlySend.connect(dly);
 rev.connect(masterG);
@@ -1848,7 +1855,7 @@ try{const strip=createConsoleStrip(ctx,source,masterG,lane);strip.update(aud);so
 }
 let analog=null;
 try{analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfile,aud,mix,offline,duration);
-vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
+tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
 return {instruments,sampleG,drumDrive,finalLimiter,glue,analog,consoleStrips,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
@@ -1948,7 +1955,7 @@ const hitGate=duration=>Math.min(duration*gate(v),ratch>1?Math.max(.005,ratchetS
 const pitchShift=2**((detail(v).pitch||0)/12);
 if(v==='k'){
 const kfreq=pitch.kick*pitchShift*2**(drift/1200);
-const subfreq=pitch.kickSub*pitchShift*2**(drift/1200);
+
 synths.kick.triggerAttackRelease(kfreq,hitGate(eighth),rt,vl);
 synths.kickSub.triggerAttackRelease(40*pitchShift,hitGate(Math.min(eighth,.16)),rt,vl*.55);
 synths.kickClk.triggerAttackRelease(hitGate(thirtySecond),rt,vl*0.3);
