@@ -1106,7 +1106,7 @@ let seq_={};
 ['b','keys','p'].forEach(t=>{seq_[t]=Array(16).fill(0).map(()=>({v:0.85+rnd(0,0.15),t:rnd(-15,15),p:100,r:1}))});
 
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,keysChorus,padsN,padsFlt;
-let drumG,bassG,keysG,padsG,masterG,limiter,vinylNoise,crackleNoise,driftLFO,analyser;
+let drumG,bassG,keysG,padsG,masterG,limiter,outputGate,laneRoutes,vinylNoise,crackleNoise,driftLFO,analyser;
 let fxRev,fxDly,fxDlyFlt,fxFlt,tapeSat,compPar,widener,kickSat,keySat,drumSat,revSend,dlySend;
 let drumTube,kickComp,padsLFO,kickClkBP,snareRngBP,keysTrem,keysDrive,hatFlt,openFlt;
 
@@ -1115,35 +1115,33 @@ let drumFX=[],bassFX=[],keysFX=[],padsFX=[],masterFX=[];
 
 // Each page load selects a playable style at random. The effect pool stays
 // out of the boot path; only the explicit randomize action builds extra FX.
-function createDefaultFX(){
+function createDefaultFX(bpm){
 const drum=[],bass=[],keys=[],pads=[];
 const add=(arr,eff,wet)=>{if(eff){eff.wet.value=wet;arr.push(eff);}return arr;};
 try{add(drum,new Tone.Distortion(0.12),0.12);}catch(e){log('FX default: '+e.message,'w');}
 try{add(drum,new Tone.StereoWidener(0.3),0.35);}catch(e){log('FX default: '+e.message,'w');}
 try{add(bass,new Tone.Chorus(1.8,3.5,0.4).start(),0.12);}catch(e){log('FX default: '+e.message,'w');}
 try{add(keys,new Tone.Chorus(1.6,2.5,0.5).start(),0.2);}catch(e){log('FX default: '+e.message,'w');}
-try{add(keys,new Tone.FeedbackDelay(Tone.Time('8n.').toSeconds(),0.26),0.14);}catch(e){log('FX default: '+e.message,'w');}
+try{add(keys,new Tone.FeedbackDelay(60/bpm*.75,0.26),0.14);}catch(e){log('FX default: '+e.message,'w');}
 try{add(pads,new Tone.Chorus(0.9,3.5,0.6).start(),0.28);}catch(e){log('FX default: '+e.message,'w');}
 // Pad ambience uses the shared native Reverb send; no FeedbackCombFilter worklet.
 try{add(pads,new Tone.StereoWidener(0.45),0.4);}catch(e){log('FX default: '+e.message,'w');}
 return {drum,bass,keys,pads};
 }
-function installDefaultFX(){
-const {drum,bass,keys,pads}=createDefaultFX();
-const chain=(g,fx,target)=>{
+function connectLaneFX(g,fx,target,sends=[]){
 g.disconnect();
-if(!fx.length){g.connect(target);g.connect(revSend);g.connect(dlySend);return;}
 let last=g;
-fx.forEach(f=>{last.connect(f);last=f;});
+for(const effect of fx){last.connect(effect);last=effect;}
 last.connect(target);
-g.connect(revSend);
-g.connect(dlySend);
-};
-chain(drumG,drum,masterG);
-chain(bassG,bass,masterG);
-chain(keysG,keys,masterG);
-chain(padsG,pads,masterG);
-drumFX=drum;bassFX=bass;keysFX=keys;padsFX=pads;masterFX=[];
+for(const send of sends)last.connect(send);
+}
+function installLaneFX(routes,fx){
+for(const [lane,[input,target,...sends]] of Object.entries(routes))connectLaneFX(input,fx[lane],target,sends);
+}
+function installDefaultFX(){
+const fx=createDefaultFX(aud_.bpm);
+installLaneFX(laneRoutes,fx);
+({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=fx);masterFX=[];
 log('FX default chain (fixed)','k');
 }
 
@@ -1153,14 +1151,14 @@ const ORIGINAL_DRUMS=JSON.stringify(DRUM_PATTERNS);
 const PATTERN_TABLES={d:DRUM_PATTERNS,b:BASS_PATS,k:KEYS_PATS,p:PAD_PATS};
 const clamp=(n,min,max,fallback)=>Number.isFinite(Number(n))?Math.max(min,Math.min(max,Number(n))):fallback;
 const newSeed=()=>crypto.getRandomValues(new Uint32Array(1))[0];
-let sessionSeed=newSeed();
+let sessionSeed=newSeed(),fxSeed=null;
 const SESSION_KEY="rg69_session_v1";
 function drumEdits(){
 const original=JSON.parse(ORIGINAL_DRUMS);
 return Object.fromEntries(Object.entries(DRUM_PATTERNS).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(original[key])));
 }
 function session(){
-return deepClone({version:1,seed:sessionSeed,pat:pat_,seq:seq_,aud:aud_,mix:mix_,drums:drumEdits(),mute:st_.muteState,steps:st_.stepCount});
+return deepClone({version:1,seed:sessionSeed,fxSeed,pat:pat_,seq:seq_,aud:aud_,mix:mix_,drums:drumEdits(),mute:st_.muteState,steps:st_.stepCount});
 }
 function restoreSession(data){
 if(!data||typeof data!=="object"||(data.version!==undefined&&data.version!==1))throw Error("Unsupported session");
@@ -1182,6 +1180,8 @@ seq_[lane][i]={v:clamp(x.v,0,1,1),t:clamp(x.t,-25,25,0),p:clamp(x.p,0,100,100),r
 if(data.mute)for(const lane of LANES)st_.muteState[lane]=data.mute[lane]?1:0;
 if([8,16].includes(data.steps))st_.stepCount=data.steps;
 if(Number.isInteger(data.seed))sessionSeed=data.seed>>>0;
+const previousFX=fxSeed;fxSeed=Number.isInteger(data.fxSeed)?data.fxSeed>>>0:null;
+if(st_.started&&previousFX!==fxSeed)refreshLaneFX();
 syncUIFromState();
 }
 function saveSession(){writeStorage(SESSION_KEY,JSON.stringify(session()));}
@@ -1302,7 +1302,7 @@ rg69AudioProfileLocked=true;
 await (activationPromise||Tone.start());
 Tone.getContext().rawContext.addEventListener('statechange',()=>{
   if(Tone.getContext().rawContext.state==='suspended'){
-    st_.playing=false;clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
+    st_.playing=false;Tone.Transport.pause();outputGate?.gain.rampTo(0,.015);clearTimeout(st_.timer);$id('play').textContent='▶ Play';$id('play').setAttribute('aria-pressed','false');st('suspended — tap to resume');log('audio suspended by browser','w');
   }
 });
 const toneProfile=rg69AudioProfile.tone,kitProfile=rg69AudioProfile.kit,voiceProfile=rg69AudioProfile.voice;
@@ -1332,7 +1332,7 @@ keysG=new Tone.Gain(Tone.dbToGain(-10));
 padsG=new Tone.Gain(Tone.dbToGain(-12));
 revSend=new Tone.Gain(0);
 dlySend=new Tone.Gain(0);
-fxRev=new Tone.Reverb(1.5);
+fxRev=new Tone.Reverb(1+profileReverbDecay());
 reverbReady=typeof fxRev.generate!=="function";
 fxDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds(),rg69AudioProfile.rig.delay.feedback);
 fxFlt=new Tone.Filter(16000,'lowpass');
@@ -1346,14 +1346,14 @@ fxFlt.connect(tapeSat);
 tapeSat.connect(compPar);
 compPar.connect(widener);
 widener.connect(limiter);
-limiter.connect(Tone.Destination);
-widener.connect(analyser=new Tone.Analyser('waveform',128));
+outputGate=new Tone.Gain(0);limiter.connect(outputGate);outputGate.connect(Tone.Destination);
+outputGate.connect(analyser=new Tone.Analyser({type:'waveform',size:128,channels:2}));
 revSend.connect(fxRev);
-fxRev.connect(compPar);
+fxRev.connect(masterG);
 dlySend.connect(fxDly);
 fxDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 fxDly.connect(fxDlyFlt);
-fxDlyFlt.connect(compPar);
+fxDlyFlt.connect(masterG);
 if (fxRev && typeof fxRev.generate === "function") {
   // Impulse generation is an offline render of its own. Awaiting it here made
   // the first play wait on the reverb before a single hit was scheduled, which
@@ -1380,8 +1380,8 @@ crackleNoise.volume.value=-45;
 const crackFlt=new Tone.Filter(380,'bandpass');
 crackFlt.Q.value=5;
 crackleNoise.connect(crackFlt);
-vinylFlt.connect(compPar);
-crackFlt.connect(compPar);
+vinylFlt.connect(masterG);
+crackFlt.connect(masterG);
 driftLFO.connect(kickN.oscillator.detune);
 driftLFO.connect(snareRng.detune);
 const livePanners=createRG69Panners();
@@ -1417,24 +1417,27 @@ const padsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
 const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.value=toneProfile.pads.saturation_wet;
 padsG.connect(padsBW);padsBW.connect(padsSat);padsSat.connect(livePanners.pads);livePanners.pads.connect(masterG);livePanners.pads.connect(revSend);livePanners.pads.connect(dlySend);
 // route remaining tracks
-[drumG,bassG].forEach(g=>{g.connect(masterG);g.connect(revSend);g.connect(dlySend);});
-installDefaultFX();
-if(st_.randomizeFxPending){st_.randomizeFxPending=false;randomizeFX();}else applyFX();
+laneRoutes={drum:[drumG,masterG,revSend,dlySend],bass:[bassG,masterG,revSend,dlySend],keys:[keysG,keysTexture],pads:[padsG,padsBW]};
+if(fxSeed==null)installDefaultFX();else refreshLaneFX();
+st_.randomizeFxPending=false;applyFX();
 log("audio engine init (analog++)","k");
 }
 
+function profileReverbDecay(){return rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale;}
 function applyFX(){
+const smooth=(param,value)=>param.rampTo(value,.025);
 const profile=rg69AudioProfile;
 if(st_.started)Tone.Transport.bpm.value=aud_.bpm;
-if(drumG)drumG.gain.value=mix_.drum/100;
-if(bassG)bassG.gain.value=mix_.bass/100;
-if(keysG)keysG.gain.value=mix_.keys/100*profile.voice.level;
-if(padsG)padsG.gain.value=mix_.pads/100*profile.voice.level;
-if(masterG)masterG.gain.value=mix_.master/100;
+if(drumG)smooth(drumG.gain,mix_.drum/100);
+if(bassG)smooth(bassG.gain,mix_.bass/100);
+if(keysG)smooth(keysG.gain,mix_.keys/100*profile.voice.level);
+if(padsG)smooth(padsG.gain,mix_.pads/100*profile.voice.level);
+if(masterG)smooth(masterG.gain,mix_.master/100);
 if(revSend)revSend.gain.value=(aud_.reverb/100)*profile.rig.reverb.level_chords;
 if(dlySend)dlySend.gain.value=(aud_.delay/100)*profile.rig.delay.throw_chords;
-if(fxRev){fxRev.wet.value=reverbReady?1:0;fxRev.decay=1+(aud_.reverb/100)*profile.rig.reverb.size*profile.effects.reverb_decay_scale;}
-if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud_.delay/100)*profile.effects.delay_feedback_range;}
+if(fxRev)fxRev.wet.value=reverbReady?1:0;
+if(!reverbReady&&revSend)revSend.gain.value=0;
+if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud_.delay/100)*profile.effects.delay_feedback_range;fxDly.delayTime.rampTo(30/aud_.bpm,.05);}
 if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
 if(tapeSat)tapeSat.wet.value=Math.min(0.75,aud_.tape/100*0.55+(100-aud_.drive)/100*0.25);
@@ -1613,7 +1616,8 @@ if(!st_.playing){st_.rafId=null;return;}
 const now=performance.now();
 if(now-(st_.visualLastUpdate||0)>=50){
 st_.visualLastUpdate=now;
-const data=analyser?.getValue();
+const channels=analyser?.getValue();
+const data=Array.isArray(channels)?channels[0]:channels;
 if(data&&data.length){
 let sumSquares=0;
 let clipping=false;
@@ -1624,7 +1628,9 @@ if(Math.abs(sample)>=0.98)clipping=true;
 }
 const rms=Math.sqrt(sumSquares/data.length);
 st_.peakL=Math.max(st_.peakL*PARAMS.VU_DECAY,rms);
-st_.peakR=Math.max(st_.peakR*PARAMS.VU_DECAY,rms);
+const right=Array.isArray(channels)?channels[1]:data;
+const rmsR=Math.sqrt(right.reduce((sum,x)=>sum+x*x,0)/right.length);
+st_.peakR=Math.max(st_.peakR*PARAMS.VU_DECAY,rmsR);
 if(vizContext&&vizCanvas){
 const width=vizCanvas.width,height=vizCanvas.height;
 vizContext.fillStyle=vizColors.background;
@@ -1641,8 +1647,8 @@ vizContext.stroke();
 }
 }
 const bars=$id('vu').children;
-const leftBars=Math.round(st_.peakL*PARAMS.VU_BARS);
-const rightBars=Math.round(st_.peakR*PARAMS.VU_BARS);
+const barsFor=level=>Math.round(Math.max(0,Math.min(1,(20*Math.log10(Math.max(1e-6,level))+48)/48))*PARAMS.VU_BARS);
+const leftBars=barsFor(st_.peakL),rightBars=barsFor(st_.peakR);
 for(let i=0;i<PARAMS.VU_BARS;i++){
 if(bars[i])bars[i].classList.toggle('active',i<leftBars);
 if(bars[i+PARAMS.VU_BARS])bars[i+PARAMS.VU_BARS].classList.toggle('active',i<rightBars);
@@ -1692,60 +1698,53 @@ log(`random: ${style.n}`,"k");
 randomizeFX();
 }
 
-function randomizeFX(){
-if(!drumG||!bassG||!keysG||!padsG||!masterG){st_.randomizeFxPending=true;return;}
-const clearFXArray=(arr)=>arr.forEach(fx=>{try{fx.disconnect();fx.dispose();}catch(e){log('FX cleanup: '+e.message,'w');}});
-[drumFX,bassFX,keysFX,padsFX,masterFX].forEach(clearFXArray);
-drumFX.length=bassFX.length=keysFX.length=padsFX.length=masterFX.length=0;
-const createFX=(isMaster)=>{
-const num=isMaster?0:1+Math.floor(Math.random()*2);
-const wet=isMaster?0.08+Math.random()*0.19:0.15+Math.random()*0.35;
+function createRandomFX(seed,bpm){
+let n=0;const random=()=>randomAt(seed,n++,"k",47);
+const createFX=()=>{
+const num=1+Math.floor(random()*2);
+const wet=.15+random()*.35;
 const fx=[];
 for(let i=0;i<num;i++){
-const type=fxPool[Math.floor(Math.random()*fxPool.length)];
+const type=fxPool[Math.floor(random()*fxPool.length)];
 let eff;
 try{
 switch(type){
-case'AutoWah':eff=new Tone.AutoWah(60+Math.random()*340,2+Math.random()*4,-40+Math.random()*30);break;
-case'AutoFilter':eff=new Tone.AutoFilter(0.1+Math.random()*7.9);if(eff.depth)eff.depth.value=0.3+Math.random()*0.7;eff.baseFrequency=100+Math.random()*1900;eff.start();break;
-case'AutoPanner':eff=new Tone.AutoPanner(0.2+Math.random()*5.8);if(eff.depth)eff.depth.value=0.4+Math.random()*0.6;eff.start();break;
-case'Chebyshev':eff=new Tone.Chebyshev(2+Math.floor(Math.random()*7));break;
-case'Chorus':eff=new Tone.Chorus(1+Math.random()*5,1+Math.random()*4,0.3+Math.random()*0.6);eff.start();break;
-case'Distortion':eff=new Tone.Distortion(0.1+Math.random()*0.7);break;
-case'FeedbackDelay':{const dt=Tone.Time(['8n','16n','8n.','4n'][Math.floor(Math.random()*4)]).toSeconds();eff=new Tone.FeedbackDelay(dt,0.15+Math.random()*0.45);}break;
+case'AutoWah':eff=new Tone.AutoWah(60+random()*340,2+random()*4,-40+random()*30);break;
+case'AutoFilter':eff=new Tone.AutoFilter(0.1+random()*7.9);if(eff.depth)eff.depth.value=0.3+random()*0.7;eff.baseFrequency=100+random()*1900;eff.start();break;
+case'AutoPanner':eff=new Tone.AutoPanner(0.2+random()*5.8);if(eff.depth)eff.depth.value=0.4+random()*0.6;eff.start();break;
+case'Chebyshev':eff=new Tone.Chebyshev(2+Math.floor(random()*7));break;
+case'Chorus':eff=new Tone.Chorus(1+random()*5,1+random()*4,0.3+random()*0.6);eff.start();break;
+case'Distortion':eff=new Tone.Distortion(0.1+random()*0.7);break;
+case'FeedbackDelay':{const dt=60/bpm*[.5,.25,.75,1][Math.floor(random()*4)];eff=new Tone.FeedbackDelay(dt,0.15+random()*0.45);}break;
 
 
-case'Phaser':eff=new Tone.Phaser({frequency:0.2+Math.random()*3.8,octaves:1+Math.random()*4,baseFrequency:200+Math.random()*1300});break;
-case'PingPongDelay':{const dt=Tone.Time(['8n','16n','8n.','4n'][Math.floor(Math.random()*4)]).toSeconds();eff=new Tone.PingPongDelay(dt,0.1+Math.random()*0.4);}break;
-case'Tremolo':eff=new Tone.Tremolo(0.5+Math.random()*11.5,0.3+Math.random()*0.6);eff.start();break;
-case'Vibrato':eff=new Tone.Vibrato(1+Math.random()*9,0.05+Math.random()*0.35);break;
-case'StereoWidener':eff=new Tone.StereoWidener(0.3+Math.random()*0.6);break;
+case'Phaser':eff=new Tone.Phaser({frequency:0.2+random()*3.8,octaves:1+random()*4,baseFrequency:200+random()*1300});break;
+case'PingPongDelay':{const dt=60/bpm*[.5,.25,.75,1][Math.floor(random()*4)];eff=new Tone.PingPongDelay(dt,0.1+random()*0.4);}break;
+case'Tremolo':eff=new Tone.Tremolo(0.5+random()*11.5,0.3+random()*0.6);eff.start();break;
+case'Vibrato':eff=new Tone.Vibrato(1+random()*9,0.05+random()*0.35);break;
+case'StereoWidener':eff=new Tone.StereoWidener(0.3+random()*0.6);break;
 }
 if(eff){eff.wet.value=wet;fx.push(eff);}
 }catch(e){log('FX create: '+e.message,'w');}
 }
 return fx;
 };
-drumFX=createFX(0);
-bassFX=createFX(0);
-keysFX=createFX(0);
-padsFX=createFX(0);
-masterFX=[];
-const chainFX=(g,fx,target)=>{
-g.disconnect();
-if(!fx.length){g.connect(target);g.connect(revSend);g.connect(dlySend);return;}
-let last=g;
-fx.forEach(f=>{last.connect(f);last=f;});
-last.connect(target);
-g.connect(revSend);
-g.connect(dlySend);
-};
-chainFX(drumG,drumFX,masterG);
-chainFX(bassG,bassFX,masterG);
-chainFX(keysG,keysFX,masterG);
-chainFX(padsG,padsFX,masterG);
+
+return {drum:createFX(),bass:createFX(),keys:createFX(),pads:createFX()};
+}
+function refreshLaneFX(){
+if(!laneRoutes)return;
+const fx=fxSeed==null?createDefaultFX(aud_.bpm):createRandomFX(fxSeed,aud_.bpm);
+const previous=[...drumFX,...bassFX,...keysFX,...padsFX,...masterFX];
+installLaneFX(laneRoutes,fx);
+({drum:drumFX,bass:bassFX,keys:keysFX,pads:padsFX}=fx);masterFX=[];
+previous.forEach(node=>node.dispose());
 applyFX();
-log('FX randomized','k');
+}
+function randomizeFX(){
+fxSeed=newSeed();
+if(laneRoutes)refreshLaneFX();else st_.randomizeFxPending=true;
+saveSession();log("FX randomized","k");
 }
 
 function encodeWav16(audioBuffer){
@@ -1788,7 +1787,7 @@ await startToneFromGesture();
 rg69AudioProfileLocked=true;
 const take=session(),aud_=take.aud,mix_=take.mix;
 take.drums[take.pat.d]=deepClone(DRUM_PATTERNS[take.pat.d]);
-const bars=8,leadIn=.05,len=bars*4*(60/aud_.bpm);
+const bars=8,leadIn=.05,len=bars*4*(60/aud_.bpm),tail=rg69AudioProfile.tone.pads.release+1;
 $id('progress-wrap').style.display='block';
 $id('progress-pct').textContent='0%';
 $id('progress-fill').style.width='0%';
@@ -1808,8 +1807,8 @@ const oWidener=new Tone.StereoWidener(aud_.width/100);
 const oLimiter=new Tone.Limiter(-1);
 const oRevSend=new Tone.Gain((aud_.reverb/100)*rg69AudioProfile.rig.reverb.level_chords);
 const oDlySend=new Tone.Gain((aud_.delay/100)*rg69AudioProfile.rig.delay.throw_chords);
-const oRev=new Tone.Reverb(1+(aud_.reverb/100)*rg69AudioProfile.rig.reverb.size*rg69AudioProfile.effects.reverb_decay_scale);
-const oDly=new Tone.FeedbackDelay(Tone.Time(rg69AudioProfile.effects.delay_time).toSeconds(),rg69AudioProfile.rig.delay.feedback+(aud_.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
+const oRev=new Tone.Reverb(1+profileReverbDecay());
+const oDly=new Tone.FeedbackDelay(30/aud_.bpm,rg69AudioProfile.rig.delay.feedback+(aud_.delay/100)*rg69AudioProfile.effects.delay_feedback_range);
 const oDlyFlt=new Tone.Filter(rg69AudioProfile.rig.delay.lowpass,'lowpass');
 oRev.wet.value=1;
 oDly.wet.value=1;
@@ -1822,20 +1821,21 @@ oWidener.connect(oLimiter);
 oLimiter.toDestination();
 oRevSend.connect(oRev);
 oDlySend.connect(oDly);
-oRev.connect(oComp);
+oRev.connect(oMaster);
 oDly.connect(oDlyFlt);
-oDlyFlt.connect(oComp);
-const oVinylNoise=new Tone.Noise('brown').start();
+oDlyFlt.connect(oMaster);
+const oVinylNoise=new Tone.Noise('brown').start().stop(len+leadIn);
 oVinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,rg69AudioProfile.rig.vinyl.level,.1);
-const oVinylFlt=new Tone.Filter(2000,'lowpass');oVinylNoise.connect(oVinylFlt);oVinylFlt.connect(oComp);
-const oCrackleNoise=new Tone.Noise('white').start();
+const oVinylFlt=new Tone.Filter(2000,'lowpass');oVinylNoise.connect(oVinylFlt);oVinylFlt.connect(oMaster);
+const oCrackleNoise=new Tone.Noise('white').start().stop(len+leadIn);
 oCrackleNoise.volume.value=rg69NoiseLevelDb(-65,aud_.crackle,rg69AudioProfile.rig.vinyl.crackle,.5);
-const oCrackleFlt=new Tone.Filter(380,'bandpass');oCrackleFlt.Q.value=5;oCrackleNoise.connect(oCrackleFlt);oCrackleFlt.connect(oComp);
+const oCrackleFlt=new Tone.Filter(380,'bandpass');oCrackleFlt.Q.value=5;oCrackleNoise.connect(oCrackleFlt);oCrackleFlt.connect(oMaster);
 // Live and offline use the same profile-driven instrument constructor.
 const offlineSynths=createToneInstruments();
 const oKickN=offlineSynths.kick,oKickSub=offlineSynths.kickSub,oKickClk=offlineSynths.kickClk,oKickBody=offlineSynths.kickBody;
 const oSnareN=offlineSynths.snare,oSnareRng=offlineSynths.snareRing,oClapN=offlineSynths.clap,oHatN=offlineSynths.hat,oOpenN=offlineSynths.open;
 const oBassN=offlineSynths.bass,oBassSub=offlineSynths.bassSub,oKeysN=offlineSynths.keys,oPadsN=offlineSynths.pads;
+const oDrift=new Tone.LFO(.05+aud_.wobble/100*Math.min(rg69AudioProfile.rig.wobble.rate_hz,rg69AudioProfile.effects.wobble_frequency_cap_hz),-4,4).start();oDrift.connect(oKickN.oscillator.detune);oDrift.connect(oSnareRng.detune);
 const oKickClkBP=new Tone.Filter(toneProfile.kick.click_filter_base_hz+kitProfile.kick.tone*toneProfile.kick.click_filter_tone_span_hz,'bandpass');
 oKickClkBP.Q.value=toneProfile.kick.click_filter_q;oKickClk.connect(oKickClkBP);
 const oSnareRngBP=new Tone.Filter(toneProfile.snare.ring_filter_base_hz+kitProfile.snare.tone*toneProfile.snare.ring_filter_tone_span_hz,'bandpass');
@@ -1843,7 +1843,7 @@ oSnareRngBP.Q.value=toneProfile.snare.ring_filter_q;oSnareRng.connect(oSnareRngB
 const oDrumSat=new Tone.Chebyshev(3);
 const oKeySat=new Tone.Chebyshev(2);
 const oKickSat=new Tone.Chebyshev(2);
-const oKickComp=new Tone.Compressor(-30,8);
+const oKickComp=new Tone.Compressor(-30,8);oKickComp.attack.value=.001;
 const oKeysChorus=new Tone.Chorus(toneProfile.keys.chorus_frequency,toneProfile.keys.chorus_delay_time,toneProfile.keys.chorus_depth).start();
 const oKeysTrem=new Tone.Tremolo({frequency:toneProfile.keys.tremolo_frequency,depth:toneProfile.keys.tremolo_depth,wet:toneProfile.keys.tremolo_wet,spread:toneProfile.keys.tremolo_spread});oKeysTrem.start();
 const oKeysDrive=new Tone.Distortion(toneProfile.keys.drive_amount);oKeysDrive.wet.value=toneProfile.keys.drive_wet;
@@ -1873,7 +1873,8 @@ oKeysDrive.connect(oKeysG);oKeysG.connect(oKeysTexture);oKeysTexture.connect(oKe
 oKeysLP.connect(offlinePanners.keys);offlinePanners.keys.connect(oMaster);offlinePanners.keys.connect(oRevSend);offlinePanners.keys.connect(oDlySend);
 oPadsN.connect(oPadsFlt);oPadsFlt.connect(oPadsG);oPadsG.connect(oPadsBW);oPadsBW.connect(oPadsSat);
 oPadsSat.connect(offlinePanners.pads);offlinePanners.pads.connect(oMaster);offlinePanners.pads.connect(oRevSend);offlinePanners.pads.connect(oDlySend);
-for(const g of [oDrumG,oBassG]){g.connect(oMaster);g.connect(oRevSend);g.connect(oDlySend);}
+const routes={drum:[oDrumG,oMaster,oRevSend,oDlySend],bass:[oBassG,oMaster,oRevSend,oDlySend],keys:[oKeysG,oKeysTexture],pads:[oPadsG,oPadsBW]};
+installLaneFX(routes,take.fxSeed==null?createDefaultFX(aud_.bpm):createRandomFX(take.fxSeed,aud_.bpm));
 // Schedule all steps using the shared triggerNotes helper
 for(let i=0;i<bars*16;i++){
 const sixteenth=60/aud_.bpm/4;
@@ -1909,7 +1910,7 @@ $id('progress-pct').textContent=`${pct}%`;
 $id('progress-fill').style.width=`${pct}%`;
 }
 }
-},len+leadIn,2,44100);
+},len+leadIn+tail,2,44100);
 const wav=encodeWav16(buf.get());
 const blob=new Blob([wav],{type:'audio/wav'});
 const url=URL.createObjectURL(blob);
@@ -1929,45 +1930,31 @@ $id('progress-wrap').style.display='none';
 }
 
 let mediaRecorder=null;
-let recordedChunks=[];
-
 async function toggleRecord(){
 try{
-if(!st_.started){
-log("start engine first","w");
-return;
-}
-if(!mediaRecorder){
-const dest=Tone.context.createMediaStreamDestination();
-masterG.connect(dest);
-mediaRecorder=new MediaRecorder(dest.stream);
-recordedChunks=[];
-mediaRecorder.ondataavailable=e=>{
-if(e.data.size>0)recordedChunks.push(e.data);
+if(!st_.started){log("start engine first","w");return;}
+if(mediaRecorder){if(mediaRecorder.state==="recording")mediaRecorder.stop();return;}
+const dest=Tone.getContext().rawContext.createMediaStreamDestination();
+outputGate.connect(dest);
+const types=["audio/webm;codecs=opus","audio/mp4","audio/ogg;codecs=opus"];
+const mimeType=types.find(type=>MediaRecorder.isTypeSupported(type));
+let recorder;
+try{recorder=new MediaRecorder(dest.stream,mimeType?{mimeType}:undefined);}
+catch(error){outputGate.disconnect(dest);dest.stream.getTracks().forEach(t=>t.stop());throw error;}
+mediaRecorder=recorder;
+const chunks=[],button=$id("record");
+const cleanup=()=>{outputGate.disconnect(dest);dest.stream.getTracks().forEach(t=>t.stop());mediaRecorder=null;button.textContent="Record";button.setAttribute("aria-pressed","false");};
+recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+recorder.onerror=()=>{cleanup();log("recording failed","e");};
+recorder.onstop=()=>{
+const type=recorder.mimeType||chunks[0]?.type||"audio/webm";
+const url=URL.createObjectURL(new Blob(chunks,{type}));
+const a=document.createElement("a");a.href=url;a.download="rg69-"+Date.now()+"."+(type.includes("mp4")?"m4a":type.includes("ogg")?"ogg":"webm");a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+cleanup();log("recording saved","k");
 };
-mediaRecorder.onstop=()=>{
-const blob=new Blob(recordedChunks,{type:'video/webm'});
-const url=URL.createObjectURL(blob);
-const a=document.createElement('a');
-a.href=url;
-a.download=`rg69-${Date.now()}.webm`;
-a.click();
-URL.revokeObjectURL(url);
-log("recording saved","k");
-$id('record').textContent='● Record';
-};
-mediaRecorder.start();
-$id('record').textContent='■ Stop';
-log("recording...","i");
-}else{
-mediaRecorder.stop();
-mediaRecorder=null;
-}
-}catch(err){
-log("Record failed: "+err.message,"e");
-mediaRecorder=null;
-$id('record').textContent='● Record';
-}
+try{recorder.start();}catch(error){cleanup();throw error;}
+button.textContent="Stop rec";button.setAttribute("aria-pressed","true");log("recording...","i");
+}catch(error){log("Record failed: "+error.message,"e");}
 }
 
 function buildUI(){
@@ -2315,8 +2302,8 @@ else if(k==='t'&&!e.repeat){e.preventDefault();$id('theme').click();}
 else if(k==='m'&&!e.repeat){e.preventDefault();toggleTrackMute(target?.closest?.('.track')?.dataset.track||st_.lastTrackKey||'k');}
 else if(k==='escape'){e.preventDefault();$id('panic').click();}
 else if(k==='z'&&(e.ctrlKey||e.metaKey)){e.preventDefault();if(e.shiftKey)redo();else undo();}
-else if(k==='c'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.writeText(JSON.stringify({pat:pat_,seq:seq_,aud:aud_,mix:mix_}));log('copied to clipboard');}
-else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.readText().then(t=>{try{const d=JSON.parse(t);if(d.pat&&d.seq){pushHistory();pat_=d.pat;seq_=d.seq;if(d.aud)aud_=d.aud;if(d.mix)mix_=d.mix;syncUIFromState();log('pasted from clipboard',"k")}}catch(err){log('paste failed: invalid data',"e")}});}
+else if(k==='c'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.writeText(JSON.stringify(session()));log('copied to clipboard');}
+else if(k==='v'&&(e.ctrlKey||e.metaKey)){e.preventDefault();navigator.clipboard.readText().then(t=>{try{const d=JSON.parse(t);if(d.pat&&d.seq){pushHistory();restoreSession(d);saveSession();log('pasted from clipboard',"k")}}catch(err){log('paste failed: invalid data',"e")}});}
 }
 
 // One gesture is enough: boot the engine if it is not running yet, then start
@@ -2339,9 +2326,7 @@ st_.booting=(async()=>{
 await initAudio(activationPromise);
 applyFX();
 st_.started=true;
-claimOwner();
-st_.heartbeat=setInterval(keepOwner,1800);
-pushHistory();
+
 })();
 }
 try{await st_.booting;}catch(e){st_.booting=null;throw e;}
@@ -2353,6 +2338,7 @@ await (activationPromise||Tone.start());
 }
 claimOwner();if(!st_.heartbeat)st_.heartbeat=setInterval(keepOwner,1800);
 st_.playing=true;
+outputGate.gain.rampTo(1,.015);
 $id('play').setAttribute('aria-pressed','true');
 if(!st_.rafId)st_.rafId=requestAnimationFrame(updateVisuals);
 if(st_.transportId==null){st_.idx=-1;st_.tick=-1;}
@@ -2408,6 +2394,7 @@ $id('play').addEventListener('click',async()=>{
     }
   } else {
     Tone.Transport.pause();
+    outputGate.gain.rampTo(0,.015);
     st_.playing = false;
     st("paused");
     playButton.textContent = "▶ Play";
@@ -2418,7 +2405,7 @@ $id('play').addEventListener('click',async()=>{
 $id('stop').addEventListener('click',()=>{
 st_.playing=false;
 clearInterval(st_.heartbeat);st_.heartbeat=null;releaseOwner();
-if(st_.started){Tone.Transport.stop();Tone.Transport.cancel();}st_.transportId=null;
+if(st_.started){outputGate.gain.rampTo(0,.015);Tone.Transport.stop();Tone.Transport.cancel();}st_.transportId=null;
 st_.idx=-1;
 st_.barCount=0;st_.tick=-1;
 const posEl=$id('pos-display');if(posEl)posEl.textContent='●';
@@ -2466,11 +2453,12 @@ clearInterval(st_.heartbeat);st_.heartbeat=null;
 cancelAnimationFrame(st_.rafId);
 st_.rafId=null;
 releaseOwner();
-if(st_.started){Tone.Transport.stop();Tone.Transport.cancel();}
+if(st_.started){outputGate.gain.rampTo(0,.005);Tone.Transport.stop();Tone.Transport.cancel();}
 st_.transportId=null;
 [kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN].forEach(s=>{
-s?.releaseAll?.();
+s?.releaseAll?.(Tone.now());
 });
+st_.idx=-1;st_.tick=-1;st_.barCount=0;
 st('killed');
 $id('play').textContent='▶ Play';
 $id('play').setAttribute('aria-pressed','false');
