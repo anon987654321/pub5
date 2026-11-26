@@ -50,7 +50,10 @@ module Studio
 
           budget&.consume!
           url = client.upload_file(carried.fetch("path"), subject:)
-          output = client.predict(model, { key => url }.merge(step_inputs(step)), timeout: 600)
+          # A cold start of a large Kontext fine-tune can exceed ten minutes;
+          # a step may declare its own ceiling.
+          output = client.predict(model, { key => url }.merge(step_inputs(step)),
+                                  timeout: Integer(step.fetch("timeout", 600)))
           path = File.join(directory, next_name(carried.fetch("path"), index, model, output))
           client.download_url(first_url(output), path)
           File.chmod(0o600, path)

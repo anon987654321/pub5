@@ -43,3 +43,30 @@ stills:
 native:
   # Declared, not merely empty: a bare empty list is refused as a broken file.
   steps: []
+
+# The realism pass: a FLUX Kontext fine-tune trained to replace plastic AI skin
+# with pores and fine texture. Kontext re-renders, so it runs on the generation
+# itself, before any upscale, and the instruction is kept to skin so the face,
+# crop and clothing survive. Unproven as of 2026-11-26: three attempts never
+# left cold start (600 s each, then cancelled), so no frame has been delivered
+# through this chain yet.
+realism:
+  - model: fofr/kontext-make-person-real
+    timeout: 1500
+    inputs:
+      prompt: "Keep the face, framing and clothing exactly as they are. Replace the plastic skin with real skin: visible pores, fine vellus hair, uneven tone across the forehead and cheeks, natural texture."
+      aspect_ratio: match_input_image
+      guidance: 2.5
+      num_inference_steps: 30
+      output_format: png
+
+# The vintage surface: levelsio/disposable-camera re-renders the whole frame, so
+# the strength stays low. At 0.35 it repaints the room and invents jewellery;
+# at 0.2 it keeps the frame and changes only the surface.
+vintage:
+  - model: levelsio/disposable-camera
+    inputs:
+      prompt: "STL analog snapshot, 35mm point and shoot, honest skin texture, fine grain"
+      prompt_strength: 0.2
+      aspect_ratio: "2:3"
+      output_format: png
