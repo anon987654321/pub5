@@ -47,9 +47,10 @@ module Operator
     end
 
     def payload
-      runs = journal_runs
+      process_rows = processes
+      runs = runs_with_live_processes(journal_runs, process_rows)
       {
-        processes:,
+        processes: process_rows,
         runs: runs.map { |run| run_row(run) },
         mission: mission_row,
         read_errors: @read_errors.dup,
@@ -59,7 +60,7 @@ module Operator
         dead_lanes: ::Master::Io::LaneState.report,
         online: online_line,
         primary: primary_line,
-        heartbeat: heartbeat_line,
+        heartbeat: heartbeat_line(runs),
       }
     end
 
@@ -214,6 +215,35 @@ module Operator
       runs.last(5)
     end
 
+    # Startup creates the operating-system process before it can safely open
+    # the journal. Do not let an older dead receipt describe that live process
+    # in the gap: surface the observed PID and name the missing receipt.
+    def runs_with_live_processes(runs, process_rows)
+      pending = process_rows.flat_map { |process| pending_receipts_for(process, runs) }
+      runs + pending
+    end
+
+    def pending_receipts_for(process, runs)
+      Array(process[:queue]).filter_map do |tree|
+        next if runs.any? { |run| live_receipt_for?(run, tree, process[:pid]) }
+
+        pending_receipt(tree, process)
+      end
+    end
+
+    def live_receipt_for?(run, tree, pid)
+      run["state"] == "active" && run["pid"].to_i == pid.to_i && relative(run["target"]) == tree
+    end
+
+    def pending_receipt(tree, process)
+      {
+        "id" => "pid-#{process[:pid]}", "state" => "active", "target" => tree,
+        "files" => [], "max_passes" => 0, "pid" => process[:pid],
+        "started_at" => "", "passes" => [], "message" => "awaiting lifecycle receipt",
+        "status_pending_receipt" => true,
+      }
+    end
+
     def run_row(run)
       assessment_details = assessment_proof_details(run)
       state, alive = run_state(run)
@@ -356,16 +386,30 @@ module Operator
     end
 
     # The newest RunPulse line in any tree's log: the run's own account of where it is.
-    def heartbeat_line
-      state_roots.flat_map { |directory| Dir.glob(File.join(directory, LOG_GLOB)) }.uniq
-        .sort_by { |path| -File.mtime(path).to_f }.each do |path|
-        tail = File.open(path, "rb") { |file| file.seek([File.size(path) - HEARTBEAT_WINDOW, 0].max) && file.read }.to_s
-        line = tail.force_encoding("UTF-8").scrub.lines.reverse.find { |row| row.match?(HEARTBEAT) }
-        return line.strip if line
+    def heartbeat_line(runs = [])
+      return "awaiting lifecycle receipt" if runs.any? { |run| run["status_pending_receipt"] }
+
+      heartbeat_logs.each do |path|
+        line = heartbeat_in(path)
+        return line if line
       end
       nil
     rescue SystemCallError
       nil
+    end
+
+    def heartbeat_logs
+      state_roots.flat_map { |directory| Dir.glob(File.join(directory, LOG_GLOB)) }.uniq
+        .sort_by { |path| -File.mtime(path).to_f }
+    end
+
+    def heartbeat_in(path)
+      bytes = File.open(path, "rb") do |file|
+        file.seek([File.size(path) - HEARTBEAT_WINDOW, 0].max)
+        file.read
+      end
+      tail = bytes.to_s
+      tail.force_encoding("UTF-8").scrub.lines.reverse.find { |row| row.match?(HEARTBEAT) }&.strip
     end
 
     def commit_row

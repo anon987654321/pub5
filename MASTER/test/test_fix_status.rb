@@ -91,6 +91,22 @@ class TestFixStatus < Minitest::Test
     refute_includes rendered, "fix0: active tree=RAILS"
   end
 
+  def test_live_process_without_a_receipt_is_not_described_by_an_old_run
+    write("fix_runs.json", JSON.generate("runs" => [run_record("RAILS", pid: 0)]))
+    status = Operator::FixStatus.new(root: @root)
+    process = { pid: Process.pid, elapsed: "00:01", queue: ["RAILS"] }
+
+    status.stub(:processes, [process]) do
+      payload = status.payload
+      row = payload[:runs].last
+
+      assert_equal "active", row[:state]
+      assert_equal Process.pid, row[:pid]
+      assert_equal "awaiting lifecycle receipt", row[:message]
+      assert_equal "awaiting lifecycle receipt", payload[:heartbeat]
+    end
+  end
+
   def test_status_exposes_terminal_reason_and_bounded_convergence_receipt
     run = run_record("RAILS", state: "validation_failed", pid: 0).merge(
       "message" => "validation failed:\nrendered output differs",
