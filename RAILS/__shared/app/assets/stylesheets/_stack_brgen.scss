@@ -15,14 +15,7 @@
 // and has to keep the later word.
 @forward "buttons" with (
   $base: false,
-  // shared-010 keeps the retired .button-small working for the markup below that
-  // still names a size while its container is verified context by context; every
-  // context in this list held only compact buttons at the 2026-11-07 tree-wide
-  // sweep. Sites whose container also carries a full-size .button (rsvp-bar,
-  // push-prompt, messenger-details-section, order-actions, the form-wrap--flush
-  // listings, the generic .cluster/.page-header/.field primitives and the
-  // no-class rows) keep the legacy class until each is measured rendered.
-  $legacy-small: true,
+  // Compact controls are scoped to their semantic action groups.
   $compact-contexts: (".profile-header", ".home-neighborhood-filter", ".local-activity-heading",
                       ".feed-quote-form", ".feed-post-actions", ".cart-item", ".cart-address",
                       ".comment header", ".thread-summary", ".comment-form",

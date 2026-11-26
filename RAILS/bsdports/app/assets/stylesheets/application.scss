@@ -189,8 +189,7 @@
   // which is why `.nav-actions .button` would not match it.
   //
   // The search submit is the shared live-search partial's own input, which used
-  // to take its compact padding and size from the retired .button-small rule in
-  // _buttons.scss (shared-010). This dialect restates those two here — same
+  // to take its compact padding and size from a retired shared size class. This dialect restates those two here — same
   // tokens, same values the shared rule had — so the submit reads exactly as it
   // did while the shared contract carries no size class.
   div.nav-actions > a.button-ghost,

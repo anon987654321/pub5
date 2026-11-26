@@ -209,7 +209,7 @@ end
 
     def image_findings
       views = Dir.glob(File.join(RAILS_ROOT, "{brgen,amber,bsdports,__shared}/app/views/**/*.erb")) +
-              Dir.glob(File.join(RAILS_ROOT, "brgen/engines/*/app/views/**/*.erb"))
+              Dir.glob(File.join(RAILS_ROOT, "brgen/engines/**/app/views/**/*.erb"))
       views.flat_map do |path|
         lines = File.read(path, encoding: "UTF-8").lines
         lines.each_with_index.filter_map do |line, idx|
@@ -314,7 +314,7 @@ end
     # button-share is its own pill (share control on marketplace/tv/nearby), not a
     # variant of the base — in the vocabulary because it is worn and styled.
     BUTTON_VOCABULARY = %w[
-      button button-primary button-ghost button-danger button-small button-link button-block button-share
+      button button-primary button-ghost button-danger button-link button-block button-share
     ].to_set
 
     # A class of this vocabulary begins with button, so the character before it is

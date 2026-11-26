@@ -2144,7 +2144,7 @@ ui_polish:
       '
   button_family:
     action: 'One family, spelled out: button with button-primary, button-ghost, button-danger,
-      button-small, button-link, button-block and button-share. The button--primary
+      button-link, button-block and button-share. The button--primary
       BEM twins are retired; emit one class name per role.
 
       '

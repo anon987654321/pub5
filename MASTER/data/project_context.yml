@@ -408,7 +408,7 @@ entries:
     same CSS bytes. Size by place, not class: __shared/_buttons.scss takes
     $compact-contexts, and an app's stack forwards the single-class places whose
     buttons are compact (brgen's profile, post, front page and cart use it). Still
-    open: button-small, cluster, mt-8 and the layout wrappers in the remaining
+    open: cluster, mt-8 and the layout wrappers in the remaining
     views (marketplace listing, messenger thread, posts/new and most verticals).
 - key: operator_master_resembles_openbsd
   name: MASTER resembles OpenBSD

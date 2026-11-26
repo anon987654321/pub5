@@ -464,4 +464,6 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-26: shared-010 migrated thirteen Dating and TV templates, including Turbo replacement forms; mixed verification and report controls retain their distinct sizes. Source contracts authored; rendered parity NOT_RUN.
 
+- 2026-11-26: concurrent commits migrated Playlist, Marketplace, Maps, Takeaway and sortable controls; inspected the remaining search hits against current source. Retired the shared legacy sizing rule and opt-in, updated token vocabulary and lint (including nested engines), and replaced the 75-file ceiling with a no-size-class source contract. Keep shared-010 open for rendered acceptance; tests NOT_RUN.
+
 Acceptance remains NOT_RUN until supported runtime evidence is recorded.

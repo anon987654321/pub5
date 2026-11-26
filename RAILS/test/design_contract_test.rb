@@ -275,59 +275,22 @@ def test_brgen_old_dialect_outranks_the_social_stack
     assert_includes base, "text-size-adjust: 100%;"
   end
 
-  # shared-010: markup names no size. The compact size comes from
-  # $compact-contexts ("where a button sits decides whether it is the compact
-  # one", Johann 2026-11-03); .button-small left the shared contract and
-  # survives only as the brgen family's opt-in for markup whose container is
-  # still awaiting its per-site rendered check.
+  # Compact sizing comes from context, never a class naming size.
   def test_button_size_comes_from_contexts_not_a_size_class
     buttons = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_buttons.scss"), encoding: "UTF-8")
-
-    assert_includes buttons, "$legacy-small: false !default;",
-                    "the legacy size class must stay off by default in the shared contract"
-    assert_includes buttons, "@if $compact-list == null {",
-                    "compact selector accumulation must use Sass control flow, not the deprecated if() function"
-    refute_includes buttons, "if($compact-list == null",
-                    "the shared button partial must not emit the deprecated Sass if() call"
-    # The one .button-small selector left in the shared partial sits behind the
-    # opt-in guard; the compact builder lists contexts only.
-    guard = buttons[/@if \$legacy-small \{(.*?)\n\}/m, 1]
-    assert guard, "the legacy rule must sit behind the $legacy-small guard"
-    assert_includes guard, ".button.button-small"
-    code = buttons.split("\n").reject { |line| line.strip.start_with?("//", "/*", "*") }.join("\n")
-    refute_includes code.sub(guard, ""), ".button-small",
-                    "no size selector outside the $legacy-small guard"
-
-    %w[
-      comments/_comment.html.erb
-      comments/_form_fields.html.erb
-      notifications/_notification.html.erb
-      shared/_newsletter_cta.html.erb
-      shared/_messenger_artifacts.html.erb
-      shared/_live_search_form.html.erb
-      shared/_master_invite.html.erb
-    ].each do |partial|
-      source = File.read(File.join(SHARED, "app", "views", partial), encoding: "UTF-8")
-      refute_includes source, "button-small",
-                      "#{partial} names a size; size it from where the button sits"
-    end
-
-    sortable = File.read(File.join(SHARED, "vendor", "javascript", "@stimulus-components--sortable.js"), encoding: "UTF-8")
-    refute_includes sortable, "button-small"
+    stack = File.read(File.join(SHARED, "app", "assets", "stylesheets", "_stack_brgen.scss"), encoding: "UTF-8")
+    refute_includes buttons, "$legacy-small"
+    refute_includes stack, "$legacy-small"
     assert_includes buttons, ".sortable-keyboard-controls > .button"
+    assert_includes buttons, "min-height: var(--tap-min)"
 
-    helper = File.read(File.join(SHARED, "app", "helpers", "shared", "stimulus_form_helper.rb"), encoding: "UTF-8")
-    refute_includes helper, "button-small"
-
-    # Ratchet: the files still naming the size only shrink. Raise this ceiling
-    # never; retire a site by naming its container in the app's compact
-    # contexts and dropping the class. 75 files carried the name when the class
-    # left the shared contract (2026-11-07).
-    naming = Dir.glob(File.join(ROOT, "{__shared,amber,brgen}",
-                                           "**", "*.{erb,js,rb,scss}")).count do |path|
-      File.read(path, encoding: "UTF-8").include?("button-small")
+    sources = Dir.glob(File.join(ROOT, "{__shared,amber,brgen,bsdports}", "{app,engines,vendor/javascript}", "**", "*.{erb,js,rb,scss}"))
+    offenders = sources.select do |path|
+      File.read(path, encoding: "UTF-8").each_line.any? do |line|
+        !line.lstrip.start_with?("//", "#", "<%#", "/*", "*") && line.include?("button-small")
+      end
     end
-    assert naming <= 75, "button-small naming grew to #{naming} files; the ratchet only shrinks"
+    assert_empty offenders, "size classes remain in active source"
   end
 
   def test_brgen_collection_and_local_actions_use_contextual_sizing
