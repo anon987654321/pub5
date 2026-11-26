@@ -11,6 +11,8 @@
   <meta name="master-runtime" content="face">
   <meta name="master-tier" content="<%= @tier.to_s %>">
   <meta name="master-profile" content="<%= @profile.to_s %>">
+  <meta name="master-container-ready" content="<%= @container_ready ? "1" : "0" %>">
+  <meta name="master-model" content="<%= @model %>">
   <meta name="master-visual-profile" content="auto">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -181,7 +183,8 @@
   <main id="chat-shell" aria-label="<%= t("face.chat_aria") %>">
     <%# Not a live region: streamed tokens re-announced every chunk. The
         finished reply is announced once through #tts-live (face.part5). %>
-    <div id="chat-log" tabindex="-1"></div>
+    <div id="chat-log" tabindex="-1"><p class="message system" id="terminal-boot">master0 at mainbus0: <%= @container_ready ? "ready" : "starting" %>
+face0 at master0: waiting for first frame</p></div>
     <form id="prompt-form" aria-label="<%= t("face.prompt_aria") %>" autocomplete="off">
       <button
         id="new-conversation-button"
