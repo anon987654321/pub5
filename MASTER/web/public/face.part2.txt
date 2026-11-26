@@ -116,9 +116,9 @@ uniform float uExpressionStrength;
 attribute vec3 scatter;
 attribute float semanticStage;
 attribute vec3 subjectFrom;
-attribute vec3 subjectNormal;
 uniform float uSubjectDirect;
-uniform vec4 uMaskMouth;
+uniform float uSculpture;
+uniform float uSculptureMotion;
 attribute float seed;
 attribute float curvature;
 attribute float boundary;
@@ -266,25 +266,20 @@ void main(){
     p = mix(p, mix(scatter, position, localMorph), uSubjectActive * (1.0-localMorph));
   }
   vec3 subjectPoint = mix(scatter, subjectFrom, localMorph);
-  // A bounded travelling displacement exists only during the transition.
+  // The same carriers respond to semantic events; no added emitter or anatomy.
   float travel = 1.0 - localMorph;
-  float envelope = 4.0 * travel * (1.0 - travel);
+  float envelope = 16.0 * travel * travel * (1.0 - travel) * (1.0 - travel);
   float signal = sin(semanticStage * 6.283185 - morphProgress * 6.283185);
   subjectPoint.z += signal * envelope * 0.025;
   float turn = envelope * (0.22 + 0.12 * signal);
   float ct = cos(turn), st = sin(turn);
   subjectPoint.xz = mat2(ct, -st, st, ct) * subjectPoint.xz;
-  // The old viseme deformation above is overwritten by a direct subject.
-  // Articulate mask geometry after interpolation, never an unrelated object.
-  vec2 lip = vec2(subjectPoint.x / max(uMaskMouth.y, 0.01),
-                  (subjectPoint.y - uMaskMouth.x) / max(uMaskMouth.z, 0.01));
-  float lipWeight = (1.0 - smoothstep(1.0, 2.8, length(lip))) *
-                    uMaskMouth.w * (1.0 - localMorph);
-  subjectPoint.y += sign(lip.y) * clamp(uVowel, 0.0, 1.0) * lipWeight * 0.014;
-  subjectPoint.x += subjectPoint.x * clamp(uMouthWide, -0.4, 0.4) * lipWeight;
-  // A few of the same carriers respond to semantic pressure; no extra emitter.
+  float activity = uSculpture * uSculptureMotion * travel;
+  float pulse = clamp(uJaw * 0.4, 0.0, 1.0);
+  float band = exp(-pow((subjectPoint.y + 0.12) * 3.0, 2.0));
+  subjectPoint += normalize(subjectPoint + vec3(0.001)) * activity * pulse * band * 0.018;
   float peripheral = smoothstep(0.28, 0.58, length(subjectPoint.xy));
-  float escape = step(0.97, seed) * peripheral * uMaskMouth.w *
+  float escape = step(0.97, seed) * peripheral * activity *
     clamp(uFracture + uEarPulse * 0.15, 0.0, 1.0) * 0.045;
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * escape;
   p = mix(p, subjectPoint, uSubjectDirect);
@@ -322,9 +317,6 @@ if (_hasWebGL && THREE) {
   faceGeom.setAttribute('position', new THREE.BufferAttribute(faceHome, 3));
   faceGeom.setAttribute('scatter',  new THREE.BufferAttribute(faceScatter, 3));
   faceGeom.setAttribute('subjectFrom', new THREE.BufferAttribute(faceHome.slice(), 3));
-  const subjectNormals = new Float32Array(faceHome.length);
-  for (let i = 2; i < subjectNormals.length; i += 3) subjectNormals[i] = 1;
-  faceGeom.setAttribute('subjectNormal', new THREE.BufferAttribute(subjectNormals, 3));
   faceGeom.setAttribute('semanticStage', new THREE.BufferAttribute(new Float32Array(faceSeeds.length), 1));
   faceGeom.setAttribute('seed',     new THREE.BufferAttribute(faceSeeds, 1));
   faceGeom.setAttribute('curvature', new THREE.BufferAttribute(faceCurvature, 1));
@@ -333,7 +325,7 @@ if (_hasWebGL && THREE) {
   faceMat = new THREE.ShaderMaterial({
     vertexShader: VERT_SHADER, fragmentShader: FRAG_SHADER,
     uniforms: {
-      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uMaskMouth:{value:{x:0,y:0,z:0,w:0}}, uSemanticStaged:{value:0}, uTime:{value:0},
+      uMorph:{value:0}, uSubjectActive:{value:0}, uSubjectDirect:{value:0}, uSculpture:{value:0}, uSculptureMotion:{value:0}, uSemanticStaged:{value:0}, uTime:{value:0},
       uColor:{value:new Color(1,1,1)},
       uHc:{value: State.highContrast ? 1.0 : (State.contrastMore ? 0.9 : 0.0)},
       uCurl:{value:0}, uJaw:{value:0}, uMouse:{value:{x:0,y:0}},
