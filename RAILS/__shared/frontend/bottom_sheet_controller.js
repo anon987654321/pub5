@@ -23,7 +23,8 @@ export default class extends Controller {
   }
 
   close() {
-    if (!this.levelValue) return
+    if (this.dragging) this.finishDrag()
+    if (!this.levelValue) { this.sync(); return }
     const restoreFocus = this.sheetTarget.contains(document.activeElement)
     this.levelValue = 0
     this.sync()
@@ -49,7 +50,7 @@ export default class extends Controller {
 
   pointerDown(event) {
     // Interactive content and native scrolling must keep their own pointer.
-    if (event.isPrimary === false || (event.button != null && event.button !== 0) ||
+    if (this.dragging || event.isPrimary === false || (event.button != null && event.button !== 0) ||
         event.target.closest("a, button, input, textarea, select, summary, label")) return
     this.dragging = true
     this.pointerId = event.pointerId
@@ -69,7 +70,7 @@ export default class extends Controller {
 
   pointerUp(event) {
     if (!this.dragging || event.pointerId !== this.pointerId) return
-    const delta = this.currentY - this.startY
+    const delta = (event.clientY ?? this.currentY) - this.startY
     this.finishDrag()
     if (delta > 80 && this.levelValue === 1) return this.close()
     if (delta > 80) this.levelValue = Math.max(0, this.levelValue - 1)
