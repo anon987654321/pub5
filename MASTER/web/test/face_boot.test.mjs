@@ -297,7 +297,7 @@ test("semantic object subjects are validated, bounded and feature-staged", () =>
   assert.match(runtime, /stageAttribute\.array\.set\(stages\)/);
 });
 
-test("five masks rotate across conversations on the shared renderer", () => {
+test("twenty-one sculptures rotate across conversations on the shared renderer", () => {
   const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
   const world = readFileSync(join(publicDir, "face_world.js"), "utf8");
   const manifest = readFileSync(join(root, "config", "face_assets.yml"), "utf8");
@@ -332,9 +332,9 @@ test("five masks rotate across conversations on the shared renderer", () => {
   };
   runInNewContext(masks, sandbox, { filename: "face_mask_profiles.js" });
   const api = window.MASTER_FACE_MASKS;
-  assert.equal(api.profiles.length, 5);
-  assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 5);
-  assert.deepEqual(Array.from(api.rotationProfiles), ["iatmul-river","iatmul-concentric","sepik-split","tatanua-crest","elema-hollow"]);
+  assert.equal(api.profiles.length, 21);
+  assert.equal(new Set(api.profiles.map((profile) => profile.id)).size, 21);
+  assert.deepEqual(Array.from(api.rotationProfiles), ["folded-seed","block-portal","trefoil","stacked-fins","paired-lobes","yoke","porous-orb","crescent","fragment","twin-bulb","branching","asymmetric-pocket","layered-cap","double-ring","three-void-shell","dispersed","round-knot","oblique-hollow","open-ribbon","eroded-monolith","bifurcate"]);
   assert.match(manifest, /- face_mask_profiles/);
   assert.match(events, /"conversation:created": \{ targets: \["face"\], fields: \["id", "conversationId"\] \}/);
   assert.match(tokens, /max_features: 8/);
@@ -346,27 +346,27 @@ test("five masks rotate across conversations on the shared renderer", () => {
     const call = calls[calls.length - 1];
     assert.equal(call.form, "object");
     assert.equal(call.descriptor.kind, "custom");
-    assert.equal(call.descriptor.parts.length, 8);
+    assert.ok(call.descriptor.parts.length >= 2 && call.descriptor.parts.length <= 8);
     for (const part of call.descriptor.parts) {
       assert.ok(["ring", "beam", "box", "cylinder", "sphere"].includes(part.primitive));
       assert.ok(part.center.every((value) => Number.isFinite(value) && Math.abs(value) <= 0.45));
       assert.ok(part.size.every((value) => Number.isFinite(value) && value >= 0.06 && value <= 0.62));
     }
   }
-  assert.ok(api.select("iatmul-river"));
-  assert.equal(api.current().id, "iatmul-river");
+  assert.ok(api.select("folded-seed"));
+  assert.equal(api.current().id, "folded-seed");
   const sessionId = sessionStorage.getItem("master.mask.session");
   assert.equal(sessionStorage.getItem("master.mask." + sessionId), "0");
   assert.equal(api.newConversation("conversation-next"), true);
-  assert.equal(api.current().id, "iatmul-concentric");
+  assert.equal(api.current().id, "block-portal");
   assert.equal(sessionStorage.getItem("master.mask.conversation-next"), "1");
   assert.equal(api.newConversation("conversation-next"), false);
-  assert.equal(api.current().id, "iatmul-concentric", "same conversation does not rotate twice");
+  assert.equal(api.current().id, "block-portal", "same conversation does not rotate twice");
   assert.ok(listeners["master:conversation-created"]?.length);
   assert.ok(listeners["master:bus"]?.length);
 });
 
-test("server-selected human mask profile drives the particle face and its source attribution", () => {
+test("server-selected sculpture drives the particle face and its source attribution", () => {
   const masks = readFileSync(join(publicDir, "face_mask_profiles.js"), "utf8");
   const controller = readFileSync(join(root, "app", "controllers", "chat_controller.rb"), "utf8");
   const view = readFileSync(join(viewsDir, "chat", "index.html.erb"), "utf8");
@@ -377,20 +377,20 @@ test("server-selected human mask profile drives the particle face and its source
     setAttribute(name, value) { attributes[name] = value; }
   };
   const source = {
-    id: "iatmul_mai", particle_profile: "iatmul-river",
-    title: "Mask (Mai)", collection: "The Metropolitan Museum of Art",
-    accession: "1974.29.2", object_url: "https://www.metmuseum.org/art/collection/search/309933",
-    rights: "Collection record; source image is not downloadable"
+    id: "folded-seed", particle_profile: "folded-seed",
+    title: "Folded seed", collection: "MASTER original concept studies",
+    
+    rights: "Original procedural concept"
   };
   const nextSource = {
-    id: "iatmul_mwai", particle_profile: "sepik-split",
-    title: "Mask (Mwai)", collection: "The Museum of Fine Arts, Houston",
-    accession: "62.33", object_url: "https://emuseum.mfah.org/objects/47457/mask-mwai",
-    rights: "Public Domain (object record); photograph © The Museum of Fine Arts, Houston"
+    id: "trefoil", particle_profile: "trefoil",
+    title: "Trefoil", collection: "MASTER original concept studies",
+    
+    rights: "Original procedural concept"
   };
   const window = {
     MASTER_FACE_MASK_SESSION: "page-session",
-    MASTER_FACE_MASK_PROFILE: "iatmul-river",
+    MASTER_FACE_MASK_PROFILE: "folded-seed",
     MASTER_FACE_CHARACTER_ID: "scout",
     MASTER_FACE_MASK_ENTRY: source,
     MASTER_FACE_MASK_CATALOG: [source, nextSource],
@@ -423,23 +423,23 @@ test("server-selected human mask profile drives the particle face and its source
   runInNewContext(masks, sandbox, { filename: "face_mask_profiles.js" });
 
   const api = window.MASTER_FACE_MASKS;
-  assert.equal(api.current().id, "iatmul-river");
+  assert.equal(api.current().id, "folded-seed");
   assert.match(controller, /@face_mask_profile = @face_mask_entry \? @face_mask_entry\.fetch\("particle_profile", ""\)\.to_s/);
   assert.match(view, /window\.MASTER_FACE_MASK_PROFILE =/);
   assert.match(view, /window\.MASTER_FACE_MASK_CATALOG =/);
-  assert.match(archive, /particle_profile: "iatmul-river"/);
+  assert.match(archive, /particle_profile: "folded-seed"/);
   assert.match(archive, /selection: "round_robin_per_new_chat"/);
   assert.equal(calls[0].form, "object");
   assert.equal(calls[0].descriptor.kind, "custom");
-  assert.equal(calls[0].descriptor.parts.length, 8);
-  assert.equal(document.documentElement.dataset.maskSourceTitle, "Mask (Mai)");
+  assert.equal(calls[0].descriptor.parts.length, 2);
+  assert.equal(document.documentElement.dataset.maskSourceTitle, "Folded seed");
   assert.equal(document.documentElement.dataset.maskCharacter, "the-scout");
   assert.equal(attributes["aria-label"], "MASTER monochrome particle mask");
-  assert.equal(api.source().id, "iatmul_mai");
+  assert.equal(api.source().id, "folded-seed");
 
-  assert.equal(api.newConversation("next-chat", "sepik-split"), true);
-  assert.equal(api.current().id, "sepik-split");
-  assert.equal(api.source().id, "iatmul_mwai");
+  assert.equal(api.newConversation("next-chat", "trefoil"), true);
+  assert.equal(api.current().id, "trefoil");
+  assert.equal(api.source().id, "trefoil");
   assert.equal(document.documentElement.dataset.maskCharacter, "the-scout");
   assert.equal(document.documentElement.dataset.maskSourceCollection, nextSource.collection);
 });
