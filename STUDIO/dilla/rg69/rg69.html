@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#fff0f5">
+<meta name="theme-color" content="#FBF6F8">
 <meta name="description" content="Ragnhild’s Dream Machine — a pocket universe of beats, chords and worn tape.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎹</text></svg>">
 <title>RG-69 | Ragnhild’s Dream Machine</title>
@@ -136,7 +136,9 @@ button,select{border:0;border-radius:6px;background:var(--panel);min-height:44px
 .studio-nav{position:fixed;z-index:900;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,1fr);padding:7px max(8px,calc((100vw - 680px)/2)) calc(8px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--brd)}.studio-nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:transparent;color:var(--txt);font-size:11px;padding:4px;min-height:52px}.studio-nav svg{width:22px;height:22px}.studio-nav [aria-current=page]{color:var(--acc);font-weight:700}.studio-nav [aria-current=page] svg{stroke-width:2.5}[hidden]{display:none!important}main>details{border:0}main>details>summary{font-size:18px}details>summary::after{content:"+"}details[open]>summary::after{content:"−"}footer{border:0}.pony{width:70px}
 @media(min-width:480px){.mix-fx{grid-template-columns:1.25fr 1fr}.mix-fx>div+div{border-left:1px solid var(--brd);padding-left:14px}}
 @media(max-width:420px){.knob-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.mix-fx .knob-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.module-heading label{min-width:100px}.step{min-height:44px}.steps-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.track-ruler .steps-grid{display:none}.performance-pads{grid-template-columns:repeat(5,minmax(0,1fr))}}
+#terminal-panel{margin-top:20px;border-top:1px solid var(--brd)}#trace{background:transparent;padding:8px 0;font:12px/1.6 var(--mono);max-height:200px}#terminal-panel summary{font:600 13px var(--mono)}#term-input{background:transparent;border:0;border-radius:0;font:14px var(--mono)}.term-input-row{border-top:1px solid var(--brd)}#copy-log{background:transparent}#install-app{margin-left:auto;background:var(--acc);color:var(--ink)}
 </style>
+<link rel="manifest" href="./manifest.webmanifest">
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute"><symbol id="pony-art" viewBox="0 0 180 144"><path d="M12 112a73 73 0 0 1 146 0" fill="none" stroke="#e7a9cb" stroke-width="8"/><path d="M23 112a62 62 0 0 1 124 0" fill="none" stroke="#c4a7e7" stroke-width="7"/><path d="M34 112a51 51 0 0 1 102 0" fill="none" stroke="#a9d5d7" stroke-width="7"/><g stroke="#853661" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M58 92Q29 71 28 101Q30 122 50 113Q35 109 43 100L62 110" fill="#bd92e0"/><path d="M60 83Q74 70 94 82L104 65L126 73L122 94L126 124H114L109 103L88 105L85 124H73L73 105L66 124H54L58 103Q49 95 60 83Z" fill="#f9bbd9"/><path d="M95 66Q85 46 101 32L103 14L115 28Q144 23 150 47L163 57Q166 71 151 75L132 75L121 86Q103 82 95 66Z" fill="#ffd9eb"/><path d="M108 26L122 5L125 28" fill="#f8d995"/><path d="M102 31Q84 30 81 48Q76 66 92 75Q84 89 100 101Q119 98 110 80Q123 72 110 60Q99 49 118 41Q136 43 143 33Q127 19 102 31Z" fill="#c39be7"/><path d="M92 45Q98 30 114 33" fill="none" stroke="#ffe0f3" stroke-width="5"/><ellipse cx="138" cy="51" rx="8" ry="11" fill="#fff"/><ellipse cx="140" cy="53" rx="4" ry="7" fill="#50305f"/><circle cx="141" cy="49" r="2" fill="#fff" stroke="none"/><path d="M149 66q5 3 9-1" fill="none"/><path d="M78 88q-6-6-10 0q-3 5 10 12q13-7 10-12q-4-6-10 0Z" fill="#e45c9a" stroke="none"/></g><g fill="#d77eb4"><path d="M23 30l3 8 8 3-8 3-3 8-3-8-8-3 8-3Z"/><path d="M160 12l2 6 6 2-6 2-2 6-2-6-6-2 6-2Z"/><circle cx="44" cy="20" r="3"/><circle cx="159" cy="93" r="3"/></g></symbol></svg>
@@ -148,7 +150,7 @@ button,select{border:0;border-radius:6px;background:var(--panel);min-height:44px
 
     
   
-<button id="studio-menu" type="button" aria-label="Session settings">···</button></header>
+<button id="install-app" type="button" hidden>Install</button><button id="studio-menu" type="button" aria-label="Session settings">···</button></header>
 
 <div class="transport transport-primary" role="group" aria-label="Playback"><button id="play" data-kind="primary" aria-label="Play sequencer" aria-pressed="false" title="Play or pause (Space)">▶ Play</button><button id="stop" type="button" aria-label="Stop" title="Stop (S)">■ Stop</button><button id="record" data-kind="danger" title="Record">Record</button><button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button><span id="pos-display" aria-hidden="true">●</span></div><div class="song-heading"><label>Harmony<select id="harmony-pat"><option value="">Independent patterns</option></select></label><div id="song-position" aria-live="off"></div></div><canvas id="viz" width="400" height="28" title="Waveform" aria-label="Audio waveform visualizer" role="img"></canvas><div class="tempo-row"><label class="ctrl-bpm">BPM <input id="bpm" type="range" min="60" max="170" value="96"> <output id="bpm-o">96</output></label><output id="root-display" aria-label="Current chord"></output><button id="random" title="Randomize (R)">Generate</button></div><div class="level-meter-row"><span class="hardware-label">Output</span><div class="vu-meter" id="vu" aria-label="VU Meter"></div><span class="meter-scale">−12 · −6 · 0 dB</span></div>
 <p id="status" role="status" aria-live="polite">Ready</p>
@@ -207,13 +209,7 @@ button,select{border:0;border-radius:6px;background:var(--panel);min-height:44px
     <button id="audio-test" type="button" title="Test direct sound and report mixer diagnostics">Audio test</button><button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">Compact layout</button>
     
     
-  </div><details><summary>Diagnostics</summary><div id="trace-wrap">
-<aside id="trace" aria-label="Terminal output" role="log" aria-live="polite"></aside><button id="copy-log" type="button">Copy log</button>
-<div class="term-input-row">
-<span class="term-prompt">$</span>
-<input id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="help" aria-label="Terminal command">
-</div>
-</div></details>
+  </div>
 </details>
 <details id="experimental-panel" data-view="fx"><summary>Experimental DSP</summary><fieldset><label for="lab-space">Convolution space <output id="lab-space-o">0</output></label><input id="lab-space" type="range" min="0" max="100" value="0"><label for="lab-morph">Spectral colour morph <output id="lab-morph-o">0</output></label><input id="lab-morph" type="range" min="0" max="100" value="0"><label for="lab-chaos">Chaotic modulation <output id="lab-chaos-o">0</output></label><input id="lab-chaos" type="range" min="0" max="100" value="0"><label for="lab-grain">Sample grains <output id="lab-grain-o">0</output></label><input id="lab-grain" type="range" min="0" max="100" value="0"><label for="lab-notch">50 Hz hum rejection <output id="lab-notch-o">0</output></label><input id="lab-notch" type="range" min="0" max="100" value="0"></fieldset><fieldset><legend>Signal laboratory</legend><label for="lab-freeze">Spectral freeze <output id="lab-freeze-o">0</output></label><input id="lab-freeze" type="range" min="0" max="100" value="0"><label for="lab-spatial">Headphone spatialization <output id="lab-spatial-o">0</output></label><input id="lab-spatial" type="range" min="0" max="100" value="0"><label for="lab-adaptive">Adaptive hum filter <output id="lab-adaptive-o">0</output></label><input id="lab-adaptive" type="range" min="0" max="100" value="0"><label for="lab-denoise">Sample spectral denoise <output id="lab-denoise-o">0</output></label><input id="lab-denoise" type="range" min="0" max="100" value="0"></fieldset><p class="shield-note">Freeze and denoise use loaded samples. Hum rejection filters the music signal, not room noise. Headphone spatialization uses browser HRTF, not head tracking.</p></details>
 <details id="dream-panel" data-view="dream"><summary>Dream Shield · noise masking</summary>
@@ -228,7 +224,13 @@ button,select{border:0;border-radius:6px;background:var(--panel);min-height:44px
 <label for="shield-phase">Phase (°) <output id="shield-phase-o">180</output></label><input id="shield-phase" type="range" min="0" max="360" value="180">
 <label for="shield-amplitude">Anti-noise amplitude <output id="shield-amplitude-o">80</output></label><input id="shield-amplitude" type="range" min="0" max="100" value="80"></fieldset>
 <output id="shield-residual" aria-live="polite"></output><p class="shield-note">Ideal single-frequency model only. No anti-noise is sent to speakers.</p></details></details>
-</main><nav class="studio-nav" aria-label="Studio views"><button type="button" data-studio-view="studio" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3z"/></svg>Studio</button><button type="button" data-studio-view="library" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7l2 2h9v13H3z"/></svg>Library</button><button type="button" data-studio-view="fx" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18M12 3v18M19 3v18M2 8h6M9 15h6M16 6h6"/></svg>FX</button><button type="button" data-studio-view="dream" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11z"/></svg>Dream</button><button type="button" data-studio-view="song" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13M9 18c0 3-6 3-6 0s6-3 6 0M21 16c0 3-6 3-6 0s6-3 6 0"/></svg>Song</button></nav>
+<details id="terminal-panel"><summary>Terminal</summary><div id="trace-wrap">
+<aside id="trace" aria-label="Terminal output" role="log" aria-live="polite"></aside><button id="copy-log" type="button">Copy log</button>
+<div class="term-input-row">
+<span class="term-prompt">$</span>
+<input id="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="help" aria-label="Terminal command">
+</div>
+</div></details></main><nav class="studio-nav" aria-label="Studio views"><button type="button" data-studio-view="studio" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 3l9 7v11h-6v-7H9v7H3z"/></svg>Studio</button><button type="button" data-studio-view="library" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h7l2 2h9v13H3z"/></svg>Library</button><button type="button" data-studio-view="fx" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18M12 3v18M19 3v18M2 8h6M9 15h6M16 6h6"/></svg>FX</button><button type="button" data-studio-view="dream" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11z"/></svg>Dream</button><button type="button" data-studio-view="song" aria-current="false"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13M9 18c0 3-6 3-6 0s6-3 6 0M21 16c0 3-6 3-6 0s6-3 6 0"/></svg>Song</button></nav>
 <footer id="meta">rg-69 / init</footer>
 <div id="progress-wrap">
 <p>Exporting… <span id="progress-pct">0%</span></p>
@@ -3147,7 +3149,15 @@ else if(e.key==='ArrowDown'){e.preventDefault();if(termHistIdx>0){termHistIdx--;
 });
 // ────────────────────────────────────────────────────────────────────────────
 
-// serviceWorker intentionally omitted — sw.js not present
+// Installation is optional; the standalone file needs no service worker.
+if(location.protocol==="https:"||location.hostname==="localhost"){
+const install=$id("install-app");let prompt=null;
+window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();prompt=event;install.hidden=false;});
+install.addEventListener("click",async()=>{if(!prompt)return;const request=prompt;prompt=null;install.hidden=true;await request.prompt();});
+window.addEventListener("appinstalled",()=>{install.hidden=true;prompt=null;log("install0: installed","k");});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").then(()=>log("offline0: registered","k")).catch(error=>log("offline0: "+error.message,"w"));
+}
+
 </script>
 </body>
 </html>
