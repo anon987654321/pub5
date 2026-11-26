@@ -343,6 +343,12 @@ def activate_headless_mode!
   activate_fast_mode!
 end
 
+HEADLESS_DIRECT_COMMANDS = %w[/capabilities /doctor /help /laws /model /status].freeze
+
+def headless_direct_command?(argv)
+  Array(argv).any? { |arg| HEADLESS_DIRECT_COMMANDS.include?(arg) }
+end
+
 # Prime the process-wide runtime choices before Master.boot. The same flags are
 # parsed again below to construct the message; applying them twice is idempotent.
 def prime_cli_boot_options!(argv)
@@ -385,6 +391,7 @@ end
 # Flags that affect boot/runtime defaults are applied before the boot; help still
 # prints without booting at all.
 prime_cli_boot_options!(ARGV)
+ENV["MASTER_FOLD"] = "0" if ENV["MASTER_HEADLESS"] == "1" && headless_direct_command?(ARGV)
 
 if ARGV.first == "--help" || ARGV.first == "-h"
   require "optparse"
@@ -478,7 +485,8 @@ unless internal_master_child || $MASTER_PROCESS_LOCK
   exit 75
 end
 
-if !$stdin.tty? && ENV["MASTER_FAST"] == "1"
+if !$stdin.tty? && ENV["MASTER_FAST"] == "1" && !headless_direct_command?(ARGV)
+
   $stdin.each_line do |line|
     command = line.strip
     body = case command
@@ -497,6 +505,7 @@ end
 # Parse once and reuse the result. OptionParser callbacks can emit warnings
 # and alter mode state; repeating this parse duplicated both effects.
 initial_message = initial_message_from_argv(ARGV.dup)
+ENV["MASTER_FOLD"] = "0" if ENV["MASTER_HEADLESS"] == "1" && HEADLESS_DIRECT_COMMANDS.include?(initial_message)
 
 cli = nil
 control_plane = nil
