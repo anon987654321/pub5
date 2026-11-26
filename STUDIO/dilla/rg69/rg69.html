@@ -635,7 +635,7 @@ button:focus-visible, .style-chip:focus-visible, summary:focus-visible, select:f
     <button id="export" title="Export WAV (E)">WAV</button><button id="export-midi">MIDI</button>
     <button id="record" data-kind="danger" title="Record">Record</button>
     <button id="shareBtn" title="Copy share link">Share</button><button id="save-session">Save</button><button id="load-session">Load</button><input id="session-file" type="file" accept="application/json,.json" hidden>
-    <button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
+    <button id="reset-mix" type="button" title="Restore all eight tracks and default mixer levels">Reset mix</button><button id="layout" type="button" aria-label="Switch to compact sequencer spacing" title="Switch to compact spacing">− dense</button>
     <button id="undobtn" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
     <button id="panic" data-kind="danger" title="Panic (Esc)">Panic</button>
   </div>
@@ -969,8 +969,6 @@ return [name,voice];
 
 function createToneInstruments(){
 const p=rg69AudioProfile,t=p.tone,k=p.kit,v=p.voice;
-const hatResonance=t.hat.resonance_base_hz+k.hat.tone*t.hat.resonance_tone_span_hz;
-const openResonance=t.openhat.resonance_base_hz+k.hat.tone*t.openhat.resonance_tone_span_hz;
 const keysModulation=t.keys.modulation_index*(v.brightness/t.keys.brightness_reference);
 const bassSub=new Tone.Synth({frequency:t.bass.sub_frequency,oscillator:{type:t.bass.sub_oscillator},envelope:{attack:t.bass.attack,decay:t.bass.decay,sustain:0,release:t.bass.release}});bassSub.volume.value=t.bass.sub_volume_db;
 const instruments={
@@ -985,21 +983,8 @@ return instruments;
 }
 
 function createRG69Panners(){
-const k=rg69AudioProfile.kit,v=rg69AudioProfile.voice;
-const pan=value=>Number.isFinite(Number(value))?Number(value):0;
-return{
-kick:new Tone.Panner(pan(k.kick.pan)),
-kickSub:new Tone.Panner(pan(k.sub.pan??k.kick.pan)),
-kickClick:new Tone.Panner(pan(k.kick.pan)),
-kickBody:new Tone.Panner(pan(k.kick.pan)),
-snare:new Tone.Panner(pan(k.snare.pan)),
-snareRing:new Tone.Panner(pan(k.snare.pan)),
-clap:new Tone.Panner(pan(k.perc.pan)),
-hat:new Tone.Panner(pan(k.hat.pan)),
-open:new Tone.Panner(pan(k.openhat.pan)),
-keys:new Tone.Panner(pan(v.pan)),
-pads:new Tone.Panner(pan(v.pan))
-};
+const pan=Number(rg69AudioProfile.voice.pan)||0;
+return {keys:new Tone.Panner(pan),pads:new Tone.Panner(pan)};
 }
 
 function rg69NoiseLevelDb(base,control,amount,reference){
@@ -1420,7 +1405,7 @@ const padsG=new Tone.Gain(mix.pads/100*rg69AudioProfile.voice.level);
 const masterG=new Tone.Gain(mix.master/100);
 const flt=new Tone.Filter(50+aud.filter/100*15950,'lowpass');
 const tape=new Tone.Distortion(0.08);
-const drumDrive=new Tone.Distortion(.65);drumDrive.wet.value=aud.drive/100;
+const drumDrive=new Tone.Distortion(.65);drumDrive.wet.value=aud.drive/100*.75;
 const comp=new Tone.Compressor(-18,1+aud.comp/100*PARAMS.COMP_RATIO_MAX);
 const widener=new Tone.StereoWidener(aud.width/100);
 const limiter=new Tone.Limiter(-1);
@@ -1474,6 +1459,11 @@ const padsLFO=new Tone.LFO(0.12,600,1400);padsLFO.start();padsLFO.connect(padsFl
 const padsBW=new Tone.Filter(toneProfile.pads.lowpass_hz,'lowpass');
 const padsSat=new Tone.Chebyshev(toneProfile.pads.saturation_order);padsSat.wet.value=toneProfile.pads.saturation_wet;
 const panners=createRG69Panners();
+// A permanent clean drum feed preserves the transients and fundamental under saturation.
+const drumClean=new Tone.Gain(.6);
+for(const voice of ['kick','kickSub','kickClk','kickBody','snare','snareRing','clap','hat','open'])instruments[voice].connect(drumClean);
+drumClean.connect(drumG);
+kickSat.wet.value=.3;drumSat.wet.value=.35;
 kickN.connect(kickSat);kickSub.connect(kickSat);kickClkBP.connect(kickSat);kickBody.connect(kickSat);
 kickSat.connect(kickComp);kickComp.connect(drumDrive);
 snareN.connect(drumSat);snareRngBP.connect(drumSat);clapN.connect(drumSat);
@@ -1517,7 +1507,7 @@ if(fxDly){fxDly.wet.value=1;fxDly.feedback.value=profile.rig.delay.feedback+(aud
 if(fxDlyFlt)fxDlyFlt.frequency.value=profile.rig.delay.lowpass;
 if(fxFlt)fxFlt.frequency.value=PARAMS.FILTER_MIN_HZ+aud_.filter/100*PARAMS.FILTER_MAX_HZ;
 if(tapeSat)smooth(tapeSat.wet,aud_.tape/100*.65);
-if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100);
+if(liveGraph?.drumDrive)smooth(liveGraph.drumDrive.wet,aud_.drive/100*.75);
 if(compPar)compPar.ratio.value=1+aud_.comp/100*PARAMS.COMP_RATIO_MAX;
 if(widener)widener.width.value=aud_.width/100;
 if(vinylNoise)vinylNoise.volume.value=rg69NoiseLevelDb(-60,aud_.vinyl,profile.rig.vinyl.level,.1);
@@ -1627,7 +1617,7 @@ const events=compileStep(index,time,opts);
 for(const event of events){
 const {voice,args}=event;
 try{
-synths[voice].triggerAttackRelease(...args);
+synths[voice].triggerAttackRelease(...args);opts.onNote?.(voice);
 }catch(error){if(!opts.onError)throw error;opts.onError(voice,error);}
 }
 if(opts.sampleGraph){try{playSample(index,time,opts);}catch(error){if(!opts.onError)throw error;opts.onError('sample',error);}}
@@ -1655,7 +1645,7 @@ bassSub:bassSub,
 keys:keysN,
 pads:padsN
 },{
-muteMap:st_.muteState,tick:st_.tick,sampleGraph:liveGraph,onError:reportVoiceFailure,
+muteMap:st_.muteState,tick:st_.tick,sampleGraph:liveGraph,onError:reportVoiceFailure,onNote:voice=>{st_.playedVoices[voice]=(st_.playedVoices[voice]||0)+1;},
 applyProb:true,
 applyRatchet:true,
 stepCount:st_.stepCount,
@@ -1674,7 +1664,7 @@ st_.clockEpoch=(st_.clockEpoch||0)+1;st_.visualQueue=[];
 function startClock(){
 clearTimeout(st_.timer);
 st_.clockEpoch=(st_.clockEpoch||0)+1;st_.visualQueue=[];
-st_.nextStepAt=audioTime()+CLOCK_LEAD;st_.audioErrors={};st_.lastClockError=0;
+st_.nextStepAt=audioTime()+CLOCK_LEAD;st_.audioErrors={};st_.playedVoices={};
 pumpClock(st_.clockEpoch);
 }
 function pumpClock(epoch){
@@ -1707,6 +1697,7 @@ function advanceVisualClock(){
 const now=audioTime();
 while(st_.visualQueue?.length&&st_.visualQueue[0].time<=now){
 const event=st_.visualQueue.shift();st_.visualIdx=event.idx;st_.uiDirty=true;
+if(event.tick%16===0){const voices=Object.keys(st_.playedVoices||{});$id('meta').textContent='rg-69 / '+voices.length+' voices · '+(voices.some(v=>v==='kick'||v==='snare'||v==='hat')?'drums active':'no drum events yet');}
 const pos=$id("pos-display");if(pos&&event.tick%4===0)pos.textContent=Math.floor(event.tick/16+1)+"."+(Math.floor(event.tick%16/4)+1);
 }
 }
@@ -2581,6 +2572,11 @@ document.querySelectorAll('.step').forEach(el=>el.classList.remove('playing'));
 st('stopped');
 $id('play').setAttribute('aria-pressed','false');
 log("playback stopped");
+});
+$id('reset-mix').addEventListener('click',()=>{
+pushHistory();Object.assign(mix_,{drum:80,bass:70,keys:60,pads:50,master:75});
+for(const lane of LANES)st_.muteState[lane]=0;
+syncUIFromState();saveSession();log("all tracks unmuted; default mixer restored","k");
 });
 $id('random').addEventListener('click',randomize);
 $id('export').addEventListener('click',exportWAV);
