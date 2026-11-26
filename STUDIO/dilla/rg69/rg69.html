@@ -1157,11 +1157,14 @@ const sampled=lane==="sample"||lane==="drum", musical=lane==="keys"||lane==="pad
 const output=gain(1),dry=gain(1),wet=gain(0),trim=gain(1),antiAlias=filter("lowpass",18000),quantize=ctx.createWaveShaper(),head=filter("lowshelf",85),tape=ctx.createWaveShaper(),playback=filter("lowpass",18000),dc=filter("highpass",14);
 tape.oversample="2x";tape.curve=Float32Array.from({length:2049},(_,i)=>{const x=i/1024-1;return Math.tanh(1.35*x)/1.35;});
 Tone.connect(source,dry);dry.connect(output);Tone.connect(source,antiAlias);
-if(sampled){antiAlias.connect(quantize);quantize.connect(trim);}else antiAlias.connect(trim);
+const nativeSampler=gain(1),workletSampler=gain(0);
+let samplerNode=null;
+if(sampled){antiAlias.connect(quantize);quantize.connect(nativeSampler);nativeSampler.connect(trim);workletSampler.connect(trim);}else antiAlias.connect(trim);
 trim.connect(head);head.connect(tape);tape.connect(playback);playback.connect(dc);dc.connect(wet);wet.connect(output);
-let lastBits=-1;
+let lastBits=-1,latest=null;
 const smooth=(p,v)=>{p.cancelScheduledValues(ctx.currentTime);p.setTargetAtTime(v,ctx.currentTime,.035);};
-return {output,update(aud){
+const stage={output,update(aud){
+latest=aud;
 const wear=(aud.tape??82)/100,amount=(aud.sampler??30)/100;
 const blend=Math.max(wear*(musical?.7:.48),sampled?amount*.7:0);
 const bits=16-Math.round(6*amount);
@@ -1170,7 +1173,13 @@ smooth(dry.gain,1-blend);smooth(wet.gain,blend);smooth(trim.gain,1+.22*wear);
 smooth(antiAlias.frequency,sampled?20000-11000*amount:20000);
 smooth(head.gain,(lane==="bass"?1.4:2.2)*wear);
 smooth(playback.frequency,18000-(musical?7500:4500)*wear);
+if(samplerNode){smooth(samplerNode.parameters.get("amount"),amount);smooth(samplerNode.parameters.get("color"),0);}
 }};
+stage.ready=sampled?loadWearModule(ctx).then(ok=>{
+if(!ok)return false;
+try{const node=new AudioWorkletNode(ctx,"rg69-wear",{outputChannelCount:[2]});antiAlias.connect(node);node.connect(workletSampler);samplerNode=node;if(latest)stage.update(latest);smooth(nativeSampler.gain,0);smooth(workletSampler.gain,1);return true;}catch(error){log("sampler0 "+lane+": "+error.message,"w");return false;}
+}):Promise.resolve(true);
+return stage;
 }
 
 // Drum-only record wear followed by a phase-colouring console strip.
@@ -1280,6 +1289,17 @@ return true;
 registerProcessor("rg69-tape-memory",TapeMemory);
 }
 
+const wearModules=new WeakMap();
+function loadWearModule(ctx){
+if(!wearModules.has(ctx))wearModules.set(ctx,(async()=>{
+if(!ctx.audioWorklet||typeof AudioWorkletNode!=="function"||typeof URL.createObjectURL!=="function")return false;
+let url;
+try{url=URL.createObjectURL(new Blob(["("+wearProcessor.toString()+")();"],{type:"text/javascript"}));await ctx.audioWorklet.addModule(url);return true;}
+catch(error){log("wear0: native fallback ("+error.message+")","w");return false;}
+finally{if(url)URL.revokeObjectURL(url);}
+})());
+return wearModules.get(ctx);
+}
 function createAnalogRig(ctx,master,output,dryMaster,wetMaster,profile,aud,mix,offline,duration){
 const gain=value=>{const node=ctx.createGain();node.gain.value=value;return node;};
 const filter=(type,frequency)=>{const node=ctx.createBiquadFilter();node.type=type;node.frequency.value=frequency;return node;};
@@ -1292,10 +1312,10 @@ shape.curve=Float32Array.from({length:2049},(_,i)=>Math.tanh(1.65*(i/1024-1))/1.
 shape.oversample="2x";
 compression.threshold.value=-13;compression.knee.value=18;compression.ratio.value=1.6;compression.attack.value=.018;compression.release.value=.16;
 const rolloff=filter("lowpass",15000),delay=ctx.createDelay(.04),returnGain=gain(0);
-const sampler=ctx.createWaveShaper(),samplerDry=gain(1),samplerWet=gain(0),samplerOut=gain(1);
-let worklet=null,workletWet=null,tapeMemory=null,memoryWet=null,latest=aud,latestMix=mix,lastBits=-1;
+const samplerOut=gain(1);
+let tapeMemory=null,memoryWet=null,latest=aud,latestMix=mix;
 const memoryDry=gain(1),memoryOut=gain(1);
-rolloff.connect(samplerDry);samplerDry.connect(samplerOut);rolloff.connect(sampler);sampler.connect(samplerWet);samplerWet.connect(samplerOut);samplerOut.connect(memoryDry);memoryDry.connect(memoryOut);memoryOut.connect(delay);
+rolloff.connect(samplerOut);samplerOut.connect(memoryDry);memoryDry.connect(memoryOut);memoryOut.connect(delay);
 delay.delayTime.value=.0045;
 input.connect(head);head.connect(bias);bias.connect(shape);shape.connect(deemphasis);deemphasis.connect(dc);dc.connect(compression);head.connect(lowBand);lowBand.connect(lowShape);lowShape.connect(lowReturn);lowReturn.connect(compression);compression.connect(rolloff);delay.connect(returnGain);
 const wow=ctx.createOscillator(),flutter=ctx.createOscillator(),wowDepth=gain(0),flutterDepth=gain(0);
@@ -1322,13 +1342,9 @@ dustSource.connect(dustFilter);dustFilter.connect(dustGain);
 const update=(aud,mix)=>{
 const tape=Math.max(0,Math.min(1,aud.tape/100)),wobble=Math.max(0,Math.min(1,aud.wobble/100)),vinyl=Math.max(0,Math.min(1,aud.vinyl/100)),crackle=Math.max(0,Math.min(1,aud.crackle/100));
 latest=aud;latestMix=mix;
-const amount=(aud.sampler??24)/100,color=(aud.console??58)/100,motion=(aud.motion??32)/100;
+const motion=(aud.motion??32)/100;
 const wet=Math.max(.95*tape,.68*wobble);
-const bits=15-Math.round(amount*7);
-if(bits!==lastBits){const levels=2**bits;sampler.curve=Float32Array.from({length:8193},(_,i)=>Math.round((i/4096-1)*levels)/levels);lastBits=bits;}
-const digital=0; // Sampler resolution belongs to source tracks, not the stereo mixdown.
-smooth(samplerDry.gain,1);smooth(samplerWet.gain,0);
-if(worklet){smooth(worklet.parameters.get("amount"),amount);smooth(worklet.parameters.get("color"),color);smooth(workletWet.gain,digital);}
+// Sampler resolution is handled by the recording stages.
 smooth(dryMaster.gain,1-wet);smooth(wetMaster.gain,0);
 smooth(returnGain.gain,wet);
 smooth(input.gain,1+.85*tape);smooth(head.gain,3.2*tape);smooth(bias.gain,5*tape);smooth(deemphasis.gain,-5*tape);smooth(lowReturn.gain,.15*tape);smooth(compression.release,Math.min(.35,15/aud.bpm));
@@ -1345,18 +1361,12 @@ const start=ctx.currentTime;wow.start(start);flutter.start(start);drift.start(st
 if(offline&&duration>start){for(const source of [wow,flutter,drift,scrape,hissSource,dustSource])source.stop(duration);}
 update(aud,mix);
 const ready=(async()=>{
-if(!ctx.audioWorklet||typeof AudioWorkletNode!=='function'||typeof URL.createObjectURL!=='function')return false;
-let url;
+if(!await loadWearModule(ctx))return false;
 try{
-url=URL.createObjectURL(new Blob(["("+wearProcessor.toString()+")();"],{type:'text/javascript'}));
-await ctx.audioWorklet.addModule(url);
-const node=new AudioWorkletNode(ctx,'rg69-wear',{outputChannelCount:[2]}),blend=gain(0);
-rolloff.connect(node);node.connect(blend);blend.connect(samplerOut);worklet=node;workletWet=blend;
 const memory=new AudioWorkletNode(ctx,"rg69-tape-memory",{outputChannelCount:[2]}),memoryBlend=gain(0);
 samplerOut.connect(memory);memory.connect(memoryBlend);memoryBlend.connect(memoryOut);tapeMemory=memory;memoryWet=memoryBlend;
 update(latest,latestMix);return true;
 }catch(error){log('wear0: native sampler fallback ('+error.message+')','w');return false;}
-finally{if(url)URL.revokeObjectURL(url);}
 })();
 return {update,ready};
 }
@@ -1650,7 +1660,7 @@ try{analog=createAnalogRig(ctx,masterG,mixSum,dryMaster,wetMaster,rg69AudioProfi
 tape.wet.value=0;vinylNoise.volume.value=-120;crackleNoise.volume.value=-120;
 }catch(error){log("analog0: optional wear unavailable: "+error.message,"w");}
 const atmosphere=createAtmosphere(ctx,masterG,aud,offline,duration);atmosphere.update(aud);
-const ready=Promise.all([rev.ready,analog?.ready]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
+const ready=Promise.all([rev.ready,analog?.ready,...recordingStages.map(stage=>stage.ready)]).then(()=>{revSend.gain.value=(aud.reverb/100)*rg69AudioProfile.rig.reverb.level_chords;return true;},error=>{revSend.gain.value=0;log("reverb unavailable; continuing without it: "+error.message,"w");return false;});
 return {instruments,sampleG,drumDrive,finalLimiter,glue,masterColor,analog,atmosphere,dreamLFO,drumColor,experimental,consoleStrips,recordingStages,duck,monoBass,masterG,drumG,bassG,keysG,padsG,limiter,outputGate,laneRoutes:routes,vinylNoise,crackleNoise,driftLFO:drift,fxRev:rev,fxDly:dly,fxDlyFlt:dlyFlt,fxFlt:flt,tapeSat:tape,compPar:comp,widener,revSend,dlySend,hatFlt,openFlt,effects,ready};
 }
 
