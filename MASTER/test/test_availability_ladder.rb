@@ -14,7 +14,7 @@ class AvailabilityLadderTest < Minitest::Test
     subject = policy
 
     assert_equal 120, subject.health_freshness_s
-    assert_equal 300, subject.dispatch_deadline_s
+    assert_equal 90, subject.dispatch_deadline_s
     assert_equal "L2", subject.ladder_floor(:interactive)
     assert_equal "L1", subject.ladder_floor(:batch_scan)
     assert_equal %w[7 3 1], subject.council_sizes.map(&:to_s)

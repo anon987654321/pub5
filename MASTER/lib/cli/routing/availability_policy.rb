@@ -10,7 +10,7 @@ module Master
         LEVELS = %w[L0 L1 L2 L3 L4].freeze
         DEFAULTS = {
           "health_freshness_s" => 120,
-          "dispatch_deadline_s" => 300,
+          "dispatch_deadline_s" => 90,
           "ladder_floor" => {
             "interactive" => "L2",
             "batch_scan" => "L1",
@@ -29,9 +29,9 @@ module Master
           positive_integer(@config["health_freshness_s"], DEFAULTS["health_freshness_s"])
         end
 
-        # Provider calls have materially exceeded the proposed 90s ceiling on
-        # the development machine. Keep the established 300s sender bound until
-        # the current pool is re-measured; the operator may still tighten it.
+        # A repair must report a provider failure quickly enough to preserve its
+        # own run budget. Operators can widen this explicitly for a known slow
+        # lane; a silent five-minute wait is not useful progress.
         def dispatch_deadline_s
           env = ENV["MASTER_DISPATCH_DEADLINE_S"].to_s.strip
           return positive_integer(env, DEFAULTS["dispatch_deadline_s"]) unless env.empty?
