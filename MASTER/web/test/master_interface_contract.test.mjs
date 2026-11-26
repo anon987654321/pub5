@@ -284,7 +284,7 @@ test("MASTER web keeps the face and mission surface free of workspace tabs", () 
     assert.match(page, /class="[^"]*\bmaster-titlebar\b/);
     assert.doesNotMatch(page, /master-session-tabs|master-session-tab/);
   }
-  assert.match(chatIndex, /class="prompt-sigil"[^>]*><%= Master::Face::Contract\.shell_prompt %>/);
+  assert.match(chatIndex, /class="prompt-sigil"[^>]*><%= Master::Face::Contract\.shell_prompt\(path: Master::ROOT, llm: @model == "booting" \? nil : @model\) %>/);
   assert.match(faceChrome, /#prompt-form \.prompt-sigil/);
 });
 
