@@ -41,8 +41,10 @@ MIN_MAJOR=3
 MIN_MINOR=2
 # Must satisfy the Gemfile floor (`ruby ">= 3.2"`). A 3.1.x build here produced an
 # interpreter this script and Bundler both reject under the previous floor; the current floor accepts 3.2+ so the no-root fallback can
-# never boot MASTER.
-RUBY_VER=3.3.6
+# never boot MASTER. The RAILS apps declare `ruby ">= 3.4"`, and they boot under
+# the same interpreter MASTER runs on, so the fallback builds a 3.4 release: a
+# 3.3.x prefix bundles MASTER and then refuses every app.
+RUBY_VER=3.4.7
 
 say() { printf 'dev-bootstrap: %s\n' "$*"; }
 
