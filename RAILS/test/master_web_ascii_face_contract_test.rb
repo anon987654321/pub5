@@ -83,7 +83,7 @@ class MasterWebAsciiFaceContractTest < Minitest::Test
     part2 = read(PUBLIC, "face.part2.txt")
 
     assert_includes part2, "gl_PointSize=3.0"
-    assert_includes part2, "vColor=vec3(ink);"
+    assert_includes part2, "vColor=vec3(0.9333333);"
     assert_includes part2, "transparent: false, depthWrite: true, depthTest: true"
     refute_includes part2, "vec3(0.74,0.66,0.58)"
     refute_includes part2, "vec3(1.0,0.98,0.94)"
