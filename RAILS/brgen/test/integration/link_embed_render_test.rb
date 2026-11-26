@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "tmpdir"
+require "minitest/mock"
 
 # What a reader's browser receives for a post that embeds a link: a facade on
 # the front page and the post page, no player until it is pressed, the plain
@@ -17,12 +19,9 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
 
   teardown do
     ActsAsTenant.current_tenant = nil
-    # The thumbnail cache is runtime state under storage/; a test leaves no
-    # seeded digests behind for the next run.
-    Shared::LinkEmbed.thumbnail_cache_dir.rmtree if Shared::LinkEmbed.thumbnail_cache_dir.exist?
   end
 
-  def embedded_post(link, answer)
+  def embedded_post(link, answer, cache_thumbnail: false)
     ActsAsTenant.with_tenant(@city) do
       author = User.strict_loading(false).create!(
         email_address: "render-#{SecureRandom.hex(4)}@brgen.no", password: "password123", city: @city
@@ -32,7 +31,7 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
                           link_embed: resolved.to_h)
       # The facade's image is served first-party (shared-029): seed the cache
       # the way the job would have, without contacting the provider.
-      if resolved.ok? && resolved.thumbnail_url
+      if resolved.ok? && resolved.thumbnail_url && cache_thumbnail
         Shared::LinkEmbed.cache_thumbnail!(resolved.thumbnail_url,
                                            fetch: ->(_uri) { [ "\xFF\xD8\xFF\xE0 seeded", "image/jpeg" ] })
       end
@@ -43,9 +42,13 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
   def recorded(name) = JSON.parse(FIXTURES.join("#{name}.json").read)
 
   test "the front page shows the facade and loads no player" do
-    embedded_post(AURORA, recorded("youtube"))
+    Dir.mktmpdir do |dir|
+      Shared::LinkEmbed.stub(:thumbnail_cache_dir, Pathname.new(dir)) do
+        embedded_post(AURORA, recorded("youtube"), cache_thumbnail: true)
 
-    get root_path
+        get root_path
+      end
+    end
     assert_response :success
 
     assert_select "body[data-controller~='media-exclusive']"
@@ -105,5 +108,28 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
     refute_includes response.body, "<b>x</b>"
     assert_select "figcaption strong", text: %(<img src=x onerror="alert(1)">"')
     assert_select "button.link-embed-play[data-media-exclusive-title-param=?]", %(<img src=x onerror="alert(1)">"')
+  end
+  test "thumbnail endpoint serves cached bytes and does not fetch a cache miss" do
+    embed = Shared::LinkEmbed
+    url = "https://i.ytimg.com/vi/example/hqdefault.jpg"
+    digest = embed.thumbnail_digest(url)
+    bytes = "\xFF\xD8\xFF\xE0 fixture".b
+
+    Dir.mktmpdir do |dir|
+      embed.stub(:thumbnail_cache_dir, Pathname.new(dir)) do
+        assert embed.cache_thumbnail!(url, fetch: ->(_) { [bytes, "image/jpeg"] })
+        Shared::OutboundHttp.stub(:request, ->(*) { flunk "thumbnail GET contacted provider" }) do
+          get link_embed_thumbnail_path(digest)
+          assert_response :success
+          assert_equal "image/jpeg", response.media_type
+          assert_equal bytes, response.body.b
+          assert_match(/inline/, response.headers["Content-Disposition"])
+          assert_match(/public/, response.headers["Cache-Control"])
+
+          get link_embed_thumbnail_path("0" * 32)
+          assert_response :not_found
+        end
+      end
+    end
   end
 end

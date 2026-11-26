@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "tmpdir"
+require "minitest/mock"
 
 # amber's community feed, as a signed-out visitor receives it: a facade for a
 # resolved link, no player until it is pressed, and the plain link otherwise.
@@ -35,5 +37,28 @@ class LinkEmbedRenderTest < ActionDispatch::IntegrationTest
 
     assert_select "#amber-posts-list p.link-embed a[href='https://vimeo.com/1084537']"
     assert_select "#amber-posts-list figure.link-embed", count: 0
+  end
+  test "thumbnail endpoint serves cached bytes and does not fetch a cache miss" do
+    embed = Shared::LinkEmbed
+    url = "https://i.ytimg.com/vi/example/hqdefault.jpg"
+    digest = embed.thumbnail_digest(url)
+    bytes = "\xFF\xD8\xFF\xE0 fixture".b
+
+    Dir.mktmpdir do |dir|
+      embed.stub(:thumbnail_cache_dir, Pathname.new(dir)) do
+        assert embed.cache_thumbnail!(url, fetch: ->(_) { [bytes, "image/jpeg"] })
+        Shared::OutboundHttp.stub(:request, ->(*) { flunk "thumbnail GET contacted provider" }) do
+          get link_embed_thumbnail_path(digest)
+          assert_response :success
+          assert_equal "image/jpeg", response.media_type
+          assert_equal bytes, response.body.b
+          assert_match(/inline/, response.headers["Content-Disposition"])
+          assert_match(/public/, response.headers["Cache-Control"])
+
+          get link_embed_thumbnail_path("0" * 32)
+          assert_response :not_found
+        end
+      end
+    end
   end
 end
