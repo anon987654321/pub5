@@ -1127,8 +1127,13 @@ function particleScale() {
   const budgetScale = Math.sqrt(Math.max(0.25, budget / 200));
   return Math.max(0.7, Math.min(1.35, areaScale, budgetScale));
 }
-const FACE_GRID_COLS = Math.round((State.coarsePointer ? 26 : 40) * particleScale());
-const FACE_GRID_ROWS = Math.round((State.coarsePointer ? 32 : 52) * particleScale());
+// The primary field replaces the stipple population, rather than adding to it.
+const primaryCeiling = Math.max(1, Math.floor(Number(faceRenderBudget().stipple_points) ||
+  (State.coarsePointer ? 2400 : 8100)));
+const primaryScale = Math.min(particleScale(),
+  Math.sqrt(primaryCeiling / (State.coarsePointer ? 26*32 : 40*52)));
+const FACE_GRID_COLS = Math.max(1, Math.floor((State.coarsePointer ? 26 : 40) * primaryScale));
+const FACE_GRID_ROWS = Math.max(1, Math.floor((State.coarsePointer ? 32 : 52) * primaryScale));
 const FACE_N_2D = Math.round(480 * particleScale());
 let faceHome, faceScatter, faceSeeds, faceCurvature, faceBoundary, faceZone;
 ({ home: faceHome, scatter: faceScatter, seeds: faceSeeds,
@@ -1417,7 +1422,7 @@ void main(){
   float band = exp(-bandY * bandY);
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * activity * pulse * band * 0.018;
   float peripheral = smoothstep(0.28, 0.58, length(subjectPoint.xy));
-  float escape = step(0.97, seed) * peripheral * activity *
+  float escape = step(0.97 * 6.28318, seed) * peripheral * activity *
     clamp(uFracture + uEarPulse * 0.15, 0.0, 1.0) * 0.045;
   subjectPoint += normalize(subjectPoint + vec3(0.001)) * escape;
   p = mix(p, subjectPoint, uSubjectDirect);
@@ -6077,7 +6082,7 @@ function setSubjectScatter(positions, stages = null) {
       };
       displace(activity*pulse*Math.exp(-Math.pow((y+.12)*3,2))*.018);
       const peripheral = smooth(.28,.58,Math.hypot(x,y));
-      if (faceSeeds[index]>=.97) displace(peripheral*activity*pressure*.045);
+      if (faceSeeds[index]>=.97*6.28318) displace(peripheral*activity*pressure*.045);
     }
     from.array[i]=x; from.array[i+1]=y; from.array[i+2]=z;
   }
