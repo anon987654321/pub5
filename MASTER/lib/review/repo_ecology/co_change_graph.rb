@@ -4,11 +4,13 @@ module Master
   module Review
     class RepoEcology
       module CoChangeGraph
+        CACHE_VERSION = 2
+
         private
 
         def build_co_change_graph
           out, status = Master::Io::Exec.capture2e("git", "-C", @root, "log", "--name-only",
-                                        "--pre#{?t}ty=format:#{COMMIT_SEPARATOR}",
+                                        "--format=#{COMMIT_SEPARATOR}%P",
                                         "-#{CO_CHANGE_COMMITS}")
           return {} unless status.success?
 
@@ -22,9 +24,13 @@ module Master
         def count_co_change_pairs(out)
           pair_counts = Hash.new(0)
           out.split(COMMIT_SEPARATOR).each do |chunk|
-            files = chunk.lines.map(&:strip).reject(&:empty?).uniq
+            parents, *paths = chunk.lines
+            # Root and shallow boundary commits are snapshots, not changes.
+            next if parents.to_s.strip.empty?
+
+            files = paths.map(&:strip).reject(&:empty?).uniq.sort
             next if files.size < 2
-            files.combination(2) { |a, b| pair_counts[[a, b].sort] += 1 }
+            files.combination(2) { |a, b| pair_counts[[a, b]] += 1 }
           end
           pair_counts
         end
@@ -40,10 +46,18 @@ module Master
         end
 
         def load_or_build_co_change_graph
+          # Fetching more history can change a shallow graph without moving HEAD.
+          return build_co_change_graph unless complete_history?
+
           cached = read_co_change_cache
           return cached if cached
 
           build_co_change_graph.tap { |graph| write_co_change_cache(graph) }
+        end
+
+        def complete_history?
+          out, status = Master::Io::Exec.capture2e("git", "-C", @root, "rev-parse", "--is-shallow-repository")
+          status.success? && out.strip == "false"
         end
 
         def read_co_change_cache
@@ -51,7 +65,7 @@ module Master
           return unless File.exist?(path)
 
           data = YAML.safe_load_file(path, aliases: true)
-          return unless data.is_a?(Hash) && data["head"] == git_head
+          return unless data.is_a?(Hash) && data["version"] == CACHE_VERSION && data["head"] == git_head
 
           thaw_graph(data["graph"] || {})
         rescue StandardError => e
@@ -62,7 +76,7 @@ module Master
         def write_co_change_cache(graph)
           path = co_change_cache_path
           FileUtils.mkdir_p(File.dirname(path))
-          File.write(path, { "head" => git_head, "graph" => graph }.to_yaml)
+          File.write(path, { "version" => CACHE_VERSION, "head" => git_head, "graph" => graph }.to_yaml)
         rescue StandardError => e
           @bus&.publish("repo_ecology:co_change_cache_error", error: e.message)
         end

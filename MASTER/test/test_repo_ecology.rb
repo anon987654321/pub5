@@ -68,6 +68,33 @@ class TestRepoEcology < Minitest::Test
     end
   end
 
+  def test_co_change_ignores_root_and_shallow_boundary_then_reads_deepened_history
+    Dir.mktmpdir("repo_ecology_history") do |dir|
+      source = File.join(dir, "source")
+      shallow = File.join(dir, "shallow")
+      git = lambda do |*args|
+        output, status = Open3.capture2e("git", *args)
+        assert status.success?, output
+      end
+      git.call("init", "-q", source)
+      3.times do |index|
+        %w[a.rb b.rb].each { |name| File.write(File.join(source, name), "puts #{index}\n") }
+        git.call("-C", source, "add", ".")
+        git.call("-C", source, "-c", "user.name=Test", "-c", "user.email=test@example.com",
+                 "commit", "-qm", "change #{index}")
+      end
+
+      expected = { "a.rb" => { "b.rb" => 2 }, "b.rb" => { "a.rb" => 2 } }
+      assert_equal expected, Master::Review::RepoEcology.new(root: source).co_change_graph
+
+      git.call("clone", "-q", "--depth=1", "file://#{source}", shallow)
+      assert_empty Master::Review::RepoEcology.new(root: shallow).co_change_graph
+      refute File.exist?(File.join(shallow, Master::Review::RepoEcology::CO_CHANGE_CACHE_PATH))
+      git.call("-C", shallow, "fetch", "-q", "--unshallow")
+      assert_equal expected, Master::Review::RepoEcology.new(root: shallow).co_change_graph
+    end
+  end
+
   def test_co_change_graph_persists_between_instances
     Dir.mktmpdir("repo_ecology_cache") do |dir|
       # A real repository: the cache key is the commit SHA returned by
