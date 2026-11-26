@@ -49,6 +49,12 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 
 `bin/master` is the interactive assistant and command entrypoint. From the `pub5/` repository root, start it with `MASTER/bin/master`; from inside `MASTER/`, use `bin/master`. The tracked launcher already has executable mode, so a normal checkout does not need `chmod`. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
+### Android and Termux
+
+Run `sh MASTER/bin/master-mobile-install --auto` from Termux to provision the supported Ubuntu or Debian guest and write `~/.local/bin/master`. Use that launcher for normal sessions; it enters the guest once through a non-login zsh command and does not update the checkout on every start. Rerun the installer when you want to fast-forward a clean checkout and refresh the guest.
+
+The first install also installs Termux Ollama and pulls the allowlisted `qwen3.5:0.8b` model (about 0.6 GB). It starts Ollama on the Termux host and enables the local lane in the guest. Set `MASTER_MOBILE_AUTO_LOCAL_MODEL=0` when running the installer to skip the package and model download; an unavailable package, server or download does not block the guest setup. Set `MASTER_NO_OLLAMA=1` for a session that must not use local inference.
+
 ## Web face: sculptural particle stipple
 
 A benevolent, otherworldly intelligence embodied by independent particles acting as one. Pluribus informs collective emergence and signal motion; Papuan sculpture informs essential form; speculative future-human anatomy informs the approachable proportions. This is original geometry, not a museum scan, ceremonial replica or prediction of human evolution.

@@ -101,9 +101,11 @@ class TermuxInstallerTest < Minitest::Test
     assert_match(/grep -Fxq ubuntu; then\s+distro=ubuntu/m, mobile_source)
     assert_match(/grep -Fxq debian; then\s+distro=debian/m, mobile_source)
     assert_includes mobile_source, 'proot-distro install "$distro"'
+    assert_includes mobile_source, 'pkg install -y git curl proot-distro zsh'
     assert_includes mobile_source, "ruby ruby-dev ruby-bundler"
+    assert_includes mobile_source, "zsh -f -s"
     assert_includes mobile_source, 'Gem::Version.new("3.2")'
-    assert_includes mobile_source, 'grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime'
+    assert_includes mobile_source, '[[ "$(< /etc/master-mobile-runtime)" == "$MASTER_RUNTIME_DISTRO $actual" ]]'
     refute_includes mobile_source, ".ruby-version"
     refute_includes mobile_source, "ruby-build"
     refute_includes mobile_source, "/opt/rubies/"
@@ -120,10 +122,28 @@ class TermuxInstallerTest < Minitest::Test
     assert_includes mobile_source, "--no-launch"
   end
 
-  def test_launcher_reuses_selected_guest_and_forwards_arguments
-    assert_match(/printf 'DISTRO=%s\\n'/, mobile_source)
-    assert_includes mobile_source, 'proot-distro login --bind "$ROOT:/pub5" "$DISTRO"'
-    assert_includes mobile_source, 'exec bin/master "$@"'
+  def test_launcher_uses_zsh_and_enters_the_guest_only_once
+    launcher = mobile_source.split("cat <<'LauncherBody'\n", 2).last.split("\nLauncherBody", 2).first
+
+    assert_includes mobile_source, "printf '#!%s/bin/zsh\\n' \"$PREFIX\""
+    assert_includes launcher, 'zsh -f -c'
+    assert_includes launcher, 'exec bin/master "$@"'
+    assert_equal 1, launcher.scan(/proot-distro login --bind/).length
+    refute_includes mobile_source, "bash"
+    refute_includes launcher, "grep"
+  end
+
+  def test_mobile_setup_installs_and_enables_the_small_local_model_by_default
+    models = File.binread(File.join(ROOT, "data", "models.yml")).force_encoding(Encoding::UTF_8)
+
+    assert_includes mobile_source, 'local_model="qwen3.5:0.8b"'
+    assert_includes mobile_source, 'MASTER_MOBILE_AUTO_LOCAL_MODEL:-1'
+    assert_includes mobile_source, 'pkg install -y ollama'
+    assert_includes mobile_source, 'ollama pull "$local_model"'
+    assert_includes mobile_source, 'MASTER_OLLAMA_ENABLED="$OLLAMA_ENABLED"'
+    assert_includes mobile_source, 'MASTER_NO_OLLAMA="${MASTER_NO_OLLAMA:-}"'
+    assert_includes models, 'id: ollama:qwen3.5:0.8b'
+    assert_match(/local:\n(?:.*\n){0,4}\s+- \*ollama_qwen_mobile/, models)
   end
 
   def test_mobile_installer_shell_syntax

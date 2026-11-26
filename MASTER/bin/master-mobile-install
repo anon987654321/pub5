@@ -12,6 +12,69 @@ demo=0
 launch=1
 
 fail() { printf 'mobile0: BLOCKED: %s\n' "$*" >&2; exit 1; }
+local_model="qwen3.5:0.8b"
+local_model_enabled=0
+auto_local_model="${MASTER_MOBILE_AUTO_LOCAL_MODEL:-1}"
+case "$auto_local_model" in
+  0|1) ;;
+  *) fail "MASTER_MOBILE_AUTO_LOCAL_MODEL must be 0 or 1." ;;
+esac
+
+ollama_server_ready() {
+  curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1
+}
+
+start_ollama_server() {
+  ollama_server_ready && return 0
+  zsh -f -c 'ollama serve >/dev/null 2>&1 &!'
+  attempt=0
+  while [ "$attempt" -lt 30 ]; do
+    if ollama_server_ready; then
+      return 0
+    fi
+    sleep 1
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+
+install_local_model() {
+  if [ "$auto_local_model" = "0" ]; then
+    printf 'mobile0: local model install disabled by MASTER_MOBILE_AUTO_LOCAL_MODEL=0\n'
+    return 0
+  fi
+
+  if ! command -v ollama >/dev/null 2>&1; then
+    printf 'mobile0: installing the Termux Ollama package\n'
+    if ! pkg update -y || ! pkg install -y ollama; then
+      printf 'mobile0: Ollama package unavailable; continuing without local inference\n' >&2
+      return 0
+    fi
+  fi
+
+  if ! command -v ollama >/dev/null 2>&1; then
+    printf 'mobile0: Ollama is unavailable; continuing without local inference\n' >&2
+    return 0
+  fi
+  if ! start_ollama_server; then
+    printf 'mobile0: Ollama did not start; continuing without local inference\n' >&2
+    return 0
+  fi
+
+  if ollama show "$local_model" >/dev/null 2>&1; then
+    local_model_enabled=1
+    printf 'mobile0: local model %s is ready\n' "$local_model"
+  else
+    printf 'mobile0: downloading local model %s (about 0.6 GB)\n' "$local_model"
+    if ollama pull "$local_model"; then
+      local_model_enabled=1
+      printf 'mobile0: local model %s is ready\n' "$local_model"
+    else
+      printf 'mobile0: local model download failed; continuing without local inference\n' >&2
+    fi
+  fi
+}
+
 usage() {
   printf '%s\n' \
     "usage: master-mobile-install [--auto|--ubuntu|--debian] [--demo] [--no-launch] [-- ARGS...]" \
@@ -56,10 +119,11 @@ if [ "$demo" -eq 1 ]; then
     exit 2
   fi
   printf 'mobile0: plan 1/5 - require maintained Termux, expected PREFIX, non-root account and private HOME path (not checked in demo)\n'
-  printf 'mobile0: plan 2/5 - install or verify git, curl and proot-distro on the Termux host\n'
+  printf 'mobile0: plan 2/5 - install or verify git, curl, proot-distro and zsh on the Termux host\n'
   printf 'mobile0: plan 3/5 - verify or fast-forward the canonical checkout; reuse Ubuntu or Debian, otherwise install Ubuntu\n'
-  printf 'mobile0: plan 4/5 - bind the checkout at /pub5; install Linux build libraries and the guest's packaged compatible Ruby\n'
-  printf 'mobile0: plan 5/5 - install/check the locked bundle with the packaged Ruby, prove the CLI boot in the selected guest, and install the Termux launcher\n'
+  printf "mobile0: plan 4/5 - bind the checkout at /pub5; install Linux build libraries and the guest's packaged compatible Ruby and zsh\n"
+  printf 'mobile0: plan 5/5 - install the small local Ollama model unless disabled, prove the guest boot, and install the Termux launcher\n'
+
   printf 'mobile0: DEMO complete; device, guest and repository checks remain unmeasured\n'
   exit 0
 fi
@@ -81,13 +145,15 @@ if [ -e "$dir" ] && [ ! -d "$dir/.git" ]; then
 fi
 
 if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1 ||
-   ! command -v proot-distro >/dev/null 2>&1; then
+   ! command -v proot-distro >/dev/null 2>&1 || ! command -v zsh >/dev/null 2>&1; then
   printf 'mobile0: installing Termux host tools\n'
   pkg update -y
-  pkg install -y git curl proot-distro
+  pkg install -y git curl proot-distro zsh
 fi
 command -v git >/dev/null 2>&1 || fail "git is still unavailable after pkg install."
+command -v curl >/dev/null 2>&1 || fail "curl is still unavailable after pkg install."
 command -v proot-distro >/dev/null 2>&1 || fail "proot-distro is still unavailable after pkg install."
+command -v zsh >/dev/null 2>&1 || fail "zsh is still unavailable after pkg install."
 
 if [ -d "$dir/.git" ]; then
   actual_origin="$(git -C "$dir" remote get-url origin 2>/dev/null || true)"
@@ -133,12 +199,12 @@ fi
 
 guest_ready() {
   proot-distro login --bind "$dir:/pub5" "$distro" -- \
-    env MASTER_RUNTIME_DISTRO="$distro" bash -lc '
-      set -eu
+    env MASTER_RUNTIME_DISTRO="$distro" zsh -f -c '
+      set -euo pipefail
       command -v ruby >/dev/null
-      ruby -e '\''require "rubygems"; abort "Ruby >= 3.2 required" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'\''
-      actual="$(ruby -e "print RUBY_VERSION")"
-      grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime >/dev/null
+      command -v zsh >/dev/null
+      actual="$(ruby -e '\''require "rubygems"; abort "Ruby >= 3.2 required" if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2"); print RUBY_VERSION'\'')"
+      [[ "$(< /etc/master-mobile-runtime)" == "$MASTER_RUNTIME_DISTRO $actual" ]]
     ' >/dev/null 2>&1
 }
 
@@ -147,8 +213,8 @@ if guest_ready; then
 else
   printf 'mobile0: provisioning %s with its packaged Ruby\n' "$distro"
   proot-distro login --bind "$dir:/pub5" "$distro" -- \
-    env MASTER_RUNTIME_DISTRO="$distro" bash -s <<'PRootSetup'
-set -eu
+    env MASTER_RUNTIME_DISTRO="$distro" zsh -f -s <<'PRootSetup'
+set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
@@ -176,6 +242,8 @@ printf 'mobile0: %s guest setup and CLI boot PASS; Android device capabilities r
 PRootSetup
 fi
 
+install_local_model
+
 shell_quote() {
   printf "'"
   printf '%s' "$1" | sed "s/'/'\\''/g"
@@ -184,33 +252,53 @@ launcher="$HOME/.local/bin/master"
 mkdir -p "$HOME/.local/bin"
 quoted_dir="$(shell_quote "$dir")"
 {
-  printf '%s\n' '#!/data/data/com.termux/files/usr/bin/bash' 'set -eu'
+  printf '#!%s/bin/zsh\n' "$PREFIX"
+  printf '%s\n' 'set -euo pipefail'
   printf 'ROOT=%s\n' "$quoted_dir"
   printf 'DISTRO=%s\n' "$(shell_quote "$distro")"
+  printf 'LOCAL_MODEL_ENABLED=%s\n' "$local_model_enabled"
   cat <<'LauncherBody'
 command -v proot-distro >/dev/null 2>&1 || {
   printf 'master0: proot-distro is unavailable; run the installer again.\n' >&2
   exit 78
 }
-if ! proot-distro list --quiet | grep -Fxq "$DISTRO"; then
+OLLAMA_ENABLED="${MASTER_OLLAMA_ENABLED:-$LOCAL_MODEL_ENABLED}"
+if [[ "${MASTER_NO_OLLAMA:-}" != "1" && "$OLLAMA_ENABLED" == "1" ]] &&
+   command -v ollama >/dev/null 2>&1 && command -v curl >/dev/null 2>&1; then
+  if ! curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1; then
+    ollama serve >/dev/null 2>&1 &!
+    for attempt in {1..5}; do
+      curl -fsS --connect-timeout 1 --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null 2>&1 && break
+      sleep 1
+    done
+  fi
+fi
+installed_guest=0
+for installed in ${(f)"$(proot-distro list --quiet)"}; do
+  if [[ "$installed" == "$DISTRO" ]]; then
+    installed_guest=1
+  fi
+done
+if (( installed_guest == 0 )); then
   exec sh "$ROOT/MASTER/bin/master-mobile-install" "--$DISTRO" --launch -- "$@"
 fi
-if ! proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- \
-  env MASTER_RUNTIME_DISTRO="$DISTRO" bash -lc '
-    set -eu
-    ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'\''
-    actual="$(ruby -e "print RUBY_VERSION")"
-    grep -Fx "$MASTER_RUNTIME_DISTRO $actual" /etc/master-mobile-runtime >/dev/null
-  ' >/dev/null 2>&1; then
-  exec sh "$ROOT/MASTER/bin/master-mobile-install" "--$DISTRO" --launch -- "$@"
+if proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- \
+  env MASTER_RUNTIME_DISTRO="$DISTRO" MASTER_OLLAMA_ENABLED="$OLLAMA_ENABLED" \
+  MASTER_NO_OLLAMA="${MASTER_NO_OLLAMA:-}" zsh -f -c '
+    set -euo pipefail
+    actual="$(ruby -e '\''require "rubygems"; abort unless Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.2"); print RUBY_VERSION'\'')" || exit 79
+    [[ "$(< /etc/master-mobile-runtime)" == "$MASTER_RUNTIME_DISTRO $actual" ]] || exit 79
+    cd /pub5/MASTER
+    exec bin/master "$@"
+  ' master "$@"; then
+  exit 0
+else
+  status=$?
+  if [[ "$status" == "79" || "$status" == "127" ]]; then
+    exec sh "$ROOT/MASTER/bin/master-mobile-install" "--$DISTRO" --launch -- "$@"
+  fi
+  exit "$status"
 fi
-exec proot-distro login --bind "$ROOT:/pub5" "$DISTRO" -- bash -lc '
-  set -eu
-  command -v ruby >/dev/null
-  ruby -e '\''require "rubygems"; abort if Gem::Version.new(RUBY_VERSION) < Gem::Version.new("3.2")'\''
-  cd /pub5/MASTER
-  exec bin/master "$@"
-' master "$@"
 LauncherBody
 } > "$launcher"
 chmod 700 "$launcher"

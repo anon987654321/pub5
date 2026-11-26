@@ -246,6 +246,10 @@ model_defs:
     <<: *model_defaults
     context_window: 128000
     score: { quality: 0.90, speed: 0.76, cost: 1.0 }
+  ollama_qwen_mobile: &ollama_qwen_mobile
+    id: ollama:qwen3.5:0.8b
+    <<: *model_defaults
+    context_window: 4096
   llama_cli_gguf: &llama_cli_gguf
     id: llama-cli:gguf
     <<: *model_defaults
@@ -371,6 +375,7 @@ models:
     - *nemotron_ultra
   local:
     - *ollama_gemma
+    - *ollama_qwen_mobile
     - *llama_cli_gguf
   # It is never included in the default, strong, review, or fix tiers.
   nsfw: []
@@ -817,9 +822,8 @@ ollama:
   max_num_ctx: 4096
   kv_cache_type: q8_0
   # The Android hint (Device::Onboarding TEMPLATE and
-  # runtime.local_model_install_hint) tells a phone to pull qwen3.5:0.8b;
-  # an allowlist that names only gemma3:4b turns that hint into a model the
-  # local tier refuses to serve, so the phone's no-key local floor stays dead.
+  # runtime.local_model_install_hint) pulls qwen3.5:0.8b; it must be present in
+  # both the local candidate list and this allowlist to reach the local tier.
   # gemma3:4b remains the host bed; qwen3.5:0.8b is the phone bed (~0.6 GB,
   # fits the 60% LOCAL_FIT rule on devices far smaller than the 8 GB Mac).
   local_model_allowlist: ["ollama:gemma3:4b", "ollama:qwen3.5:0.8b"]
