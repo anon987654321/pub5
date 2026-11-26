@@ -28,6 +28,13 @@ class EncountersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to match.chat
   end
 
+  test "a visitor who never asked is sent to nearby rather than made to wait" do
+    assert_no_difference -> { Encounter.count } do
+      get waiting_encounters_path
+    end
+    assert_redirected_to nearby_path
+  end
+
   test "the second ask pairs immediately" do
     first = User.create!(email_address: "first-#{SecureRandom.hex(4)}@brgen.no",
                          password: "password123", city: City.find_by!(domain: "brgen.no"))
