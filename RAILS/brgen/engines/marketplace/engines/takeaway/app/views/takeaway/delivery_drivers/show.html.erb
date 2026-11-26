@@ -1,11 +1,11 @@
 <% content_for :title, t("takeaway.delivery_driver") %>
 
-<div class="page-header">
+<div class="page-header courier-header">
   <hgroup>
     <p><%= t("takeaway.operations") %></p>
     <%= tag.h1 @delivery_driver.user&.display_name || t("takeaway.anon") %>
   </hgroup>
-  <%= link_to t("actions.all_drivers"), delivery_drivers_path, class: "button button-ghost button-small" %>
+  <%= link_to t("actions.all_drivers"), delivery_drivers_path, class: "button button-ghost" %>
 </div>
 
 <article aria-label="<%= t("takeaway.driver_details") %>">
@@ -32,7 +32,7 @@
 <% end %>
 
 <% if authenticated? && Current.user == @delivery_driver.user %>
-  <%= form_with model: @delivery_driver, url: delivery_driver_path(@delivery_driver), scope: :delivery_driver, method: :patch do |form| %>
+  <%= form_with model: @delivery_driver, url: delivery_driver_path(@delivery_driver), scope: :delivery_driver, method: :patch, class: "courier-update-form" do |form| %>
     <%= render "shared/errors", object: @delivery_driver %>
     <div class="field">
       <%= form.label :vehicle_type %>
@@ -65,6 +65,6 @@
       </button>
       <p role="status" data-current-location-target="status"></p>
     </fieldset>
-    <%= form.submit t("takeaway.update"), class: "button button-primary button-small" %>
+    <%= form.submit t("takeaway.update"), class: "button button-primary" %>
   <% end %>
 <% end %>

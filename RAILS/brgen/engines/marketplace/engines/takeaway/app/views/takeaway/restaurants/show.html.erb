@@ -11,7 +11,7 @@
 
 <% if authenticated? && @restaurant.owner?(Current.user) && !@restaurant.active? %>
   <% checklist = @restaurant.setup_checklist %>
-  <section class="store-panel" aria-labelledby="restaurant-setup-heading">
+  <section class="store-panel restaurant-setup" aria-labelledby="restaurant-setup-heading">
     <h2 id="restaurant-setup-heading"><%= t("takeaway.setup_heading") %></h2>
     <p><%= t("takeaway.setup_private_notice") %></p>
     <ul class="restaurant-setup-checklist">
@@ -23,7 +23,7 @@
         </li>
       <% end %>
     </ul>
-    <%= link_to t("takeaway.edit_restaurant"), edit_restaurant_path(@restaurant), class: "button button-primary button-small" %>
+    <%= link_to t("takeaway.edit_restaurant"), edit_restaurant_path(@restaurant), class: "button button-primary" %>
   </section>
 <% end %>
 
@@ -59,8 +59,8 @@
       <%= tag.h1 @restaurant.name %>
       <%= render "business_verifications/status", business: @restaurant, kind: "restaurant", owner: authenticated? && @restaurant.owner?(Current.user) %>
       <% if authenticated? && @restaurant.owner?(Current.user) %>
-        <nav aria-label="<%= t("takeaway.restaurant_actions") %>">
-          <%= link_to t("actions.edit"), edit_restaurant_path(@restaurant), class: "button button-ghost button-small" %>
+        <nav class="restaurant-owner-actions" aria-label="<%= t("takeaway.restaurant_actions") %>">
+          <%= link_to t("actions.edit"), edit_restaurant_path(@restaurant), class: "button button-ghost" %>
         </nav>
       <% end %>
     </div>
@@ -115,7 +115,7 @@
   <section aria-labelledby="add-menu-item-heading">
     <%= tag.h2 t("takeaway.add_menu_item"), id: "add-menu-item-heading", class: "store-heading" %>
     <div class="form-wrap">
-      <%= form_with scope: :takeaway_menu_item, url: restaurant_menu_items_path(@restaurant) do |f| %>
+      <%= form_with scope: :takeaway_menu_item, url: restaurant_menu_items_path(@restaurant), class: "restaurant-menu-form" do |f| %>
         <div class="field"><%= f.text_field :name, placeholder: t("takeaway.item_name"), aria: { label: t("takeaway.item_name") }, required: true %></div>
         <div class="field"><%= f.number_field :price_cents, placeholder: t("takeaway.item_price"), aria: { label: t("takeaway.item_price") }, required: true, inputmode: "numeric" %></div>
         <div class="field"><%= f.text_field :description, placeholder: t("takeaway.item_description"), aria: { label: t("takeaway.item_description") } %></div>
@@ -124,7 +124,7 @@
         <div class="field field--check"><%= f.check_box :vegetarian %><%= f.label :vegetarian %></div>
         <div class="field field--check"><%= f.check_box :vegan %><%= f.label :vegan %></div>
         <%= render "takeaway/menu_items/allergen_fields", f: f, item: Takeaway::MenuItem.new %>
-        <div class="field"><%= f.submit t("takeaway.add"), class: "button button-primary button-small" %></div>
+        <div class="field"><%= f.submit t("takeaway.add"), class: "button button-primary" %></div>
       <% end %>
     </div>
   </section>
@@ -155,7 +155,7 @@
 <% if @can_review %>
 <section>
   <%= tag.h2 t("takeaway.leave_review") %>
-  <%= form_with scope: :takeaway_review, url: restaurant_reviews_path(@restaurant) do |f| %>
+  <%= form_with scope: :takeaway_review, url: restaurant_reviews_path(@restaurant), class: "restaurant-review-form" do |f| %>
     <div class="field">
       <%= f.label :rating, t("takeaway.rating") %>
       <%= f.number_field :rating, min: 1, max: 5, required: true, inputmode: "numeric" %>
@@ -167,7 +167,7 @@
   <span class="char-counter" data-character-counter-target="counter" aria-live="polite"></span>
 </div>
     </div>
-    <div class="field"><%= f.submit t("marketplace.post_review"), class: "button button-primary button-small" %></div>
+    <div class="field"><%= f.submit t("marketplace.post_review"), class: "button button-primary" %></div>
   <% end %>
 </section>
 <% end %>

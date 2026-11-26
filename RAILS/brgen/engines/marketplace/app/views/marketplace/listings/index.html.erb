@@ -112,7 +112,7 @@
               <div class="listing-filter-controls">
                 <%# lat and lng are hidden fields of the header form, which is where
                     geolocation#pin looks for them through this button's form. %>
-                <button type="button" class="button button-ghost button-small" form="<%= StorefrontSearch::FORM %>" data-controller="geolocation" data-action="geolocation#pin">
+                <button type="button" class="button button-ghost" form="<%= StorefrontSearch::FORM %>" data-controller="geolocation" data-action="geolocation#pin">
                   <%= t("marketplace.near_me") %>
                 </button>
                 <%= f.number_field :radius_km, value: @radius_km, min: 1, max: Marketplace::Listing::MAX_RADIUS_KM, step: 1, placeholder: t("marketplace.radius_km"), form: StorefrontSearch::FORM, aria: { label: t("marketplace.radius_label") }, inputmode: "numeric" %>

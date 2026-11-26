@@ -7,7 +7,7 @@
   <% elsif buybox_listing.expired? %>
     <p class="listing-status"><%= t("marketplace.expired_notice") %></p>
     <% if Current.user.present? && Current.user&.id == buybox_listing.user_id %>
-      <%= button_to t("marketplace.renew"), renew_listing_path(buybox_listing), method: :post, class: "button button-primary button-small" %>
+      <%= button_to t("marketplace.renew"), renew_listing_path(buybox_listing), method: :post, form: { class: "listing-renew-form" }, class: "button button-primary" %>
     <% end %>
   <% end %>
   <% if buybox_listing.photo_processing? %>
