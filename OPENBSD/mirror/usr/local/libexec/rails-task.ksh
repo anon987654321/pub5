@@ -5,6 +5,11 @@ PATH=/usr/local/bin:/usr/bin:/bin
 export PATH
 unset RUBYOPT RUBYLIB RUBYPATH RUBYGEMS_GEMDEPS GEM_HOME GEM_PATH
 unset BUNDLE_GEMFILE BUNDLE_PATH BUNDLE_BIN_PATH BUNDLE_WITH BUNDLE_WITHOUT
+# The box runs its system Bundler. Lockfiles name 4.0.20, and once a task had
+# installed it Bundler switched to it and refused the frozen lockfile
+# ("unlocking ruby"); the pinned bundles were built by the system Bundler.
+BUNDLE_VERSION=system
+export BUNDLE_VERSION
 
 app=${1:-}
 task=${2:-}
@@ -223,9 +228,9 @@ case "$task" in
   bundle-install)
     # Bounded: 15 wall-clock minutes under nice for everything hydration
     # could not borrow, then a precise still-missing list instead of a
-    # vague bundler backtrace. --frozen: a deploy installs exactly its
+    # vague bundler backtrace. BUNDLE_FROZEN: a deploy installs exactly its
     # lockfile or refuses.
-    command='nice -n 15 timeout 900 "$PUB4_TASK_BUNDLE" install --frozen --jobs 1
+    command='BUNDLE_FROZEN=true nice -n 15 timeout 900 "$PUB4_TASK_BUNDLE" install --jobs 1
 missing=$("$PUB4_TASK_RUBY" -e "
   require \"bundler\"
   need = Bundler.load.specs.map { |s| \"#{s.name}-#{s.version}\" }

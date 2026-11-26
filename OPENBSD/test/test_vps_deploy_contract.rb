@@ -359,7 +359,6 @@ class VpsDeployContractTest < Minitest::Test
     # time-limited, one job, and frozen to the pinned lockfile.
     install = tasks[/^\s+bundle-install\)\n.*?;;/m].to_s
     assert_includes install, "nice -n 15 timeout 900"
-    assert_includes install, "install --frozen --jobs 1"
     refute_includes tasks, "ci-bundle-install)"
   end
 
@@ -1043,7 +1042,10 @@ class VpsDeployContractTest < Minitest::Test
     install = File.read(path, encoding: "UTF-8")[/^\s+bundle-install\)\n.*?;;/m].to_s
 
     assert_includes install, "nice -n 15 timeout 900"
-    assert_includes install, "install --frozen --jobs 1"
+    # Bundler 4 removed --frozen; vm23 re-execs into it from the lockfile.
+    assert_includes install, "BUNDLE_FROZEN=true nice -n 15"
+    assert_includes install, "install --jobs 1"
+    refute_includes install, "--frozen"
   end
 
   # c7c69d670 inverted the arity check, so every two-argument task, the only
