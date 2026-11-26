@@ -47,6 +47,7 @@ module Master
         values = {
           load_avg_1m: load_average,
           rss_mb:,
+          cgroup_memory_ratio: cgroup_memory_ratio,
           fd_count:,
           thread_count: Thread.list.size,
           process_count:,
@@ -106,6 +107,7 @@ module Master
           [:load_avg_1m, limit("load_avg_1m", "warn", DEFAULTS[:load_avg_1m][:warn]) * @cpus,
            limit("load_avg_1m", "crit", DEFAULTS[:load_avg_1m][:crit]) * @cpus],
           [:rss_mb, rss_limit("warn"), rss_limit("crit")],
+          [:cgroup_memory_ratio, 0.80, 0.92],
           [:fd_count, resource_limit("fd_count", "warn"), resource_limit("fd_count", "crit")],
           [:thread_count, resource_limit("thread_count", "warn"), resource_limit("thread_count", "crit")],
           [:process_count, resource_limit("process_count", "warn"), resource_limit("process_count", "crit")],
@@ -193,7 +195,9 @@ module Master
       def detect_physical_memory_mb
         if File.file?("/proc/meminfo")
           kb = File.read("/proc/meminfo")[/^MemTotal:\s+(\d+) kB$/, 1]
-          return kb.to_i / 1024 if kb
+          host = kb.to_i / 1024.0 if kb
+          limit = linux_memory_groups.map { |dir, ceiling, _usage| memory_bytes(File.join(dir, ceiling)) }.compact.min
+          return [host, limit && limit / 1048576.0].compact.min
         end
         sysctl = ["/sbin/sysctl", "/usr/sbin/sysctl"].find { |bin| File.executable?(bin) }
         return unless sysctl
@@ -203,6 +207,54 @@ module Master
         status.success? ? out.to_i / (1024 * 1024) : nil
       rescue StandardError
         nil
+      end
+
+      # Include ancestors: a child can be unlimited inside a bounded parent.
+      def linux_memory_groups
+        return [] unless @platform == "linux"
+
+        rows = File.readlines("/proc/self/cgroup", chomp: true)
+        groups = rows.flat_map do |row|
+          _, controllers, path = row.split(":", 3)
+          next [] unless path&.start_with?("/") && !path.split("/").include?("..")
+          next [] unless controllers.empty? || controllers.split(",").include?("memory")
+
+          root, ceiling, usage = controllers.empty? ?
+            ["/sys/fs/cgroup", "memory.max", "memory.current"] :
+            ["/sys/fs/cgroup/memory", "memory.limit_in_bytes", "memory.usage_in_bytes"]
+          dir = File.join(root, path)
+          result = []
+          loop do
+            result << [dir, ceiling, usage]
+            break if dir == root
+            dir = File.dirname(dir)
+            break unless dir == root || dir.start_with?(root + "/")
+          end
+          result << [root, ceiling, usage]
+          result
+        end
+        groups.uniq
+      rescue SystemCallError
+        []
+      end
+
+      def memory_bytes(path)
+        raw = File.read(path).strip
+        return unless raw.match?(/\A\d+\z/)
+
+        bytes = raw.to_i
+        # Cgroup v1 represents unlimited with a page-aligned LONG_MAX.
+        bytes if bytes < (1 << 60)
+      rescue SystemCallError
+        nil
+      end
+
+      def cgroup_memory_ratio
+        linux_memory_groups.filter_map do |dir, ceiling, usage|
+          maximum = memory_bytes(File.join(dir, ceiling))
+          current = memory_bytes(File.join(dir, usage))
+          current.fdiv(maximum) if maximum&.positive? && current
+        end.max
       end
 
       def limit(section, key, fallback)

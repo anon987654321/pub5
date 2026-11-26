@@ -13,7 +13,7 @@ class TestFixResourceBudgetRss < Minitest::Test
   def limits(budget) = [budget.send(:rss_limit, "warn"), budget.send(:rss_limit, "crit")]
 
   def test_a_one_gigabyte_server_keeps_the_original_figures
-    assert_equal [512, 768], limits(budget(memory_mb: 1000))
+    assert_equal [384, 640], limits(budget(memory_mb: 1000))
   end
 
   def test_a_laptop_gets_a_share_of_its_memory
@@ -21,7 +21,7 @@ class TestFixResourceBudgetRss < Minitest::Test
   end
 
   def test_the_floor_holds_on_a_machine_smaller_than_the_server
-    assert_equal [512, 768], limits(budget(memory_mb: 256))
+    assert_equal [384, 640], limits(budget(memory_mb: 256))
   end
 
   def test_configuration_still_wins
@@ -42,5 +42,24 @@ class TestFixResourceBudgetRss < Minitest::Test
     critical = budget(memory_mb: 8192).send(:classify_one_check, :ok, :rss_mb, 791, *limits(budget(memory_mb: 8192)))
 
     assert_equal [:ok, nil], critical
+  end
+  def test_container_pressure_sheds_optional_work_even_when_process_rss_is_low
+    resource = budget(memory_mb: 4096)
+    result = resource.send(:classify_resource_checks, { rss_mb: 100, cgroup_memory_ratio: 0.94 })
+
+    assert_equal :critical, result.first
+    assert_match(/cgroup_memory_ratio/, result.last.join(" "))
+  end
+
+  def test_container_ratio_uses_the_most_constrained_ancestor
+    resource = budget(memory_mb: 4096)
+    groups = [["/group/child", "max", "current"], ["/group", "max", "current"]]
+    values = { "/group/child/max" => 1000, "/group/child/current" => 100,
+               "/group/max" => 2000, "/group/current" => 1800 }
+    resource.stub(:linux_memory_groups, groups) do
+      resource.stub(:memory_bytes, ->(path) { values[path] }) do
+        assert_in_delta 0.9, resource.send(:cgroup_memory_ratio), 0.001
+      end
+    end
   end
 end
