@@ -1149,11 +1149,12 @@ test("sculpture surfaces are distinct, deterministic and bounded", async () => {
   assert.equal(masks.current().id, "block-portal");
 });
 
-test("direct subject mouth deformation is anatomical and mask-only", () => {
-  assert.match(faceSource, /uniform vec4 uMaskMouth/);
-  assert.match(faceSource, /subjectPoint\.y \+= sign\(lip\.y\)/);
-  assert.match(faceSource, /uMaskMouth\.w \* \(1\.0 - localMorph\)/);
-  assert.match(faceWorld, /mouth && nativeSubjectField \? 1 : 0/);
+test("sculptural articulation uses bounded event-driven movement, not human anatomy", () => {
+  assert.match(faceSource, /uniform float uSculpture;/);
+  assert.match(faceSource, /uSculpture \* uSculptureMotion \* travel/);
+  assert.match(faceSource, /float pulse = clamp\(uJaw \* 0\.4/);
+  assert.match(faceWorld, /sculptureUniform\.value = semanticDescriptor\?\.maskProfile && nativeSubjectField/);
+
 });
 
 test("mask geometry has enough projected coverage to read at terminal size", () => {
@@ -1192,12 +1193,12 @@ test("mask geometry has enough projected coverage to read at terminal size", () 
 test("mask correspondence uses bounded stable spatial ordering", () => {
   assert.match(faceWorld, /const MASK_PRIMARY_SCALE = \.92/);
   assert.match(faceWorld, /function orderMaskPoints/);
-  assert.match(faceWorld, /new Uint32Array\(256\)/);
-  assert.match(faceWorld, /mouth\.width \* MASK_PRIMARY_SCALE/);
+  assert.match(faceWorld, /new Uint32Array\(4096\)/);
+  assert.match(faceWorld, /const morton = \(x, y, z\)/);
 });
 
 test("sculptures use uniform ink and fixed footprints", () => {
-  assert.match(faceSource, /attribute vec3 subjectNormal/);
+  assert.doesNotMatch(faceSource, /attribute vec3 subjectNormal/);
   assert.match(faceSource, /vColor=vec3\(0\.9333333\)/);
   assert.doesNotMatch(faceSource, /float reliefTone/);
   assert.match(faceSource, /transparent: false, depthWrite: true, depthTest: true/);
@@ -1205,7 +1206,7 @@ test("sculptures use uniform ink and fixed footprints", () => {
   assert.match(system, /const showPreview = preview && subject === "face"/);
   assert.match(faceWorld, /world\.visible = !\(nativeSubjectField \|\| \(portrait && semanticForm === "face"\)\)/);
   assert.match(sparseField, /if \(primaryOwnsPortrait\(\)\) \{\s+if \(layer\) layer\.visible = false/);
-  assert.match(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
+  assert.doesNotMatch(faceWorld, /MASTER_FACE_MASKS\.normalAt/);
   assert.match(faceSource, /gl_FragColor=vec4\(vColor,1\.0\)/);
 });
 
