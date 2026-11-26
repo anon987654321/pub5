@@ -328,18 +328,14 @@ module Studio
       # restoration model.
       STILL_CHAIN = "native".freeze
 
-      # A chain that develops nothing hands back the frame as the model left it,
-      # so the film character is already in the pixels. The house look is a
-      # second grade over that character, and on an untouched frame it crushes
-      # the midtones into mud. Such a frame takes one portrait grade instead.
+      # Native capture is developed once with the shot's selected grade.
+      # Do not silently replace every film decision with a portrait preset.
       UNTOUCHED_GRADE = "portrait".freeze
 
-      # What to grade with, given the chain that made the frame. A nil preset
-      # means the caller asked for no grade at all and keeps that.
       def self.development(chain:, preset:, chain_presets: HOUSE_CHAIN)
-        return [preset, Array(chain_presets)] if preset.nil? || !delivered_untouched?(chain)
+        return [preset, Array(chain_presets)] unless delivered_untouched?(chain)
 
-        [UNTOUCHED_GRADE, []]
+        [preset || UNTOUCHED_GRADE, []]
       end
 
       def self.delivered_untouched?(chain)
