@@ -108,3 +108,65 @@ test("live search waits for IME input and cancels stale debounced submissions", 
   assert.equal(sends, 2)
   controller.disconnect()
 })
+
+
+test("bottom sheets ignore interactive controls and cancelled drags restore state", async () => {
+  const source = await readSource("__shared/frontend/bottom_sheet_controller.js")
+  const { default: BottomSheet } = await import("data:text/javascript," +
+    encodeURIComponent(source.replace(/^import .*$/m, "class Controller {}")))
+  const controller = new BottomSheet()
+  const input = { closest: () => ({}) }
+  const surface = { closest: () => null }
+  const sheet = { dataset: {}, style: {}, contains: () => true }
+  let focused = 0
+  Object.assign(controller, {
+    levelValue: 1, sheetTarget: sheet,
+    hasTriggerTarget: true, triggerTarget: { setAttribute() {}, focus() { focused += 1 } }
+  })
+  globalThis.document = { activeElement: {} }
+  controller.connect()
+  controller.pointerDown({ target: input, pointerId: 1, clientY: 0 })
+  assert.equal(controller.dragging, false)
+  controller.pointerDown({ target: surface, pointerId: 1, clientY: 0 })
+  controller.pointerMove({ pointerId: 1, clientY: 200 })
+  assert.equal(sheet.style.transform, "translateY(100%)")
+  controller.pointerCancel({ pointerId: 1 })
+  assert.equal(controller.levelValue, 1)
+  assert.equal(sheet.style.transform, "translateY(50%)")
+  assert.equal(sheet.style.transition, "")
+  controller.close()
+  assert.equal(focused, 1)
+  delete globalThis.document
+})
+
+test("a failed conversation history request leaves manual retry available", async () => {
+  const source = await readSource("__shared/frontend/conversation_log_controller.js")
+  const { default: ConversationLog } = await import("data:text/javascript," +
+    encodeURIComponent(source.replace(/^import .*$/m, "class Controller {}")))
+  const controller = new ConversationLog()
+  const button = { disabled: false }
+  const attributes = new Map()
+  Object.assign(controller, {
+    historyUrlValue: "/messages?before=42",
+    sentinel: {
+      querySelector: () => button,
+      setAttribute: (key, value) => attributes.set(key, value),
+      removeAttribute: key => attributes.delete(key)
+    },
+    historyObserver: {
+      disconnect() {},
+      observe() { assert.fail("failed visible sentinel must not automatically retry") }
+    }
+  })
+  const originalFetch = globalThis.fetch
+  try {
+    globalThis.fetch = async () => ({ ok: false, status: 503 })
+    await controller.loadOlder()
+    assert.equal(controller.historyUrlValue, "/messages?before=42")
+    assert.equal(controller.loadingHistory, false)
+    assert.equal(button.disabled, false)
+    assert.equal(attributes.has("aria-busy"), false)
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+})

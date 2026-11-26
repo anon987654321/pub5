@@ -78,7 +78,7 @@
     browser `allow_browser versions: :modern` admits -- so one finger drag ran
     pointerMove and touchMove on the same frame, each writing a transform from
     its own reading of the same gesture. %>
-<section class="mobile-sheet" data-level="0" aria-label="<%= t("nav.quick_actions") %>" data-bottom-sheet-target="sheet" data-action="pointerdown->bottom-sheet#pointerDown pointermove->bottom-sheet#pointerMove pointerup->bottom-sheet#pointerUp pointercancel->bottom-sheet#pointerUp">
+<section class="mobile-sheet" data-level="0" aria-label="<%= t("nav.quick_actions") %>" data-bottom-sheet-target="sheet" data-action="pointerdown->bottom-sheet#pointerDown pointermove->bottom-sheet#pointerMove pointerup->bottom-sheet#pointerUp pointercancel->bottom-sheet#pointerCancel lostpointercapture->bottom-sheet#pointerCancel">
   <div class="mobile-sheet-handle"></div>
   <%= render "shared/city_network",
                container_class: "mobile-sheet-cities",

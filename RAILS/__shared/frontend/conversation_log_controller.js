@@ -49,6 +49,7 @@ export default class extends Controller {
     this.#dayBreaks()
     this.#group()
     this.#pinToNewest()
+    this.followingTail = this.#atTail()
 
     this.observer = new MutationObserver((mutations) => {
       const added = mutations.flatMap((m) => Array.from(m.addedNodes))
@@ -60,10 +61,14 @@ export default class extends Controller {
       this.#dayBreaks()
       this.observer.observe(this.element, { childList: true })
       this.#group()
-      const wasAtTail = this.#atTail()
-      this.#pinToNewest()
-      if (!wasAtTail && !this.appendingHistory) {
-        this.unread += added.filter((n) => n.nodeType === Node.ELEMENT_NODE).length
+      if (this.appendingHistory) return
+      if (this.followingTail) {
+        this.toTail()
+      } else {
+        this.unread += added.filter((node) => {
+          const sender = node.querySelector?.("[data-sender-id]")?.dataset.senderId
+          return sender && sender !== this.viewerIdValue
+        }).length
         this.#renderPill()
       }
     })
@@ -81,7 +86,8 @@ export default class extends Controller {
     this.reactionObserver.observe(this.element, { childList: true, subtree: true })
 
     this.onScroll = () => {
-      if (this.#atTail()) { this.unread = 0; this.#renderPill() }
+      this.followingTail = this.#atTail()
+      if (this.followingTail) { this.unread = 0; this.#renderPill() }
     }
     this.element.addEventListener("scroll", this.onScroll, { passive: true })
     // Below the wide layout the log is as tall as its lines and something
@@ -156,6 +162,7 @@ export default class extends Controller {
   toTail() {
     const scroller = this.#pageScrolls() ? this.#outerScroller() : this.element
     scroller.scrollTop = scroller.scrollHeight
+    this.followingTail = true
     this.unread = 0
     this.#renderPill()
   }
@@ -172,6 +179,7 @@ export default class extends Controller {
     if (!this.historyUrlValue || this.loadingHistory) return
 
     this.loadingHistory = true
+    let loaded = false
     const button = this.#historyButton
     if (button) button.disabled = true
     this.sentinel?.setAttribute("aria-busy", "true")
@@ -194,14 +202,19 @@ export default class extends Controller {
       // through a thread does not teleport anyone.
       this.element.scrollTop += this.element.scrollHeight - heightBefore
       this.#installHistorySentinel()
+      loaded = true
     } catch {
       // The URL and the button survive unchanged: nothing was loaded, so the
       // affordance keeps telling the truth.
     } finally {
       this.loadingHistory = false
       this.appendingHistory = false
+      if (button) button.disabled = false
+      this.sentinel?.removeAttribute("aria-busy")
       this.historyObserver?.disconnect()
-      if (this.sentinel) this.historyObserver?.observe(this.sentinel)
+      // Failed requests keep an enabled manual retry; re-observing a visible
+      // sentinel immediately would hammer the server with the same failure.
+      if (loaded && this.sentinel) this.historyObserver?.observe(this.sentinel)
     }
   }
 

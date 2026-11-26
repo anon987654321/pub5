@@ -12,7 +12,8 @@ export default class extends Controller {
   }
 
   toggle() {
-    this.levelValue = this.levelValue >= 2 ? 0 : this.levelValue + 1
+    if (this.levelValue >= 2) return this.close()
+    this.levelValue += 1
     this.sync()
   }
 
@@ -22,8 +23,11 @@ export default class extends Controller {
   }
 
   close() {
+    if (!this.levelValue) return
+    const restoreFocus = this.sheetTarget.contains(document.activeElement)
     this.levelValue = 0
     this.sync()
+    if (restoreFocus && this.hasTriggerTarget) this.triggerTarget.focus()
   }
 
   sync() {
@@ -44,7 +48,11 @@ export default class extends Controller {
   }
 
   pointerDown(event) {
+    // Interactive content and native scrolling must keep their own pointer.
+    if (event.isPrimary === false || (event.button != null && event.button !== 0) ||
+        event.target.closest("a, button, input, textarea, select, summary, label")) return
     this.dragging = true
+    this.pointerId = event.pointerId
     this.startY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
     this.currentY = this.startY
     this.sheetTarget.style.transition = "none"
@@ -52,7 +60,7 @@ export default class extends Controller {
   }
 
   pointerMove(event) {
-    if (!this.dragging) return
+    if (!this.dragging || event.pointerId !== this.pointerId) return
     this.currentY = event.clientY ?? event.touches?.[0]?.clientY ?? 0
     const delta = this.currentY - this.startY
     const offset = Math.max(0, Math.min(100, 100 - (this.levelValue * 50) + (delta / 4)))
@@ -60,15 +68,27 @@ export default class extends Controller {
   }
 
   pointerUp(event) {
-    if (!this.dragging) return
-    this.dragging = false
-    this.sheetTarget.style.transition = ""
-    if (event?.pointerId != null && this.sheetTarget.hasPointerCapture?.(event.pointerId)) {
-      this.sheetTarget.releasePointerCapture(event.pointerId)
-    }
+    if (!this.dragging || event.pointerId !== this.pointerId) return
     const delta = this.currentY - this.startY
+    this.finishDrag()
+    if (delta > 80 && this.levelValue === 1) return this.close()
     if (delta > 80) this.levelValue = Math.max(0, this.levelValue - 1)
     else if (delta < -80) this.levelValue = Math.min(2, this.levelValue + 1)
     this.sync()
+  }
+
+  pointerCancel(event) {
+    if (!this.dragging || event.pointerId !== this.pointerId) return
+    this.finishDrag()
+    this.sync()
+  }
+
+  finishDrag() {
+    this.dragging = false
+    this.sheetTarget.style.transition = ""
+    if (this.pointerId != null && this.sheetTarget.hasPointerCapture?.(this.pointerId)) {
+      this.sheetTarget.releasePointerCapture(this.pointerId)
+    }
+    this.pointerId = null
   }
 }
