@@ -14,3 +14,21 @@ const prefix=fixture.slice(0,fixture.indexOf('const aud_='));
 const state=fixture.slice(fixture.indexOf('const aud_='));
 const run=new Function('assert',prefix+sources[0]+sources[1]+state+sources.slice(2).join('\n')+checks);
 console.log(JSON.stringify(run(assert),null,2));
+
+const clockSource=extract("const audioTime=()=>","let stepUiByIndex=");
+const clockTest=new Function("assert",clockSource+`
+let now=0,callback=null,steps=0,failures=0;
+const st_={playing:true,idx:-1,tick:-1,stepCount:16},aud_={bpm:120};
+const Tone={getContext:()=>({rawContext:{currentTime:now}})};
+const setTimeout=fn=>(callback=fn,1),clearTimeout=()=>{callback=null;};
+const log=()=>{failures++},st=()=>{},console={warn(){}},$id=()=>null;
+const scheduleLoop=time=>{steps++;if(steps===1)throw Error("synthetic voice failure");st_.idx=(st_.idx+1)%16;st_.tick++;};
+startClock();assert(callback&&failures===1,"clock must survive first-step failure");
+for(let i=0;i<120;i++){now+=.02;callback();}
+assert(steps>=18&&steps<=22,"clock must advance at 120 BPM");
+const before=steps;now+=20;callback();assert(steps-before<=4,"late clock must not flood audio");
+const stale=callback;pauseClock();stale();assert(callback===null,"paused clock cannot reschedule");
+st_.playing=true;startClock();assert(callback,"restart must arm clock");
+return {clock:"passed",steps,failures};
+`);
+console.log(JSON.stringify(clockTest(assert),null,2));
