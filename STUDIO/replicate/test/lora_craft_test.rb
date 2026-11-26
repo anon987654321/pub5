@@ -20,6 +20,21 @@ class TestStudioLoraCraft < Minitest::Test
     assert(scenes.any? { |scene| scene.include?("shadow side") }, "the studio sitting keeps a modelled face")
   end
 
+  # A chain that develops nothing hands back the frame as the model left it, so
+  # the house look would be a second grade over a film character already in the
+  # pixels. The stack crushed the midtones; one portrait grade carries the frame.
+  def test_an_untouched_frame_takes_one_portrait_grade
+    craft = Studio::Lora::Craft
+    assert_equal ["portrait", []],
+                 craft.development(chain: "native", preset: "house", chain_presets: %w[aged_kodachrome])
+    assert_equal ["house", %w[aged_kodachrome]],
+                 craft.development(chain: "stills", preset: "house", chain_presets: %w[aged_kodachrome])
+    assert_equal ["house", %w[aged_kodachrome]],
+                 craft.development(chain: "vintage", preset: "house", chain_presets: %w[aged_kodachrome])
+    assert_equal [nil, %w[aged_kodachrome]],
+                 craft.development(chain: "native", preset: nil, chain_presets: %w[aged_kodachrome])
+  end
+
   def test_the_scene_opens_with_the_film_stock
     scene = Studio::Lora::Selfie.scene(1, subject: "johann")
 

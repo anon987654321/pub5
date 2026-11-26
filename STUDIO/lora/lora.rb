@@ -319,6 +319,29 @@ module Studio
       # The Replicate development chain run before any local grade: repair, then
       # sharpen, then emulate stock. Declared in STUDIO/replicate/chains.yml.
       STILL_CHAIN = "stills".freeze
+
+      # A chain that develops nothing hands back the frame as the model left it,
+      # so the film character is already in the pixels. The house look is a
+      # second grade over that character, and on an untouched frame it crushes
+      # the midtones into mud. Such a frame takes one portrait grade instead.
+      UNTOUCHED_GRADE = "portrait".freeze
+
+      # What to grade with, given the chain that made the frame. A nil preset
+      # means the caller asked for no grade at all and keeps that.
+      def self.development(chain:, preset:, chain_presets: HOUSE_CHAIN)
+        return [preset, Array(chain_presets)] if preset.nil? || !delivered_untouched?(chain)
+
+        [UNTOUCHED_GRADE, []]
+      end
+
+      def self.delivered_untouched?(chain)
+        return true if chain.nil?
+
+        require_relative "../replicate/chain"
+        Studio::ReplicateClient::Chain.definition(chain).empty?
+      rescue ArgumentError
+        false
+      end
       SHOT_AXES = %w[scene framing distance lens lighting moment gaze composition].freeze
       SHOT_OPTIONAL = %w[preset key_side catchlight focus].freeze
       KEY_SIDE = {

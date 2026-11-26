@@ -137,6 +137,9 @@ module Studio
           grade_seed = Integer(grade_seed)
           raise ArgumentError, "grade seed out of range" unless grade_seed.between?(0, 2_147_483_647)
         end
+        preset, chain_presets = Studio::Lora::Craft.development(
+          chain:, preset:, chain_presets:
+        )
         validate_model!
         if film
           validate_film_model!
