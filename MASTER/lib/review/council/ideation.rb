@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "inter_model_contract"
+require_relative "critique/cherry_pick"
 
 module Master
   module Review
@@ -30,9 +31,9 @@ module Master
           quota_result = fill_quota(prompt:, ideas:, critiques:, constraints:, deadline:)
           return quota_result if quota_result
           required = Master::Core::Proof::ALTERNATIVES_REQUIRED
-          if ideas.uniq.size < required
+          if ideas.size < required
             return Master::Result.err(
-              "ideation: #{ideas.uniq.size} distinct approaches; #{required} required",
+              "ideation: #{ideas.size} text-distinct approaches; #{required} required",
               category: :llm_failure
             )
           end
@@ -40,18 +41,18 @@ module Master
           synth_result = synthesize(prompt:, ideas:, critiques:, constraints:)
           return synth_result if synth_result.err?
 
-          Master::Result.ok(ideas: ideas.uniq, critiques:, final: synth_result.value!)
+          Master::Result.ok(ideas:, critiques:, final: synth_result.value!)
         end
 
         private
 
         def fill_quota(prompt:, ideas:, critiques:, constraints:, deadline:)
-          return if ideas.uniq.size >= Master::Core::Proof::ALTERNATIVES_REQUIRED || Time.now >= deadline
+          return if ideas.size >= Master::Core::Proof::ALTERNATIVES_REQUIRED || Time.now >= deadline
 
           more = brainstorm(prompt:, prior: ideas, constraints:)
           return more if more.err?
 
-          additions = more.value!.uniq - ideas.uniq
+          additions = distinct_additions(ideas, more.value!)
           ideas.concat(additions)
           return if additions.empty?
 
@@ -66,7 +67,7 @@ module Master
           return Master::Result.err("ideation: budget expired", category: :timeout) if Time.now >= deadline
           brainstorm_result = brainstorm(prompt:, prior: ideas, constraints:)
           return brainstorm_result if brainstorm_result.err?
-          ideas.concat(brainstorm_result.value!)
+          ideas.concat(distinct_additions(ideas, brainstorm_result.value!))
           @bus&.publish("ideation:cycle", cycle: cycle + 1, ideas: ideas.size)
 
           return Master::Result.err("ideation: budget expired", category: :timeout) if Time.now >= deadline
@@ -77,10 +78,20 @@ module Master
           nil
         end
 
+        # Reuse the council text-similarity filter before counting or critiquing
+        # candidates. This rejects paraphrases heuristically, not semantically.
+        def distinct_additions(prior, proposed)
+          accepted = Critique::CherryPick.materially_distinct(prior + proposed)
+          additions = accepted - prior
+          @bus&.publish("ideation:diversity", proposed: proposed.size, accepted: additions.size,
+                        method: :lexical_overlap)
+          additions
+        end
+
         def brainstorm(prompt:, prior:, constraints:)
           context = prior.any? ? "Prior ideas (avoid repeating): #{prior.join('; ')}\n\n" : ""
           constraint_prefix = constraints.any? ? "Constraints: #{constraints.join(', ')}\n\n" : ""
-          minimum = [Master::Core::Proof::ALTERNATIVES_REQUIRED - prior.uniq.size, 1].max
+          minimum = [Master::Core::Proof::ALTERNATIVES_REQUIRED - prior.size, 1].max
           system_msg = "Generate at least #{minimum} distinct approaches. " \
                        "Return one structured finding per approach; put the complete approach in claim and use " \
                        "proposed_repair=none. Do not repeat a prior idea."
