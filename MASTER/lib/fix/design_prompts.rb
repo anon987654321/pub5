@@ -9,9 +9,10 @@ module Master
       SOURCE_CHARS = 12_000
 
       VARIANTS = [
-        "Macro: strengthen overall composition, content priority and spatial balance.",
+        "Macro: strengthen overall composition, content priority and spatial balance. Question the existing layout; propose a different arrangement of the same functional regions.",
         "Meso: refine relationships among groups, alignment and separation.",
         "Micro: refine type size, optical alignment, rhythm or control geometry.",
+        "Subtractive: remove framing or a redundant wrapper; use negative space and preserve the task.",
       ].freeze
 
       DIRECTION = "Flat, brutalist, Swiss: one sans family, a strict 8px rhythm, tap targets of at least 44px, " \
@@ -82,6 +83,8 @@ module Master
           #{type_note}
           #{markup_note(sources)}
           #{VARIANTS[variant % VARIANTS.size]}
+          Judge the whole composition, including the relationship between its primary subject and secondary controls.
+          A sparse interface is not a defect; do not add furniture merely to fill empty space.
           #{undone_note}
           #{prior_design_lessons(sources)}
           Return only JSON: {"file": "<one path below>", "find": "<exact text from that file, occurring once>",

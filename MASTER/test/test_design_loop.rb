@@ -303,6 +303,25 @@ class TestDesignLoop < Minitest::Test
     end
   end
 
+  def test_sparse_compositions_remain_eligible_for_design_review
+    with_sheet do |path|
+      committed = []
+      stub_scoring do
+        rounds = loop_for(path, committed:, classes: [".card"]).run
+        assert_equal :kept, rounds.first.outcome
+      end
+      assert_equal [path], committed.map(&:first)
+    end
+  end
+
+  def test_anchorless_surfaces_are_skipped
+    with_sheet do |path|
+      stub_scoring do
+        assert_empty loop_for(path, committed: [], classes: []).run
+      end
+    end
+  end
+
   def test_design_rounds_rotate_candidate_scales_even_with_one_candidate
     with_sheet do |path|
       prompts = []

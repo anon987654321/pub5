@@ -30,7 +30,6 @@ module Master
       TIE = 0.05
       OTHERS_TOLERANCE = 1.0
       TRIES_PER_SURFACE = DesignPrompts::VARIANTS.size
-      MIN_PAGE_TOKENS = 8
       SHARED = "/RAILS/__shared/"
       MARKUP_FILES = 2
       Round = Data.define(:number, :surface, :why, :outcome, :before, :after)
@@ -95,18 +94,17 @@ module Master
 
       def score(payload) = LayoutScoreStore.measure(@plan.root, payload).score
 
-      # A page with next to nothing on it (a login wall, an empty list) has no layout to
-      # improve, so it is not chosen however low it scores.
+      # Sparse compositions deserve review too; only pages without editable anchors are skipped.
       def weakest
         open = @state.reject { |row| @spent[row[:surface].id] >= TRIES_PER_SURFACE || sparse?(row) }
         open.min_by { |row| row[:score] }
       end
 
-      def sparse?(row) = page_tokens_of(row).size < MIN_PAGE_TOKENS
+      def sparse?(row) = page_tokens_of(row).empty?
 
       def survey
         @state.each do |row|
-          note = sparse?(row) ? ", too little on the page to work on" : ""
+          note = sparse?(row) ? ", no editable anchors" : ""
           @say.call("#{row[:surface].id}: score #{row[:score].round(1)}, #{page_tokens_of(row).size} classes and ids#{note}")
         end
       end
