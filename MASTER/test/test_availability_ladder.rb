@@ -46,7 +46,7 @@ class AvailabilityLadderTest < Minitest::Test
       assert_in_delta 121, health.send(:age_seconds, "cloud-model"), 0.01
       refute health.fresh?("cloud-model", max_age_s: 120)
       assert health.stale?("cloud-model", max_age_s: 120)
-      assert_equal :unknown, health.freshness("never-seen", max_age_s: 120)
+      assert_equal :unknown, health.send(:freshness, "never-seen", max_age_s: 120)
     end
   end
 
