@@ -691,12 +691,9 @@ module Operator
     # Under the Ruby the repo pins, as the app suites below run. runner.rb refuses
     # any other, so launched with this process's Ruby every check was skipped and
     # the stage reported one refusal as its whole result.
-    def rails_checks(scan_only:, strict_inconclusive: false)
-      fixed = strict_env.merge("CHECK_AUTOFIX" => scan_only ? "0" : "1", **Master::Fix::WorkLane.check_env)
-      # A proof cannot pass a check that measured nothing. The normal contribution
-      # mode remains permissive; /fix opts into strict inconclusive handling here
-      # because this child environment is constructed explicitly.
-      fixed["CHECK_STRICT_INCONCLUSIVE"] = "1" if strict_inconclusive
+    # `surfaces` (app names) narrows the rendered sweep through runner.rb's CHECK_SURFACES.
+    def rails_checks(scan_only:, strict_inconclusive: false, surfaces: nil)
+      fixed = rails_checks_env(scan_only:, strict_inconclusive:, surfaces:)
       key = scan_only && rails_checks_key(fixed)
       kept = key && @rails_checks_kept&.fetch(key, nil)
       if kept
@@ -710,6 +707,16 @@ module Operator
       end
       keep_rails_checks(key, reading)
       reading
+    end
+
+    # A proof cannot pass a check that measured nothing. The normal contribution
+    # mode remains permissive; /fix opts into strict inconclusive handling here
+    # because this child environment is constructed explicitly.
+    def rails_checks_env(scan_only:, strict_inconclusive:, surfaces:)
+      env = strict_env.merge("CHECK_AUTOFIX" => scan_only ? "0" : "1", **Master::Fix::WorkLane.check_env)
+      env["CHECK_SURFACES"] = Array(surfaces).join(",") if Array(surfaces).any?
+      env["CHECK_STRICT_INCONCLUSIVE"] = "1" if strict_inconclusive
+      env
     end
 
     def keep_rails_checks(key, reading)

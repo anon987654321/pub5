@@ -1621,6 +1621,30 @@ end
     ENV["MASTER_IN_PROOF"] = previous_proof if previous_proof
   end
 
+  def test_a_repair_proof_sweeps_only_the_apps_its_paths_belong_to
+    pass = Master::CLI::Pipeline::Pass.allocate
+    scoped = lambda do |paths|
+      pass.stub(:rails_repair_paths, paths) { pass.send(:proof_surfaces) }
+    end
+
+    assert_nil scoped.call([]), "the pre-repair proof sweeps every app"
+    assert_equal %w[amber], scoped.call(["RAILS/amber/app/views/home/index.html.erb"])
+    assert_equal %w[master], scoped.call(["MASTER/web/index.html"])
+    assert_nil scoped.call(["RAILS/amber/app/a.rb", "RAILS/test/x_test.rb"]), "an unowned path could move any page"
+  end
+
+  def test_rails_checks_narrow_the_sweep_to_named_surfaces
+    envs = []
+    capture = ->(*_cmd, env:, **) { envs << env; [true, [], 0] }
+    Operator::CheckChain.stub(:capture, capture) do
+      Operator::CheckChain.rails_checks(scan_only: true, surfaces: %w[amber brgen])
+      Operator::CheckChain.rails_checks(scan_only: true)
+    end
+
+    assert_equal "amber,brgen", envs.first.fetch("CHECK_SURFACES")
+    refute envs.last.key?("CHECK_SURFACES")
+  end
+
   def test_rails_checks_launches_a_runner_that_exists
     seen = nil
     capture = ->(*cmd, **) { seen = cmd; [true, [], 0] }

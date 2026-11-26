@@ -4,6 +4,7 @@ require "digest"
 require "fileutils"
 require "json"
 require "set"
+require "yaml"
 require_relative "../../operator/check_chain"
 require_relative "proof/reading"
 require_relative "proof/affected"
@@ -243,6 +244,34 @@ module Master
           @repair_before ? Array(repo_git.paths_since(@repair_before)).grep(%r{\A(?:RAILS|MASTER/web)/}) : []
         end
 
+        SURFACES_FILE = File.join(::Operator::CheckChain::MASTER, "checks", "data", "geometry_surfaces.yml")
+
+        # A repair proves in the browser only the apps its paths belong to: every pass swept every
+        # app at every viewport, 20-30 minutes on an 8 GB Mac (2026-11-26), and the run timed out.
+        # The pre-repair proof changed nothing and sweeps everything; a path no declared app owns
+        # (RAILS/test, RAILS/config) could move any page, so it sweeps everything too.
+        def proof_surfaces
+          paths = rails_repair_paths
+          return if paths.empty?
+
+          named = Master::Fix::RailsApp.named_apps(repo_root: Master::REPO_ROOT)
+          engine = Master::Fix::RailsApp.engine_apps(repo_root: Master::REPO_ROOT)
+          owners = paths.map do |path|
+            path.start_with?("MASTER/web/") ? ["master"] : RailsApps.owners(path, named:, engine:)
+          end
+          return if owners.any?(&:empty?)
+
+          declared = declared_surface_apps
+          wanted = owners.flatten.uniq & declared
+          wanted.sort unless wanted.empty? || wanted.size == declared.size
+        end
+
+        def declared_surface_apps
+          config = YAML.safe_load_file(SURFACES_FILE)
+          apps = Array(config["surfaces"]).map { |row| row["app"].to_s }
+          (apps + (config["include_brgen_verticals"] ? ["brgen"] : [])).reject(&:empty?).uniq
+        end
+
         # A whole-MASTER pass proves with the tests that name what it changed when it has what was red
         # before to judge them by: its baseline if one was kept, else the tree's known-red record
         # (Proof::Affected). Nil keeps the whole suite.
@@ -275,11 +304,7 @@ module Master
             # no apps up the rendered half could only report red.
             return unless chain.verification_stage?("source")
 
-            return ["rails checks", -> {
-              held, out = rails_proof(*chain.rails_checks(scan_only: true, strict_inconclusive: ENV[PROOF_ENV] == "1"))
-              apps_held, apps_out = RailsApps.prove(rails_repair_paths, before: @repair_before)
-              [held && apps_held, Array(out) + apps_out]
-            }]
+            return ["rails checks", -> { rails_tree_proof(chain) }]
           end
 
           tree, root = PROOF_ROOTS.find { |_name, dir| abs == dir || abs.start_with?("#{dir}/") }
@@ -295,6 +320,13 @@ module Master
           ["#{tree} tests for #{File.basename(abs)}", -> { targeted_proof(chain, abs) }]
         end
         public :proof_runner
+
+        def rails_tree_proof(chain)
+          held, out = rails_proof(*chain.rails_checks(scan_only: true, strict_inconclusive: ENV[PROOF_ENV] == "1",
+                                                      surfaces: proof_surfaces))
+          apps_held, apps_out = RailsApps.prove(rails_repair_paths, before: @repair_before)
+          [held && apps_held, Array(out) + apps_out]
+        end
 
         # No test maps to the path is not a failure of the repair: it is a target with no proof to
         # offer, and says so in the reading.
