@@ -503,7 +503,7 @@ function oscillator(type,ratio,level,cents=0,dest=filter){
 const osc=ctx.createOscillator(),amp=gain(level);osc.type=type;osc.frequency.value=freq*ratio;osc.detune.value=cents;
 osc.connect(amp);amp.connect(dest);sources.push(osc);nodes.push(amp);return {osc,amp};
 }
-const type=patch.type,decay=patch.decay||2,attack=patch.attack??(type==="pad"?.4:.005);
+const type=patch.type,decay=patch.decay||2,attack=patch.attack??(lane==="p"?.65:type==="pad"?.4:.005);
 let sustain=.58,release=Math.min(2.4,Math.max(.12,decay*.25));
 switch(type){
 case "vector":{
@@ -592,6 +592,7 @@ sustain=.15;release=.2;break;
 }
 default:oscillator("sawtooth",1,.34,-9);oscillator("triangle",1,.34,7);oscillator("sine",2,.18);sustain=.65;
 }
+if(lane==="p"){sustain=Math.max(.72,sustain);release=Math.max(2.8,release);}
 const amp=Math.max(.001,Math.min(1,velocity||.8)),end=at+Math.max(.01,duration),rise=Math.min(attack,Math.max(.003,duration*.65)),fall=Math.min(end,at+rise+Math.max(.03,decay*.35));
 envelope.gain.setValueAtTime(0,at);envelope.gain.linearRampToValueAtTime(amp,at+rise);
 envelope.gain.linearRampToValueAtTime(amp*sustain,fall);
@@ -767,6 +768,16 @@ HARMONY_CATALOGUE.push({id:"velvet_afterhours",title:"Velvet Afterhours · origi
 {symbol:"Bbm11",bass:"Bb1",keys:["Ab3","C4","Db4","F4","Eb5"],pads:["Bb3","Db4","F4","Ab4"],steps:32},
 {symbol:"C7b9b13",bass:"C1",keys:["Bb3","Db4","E4","Ab4","C5"],pads:["C3","E4","Ab4","Bb4"],steps:32}
 ]});
+HARMONY_CATALOGUE.push({id:"afterglow",title:"Afterglow · original 16 bars",status:"engine_original",bpm:84,segments:[
+{symbol:"Fm9",bass:"F2",keys:["Ab3","C4","Eb4","G4"],pads:["F3","Ab3","Eb4","G4","C5"],steps:32},
+{symbol:"Abmaj9/Eb",bass:"Eb2",keys:["Ab3","C4","Eb4","Bb4"],pads:["Eb3","G3","C4","Bb4"],steps:32},
+{symbol:"Dbmaj9#11",bass:"Db2",keys:["Ab3","C4","F4","G4"],pads:["Db3","F3","C4","G4","Eb5"],steps:32},
+{symbol:"Cm9",bass:"C2",keys:["Bb3","D4","Eb4","G4"],pads:["C3","G3","Bb3","D4","Eb5"],steps:32},
+{symbol:"Bbm9",bass:"Bb1",keys:["Ab3","C4","Db4","F4"],pads:["Bb3","F4","Ab4","C5"],steps:32},
+{symbol:"Eb13",bass:"Eb2",keys:["G3","Db4","F4","C5"],pads:["Eb3","G3","Db4","C5"],steps:32},
+{symbol:"Abmaj9",bass:"Ab1",keys:["G3","Bb3","C4","Eb4"],pads:["Ab3","C4","G4","Bb4"],steps:32},
+{symbol:"C7b9b13",bass:"C2",keys:["Bb3","Db4","E4","Ab4"],pads:["C3","E3","Bb3","Db4","Ab4"],steps:32}
+]});
 const HARMONY_PREFIX="catalogue:";
 const HARMONIES=Object.fromEntries(HARMONY_CATALOGUE.map(row=>[HARMONY_PREFIX+row.id,row]));
 for(const [id,row] of Object.entries(HARMONIES)){
@@ -812,6 +823,7 @@ Object.assign(PATCH_CATALOGUE,{"rhodes_mark_ii":{"name":"Rhodes Mark II","type":
 const patchName=id=>id==="original"?"Original RG-69":PATCH_CATALOGUE[id]?.name||"Original RG-69";
 const validPatch=id=>Object.hasOwn(PATCH_CATALOGUE,id)?id:"original";
 const STYLES=[
+{n:'Afterglow',m:['Lush','Groovy','Spiritual'],d:'dusty1',b:'catalogue:afterglow',k:'catalogue:afterglow',p:'catalogue:afterglow',bpm:[82,86],sw:[30,38],dr:[18,25],tm:[35,45]},
 {n:'Dust & Space',m:['Groovy','Mysterious','Spacious'],d:'dusty1',b:'dustybass1',k:'neosoul',p:'ambientwash',bpm:[76,92],sw:[25,40],dr:[25,45],tm:[50,70]},
 {n:'Astral Soul',m:['Spiritual','Calm','Lush'],d:'ambient-click',b:'ambientbass',k:'neosoul',p:'choir',bpm:[68,84],sw:[12,28],dr:[8,24],tm:[30,55]},
 {n:'Industrial',m:['Aggressive','Dark'],d:'hate-pummel',b:'industrialbass',k:'indstab',p:'industrialdrone',bpm:[140,160],sw:[0,5],dr:[60,90],tm:[20,38]},
@@ -889,15 +901,15 @@ const keys=KEYS_PATS[style.k]||[];
 const pads=PAD_PATS[style.p]||[];
 return drums&&Object.values(drums).some(pattern=>pattern.some(hit=>hit>0))&&bass.some(note=>note)&&keys.some(note=>note&&note!==0)&&pads.some(note=>note&&note!==0);
 });
-const bootStyle=bootStyleCandidates.find(style=>style.n==="Neo-Soul")||bootStyleCandidates.find(style=>style.n==="Dusty")||bootStyleCandidates[0]||STYLES[0];
+const bootStyle=bootStyleCandidates.find(style=>style.n==="Afterglow")||bootStyleCandidates.find(style=>style.n==="Neo-Soul")||bootStyleCandidates.find(style=>style.n==="Dusty")||bootStyleCandidates[0]||STYLES[0];
 let st_={song:true,started:false,playing:false,idx:-1,timer:null,density:'comfortable',heartbeat:null,paintMode:false,tapTimes:[],history:[],historyIdx:-1,stepCount:16,bank:0,laneLengths:{},theme:'light',rafId:null,peakL:0,peakR:0,muteState:{k:0,s:0,c:0,h:0,o:0,b:0,keys:0,p:0},randomizeFxPending:false};
-const textureDefaults={console:100,phase:100,sampler:100,motion:100,duck:100,drumRecording:0,drumSonitex:100,drumVcs:100,tape:100,wobble:100,vinyl:100,crackle:100};
-let aud_={pocket:76,bpm:88,swing:18,drive:100,...textureDefaults,comp:100,width:100,reverb:100,delay:100,filter:100,ambience:1,ambienceLevel:32,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,labSpace:0,labMorph:0,labChaos:0,labGrain:0,labNotch:0,labFreeze:0,labSpatial:0,labAdaptive:0,labDenoise:0,drift:0.05};
-let mix_={drum:65,bass:62,keys:94,pads:85,master:75};
-let pat_={d:bootStyle.d,b:'catalogue:velvet_afterhours',k:'catalogue:velvet_afterhours',p:'catalogue:velvet_afterhours',keysVoice:'rhodes_mark1',padsVoice:'juno_106',drumMachine:'tr808'};
+const textureDefaults={console:58,phase:28,sampler:38,motion:35,duck:18,drumRecording:5,drumSonitex:55,drumVcs:48,tape:42,wobble:22,vinyl:18,crackle:8};
+let aud_={pocket:88,bpm:84,swing:34,drive:22,...textureDefaults,comp:32,width:62,reverb:44,delay:24,filter:100,ambience:0,ambienceLevel:12,noteRouting:0,pitchRhythm:0,lfoMorph:35,lfoDepth:100,lfoRate:20,labSpace:0,labMorph:0,labChaos:0,labGrain:0,labNotch:0,labFreeze:0,labSpatial:0,labAdaptive:0,labDenoise:0,drift:0.05};
+let mix_={drum:58,bass:58,keys:85,pads:96,master:75};
+let pat_={d:bootStyle.d,b:bootStyle.b,k:bootStyle.k,p:bootStyle.p,keysVoice:'rhodes_mark1',padsVoice:'juno_106',drumMachine:'mpc60'};
 let seq_={};
-['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
-['b','keys','p'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.85+rnd(0,.15),t:rnd(-15,15),p:100,r:1,g:1,cond:1,pitch:0}))});
+['k','s','c','h','o'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.92,t:0,p:100,r:1,g:1,cond:1,pitch:0}))});
+['b','keys','p'].forEach(t=>{seq_[t]=Array(64).fill(0).map(()=>({v:.92,t:0,p:100,r:1,g:1,cond:1,pitch:0}))});
 
 let liveGraph;
 let kickN,kickSub,kickClk,kickBody,snareN,snareRng,clapN,hatN,openN,bassN,bassSub,keysN,padsN;
@@ -1785,15 +1797,16 @@ const allowed=lane=>!opts.muteMap?.[lane]&&(!frame||frame.lanes.includes(lane));
 const phrase=lane=>!frame?1:frame.level*(frame.name==='Outro'?Math.max(.14,1-frame.progress*.86):1)*(frame.name==='Intro'&&lane==='h'?.7:1);
 const sixteenth=opts.sixteenth||60/aud.bpm/4;
 const chaos=(aud.labChaos??0)/100;
-const pocket=(aud.pocket??68)/100,bias={k:7,s:-6,c:-4,h:-5,o:-3,b:4,keys:2,p:0};
+const pocket=(aud.pocket??68)/100;
+const groove={k:[0,8,-5,13,0,-7,10,3,4,-9,12,0,-4,11,2,-6],s:[0,0,0,0,21,0,0,0,0,0,0,0,28,0,0,0],c:[0,0,0,0,16,0,0,0,0,0,0,0,23,0,0,0],h:[-8,9,-12,14,-6,7,-10,17,-9,5,-12,13,-4,10,-7,18],o:[-5,7,-8,10],b:[9,-4,6,-8],keys:[-10,4,0,8],p:[-12,0,0,0]};
 const lengths=take?.lengths||st_.laneLengths||{};
 const index=(lane,delta=0)=>lengths[lane]?(tick+delta)%lengths[lane]:(stepIdx+delta)%(opts.stepCount||16);
 const detail=lane=>seq[lane][index(lane)];
-const swing=(lane,i)=>swingOffsetSeconds(i,sixteenth,aud.swing*pocket*(DRUM_LANES.includes(lane)?1:.65),opts.addSwing);
-const offset=(lane,delta=0)=>((bias[lane]||0)+seq[lane][index(lane,delta)].t+(randomAt(seed,Math.floor((tick+delta)/16),lane,17)-.5)*4)*pocket;
+const swing=(lane,i)=>swingOffsetSeconds(i,sixteenth,aud.swing*pocket*({k:.52,s:.15,c:.15,h:1,o:.85,b:.46,keys:.24,p:0}[lane]??1),opts.addSwing);
+const offset=(lane,delta=0)=>((groove[lane][(tick+delta)%groove[lane].length]||0)+seq[lane][index(lane,delta)].t+(randomAt(seed,Math.floor((tick+delta)/16),lane,17)-.5)*4)*pocket;
 const noteTime=lane=>Math.max(0,baseTime+swing(lane,stepIdx)+microtimingSeconds(offset(lane),sixteenth));
 const chance=lane=>!opts.applyProb||(Math.floor(tick/(lengths[lane]||opts.stepCount||16))%(detail(lane).cond||1)===0&&randomAt(seed,tick,lane)*100<(detail(lane).p??100));
-const accent=lane=>detail(lane).v*(1-pocket*.12*(stepIdx%4!==0))*phrase(lane);
+const accent=lane=>detail(lane).v*(1-pocket*(lane==="h"&&stepIdx%2?.27:stepIdx%4!==0?.12:0))*phrase(lane);
 const gate=lane=>detail(lane).g??1;
 const transpose=(lane,note)=>midiNote(clamp(noteMidi(note)+(detail(lane).pitch||0)+(frame?.transpose||0)+(chaos>0&&lane!=="b"&&randomAt(seed,tick,lane,71)<chaos*.12?12:0),12,119,60));
 // Resolve note lengths to seconds before scheduling. Tone's musical-time
@@ -1857,7 +1870,8 @@ const routing=Math.round(aud.noteRouting??0),bag=Math.round(aud.pitchRhythm??0);
 const keysAllowed=allowed("keys")&&chance("keys"),padsAllowed=allowed("p")&&chance("p");
 if(!routing&&!bag){
 if(ch&&keysAllowed)synths.keys.triggerAttackRelease([ch].flat().map(n=>transpose("keys",n)),harmonyDuration("keys"),noteTime("keys"),accent("keys"));
-if(Array.isArray(pad)&&padsAllowed)synths.pads.triggerAttackRelease(pad.map(n=>transpose("p",n)),harmonyDuration("p"),noteTime("p"),accent("p")*.95);
+else if(keysAllowed&&pat.k==="catalogue:afterglow"&&tick%32===11){const chord=harmonyAt(HARMONIES[pat.k],tick);if(chord)synths.keys.triggerAttackRelease(chord.keys.slice(1).map(n=>transpose("keys",n)),sixteenth*5,noteTime("keys"),accent("keys")*.45);}
+if(Array.isArray(pad)&&padsAllowed)synths.pads.triggerAttackRelease(pad.map(n=>transpose("p",n)),harmonyDuration("p")+sixteenth*.3,noteTime("p"),accent("p")*.95);
 }else{
 const hit=bag?pitchBagHit(bag,tick):-1;
 const row=HARMONIES[pat.k],chord=harmonyAt(row,tick);
