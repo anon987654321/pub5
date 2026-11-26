@@ -363,8 +363,9 @@ module Master
           candidates = BestOfN.distinct_changes(candidates.reject { |source| source == original }) do |source|
             BestOfN.change_signature(original, source)
           end
-          @bus&.publish("repair_loop:candidate_diversity", requested: UserSimulation.candidate_count,
-            generated: proposals.size, distinct: candidates.size)
+          @bus&.publish("repair_loop:candidate_diversity", BestOfN.diversity_receipt(
+            requested: UserSimulation.candidate_count, generated: proposals.size, distinct: candidates.size
+          ))
           baseline = rescan_candidate(original, path)
           viable = Array(candidates).map(&:to_s).reject(&:empty?).uniq.filter_map do |candidate|
             count = rescan_candidate(candidate, path)
