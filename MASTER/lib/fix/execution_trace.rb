@@ -247,7 +247,8 @@ module Master
       # resulting Ruby parses. A malformed program therefore remains a failed
       # preflight even if a fixer could invent a valid candidate.
       def safe_transport_unwrap(source)
-        return source if source.empty? || Prism.parse(source).success?
+        return source unless source.start_with?("<sub>") || source.match?(%r{</sub>\s*\z})
+        return source if Prism.parse(source).success?
 
         candidate = source.dup
         changed = false
