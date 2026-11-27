@@ -37,6 +37,44 @@ class TestWhitespaceNormalizer < Minitest::Test
     assert_equal out, N.normalize(out, path: "data.yml")
   end
 
+  def test_banners_keep_useful_titles_and_directives
+    source = "# --- Public API ---\n# ===\n# --- frozen_string_literal: true\nname: example\n"
+    out = N.normalize(source, path: "data.yml")
+
+    assert_includes out, "# Public API\n"
+    refute_includes out, "# ==="
+    assert_includes out, "# --- frozen_string_literal: true"
+    assert_equal Psych.parse_stream(source).yaml, Psych.parse_stream(out).yaml
+  end
+
+  def test_header_cleanup_does_not_touch_executable_body
+    {
+      "script.zsh" => ["#!/bin/zsh\n# --- Setup ---\n# =====\n", "cat <<'TEXT'\n# =====\n  a  \nTEXT\n"],
+      "app.js" => ["// --- Setup ---\n// =====\n", "const x = " + 96.chr + "\n// =====\n  a  \n" + 96.chr + ";\n"],
+      "theme.css" => ["/* --- Setup --- */\n/* ===== */\n", ".a { --value: '  '; }\n/* ===== */\n"],
+    }.each do |path, (head, body)|
+      source = head + body
+      out = N.normalize(source, path:)
+      refute_equal source, out
+      assert out.end_with?(body), path
+      assert_equal source.lines.size, out.lines.size, path
+      assert_equal out, N.normalize(out, path:)
+      assert_includes out, "Setup"
+    end
+  end
+
+  def test_json_equivalence_does_not_hide_duplicate_key_or_number_changes
+    refute N.data_equivalent?('{"a":1,"a":2}', '{"a":2}', path: "data.json")
+    refute N.data_equivalent?('{"a":1.0}', '{"a":1}', path: "data.json")
+    assert N.data_equivalent?('{"a": "  x  "}', '{"a":"  x  "}', path: "data.json")
+  end
+
+  def test_unknown_file_content_is_not_normalized_by_guesswork
+    source = "record\t  \n\n\nvalue  "
+    assert_equal source, N.normalize(source, path: "data.tsv")
+    assert_equal source, N.normalize(source, path: "data.txt")
+  end
+
   def test_markdown_write_cleanup_preserves_hard_breaks
     assert_equal "a  \nb\n", N.normalize("a  \nb \n", path: "README.md")
   end

@@ -479,6 +479,21 @@ class TestAstFixerTransforms < Minitest::Test
     assert_equal source, fix("literal.rb", source)[:content]
   end
 
+  def test_format_only_cleans_web_and_shell_preambles
+    fixer = Master::Fix::Scan::AstFixer
+    {
+      "app.js" => ["// --- UI ---\n", "const s = '  '; \n"],
+      "theme.css" => ["/* --- Layout --- */\n", ".a { --value: '  '; }\n"],
+      "script.zsh" => ["#!/bin/zsh\n# --- Run ---\n", "cat <<'TEXT'\n  data  \nTEXT\n"],
+    }.each do |path, (head, body)|
+      result = fixer.propose(path, head + body, format_only: true)
+      assert result.changed, path
+      assert_includes result.transforms, :comment_separators
+      assert result.content.end_with?(body), path
+      refute_includes result.content, "---"
+    end
+  end
+
   def test_collapse_blank_lines_transform
     result = fix("blank.rb", "def call\n\n\n  :ok\nend\n")
 

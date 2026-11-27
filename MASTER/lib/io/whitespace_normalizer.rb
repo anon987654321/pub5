@@ -13,8 +13,14 @@ module Master
 
       COLLAPSE_INTERNAL_EXTS = %w[.rb].freeze
 
-      SEPARATOR = /\A[ \t]*#[ \t]*[-=*_~─━═+#.]{3,}[ \t]*\r?\n?\z/
-      SEPARATOR_LINE = /^[ \t]*#[ \t]*[-=*_~─━═+#.]{3,}[ \t]*\r?$/
+      DECORATION = /[-=*_~─━═+#.]{3,}/
+      HEADER_COMMENT = {
+        ".sh" => "#", ".zsh" => "#", ".bash" => "#",
+        ".js" => "//", ".ts" => "//", ".jsx" => "//", ".tsx" => "//",
+        ".css" => "/*", ".scss" => "/*",
+      }.freeze
+      SAFE_EXTENSIONS = %w[.rb .yml .yaml .json .md].freeze
+
 
       def normalize(content, path: nil)
         return content unless content.is_a?(String) && !content.empty?
@@ -31,6 +37,7 @@ module Master
       def guarded(src, path:)
         candidate = yield
         return src if candidate == src
+        return src if path && !SAFE_EXTENSIONS.include?(extension(path))
         return src if extension(path) == ".md" && markdown_literal_content?(src)
 
         case extension(path)
@@ -39,6 +46,8 @@ module Master
           after = Prism.parse(candidate)
           return src unless before.success? && after.success? && before.value === after.value
           return src unless before.data_loc&.slice == after.data_loc&.slice
+          return src unless magic_comments(before) == magic_comments(after)
+          return src unless before.encoding == after.encoding
           return src if src.include?("__LINE__") && src.lines.size != candidate.lines.size
         when ".yml", ".yaml"
           return src unless data_equivalent?(src, candidate, path:)
@@ -55,12 +64,22 @@ module Master
         when ".yml", ".yaml"
           Psych.parse_stream(before).yaml == Psych.parse_stream(after).yaml
         when ".json"
-          JSON.generate(JSON.parse(before)) == JSON.generate(JSON.parse(after))
+          json_tokens(before) == json_tokens(after)
         else
           false
         end
       rescue Psych::Exception, JSON::ParserError
         false
+      end
+
+      def magic_comments(parsed)
+        parsed.magic_comments.map { |comment| [comment.key, comment.value] }
+      end
+
+      # Keep duplicate keys, number spellings, order and string escapes intact.
+      def json_tokens(src)
+        JSON.parse(src)
+        src.gsub(/"(?:\\.|[^"\\])*"|[ \t\r\n]+/m) { |token| token.start_with?('"') ? token : "" }
       end
 
       # A Markdown code block, literal HTML or tab-indented block may contain
@@ -72,11 +91,14 @@ module Master
       end
 
       def supported?(path)
-        %w[.rb .yml .yaml .json .md].include?(extension(path))
+        SAFE_EXTENSIONS.include?(extension(path)) || HEADER_COMMENT.key?(extension(path))
       end
 
       def remove_comment_separators(src, path:)
-        return src unless src.match?(SEPARATOR_LINE)
+        return src unless src.match?(DECORATION)
+
+        marker = HEADER_COMMENT[extension(path)]
+        return clean_header(src, marker) if marker
 
         lines = src.lines
         case extension(path)
@@ -101,10 +123,56 @@ module Master
           return src
         end
 
-        indexes.each { |index| lines[index] = "\n" if lines[index]&.match?(SEPARATOR) }
+        indexes.each { |index| lines[index] = clean_comment(lines[index], "#") }
         guarded(src, path:) { lines.join }
       rescue Psych::Exception
         src
+      end
+
+      # Only the initial comment preamble is unambiguous without a lexer.
+      # Never enter program text, multiline strings, heredocs or block comments.
+      def clean_header(src, marker)
+        in_header = true
+        src.each_line.map do |line|
+          next line unless in_header
+          next line if line.strip.empty? || line.start_with?("#!")
+
+          if standalone_comment?(line, marker)
+            clean_comment(line, marker)
+          else
+            in_header = false
+            line
+          end
+        end.join
+      end
+
+      def standalone_comment?(line, marker)
+        text = line.lstrip
+        return text.match?(%r{\A/\*(?:(?!\*/).)*\*/[ \t]*\r?\n?\z}) if marker == "/*"
+
+        text.start_with?(marker)
+      end
+
+      def clean_comment(line, marker)
+        return line unless line
+        newline = line[/\r?\n\z/] || ""
+        text = line.delete_suffix(newline)
+        indent = text[/\A[ \t]*/]
+        comment = text.delete_prefix(indent)
+        return line unless comment.start_with?(marker)
+        body = comment.delete_prefix(marker)
+        if marker == "/*"
+          return line unless body.rstrip.end_with?("*/")
+          body = body.rstrip.delete_suffix("*/")
+        end
+        body = body.strip
+        return newline if body.match?(/\A#{DECORATION}\z/)
+
+        title = body.sub(/\A#{DECORATION}[ \t]+/, "").sub(/[ \t]+#{DECORATION}\z/, "")
+        return line if title == body || !title.match?(/\A[[:alpha:]][[:alnum:] .,&()\/-]*\z/)
+
+        ending = marker == "/*" ? " */" : ""
+        "#{indent}#{marker} #{title}#{ending}#{newline}"
       end
 
       def collapse_internal?(path)
