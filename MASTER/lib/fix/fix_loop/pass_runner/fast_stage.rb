@@ -45,12 +45,13 @@ module Master
 
           def find_gemfile_root(dir)
             root_prefix = File.expand_path(@root)
-            while dir.start_with?(root_prefix)
+            origin = dir
+            while dir == root_prefix || dir.start_with?("#{root_prefix}/")
               return dir if File.exist?(File.join(dir, "Gemfile"))
               break if dir == root_prefix
               dir = File.dirname(dir)
             end
-            owner_bundle_root(dir)
+            owner_bundle_root(origin)
           end
 
           def owner_bundle_root(dir)
