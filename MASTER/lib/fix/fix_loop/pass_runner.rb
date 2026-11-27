@@ -644,7 +644,9 @@ module Master
                      []
                    end
           models = models.select { |model| Master::Io::LaneSelection.alive?(model) }
-          if models.empty?
+          if ENV["MASTER_LOCAL_ONLY"] == "1"
+            models.select! { |model| Master::Io::LaneHealth.local_model?(model) }
+          elsif models.empty?
             models = Master::Io::LaneSelection.catalogue.select do |model|
               Master::Io::LaneSelection.alive?(model)
             end
