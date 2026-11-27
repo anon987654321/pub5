@@ -496,4 +496,9 @@ status used the dispatcher's target parser. The CLI argument and status suites
 passed 39 tests and 138 assertions. GitHub compared all 29 non-main branch tips
 with `main@2b78bcb`. None had unique commits.
 
+On 2026-11-27, the browser voice chain gained the low and high shelf filters
+declared in `data/voice.yml`. Ten voice-chain tests and the generated-runtime
+contract passed. Chromium's `OfflineAudioContext` confirmed both frequency
+responses. Listening acceptance remains open.
+
 Five-tree acceptance remains open.

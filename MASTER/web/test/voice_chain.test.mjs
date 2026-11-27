@@ -5,10 +5,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runInNewContext } from "node:vm";
 
-// The face builds data/voice.yml's post_chain as WebAudio nodes, so this test
-// reads the declaration from the yml and the builder from the shipped source.
-// A paraphrase of either would let the two drift, which is the defect the port
-// closed: the page had its own invented chain while the terminal used dilla's.
+// Read voice.yml and the shipped builder so the test catches drift between them.
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, "..", "public", "face_speech_runtime.js"), "utf8");
 const voiceYml = readFileSync(join(here, "..", "..", "..", "MASTER", "data", "voice.yml"), "utf8");
@@ -71,6 +68,16 @@ test("every filter the declared chain names has a node", () => {
   assert.ok(chain, "the declared chain built nothing");
   assert.equal(chain.skipped.join(","), "", "a filter was dropped silently");
   assert.equal(chain.stages, declaredChain.split(",").length);
+});
+
+test("shelf filters keep the declared frequencies and gains", () => {
+  const { ctx } = build(declaredChain);
+  const shelves = ctx.created.filter((node) => node.kind === "biquad" && node.type.endsWith("shelf"));
+  const declared = [...declaredChain.matchAll(/(lowshelf|highshelf)=f=([\d.]+):g=([\d.-]+)/g)]
+    .map(([, type, frequency, gain]) => [type, parseFloat(frequency), parseFloat(gain)]);
+
+  assert.equal(declared.length, 2);
+  assert.deepEqual(shelves.map((node) => [node.type, node.frequency.value, node.gain.value]), declared);
 });
 
 // Read from the declaration, like the band below: the test holds the face to voice.yml

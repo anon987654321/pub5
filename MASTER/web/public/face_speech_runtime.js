@@ -845,14 +845,19 @@ function buildPitchIdiom(ctx, filters, index) {
 }
 
 function buildChainNode(ctx, name, args) {
-  // A filter with a timeline (enable=) has no honest node; the whole unit is
-  // skipped by the caller.
+  // Timeline expressions require an automation graph.
   if (args.enable !== undefined) return null;
-  if (name === 'equalizer') {
+  if (name === 'equalizer' || name === 'lowshelf' || name === 'highshelf') {
     const node = ctx.createBiquadFilter();
-    node.type = args.t === 'h' ? 'highshelf' : 'peaking';
-    node.frequency.value = parseFloat(args.f) || 1000;
-    node.Q.value = parseFloat(args.w) || 1;
+    let defaultFrequency = 1000;
+    if (name === 'equalizer') {
+      node.type = args.t === 'h' ? 'highshelf' : 'peaking';
+      node.Q.value = parseFloat(args.w) || 1;
+    } else {
+      node.type = name;
+      defaultFrequency = name === 'lowshelf' ? 100 : 3000;
+    }
+    node.frequency.value = parseFloat(args.f) || defaultFrequency;
     node.gain.value = parseFloat(args.g) || 0;
     return { input: node, output: node };
   }

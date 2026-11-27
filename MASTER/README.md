@@ -330,7 +330,8 @@ Before changing performance policy, compare the same pinned target, runtime, res
 ## Configuration has owners
 
 - `data/providers.yml` and `data/models.yml` own provider and model configuration; `lib/io/model_quota.rb` owns quota measurement and fallback decisions.
-- `data/voice.yml` owns speech runtime configuration.
+- `data/voice.yml` owns speech runtime configuration. The browser builds the
+  declared `post_chain`, including its low and high shelf filters.
 - `data/tokens.yml` owns visual values; `data/laws.yml` owns minimal-interface, visual, dialogue and constitutional policy.
 - Generate the current typography reference without creating a second source: `ruby MASTER/tools/design_tokens.rb --type-spec` reads the named role tokens, product dialect and measured accessibility limits directly from `data/tokens.yml`.
 - `data/council.yml` owns council personas, presets and the juror and judge prompts; the default hard-critique preset is `general_critique`, and the prose contract on those prompts applies to English and Bokmål alike.
