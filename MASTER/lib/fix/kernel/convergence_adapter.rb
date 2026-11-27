@@ -666,7 +666,8 @@ module Master
         outcome = VisualLane.new(
           world: visual_world, repo_root: Master::REPO_ROOT,
           say: ->(line) { Master::Trace::Dmesg.status("visual0", line) },
-          stop: -> { cancellation_requested? || RunBudget.stopping }
+          stop: -> { cancellation_requested? || RunBudget.stopping },
+          model_available: -> { visual_model_available? }
         ).run
         @bus&.publish("fix_loop:visual_lane", target:, **outcome.to_h)
         return cancellation_terminal if cancellation_requested?
@@ -678,6 +679,14 @@ module Master
         tools = { reachability: @reachability, committer: @committer,
                   repair_loop: ->(brief) { visual_repair_loop(brief) }, reviewer: method(:visual_review) }
         VisualLaneWorld.new(repo_root: Master::REPO_ROOT, tools:, bus: @bus).world
+      end
+
+      def visual_model_available?
+        return true unless ENV["MASTER_LOCAL_ONLY"] == "1"
+
+        selection = Master::Io::LaneSelection
+        local = selection.catalogue.select { |id| Master::Io::LaneHealth.local_model?(id) }
+        selection.order(local).any? { |id| selection.alive?(id) }
       end
 
       # The lane proves only what its resweep shows, so a repaired but unmeasured group never

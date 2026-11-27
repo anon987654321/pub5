@@ -507,6 +507,7 @@ def stage_commit_mode?
           Master::Trace::Dmesg.status(
             "deliver0", "commit=#{@git.head} push=#{push_each? ? "ok" : "deferred"} paths=#{paths.join(", ")}"
           )
+          RunLedger.record_verified_checkpoint(@git.head)
           @bus&.publish("ops:commit", operation: "commit", head: @git.head, path_count: paths.size, finding_count: Array(findings).size)
           Result.ok(:committed)
         rescue StandardError => e
@@ -598,6 +599,7 @@ def stage_commit_mode?
           transaction.delivery.record_commit!(head_after:)
           push_commit!(paths)
           promote_known_good(head_after, paths)
+          RunLedger.record_verified_checkpoint(head_after)
           @bus&.publish("ops:commit", operation: "commit", head: head_after, path_count: paths.size, finding_count: Array(findings).size)
           Result.ok(:committed)
         end

@@ -47,7 +47,7 @@ class TestRunLedgerPerRun < Minitest::Test
   end
 
   def test_a_new_run_forgets_the_last_runs_rejections_and_keeps_its_file_cap
-    2.times { Ledger.reject(:new_violations, file: "lib/a.rb") }
+    Ledger::MAX_REJECTS_PER_FILE.times { Ledger.reject(:new_violations, file: "lib/a.rb") }
     Ledger.record_discovery(file: "lib/a.rb", law: "NO_GOD_CLASS", line: 4, message: "fixture")
     Ledger.record_file_outcome(file: "lib/a.rb", law: "NO_GOD_CLASS", outcome: :commit_refused, reason: "house lint")
     assert Ledger.file_done?("lib/a.rb")

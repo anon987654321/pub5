@@ -35,6 +35,9 @@ module Master
         def begin_run!
           @mutex.synchronize do
             @started_at = Time.now
+            @repair_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            @verified_checkpoints = {}
+            @first_checkpoint_s = nil
             @reasons = Hash.new(0)
             @declined = Hash.new(0)
             @file_rejects = Hash.new(0)
@@ -241,9 +244,32 @@ module Master
 
         def reasons = @mutex.synchronize { @reasons.dup }
 
+        def record_verified_checkpoint(commit, clock: Process.clock_gettime(Process::CLOCK_MONOTONIC))
+          return if commit.to_s.empty?
+
+          @mutex.synchronize do
+            return unless @repair_started
+
+            elapsed = [clock - @repair_started, 0.0].max
+            @verified_checkpoints[commit.to_s] ||= elapsed
+            @first_checkpoint_s ||= elapsed
+          end
+        end
+
+        def checkpoint_metrics(clock: Process.clock_gettime(Process::CLOCK_MONOTONIC))
+          @mutex.synchronize do
+            elapsed = @repair_started ? [clock - @repair_started, 0.0].max : 0.0
+            count = (@verified_checkpoints || {}).size
+            { verified_checkpoints: count, first_checkpoint_s: @first_checkpoint_s,
+              checkpoints_per_minute: elapsed.positive? ? count * 60.0 / elapsed : 0.0 }
+          end
+        end
+
         # "rejected 14: new_violations 9, boyscout_violation 3, ..." for the summary.
         def summary_lines
-          lines = []
+          metrics = checkpoint_metrics
+          first = metrics[:first_checkpoint_s] ? "#{metrics[:first_checkpoint_s].round(2)}s" : "none"
+          lines = ["fix0: verified checkpoints=#{metrics[:verified_checkpoints]} first=#{first} per_minute=#{metrics[:checkpoints_per_minute].round(2)}"]
           total = reasons.values.sum
           unless total.zero?
             parts = reasons.sort_by { |_, count| -count }.map { |reason, count| "#{reason} #{count}" }

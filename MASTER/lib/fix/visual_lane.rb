@@ -30,13 +30,14 @@ module Master
       SHOTS = 3
       CLEARED = "cleared by the resweep"
 
-      def initialize(world:, repo_root:, say: ->(_) {}, stop: -> { false }, model_groups: MODEL_GROUPS)
+      def initialize(world:, repo_root:, say: ->(_) {}, stop: -> { false }, model_groups: MODEL_GROUPS, model_available: -> { true })
         @world = world
         @repo_root = repo_root
         @say = say
         @stop = stop
         @model_groups = model_groups
         @model_calls = 0
+        @model_available = model_available
       end
 
       def run
@@ -87,13 +88,16 @@ module Master
       end
 
       def ask_model(group, reasons)
+        unless @model_available.call
+          return record(group, fix: :none, detail: (reasons + ["no usable model lane; not attempted"]).join("; "))
+        end
         if @model_calls >= @model_groups
           record(group, fix: :none, detail: (reasons + ["model budget of #{@model_groups} group(s) spent"]).join("; "))
           return
         end
 
-        @model_calls += 1
         outcome = @world.repair.call(group)
+        @model_calls += 1 unless outcome == :no_source_file
         record(group, fix: outcome == :applied ? :model : :none, detail: (reasons + ["model: #{outcome}"]).join("; "))
       end
 
