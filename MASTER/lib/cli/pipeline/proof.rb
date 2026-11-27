@@ -197,7 +197,14 @@ module Master
 
         def measure_baseline(name, sha:, runner:)
           @measuring_baseline = true
-          ok, out = inside_proof { runner.call }
+          ok, out = ::Operator::CheckChain.with_pre_repair_budget do
+            if ::Operator::CheckChain.pre_repair_remaining <= 0
+              [false, ["pre-repair allowance exhausted; final proof required"]]
+            else
+              result = inside_proof { runner.call }
+              ::Operator::CheckChain.pre_repair_incomplete? ? [false, ["pre-repair proof incomplete; final proof required"]] : result
+            end
+          end
           Master::Fix::CheckFocus.note(out) unless ok
           reading = Reading.parse(ok, out)
           Proof.remember(name, sha: (sha if reading.measured?), reading:)

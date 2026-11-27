@@ -811,6 +811,7 @@ module Master
     # more. It prints no counts: the only ones at hand measure the word
     # "violation" in the stage's text, not the findings.
     def log_phase(unit, kind, detail)
+      Master::Fix::RunBudget.current&.phase!(kind, target: @resolved)
       Master::Trace::Dmesg.attach(unit, @unit, [kind, detail].compact.join(" "))
       t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       out = yield

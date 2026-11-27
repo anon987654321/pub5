@@ -76,7 +76,7 @@ class TestFixStatus < Minitest::Test
     assert_equal before, Dir.glob(File.join(@root, "**", "*"), File::FNM_DOTMATCH).sort
   end
 
-  def test_status_and_tail_share_the_stream_and_show_the_latest_heartbeat
+  def test_tail_keeps_history_but_status_requires_a_live_receipt
     beat = "fix0: pass 2/8 scan0 files 812/2638 (31%) fixes 1 ok 0 failed tokens = 5 (5) elapsed = 60s (1m00s) eta ~3m load 1.0"
     write("fix-RAILS.log", "#{beat.sub("812", "700")}\nscan0: 9/10 a.rb\n#{beat}\n" \
       "fix0 phase=stream fixed=3 failed=1 rejected=0 lane=free elapsed=62\n" \
@@ -84,8 +84,8 @@ class TestFixStatus < Minitest::Test
 
     status = Operator::FixStatus.new(root: @root)
 
-    assert_equal beat, status.payload[:heartbeat]
-    assert_includes status.render, "heartbeat: #{beat}"
+    assert_equal "no live receipt", status.payload[:heartbeat]
+    assert_includes status.render, "heartbeat: no live receipt"
     out = StringIO.new
     require "operator/fix_tail"
     Operator::FixTail.run(%w[--once --tail=2], roots: [File.join(@root, "MASTER")], io: out)
@@ -131,6 +131,24 @@ class TestFixStatus < Minitest::Test
       assert_equal Process.pid, row[:pid]
       assert_equal "awaiting lifecycle receipt", row[:message]
       assert_equal "awaiting lifecycle receipt", payload[:heartbeat]
+    end
+  end
+
+  def test_pre_journal_pulse_is_bound_to_a_live_pid_and_reports_staleness
+    now = Time.now
+    process = { pid: Process.pid, elapsed: "01:01", queue: ["RAILS"] }
+    pulse = { pid: Process.pid, host: Socket.gethostname, target: "RAILS", phase: "regression baseline",
+              updated_at: now.to_f - 10, phase_elapsed_s: 51, elapsed_s: 61, child_pid: 123,
+              last_output_age_s: 8, checkpoints: { verified_checkpoints: 0 } }
+    write("fix-live-#{Process.pid}.json", JSON.generate(pulse))
+    status = Operator::FixStatus.new(root: @root, now:)
+    status.stub(:processes, [process]) do
+      assert_includes status.payload[:heartbeat], "phase=regression baseline"
+      assert_includes status.payload[:heartbeat], "checkpoints=0"
+      assert_includes status.payload[:heartbeat], "child=123"
+      pulse[:updated_at] = now.to_f - 300
+      write("fix-live-#{Process.pid}.json", JSON.generate(pulse))
+      assert_includes status.payload[:heartbeat], "heartbeat stale"
     end
   end
 

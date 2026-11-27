@@ -50,6 +50,7 @@ module Operator
     RUBY = Operator::RubyRunner.check_ruby
     CHILD_TIMEOUT_S = 1_800
     DISK_POLL_INTERVAL_S = 30
+    PRE_REPAIR_SECONDS = 120
     SUITE_TIMEOUTS = {
       "MASTER" => 1_800,
       "RAILS contracts" => 1_200,
@@ -190,8 +191,33 @@ module Operator
       cached = read_baseline(key)
       return reuse_baseline(key, cached) if cached
 
-      status, changed = measure_pre_repair_baseline(selected:, trees:)
+      status, changed = with_pre_repair_budget { measure_pre_repair_baseline(selected:, trees:) }
       persist_pre_repair_baseline(key:, selected:, status:, changed:)
+    end
+
+    # Share the startup allowance across both baseline readers in a /fix run.
+    def with_pre_repair_budget
+      previous = Thread.current[:master_pre_repair_budget]
+      return yield if previous
+
+      elapsed = defined?(Master::Fix::RunBudget) ? Master::Fix::RunBudget.elapsed_seconds : 0.0
+      deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + [PRE_REPAIR_SECONDS - elapsed, 0].max
+      Thread.current[:master_pre_repair_budget] = { deadline:, incomplete: false }
+      yield
+    ensure
+      Thread.current[:master_pre_repair_budget] = previous
+    end
+
+    def pre_repair_remaining
+      budget = Thread.current[:master_pre_repair_budget]
+      budget && [budget[:deadline] - Process.clock_gettime(Process::CLOCK_MONOTONIC), 0.0].max
+    end
+
+    def pre_repair_incomplete? = Thread.current[:master_pre_repair_budget]&.fetch(:incomplete, false)
+
+    def note_pre_repair_gap
+      budget = Thread.current[:master_pre_repair_budget]
+      budget[:incomplete] = true if budget
     end
 
     def reuse_baseline(key, cached)
@@ -720,7 +746,7 @@ module Operator
                 chdir: File.join(ROOT, "RAILS"), env: fixed.merge(progress),
                 timeout_s: (pre_repair ? [child_timeout_s, 90].min : nil))
       end
-      keep_rails_checks(key, reading) unless reading.last == 124
+      keep_rails_checks(key, reading) unless reading.last == 124 || pre_repair_incomplete?
       reading
     end
 
@@ -888,6 +914,13 @@ module Operator
     def capture(*cmd, chdir: MASTER, env: {}, unbundled: false, timeout_s: nil,
                 disk_poll_s: DISK_POLL_INTERVAL_S, label: nil, heartbeat_unit: "check0")
       timeout_s = child_timeout_s if timeout_s.nil?
+      if (remaining = pre_repair_remaining)
+        if remaining <= 0
+          note_pre_repair_gap
+          return [false, ["pre-repair allowance exhausted; final proof required"], 3]
+        end
+        timeout_s = [timeout_s, remaining].min
+      end
       paths = [ROOT, chdir, Dir.tmpdir]
       display = label.to_s.empty? ? nil : "#{label}: "
       Master::Trace::Dmesg.status(heartbeat_unit, "#{label} running") if label
@@ -898,6 +931,7 @@ module Operator
         cmd, chdir:, env:, unbundled:, timeout_s:, paths:, disk_poll_s:,
         display:, label:, heartbeat_unit:
       )
+      note_pre_repair_gap if [3, 124].include?(exitstatus)
       [ok, output.lines.map(&:rstrip).reject(&:empty?), exitstatus]
     rescue StandardError => error
       [false, ["#{error.class}: #{error.message}"], 1]
@@ -940,6 +974,8 @@ module Operator
 
     def capture_child_session(output:, stream:, wait:, started:, timeout_s:, paths:, disk_poll_s:,
                               display:, label:, heartbeat_unit:, stop_lock:, stopped:)
+      budget = Master::Fix::RunBudget.current if defined?(Master::Fix::RunBudget)
+      budget&.child_started!(wait.pid)
       watchdog = start_capture_watchdog(
         wait.pid, started:, timeout_s:, paths:, disk_poll_s:, display:, label:,
         heartbeat_unit:, stop_lock:, stopped:
@@ -953,6 +989,7 @@ module Operator
     ensure
       watchdog&.kill
       watchdog&.join
+      budget&.child_finished!(wait.pid)
     end
 
     def start_capture_watchdog(pid, started:, timeout_s:, paths:, disk_poll_s:, display:,
@@ -969,7 +1006,10 @@ module Operator
                                label:, heartbeat_unit:, stop_lock:, stopped:)
       last_heartbeat = 0.0
       loop do
-        sleep [disk_poll_s.to_f, 0.01].max
+        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+        interval = disk_poll_s.to_f
+        interval = [interval, timeout_s.to_f - elapsed].min if timeout_s
+        sleep [interval, 0.01].max
         elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
         if label && elapsed >= last_heartbeat + 28
           Master::Trace::Dmesg.status(heartbeat_unit, "#{label} running, elapsed #{elapsed.round}s")
@@ -1112,6 +1152,14 @@ module Operator
     end
 
     def run_stage(stage, seen)
+      if (budget = Thread.current[:master_pre_repair_budget])
+        budget[:incomplete] = false
+        if pre_repair_remaining <= 0
+          note_pre_repair_gap
+          reason = "pre-repair allowance exhausted; final proof required"
+          return Result.new(stage: stage.name, state: "skipped", summary: reason, changed: [], body: [reason])
+        end
+      end
       unit = stage_unit(stage)
       Master::Trace::Dmesg.attach(
         unit, "check0",
@@ -1124,6 +1172,7 @@ module Operator
       end
       changed = dirty - seen
       state = classify(ok, exitstatus)
+      state = "skipped" if pre_repair_incomplete? || (pre_repair_remaining && exitstatus == 124)
       state = "failed" if changed.any? && !stage.mutates
       summary = verdict(body)
       Master::Trace::Dmesg.status(unit, "#{state}, #{summary}")

@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require "json"
+require "socket"
+require_relative "../io/atomic_write"
 require_relative "../io/exec"
 require_relative "../boot/paths"
 require_relative "run_pulse"
@@ -285,6 +287,7 @@ module Master
         return if @finished_said
 
         @finished_said = true
+        close_live_status
         reason = @exit_reason || reason
         counts = @pulse.counts
         elapsed = @started ? (@clock.call - @started).round : 0
@@ -363,11 +366,72 @@ module Master
         # attach event listeners or emit a fresh-run banner after that verdict.
         return self if @exit_reason
 
+        if @max_passes.positive?
+          @status_lock = Mutex.new
+          @status_path = File.join(File.dirname(@costs), "fix-live-#{Process.pid}.json")
+          phase!("startup", target:)
+        end
         limits = "budget #{show(@max_cost, "$")} / #{show(@max_minutes, "", "m")}"
         RunPulse::Banner.lines(root: @root, target: target || @root, max_passes: @max_passes, limits:).each { |text| @say.call(text) }
         @pulse.attach(bus) if bus
         @guard_scope = guard_scope(target)
         @protected_baseline = AutofixGuard.protected_changes(@root)
+      end
+
+      # Command-level pulse exists before the kernel can create its run journal.
+      def phase!(name, target: nil)
+        return unless @status_lock
+
+        @status_lock.synchronize do
+          @status_phase = name.to_s
+          @status_target = target.to_s if target
+          @status_phase_started = @clock.call
+          write_live_status
+        end
+      end
+
+      def child_started!(pid)
+        @status_lock&.synchronize do
+          @status_child_pid = pid
+          write_live_status
+        end
+      end
+
+      def child_finished!(pid)
+        @status_lock&.synchronize do
+          next unless @status_child_pid == pid
+
+          @status_child_pid = nil
+          write_live_status
+        end
+      end
+
+      def refresh_live_status
+        @status_lock&.synchronize { write_live_status }
+      end
+
+      def write_live_status
+        return unless @status_path
+
+        now = @clock.call
+        row = { pid: Process.pid, host: Socket.gethostname, target: @status_target,
+                phase: @status_phase, child_pid: @status_child_pid,
+                started_at: @started_wall, updated_at: @wall.call.to_f,
+                phase_elapsed_s: (now - @status_phase_started).round,
+                elapsed_s: elapsed_seconds.round, last_output_age_s: (now - @last_output).round,
+                checkpoints: RunLedger.checkpoint_metrics(clock: now) }
+        Master::Io::AtomicWrite.write_atomic(@status_path, JSON.generate(row), mode: 0o600)
+      rescue StandardError => error
+        Master::Ground::Swallow.log(error, context: "Fix::RunBudget.live_status")
+      end
+
+      def close_live_status
+        @status_lock&.synchronize do
+          File.unlink(@status_path) if @status_path && File.file?(@status_path)
+          @status_path = nil
+        end
+      rescue SystemCallError => error
+        Master::Ground::Swallow.log(error, context: "Fix::RunBudget.close_live_status")
       end
 
       # The tree a run can write, as a repository-relative prefix ("RAILS/"), or nil for the whole
@@ -453,6 +517,7 @@ module Master
         return if now - (@last_machine_beat || 0) < MACHINE_BEAT_SECONDS
 
         @last_machine_beat = now
+        refresh_live_status
         renew_owned_mission_lease
         @say.call(@pulse.machine_line(now - @started)) unless machine_heartbeat_hidden?
         reasons = RunLedger.why_line

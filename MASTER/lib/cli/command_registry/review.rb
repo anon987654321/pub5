@@ -642,6 +642,7 @@ module Master
         lane_refusal = Master::Fix::WorkLane.refusal(target)
         return Master::Result.err("fix: #{lane_refusal}", category: :validation) if lane_refusal
 
+        Master::Fix::RunBudget.current&.phase!("lane preflight", target:)
         lexical = Master::Fix::LanePreflight.deterministic_observation?(mode:, writes_requested:, critique:, only:)
         preflight = fix_lane_preflight(lexical ? nil : deliberation, cancellation)
         return preflight if preflight
@@ -749,17 +750,21 @@ module Master
       # review. Returns the result that ends the run, or nil when they all passed.
       def run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:, cancellation:,
                                 writes_requested:, trace_scope:, host_evidence: nil)
+        Master::Fix::RunBudget.current&.phase!("first read")
         first_read_results = first_read(
           deliberation:, bus:, targets:, persist: writes_requested, cancellation:, host_evidence:
         )
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
+        Master::Fix::RunBudget.current&.phase!("registry review")
         weekly_owner_registry_review(deliberation:, bus:, cancellation:, repo_root: Master.repo_root, record: writes_requested)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
+        Master::Fix::RunBudget.current&.phase!("execution trace")
         trace_refusal = run_fix_steady_trace(scanner:, fix_loop:, deliberation:, bus:, cancellation:, trace_scope:)
         return trace_refusal if trace_refusal
 
+        Master::Fix::RunBudget.current&.phase!("structural review")
         structural_review(deliberation:, bus:, targets:, persist: writes_requested,
                           first_read_results:, cancellation:)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
@@ -828,10 +833,12 @@ module Master
 
         Master::Fix::CheckFocus.reset!
         resume_from_residual(target)
+        Master::Fix::RunBudget.current&.phase!("regression baseline", target:)
         visual_repair, baseline, refusal = visual_repair_baseline(target:, check_label:, writes_requested:)
         return refusal if refusal
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
+        Master::Fix::RunBudget.current&.phase!("target pass", target:)
         value = run_fix_target_pass(
           scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, writes_requested:,
           effective_critique:, aesthetic:, only:, cancellation:, task_intent:, source_critique:
@@ -840,6 +847,7 @@ module Master
         return value if !writes_requested || visual_repair
         return incomplete_fix_pipeline(value) if incomplete_fix_pipeline?(value)
 
+        Master::Fix::RunBudget.current&.phase!("final regression proof", target:)
         verify_fix_target_delivery(
           value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, baseline:,
           check_label:, critique:, aesthetic:, only:, cancellation:, task_intent:

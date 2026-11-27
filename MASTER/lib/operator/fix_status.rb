@@ -5,6 +5,7 @@ require_relative "../execution"
 require "json"
 require_relative "../io/exec"
 require "time"
+require "socket"
 require_relative "../io/lane_health"
 require_relative "../io/lane_state"
 require_relative "../io/lane_selection"
@@ -18,8 +19,7 @@ module Operator
     JOURNAL = "fix_runs.json"
     MISSION = "mission.json"
     LOG_GLOB = "fix-*.log"
-    HEARTBEAT = %r{\Afix0: pass \d+/\d+ }
-    HEARTBEAT_WINDOW = 65_536
+    LIVE_STATUS_MAX_AGE = 120
     TEMP_WORKTREE = /pub5-master-fix-/
 
     def initialize(root:, trees: [], now: Time.now)
@@ -380,36 +380,25 @@ module Operator
       end.sort_by { |row| row[:name] }
     end
 
-    # The newest RunPulse line in any tree's log: the run's own account of where it is.
+    # A log tail is history, not proof that the current PID is making progress.
     def heartbeat_line(runs = [])
-      return "awaiting lifecycle receipt" if runs.any? { |run| run["status_pending_receipt"] }
-      return "no live receipt" if runs.any? && live_receipt(runs).nil?
+      run = runs.reverse.find { |entry| entry["state"] == "active" && alive?(entry["pid"]) }
+      return "no live receipt" unless run
 
-      heartbeat_logs.each do |path|
-        line = heartbeat_in(path)
-        return line if line
+      pulse = read_json("fix-live-#{run["pid"].to_i}.json")
+      if pulse && pulse["pid"].to_i == run["pid"].to_i && pulse["host"] == Socket.gethostname
+        age = @now.to_f - pulse["updated_at"].to_f
+        return "heartbeat stale (#{age.round}s old), last phase #{pulse["phase"]}" if age > LIVE_STATUS_MAX_AGE
+        if age >= 0
+          count = pulse.dig("checkpoints", "verified_checkpoints").to_i
+          child = pulse["child_pid"].to_i.positive? ? " child=#{pulse["child_pid"]}" : ""
+          return "pid=#{pulse["pid"]}#{child} phase=#{pulse["phase"]} phase_elapsed=#{pulse["phase_elapsed_s"]}s " \
+                 "elapsed=#{pulse["elapsed_s"]}s checkpoints=#{count} last_output=#{pulse["last_output_age_s"]}s ago"
+        end
       end
-      nil
-    rescue SystemCallError
-      nil
-    end
+      return "awaiting lifecycle receipt" if run["status_pending_receipt"]
 
-    def live_receipt(runs)
-      runs.reverse.find { |run| run["state"] == "active" && alive?(run["pid"]) }
-    end
-
-    def heartbeat_logs
-      state_roots.flat_map { |directory| Dir.glob(File.join(directory, LOG_GLOB)) }.uniq
-        .sort_by { |path| -File.mtime(path).to_f }
-    end
-
-    def heartbeat_in(path)
-      bytes = File.open(path, "rb") do |file|
-        file.seek([File.size(path) - HEARTBEAT_WINDOW, 0].max)
-        file.read
-      end
-      tail = bytes.to_s
-      tail.force_encoding("UTF-8").scrub.lines.reverse.find { |row| row.match?(HEARTBEAT) }&.strip
+      "live journal; no current heartbeat"
     end
 
     def commit_row

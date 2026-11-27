@@ -406,6 +406,35 @@ class TestCheckChain < Minitest::Test
     assert_equal [90, 1800], timeouts
   end
 
+  def test_pre_repair_budget_exhaustion_does_not_spawn_a_child_or_limit_final_proof
+    G.with_pre_repair_budget do
+      budget = Thread.current[:master_pre_repair_budget]
+      budget[:deadline] = Process.clock_gettime(Process::CLOCK_MONOTONIC) - 1
+      G.stub(:capture_command, ->(*) { flunk "exhausted baseline spawned a child" }) do
+        assert_equal 3, G.capture("unused").last
+      end
+      assert G.pre_repair_incomplete?
+    end
+    assert_nil G.pre_repair_remaining
+    refute G.pre_repair_incomplete?
+  end
+
+  def test_pre_repair_budget_caps_each_child_without_limiting_final_proof
+    timeouts = []
+    runner = ->(*, timeout_s:, **) { timeouts << timeout_s; [true, "", 0] }
+    G.stub(:capture_disk_preflight, nil) do
+      G.stub(:capture_command, runner) do
+        G.with_pre_repair_budget do
+          Thread.current[:master_pre_repair_budget][:deadline] = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+          assert_equal 0, G.capture("unused", timeout_s: 90).last
+        end
+        assert_equal 0, G.capture("unused", timeout_s: 90).last
+      end
+    end
+    assert_operator timeouts.first, :<=, 5
+    assert_equal 90, timeouts.last
+  end
+
   def test_incomplete_baseline_is_not_cached
     previous = G.instance_variable_get(:@last_results)
     G.instance_variable_set(:@last_results, [
