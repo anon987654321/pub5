@@ -2,8 +2,6 @@
 
 # The re-opened parts of this class, one responsibility each; every path is
 # listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
-require_relative "context/surfaces"
-require_relative "context/references"
 require_relative "../fix_loop/structural_stage"
 
 module Master
@@ -13,6 +11,179 @@ module Master
       # directory, the files it might merge into, and every line elsewhere that
       # names it, with the requiring files in full because a move rewrites them.
       class Context
+        public
+
+        def self.surface_findings(target)
+          stale_reference_findings(target) + prose_findings(target) + command_surface_findings(target) + route_surface_findings(target) + config_surface_findings(target)
+        end
+
+        def self.stale_reference_findings(target)
+          rows = reference_files(target).reject { |path| Master.binary_file?(path) }.filter_map do |path|
+            text = File.read(path, encoding: "UTF-8")
+            matches = STALE_PATHS.select { |needle| text.include?(needle) }
+            matches.empty? ? nil : [path, matches]
+          rescue StandardError => e
+            raise "structural stale_reference scan failed for #{path}: #{e.class}: #{e.message}"
+          end
+          rows.filter_map do |path, matches|
+            related = rows.select { |_other, other_matches| (matches & other_matches).any? }
+                        .map(&:first).reject { |other| other == path }.first(8)
+            [path, "STALE_PATH_REFERENCE", "#{matches.length} retired topology reference(s): #{matches.join(", ")}", related]
+          end
+        end
+
+        def self.prose_findings(target)
+          paragraphs = Hash.new { |hash, key| hash[key] = [] }
+          repository_files(target).select { |path| PROSE_EXTENSIONS.include?(File.extname(path).downcase) }.each do |path|
+            File.read(path, encoding: "UTF-8").split(/\n\s*\n+/).each do |block|
+              next if block.lstrip.start_with?("```") || block.include?("\n```")
+              normalized = block.lines.map(&:strip).reject(&:empty?).join(" ").downcase.gsub(/\s+/, " ").strip
+              next if normalized.length < 120 || normalized.split.length < 20
+              paragraphs[normalized] << path
+            end
+          rescue StandardError => e
+            raise "structural prose scan failed for #{path}: #{e.class}: #{e.message}"
+          end
+          paragraphs.filter_map do |_paragraph, paths|
+            paths = paths.uniq
+            next if paths.size < 2
+            paths.map do |path|
+              [path, "PROSE_DUPLICATION", "prose paragraph is duplicated across #{paths.size} files", paths.reject { |other| other == path }.first(8)]
+            end
+          end.flatten(1)
+        end
+
+        def self.route_surface_findings(target)
+          repository_files(target).select { |path| File.basename(path) == "routes.rb" }.filter_map do |path|
+            text = File.read(path, encoding: "UTF-8")
+            helpers = text.scan(/\bas:\s*:([a-z][a-z0-9_]*)/i).flatten
+            duplicates = helpers.tally.select { |_name, count| count > 1 }.keys
+            next if duplicates.empty?
+
+            [path, "ROUTE_SURFACE_DUPLICATION", "route helper(s) declared more than once: #{duplicates.join(", ")}", []]
+          rescue StandardError => e
+            raise "structural routes scan failed for #{path}: #{e.class}: #{e.message}"
+          end
+        end
+
+        def self.config_surface_findings(target)
+          repository_files(target).filter_map do |path|
+            relative = relative_static(path, target)
+            next unless relative.split("/").include?("config") && CONFIG_EXTENSIONS.include?(File.extname(path).downcase)
+
+            text = File.read(path, encoding: "UTF-8")
+            keys = text.scan(/^\s*config\.x\.([A-Za-z0-9_]+)\s*=/).flatten
+            duplicates = keys.tally.select { |_name, count| count > 1 }.keys
+            next if duplicates.empty?
+
+            [path, "CONFIG_SURFACE_DUPLICATION", "config.x setting(s) assigned more than once: #{duplicates.join(", ")}", []]
+          rescue StandardError => e
+            raise "structural config scan failed for #{path}: #{e.class}: #{e.message}"
+          end
+        end
+
+        def self.command_surface_findings(target)
+          signatures = repository_files(target).filter_map { |path| command_signature(path, target) }
+          signatures.group_by { |_path, commands| commands }.values
+            .select { |group| group.size > 1 }.flat_map do |group|
+              group.map do |path, commands|
+                [path, "COMMAND_SURFACE_DUPLICATION", "command surface #{commands.join(", ")} is duplicated across #{group.size} executables", group.map(&:first).reject { |other| other == path }.first(8)]
+              end
+            end
+        end
+
+        # A command surface is the switch labels and COMMANDS declarations of
+        # one executable file under bin/ or tools/, so identical surfaces across
+        # separate executables become one duplication finding per file.
+        def self.command_signature(path, target)
+          relative = relative_static(path, target)
+          ext = File.extname(path).downcase
+          root = relative.split("/").first
+          return unless COMMAND_EXTENSIONS.include?(ext) && (COMMAND_ROOTS.include?(root) || relative.include?("/bin/"))
+
+          text = File.read(path, encoding: "UTF-8")
+          commands = []
+          text.scan(/^\s*when\s+["\x27]([a-z][a-z0-9_:-]*)["\x27]/i) { |match| commands << match.first.downcase }
+          text.scan(/\bCOMMANDS\s*=\s*%i\[([^\]]+)\]/) { |match| commands.concat(match.first.scan(/[a-z][a-z0-9_:-]*/i).map(&:downcase)) }
+          commands = commands.uniq.sort
+          return if commands.empty?
+
+          [path, commands]
+        rescue StandardError => e
+          raise "structural commands scan failed for #{path}: #{e.class}: #{e.message}"
+        end
+
+        private_class_method :surface_findings, :stale_reference_findings, :prose_findings
+        private_class_method :route_surface_findings, :config_surface_findings, :command_surface_findings, :command_signature
+
+        public
+
+        private
+
+        def production_reference_section
+          hits = production_references.flat_map do |path, lines|
+            lines.map { |number, text| "#{relative(path)}:#{number}: #{text.strip[0, 160]}" }
+          end
+          return if hits.empty?
+
+          "Production references:\n#{hits.first(REFERENCE_LINES).join("\n")}"
+        end
+
+        def reference_section
+          hits = references.flat_map do |path, lines|
+            lines.map { |number, text| "#{relative(path)}:#{number}: #{text.strip[0, 160]}" }
+          end
+          return if hits.empty?
+
+          "Lines elsewhere that name it:\n#{hits.first(REFERENCE_LINES).join("\n")}"
+        end
+
+        def requirer_section
+          requirers = references.keys.select { |path| File.read(path, encoding: "UTF-8").match?(require_pattern) }
+                                .select { |path| File.foreach(path, encoding: "UTF-8").count <= SMALL }.first(REQUIRERS)
+          return if requirers.empty?
+
+          requirers.map { |path| "Requires it, in full, #{relative(path)}:\n#{numbered(path)}" }.join("\n\n")
+        end
+
+        # { path => [[line_number, text]] } for files that name the stem or a constant.
+        def production_references
+          @production_references ||= Context.reference_files(@root)
+            .reject { |path| path == @path || test_path?(path) || PROSE_EXTENSIONS.include?(File.extname(path).downcase) }
+            .to_h do |path|
+              [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
+            rescue ArgumentError
+              [path, []]
+            end.reject { |_path, lines| lines.empty? }
+        end
+
+        def references
+          @references ||= Context.reference_files(@root).reject { |path| path == @path }.to_h do |path|
+            [path, File.foreach(path, encoding: "UTF-8").with_index(1).select { |text, _n| text.match?(needle) }.map(&:reverse)]
+          rescue ArgumentError
+            [path, []]
+          end.reject { |_path, lines| lines.empty? }
+        end
+
+        def needle
+          @needle ||= Regexp.union([require_pattern, *constants.map { |name| /\b#{name}\b/ }])
+        end
+
+        def require_pattern
+          stem = Regexp.escape(File.basename(@path, ".*"))
+          /require(?:_relative)?\s*\(?\s*["'][^"']*\b#{stem}["']/
+        end
+
+        def constants
+          File.read(@path, encoding: "UTF-8").scan(/^\s*(?:class|module)\s+([A-Z]\w+)/).flatten.uniq - Restructure.namespaces(@tree)
+        end
+
+        def test_path?(path)
+          path.split("/").any? { |part| %w[test spec fixtures].include?(part) }
+        end
+
+        public
+
         SOURCE_EXT = %w[.rb .rake .js .mjs].freeze
         REFERENCE_LINES = 80
         REQUIRERS = 5

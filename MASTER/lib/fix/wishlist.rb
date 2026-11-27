@@ -14,8 +14,6 @@ require_relative "wishlist/proof_contract"
 require_relative "wishlist/personas"
 # The re-opened parts of this class, one responsibility each; every path is
 # listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
-require_relative "wishlist/claims"
-require_relative "wishlist/rendering"
 
 module Master
   module Fix
@@ -23,6 +21,539 @@ module Master
     # queue. It proposes; it does not silently edit source. Concrete wishes are
     # surfaced to the next /fix through the orientation layer.
     class Wishlist
+      public
+
+      # How ledger rows move: queued -> claimed -> applied -> verified, with
+      # stale, blocked and abandoned-claim exits, plus reflection intake from a
+      # finished run. Every mutation here happens under the caller's ledger
+      # lock; each method returns the rows it touched.
+      def claimable(target:, limit: BATCH_SIZE, run_id: nil)
+        with_ledger_lock do
+          ledger = load_ledger
+          head = @git.head
+          changed = false
+          rows = ledger["proposals"].filter_map do |proposal|
+            row, updated = claimable_row(proposal, head, target:, run_id:)
+            changed = true if updated
+            row
+          end.then { |rows| Personas.order(rows) }.first(limit.to_i)
+
+          save_ledger(ledger) if changed
+          rows
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claimable", event_bus: @bus)
+        []
+      end
+
+      def claim!(proposals, run_id:)
+        with_ledger_lock do
+          ids = Array(proposals).map { |proposal| proposal["uid"].to_s }.reject(&:empty?)
+          return [] if ids.empty?
+
+          ledger = load_ledger
+          now = Master::Clock.utc_now.iso8601
+          claimed = ledger["proposals"].filter_map do |proposal|
+            next unless ids.include?(proposal["uid"].to_s) && proposal["status"] == "queued"
+
+            proposal["status"] = "claimed"
+            proposal["claimed_at"] = now
+            proposal["claimed_run"] = run_id.to_s
+            proposal
+          end
+          save_ledger(ledger)
+          @bus&.publish("wishlist:claimed", run_id:, count: claimed.size)
+          claimed
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.claim!", event_bus: @bus)
+        []
+      end
+      # FixLoop::PassExecution asks for `claim`; without it every wishlist round raised NoMethodError.
+      alias claim claim!
+
+      def mark_attempt(proposal_id:, fixed:, status:, message:, run_id:)
+        with_ledger_lock do
+          ledger = load_ledger
+          proposal = ledger["proposals"].find { |item| item["uid"].to_s == proposal_id.to_s }
+          return unless proposal
+
+          attempts = record_attempt(proposal, fixed:, status:, message:, run_id:)
+          save_ledger(ledger)
+          publish_attempt(proposal_id, proposal, status, fixed, attempts)
+          proposal
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_attempt", event_bus: @bus)
+        nil
+      end
+
+      def mark_delivered(proposal_ids:, run_id:)
+        with_ledger_lock do
+          ids = Array(proposal_ids).map(&:to_s)
+          return [] if ids.empty?
+
+          ledger = load_ledger
+          changed = ledger["proposals"].filter_map { |proposal| deliver_row(proposal, ids, run_id) }
+          save_ledger(ledger) unless changed.empty?
+          changed
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_delivered", event_bus: @bus)
+        []
+      end
+
+      def mark_verified(proposal_ids:, run_id:)
+        with_ledger_lock do
+          ids = Array(proposal_ids).map(&:to_s)
+          return [] if ids.empty?
+
+          ledger = load_ledger
+          changed = ledger["proposals"].filter_map { |proposal| verify_row(proposal, ids, run_id) }
+          save_ledger(ledger) unless changed.empty?
+          changed
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.mark_verified", event_bus: @bus)
+        []
+      end
+
+      def record_reflection!(reflection:, state:, target:, run_id:)
+        with_ledger_lock do
+          return false unless reflection.respond_to?(:repair?) && reflection.repair?
+          law, anchor, evidence, change = reflection_fields(reflection)
+          return false unless law
+
+          item = reflection_item(reflection, law, anchor, evidence, change)
+          ledger = load_ledger
+          added = merge_new_items!(ledger, [item], state:, target:, run_id:)
+          save_ledger(ledger) if added.positive?
+          @bus&.publish("wishlist:reflection", added:, law:, anchor:, run_id:)
+          added.positive?
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.record_reflection!", event_bus: @bus)
+        false
+      end
+
+      private
+
+      # One pass over a row for claimability: reclaimed claims, auto
+      # implementations only, live anchors, current digests, rebased heads, no
+      # run-local repeats. Returns [row or nil, mutated?].
+      def claimable_row(proposal, head, target:, run_id:)
+        changed = reclaim_claim!(proposal)
+        return [nil, changed] unless proposal["status"] == "queued"
+        return [nil, changed] unless AUTO_IMPLEMENTATIONS.include?(proposal["implementation"])
+
+        anchor = anchor_file(proposal["anchor"])
+        unless anchor
+          stale_missing_anchor!(proposal)
+          return [nil, true]
+        end
+        return [nil, changed] unless anchor_in_target?(anchor, target)
+        return [nil, true] if stale_anchor!(proposal, anchor)
+
+        keep, rebased = rebase_row(proposal, head, run_id)
+        return [nil, changed || rebased] unless keep
+
+        [proposal, changed]
+      end
+
+      # A claim left over from a crashed run re-enters the queue.
+      def reclaim_claim!(proposal)
+        return false unless proposal["status"] == "claimed"
+
+        proposal["status"] = "queued"
+        proposal.delete("claimed_at")
+        proposal.delete("claimed_run")
+        true
+      end
+
+      def stale_missing_anchor!(proposal)
+        proposal["status"] = "stale"
+        proposal["stale_reason"] = "anchor missing"
+      end
+
+      # Stales a row whose recorded anchor digest no longer matches the file on
+      # disk and tells the bus; true when the row was staled.
+      def stale_anchor!(proposal, anchor)
+        recorded_digest = proposal["anchor_sha256"].to_s
+        current_digest = Digest::SHA256.file(anchor).hexdigest
+        return false unless recorded_digest.empty? || recorded_digest != current_digest
+
+        proposal["status"] = "stale"
+        proposal["stale_reason"] = "anchor changed since proposal"
+        proposal["stale_at"] = Master::Clock.utc_now.iso8601
+        @bus&.publish("wishlist:stale", id: proposal["uid"], reason: proposal["stale_reason"])
+        true
+      end
+
+      # Rebases an anchor-verified row onto the current head and drops
+      # run-local repeats. Returns [keep?, mutated?].
+      def rebase_row(proposal, head, run_id)
+        return [false, false] if head.to_s.empty?
+
+        changed = false
+        if proposal["basis_head"].to_s != head.to_s
+          proposal["basis_head"] = head
+          proposal["rebased_at"] = Master::Clock.utc_now.iso8601
+          changed = true
+        end
+        keep = !(run_id && proposal["last_attempt_run"].to_s == run_id.to_s)
+        [keep, changed]
+      end
+
+      # Applies one attempt outcome under the bounded-retry policy: fixes keep
+      # the claim, human decisions and exhausted attempts block, the rest requeue.
+      def record_attempt(proposal, fixed:, status:, message:, run_id:)
+        attempts = proposal.fetch("attempts", 0).to_i + 1
+        proposal["attempts"] = attempts
+        proposal["last_attempt_run"] = run_id.to_s
+        proposal["last_outcome"] = status.to_s
+        proposal["last_message"] = message.to_s.byteslice(0, 500)
+
+        if fixed.to_i.positive?
+          proposal["status"] = "claimed"
+          proposal["last_fixed"] = fixed.to_i
+        elsif %i[human_decision needs_person].include?(status.to_sym)
+          proposal["status"] = "blocked"
+        elsif attempts >= MAX_ATTEMPTS
+          proposal["status"] = "blocked"
+          proposal["blocked_reason"] = "attempt limit reached"
+        else
+          proposal["status"] = "queued"
+        end
+        attempts
+      end
+
+      def publish_attempt(proposal_id, proposal, status, fixed, attempts)
+        @bus&.publish(
+          "wishlist:attempt",
+          id: proposal_id,
+          status: proposal["status"],
+          outcome: status,
+          fixed: fixed.to_i,
+          attempts:,
+        )
+      end
+
+      # Stamps a claimed, fixed row as applied and clears the claim markers.
+      def deliver_row(proposal, ids, run_id)
+        return unless ids.include?(proposal["uid"].to_s)
+        return unless proposal["status"] == "claimed"
+        return unless proposal.fetch("last_fixed", 0).to_i.positive?
+
+        proposal["status"] = "applied"
+        proposal["applied_at"] = Master::Clock.utc_now.iso8601
+        proposal["applied_run"] = run_id.to_s
+        proposal.delete("claimed_at")
+        proposal.delete("claimed_run")
+        proposal
+      end
+
+      # Runs the proof contract on an applied row and files the outcome.
+      def verify_row(proposal, ids, run_id)
+        return unless ids.include?(proposal["uid"].to_s)
+        return unless proposal["status"] == "applied"
+
+        proof = ProofContract.verify(proposal, root: @root)
+        proposal["proof_state"] = proof[:state].to_s
+        proposal["proof_checks"] = Array(proof[:checks]).first(6)
+        apply_proof_state(proposal, proof, run_id)
+        proposal
+      end
+
+      # Proven rows verify, failed proofs block, and open proofs stay applied
+      # pending external validation.
+      def apply_proof_state(proposal, proof, run_id)
+        case proof[:state]
+        when :proven
+          proposal["status"] = "verified"
+          proposal["verified_at"] = Master::Clock.utc_now.iso8601
+          proposal["verified_run"] = run_id.to_s
+        when :failed
+          proposal["status"] = "blocked"
+          proposal["blocked_reason"] = "wishlist proof failed"
+          proposal["blocked_at"] = Master::Clock.utc_now.iso8601
+        else
+          proposal["status"] = "applied"
+          proposal["verification_reason"] = "proof contract requires external validation"
+        end
+      end
+
+      # A reflection is only usable when law, anchor, evidence and change all
+      # carry text; returns those four strings, or nil when any is empty.
+      def reflection_fields(reflection)
+        fields = [reflection.law, reflection.anchor, reflection.evidence, reflection.next_action].map(&:to_s)
+        fields.any?(&:empty?) ? nil : fields
+      end
+
+      def reflection_item(reflection, law, anchor, evidence, change)
+        {
+          "id" => "reflection_#{Digest::SHA256.hexdigest([law, anchor, evidence, change].join("\n"))[0, 16]}",
+          "title" => reflection.summary.to_s,
+          "rationale" => reflection.summary.to_s,
+          "anchor" => anchor,
+          "change" => change,
+          "effort" => "medium",
+          "reversibility" => "guarded",
+          "implementation" => "next_fix",
+          "evidence" => evidence,
+          "proof" => ["same law and anchor must hold after mutation"],
+        }
+      end
+
+
+      public
+
+      # The model-facing and read-only side: the brief the agent answers, the
+      # YAML response parsing and normalization, and the pending-queue
+      # renderings other subsystems consume. No ledger mutation lives here.
+      def render_pending(target:, limit: BATCH_SIZE)
+        rows = claimable(target:, limit:)
+        return if rows.empty?
+
+        <<~TEXT.strip
+          Pending automatic convergence proposals from the durable /fix ledger.
+          Treat each queued next_fix proposal as an actual bounded repair target.
+          Do not treat this as a TODO list. Re-check the live source and constitutional
+          rules before mutation. Unsupported, stale, operator-owned, or research-only
+          work is not automatically completed.
+
+          #{pending_bodies(rows).join("\n\n")}
+        TEXT
+      end
+
+      def pending_titles(target:, limit: BATCH_SIZE)
+        claimable(target:, limit:).map { |proposal| proposal["title"].to_s }.reject(&:empty?)
+      end
+
+      def pending_count(target:)
+        claimable(target:, limit: MAX_PROPOSALS).size
+      end
+
+      def self.pending_context(root, target: root, limit: BATCH_SIZE)
+        new(root:, agent: nil).render_pending(target:, limit:)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.pending_context")
+        nil
+      end
+
+      def self.pending_titles(root, target: root, limit: BATCH_SIZE)
+        new(root:, agent: nil).pending_titles(target:, limit:)
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.pending_titles")
+        []
+      end
+
+      def self.findings(proposals, root:)
+        Array(proposals).filter_map do |proposal|
+          path, line = proposal["anchor"].to_s.split(":", 2)
+          next if path.to_s.empty? || line.to_s !~ /\A\d+\z/
+
+          file = File.expand_path(path, root)
+          next unless File.file?(file)
+
+          build_finding(proposal, file, line.to_i)
+        end
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "Fix::Wishlist.findings")
+        []
+      end
+
+      # Builds the law finding for one proposal with a live anchor file.
+      def self.build_finding(proposal, file, line)
+        fingerprint = Master::Review::Scan::SemanticFingerprint.for(File.read(file, encoding: "UTF-8"))
+        proof = Array(proposal["proof"]).join(", ")
+        {
+          law: LAW_ID,
+          file:,
+          line:,
+          severity: :warning,
+          confidence: 1.0,
+          reversibility: proposal["reversibility"].to_s,
+          blast_radius: { files_touched: 1 },
+          fingerprint:,
+          message: "#{proposal["title"]}: #{proposal["rationale"]}",
+          fix: [
+            proposal["change"],
+            "Evidence: #{proposal["evidence"]}",
+            ("Proof contract: #{proof}" unless proof.empty?),
+          ].compact.join("\n"),
+          wishlist_id: proposal["uid"].to_s,
+          wishlist_proposal: proposal,
+        }
+      end
+      private_class_method :build_finding
+
+      private
+
+      # Renders each queued proposal as its labeled field block.
+      def pending_bodies(rows)
+        rows.map do |proposal|
+          proof = Array(proposal["proof"]).join(", ")
+          [
+            "proposal: #{proposal["uid"]}",
+            "title: #{proposal["title"]}",
+            "anchor: #{proposal["anchor"]}",
+            "change: #{proposal["change"]}",
+            "evidence: #{proposal["evidence"]}",
+            "proof: #{proof}",
+            "effort: #{proposal["effort"]}",
+            "reversibility: #{proposal["reversibility"]}",
+          ].join("\n")
+        end
+      end
+
+      # The full brief: intro, run context, item schema, guidance and output
+      # contract, joined with single blank lines.
+      def prompt(orientation:, state:, target:, run_id:)
+        [
+          prompt_intro,
+          prompt_run(state:, target:, run_id:, orientation:),
+          prompt_schema,
+          prompt_guidance,
+          prompt_footer,
+        ].join("\n\n") + "\n"
+      end
+
+      def prompt_intro
+        <<~TEXT.chomp
+          You are proposing the next bounded work queue after a completed MASTER /fix run.
+          Do not claim a defect unless the supplied evidence supports it.
+          Do not repeat work that is already marked done. Prefer concrete improvements
+          that a later /fix can implement and verify.
+        TEXT
+      end
+
+      def prompt_run(state:, target:, run_id:, orientation:)
+        <<~TEXT.chomp
+          Run:
+          state: #{state}
+          target: #{target}
+          run_id: #{run_id}
+
+          Orientation:
+          #{orientation}
+        TEXT
+      end
+
+      def prompt_schema
+        <<~TEXT.chomp
+          Produce 0 to #{MAX_NEW_ITEMS} wishlist items as YAML.
+          Each item must contain:
+          - id: snake_case
+          - title: short human-readable name
+          - rationale: one sentence
+          - anchor: repository-relative path:line, or run:<state>
+          - change: one concrete implementation sentence
+          - effort: cheap, medium, or deep
+          - reversibility: reversible, guarded, or operator
+          - implementation: next_fix, research, or operator
+          - evidence: one sentence using only facts present in the supplied orientation/run
+          - proof: 0 to 6 concrete checks that can verify the proposed change
+        TEXT
+      end
+
+      def prompt_guidance
+        <<~TEXT.chomp
+          Prefer automatic next_fix only for bounded, evidence-backed changes anchored in
+          a real file. Use research when more investigation is needed and operator when
+          a human, credential, device, external service, irreversible decision, or
+          real-world observation is required.
+        TEXT
+      end
+
+      def prompt_footer
+        <<~TEXT.chomp
+          Do not invent external purchases, users, scale numbers, credentials, incidents,
+          benchmarks, or measurements. Never pad the list to reach a quota.
+          Return only the YAML array. No Markdown fences and no prose.
+        TEXT
+      end
+
+      def parse(text)
+        body = text.to_s.sub(/\A.*?(?=^- |\A- )/m, "").sub(/\n```.*\z/m, "").strip
+        data = YAML.safe_load(body, aliases: false)
+        raise ParseError, "wishlist response must be a YAML array" unless data.is_a?(Array)
+
+        data
+      rescue Psych::Exception => e
+        raise ParseError, "wishlist response contains invalid YAML: #{e.message}"
+      end
+
+      def normalize(items)
+        rows = items.filter_map { |item| normalize_item(item) }
+        rows.uniq { |item| [item["id"], item["anchor"], item["change"]] }.first(MAX_NEW_ITEMS)
+      end
+
+      # Coerces one raw model answer into the canonical proposal shape, or nil
+      # when it is junk, incomplete, or anchored nowhere real.
+      def normalize_item(item)
+        return unless item.is_a?(Hash)
+
+        id = slug(item["id"] || item["title"])
+        anchor = item["anchor"].to_s.strip
+        return unless complete_answer?(item, id)
+        return unless valid_anchor?(anchor)
+
+        reversibility = normalize_choice(item["reversibility"], %w[reversible guarded operator], "guarded")
+        implementation = normalized_implementation(item, anchor, reversibility)
+        normalized_item(item, id, anchor, reversibility, implementation)
+      end
+
+      # Rejects answers missing an id, title, rationale, change or evidence.
+      def complete_answer?(item, id)
+        return false if id.empty?
+        return false if item["title"].to_s.strip.empty? || item["rationale"].to_s.strip.empty?
+        return false if item["change"].to_s.strip.empty? || item["evidence"].to_s.strip.empty?
+
+        true
+      end
+
+      # Operator reversibility forces operator implementation, and a next_fix
+      # without a real anchor file degrades to operator too.
+      def normalized_implementation(item, anchor, reversibility)
+        implementation = normalize_choice(item["implementation"], %w[next_fix research operator], "operator")
+        implementation = "operator" if reversibility == "operator" && implementation == "next_fix"
+        implementation = "operator" unless anchor_file(anchor) || implementation != "next_fix"
+        implementation
+      end
+
+      def normalized_item(item, id, anchor, reversibility, implementation)
+        {
+          "id" => id,
+          "title" => item["title"].to_s.strip,
+          "rationale" => item["rationale"].to_s.strip,
+          "anchor" => anchor,
+          "change" => item["change"].to_s.strip,
+          "effort" => normalize_choice(item["effort"], %w[cheap medium deep], "medium"),
+          "reversibility" => reversibility,
+          "implementation" => implementation,
+          "evidence" => item["evidence"].to_s.strip,
+          "proof" => Array(item["proof"]).map { |value| value.to_s.strip }.reject(&:empty?).first(6),
+        }
+      end
+
+      def valid_anchor?(anchor)
+        return true if anchor.match?(/\Arun:[a-z_]+\z/i)
+
+        !anchor_file(anchor).nil?
+      end
+
+      def normalize_choice(value, allowed, fallback)
+        choice = value.to_s.downcase
+        allowed.include?(choice) ? choice : fallback
+      end
+
+      def slug(value)
+        value.to_s.downcase.gsub(/[^a-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")[0, 64]
+      end
+
+
+      public
+
       include ::Master::Io::AtomicWrite
 
       LEDGER_PATH = ".master/fix_wishlist.json"

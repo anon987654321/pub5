@@ -18,13 +18,462 @@ require_relative "../../review/scan/law_health"
 require_relative "../../trace/dmesg"
 # The re-opened parts of this class, one responsibility each; every path is
 # listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
-require_relative "file_processor/progress"
-require_relative "file_processor/semantic_tier"
 
 module Master
   module Fix
     module Scan
       class FileProcessor
+        public
+
+        PROGRESS_POLL_SECONDS = 1.0
+        PROGRESS_IDLE_GRACE_SECONDS = 3.0
+        # Match the scan-level checkpoint cadence; a live spinner covers the gaps.
+        PROGRESS_HEARTBEAT_SECONDS = 60.0
+
+        private
+
+        # Constructor state of the progress monitor, kept beside the methods that read it.
+        def init_progress_state
+          @progress_path = ENV.fetch("CHECK_PROGRESS_FILE", "").to_s
+          @progress_writer_id = "#{Process.pid}-#{object_id}"
+          @progress_mutex = Mutex.new
+          @active_law_checks = {}
+          @progress_previous_callbacks = {}
+          @progress_sequence = 0
+          @progress_thread = nil
+          @progress_idle_since = nil
+          @progress_last_check = nil
+          @progress_error_reported = false
+        end
+
+        # The monitor reports the law that's actually in flight, not merely the
+        # outer scan stage. One small watcher samples this in-memory state once a
+        # second; worker threads never contend on progress-file I/O.
+        def begin_law_progress(pass:, law:, index:, total:, path:)
+          return unless progress_reporting?
+
+          previous_callback = Thread.current.thread_variable_get(:master_scan_progress_callback)
+          # Object identity keeps simultaneous worker threads from collapsing
+          # into one hash key when they enter the scanner at the same time.
+          token = Object.new
+          Thread.current.thread_variable_set(:master_scan_progress_callback, progress_callback(token, total))
+
+          row = initial_progress_row(pass:, law:, index:, total:, path:)
+          @progress_mutex.synchronize do
+            @progress_sequence += 1
+            row["checks"] = @progress_sequence
+            @progress_previous_callbacks[token] = previous_callback
+            @active_law_checks[token] = row
+            @progress_idle_since = nil
+            @progress_last_check = row
+            start_progress_monitor_locked
+          end
+          token
+        end
+
+        def end_law_progress(token)
+          return unless token
+
+          previous_callback = nil
+          @progress_mutex.synchronize do
+            previous_callback = @progress_previous_callbacks.delete(token)
+            finished = @active_law_checks.delete(token)
+            if finished && @active_law_checks.empty?
+              @progress_idle_since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+              @progress_last_check = finished.merge(
+                "state" => "idle",
+                "active" => 0,
+                "updated_at" => Time.now.to_f,
+              )
+            end
+          end
+          Thread.current.thread_variable_set(:master_scan_progress_callback, previous_callback)
+        end
+
+        def start_progress_monitor_locked
+          return if @progress_thread&.alive?
+
+          @progress_thread = Thread.new { run_progress_monitor }
+          @progress_thread.name = "master-scan-progress" if @progress_thread.respond_to?(:name=)
+        end
+
+        def run_progress_monitor
+          last_console_beat = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          loop do
+            sleep PROGRESS_POLL_SECONDS
+            snapshot, stop = progress_tick
+            break if stop
+            next unless snapshot
+
+            last_console_beat = emit_progress(snapshot, last_console_beat)
+          end
+        rescue StandardError => e
+          Master::Trace::Dmesg.status("scan0", "progress monitor failed, #{e.class}: #{e.message.to_s[0, 140]}")
+        ensure
+          @progress_mutex.synchronize do
+            @progress_thread = nil if @progress_thread == Thread.current
+          end
+        end
+
+        # One poll of the watcher: read the in-memory state and decide between
+        # the running row and the idle one, or retire once the last law has been
+        # quiet past the grace period.
+        def progress_tick
+          snapshot = nil
+          stop = false
+          @progress_mutex.synchronize do
+            if @active_law_checks.empty?
+              stop, snapshot = idle_tick(Process.clock_gettime(Process::CLOCK_MONOTONIC))
+            else
+              snapshot = running_row
+            end
+          end
+          [snapshot, stop]
+        end
+
+        def idle_tick(now)
+          @progress_idle_since ||= now
+          if now - @progress_idle_since >= PROGRESS_IDLE_GRACE_SECONDS
+            @progress_thread = nil if @progress_thread == Thread.current
+            return [true, nil]
+          end
+
+          [false, idle_row]
+        end
+
+        def idle_row
+          return unless @progress_last_check
+
+          @progress_last_check.merge(
+            "state" => "idle",
+            "active" => 0,
+            "monitor_at" => Time.now.to_f,
+          )
+        end
+
+        def running_row
+          current = @active_law_checks.values.max_by { |row| row.fetch("checks") }
+          current.merge(
+            "state" => "running",
+            "active" => @active_law_checks.size,
+            "monitor_at" => Time.now.to_f,
+          )
+        end
+
+        # The snapshot goes to the CHECK_PROGRESS_FILE when one is asked for;
+        # otherwise the console gets a heartbeat only while a law is running.
+        # Returns the console beat so an idle stretch keeps its own cadence.
+        def emit_progress(snapshot, last_console_beat)
+          if @progress_path.empty?
+            now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            if Master::Trace::Dmesg.verbose? && snapshot["state"] == "running" &&
+               now - last_console_beat >= PROGRESS_HEARTBEAT_SECONDS
+              Master::Trace::Dmesg.status("scan0", progress_line(snapshot))
+              last_console_beat = now
+            end
+          else
+            write_progress_snapshot(snapshot)
+          end
+          last_console_beat
+        end
+
+        # The callback a law run, and the nested detectors inside laws.yml's own
+        # pass, call to say which law is in flight; the watcher samples what it
+        # wrote under the same mutex.
+        def progress_callback(token, _total)
+          lambda do |inner_pass:, inner_law:, index:, total:, path:|
+            @progress_mutex.synchronize do
+              active = @active_law_checks[token]
+              next unless active
+
+              @progress_sequence += 1
+              active.merge!(progress_fields(inner_pass, inner_law, index, total, path))
+              @progress_last_check = active
+            end
+          end
+        end
+
+        def progress_fields(inner_pass, inner_law, index, total, path)
+          {
+            "pass" => inner_pass.to_s,
+            "law" => inner_law.to_s,
+            "file" => relative_progress_path(path),
+            "n" => index,
+            "total" => total,
+            "name" => "#{inner_pass} #{inner_law}",
+            "at" => Time.now.to_f,
+            "updated_at" => Time.now.to_f,
+            "checks" => @progress_sequence,
+          }
+        end
+
+        def initial_progress_row(pass:, law:, index:, total:, path:)
+          law_id = law.respond_to?(:id) ? law.id.to_s : law.class.name.to_s
+          {
+            "kind" => "scan",
+            "state" => "running",
+            "pass" => pass.to_s,
+            "law" => law_id,
+            "file" => relative_progress_path(path),
+            "n" => index,
+            "total" => total,
+            "name" => "#{pass} #{law_id}",
+            "at" => Time.now.to_f,
+            "updated_at" => Time.now.to_f,
+          }
+        end
+
+        def progress_reporting? = ENV["MASTER_SCAN_PROGRESS"] != "0"
+
+        def write_progress_snapshot(row)
+          Master::Io::AtomicWrite.write_atomic(
+            @progress_path, JSON.generate(row), fsync: false, fsync_dir: false, mode: 0o600
+          )
+        rescue SystemCallError, IOError => e
+          should_report = @progress_mutex.synchronize do
+            next false if @progress_error_reported
+
+            @progress_error_reported = true
+          end
+          Master::Trace::Dmesg.status("scan0", "progress file unavailable, #{e.class}: #{e.message}") if should_report
+        end
+
+        def relative_progress_path(path)
+          expanded = File.expand_path(path.to_s)
+          [Master::REPO_ROOT, Master::ROOT].compact.each do |root|
+            base = File.expand_path(root)
+            return expanded.delete_prefix("#{base}/") if expanded.start_with?("#{base}/")
+          end
+          path.to_s
+        end
+
+        def progress_line(row)
+          format(
+            "active %s/%s %s, %s/%s laws, %s workers, %ds",
+            row.fetch("pass"), row.fetch("law"), row.fetch("file"),
+            row.fetch("n"), row.fetch("total"), row.fetch("active", 1),
+            [Time.now.to_f - row.fetch("at").to_f, 0].max.round
+          )
+        end
+
+        public
+
+        def skip_semantic!
+          @skip_semantic = true
+        end
+
+        def full_semantic!
+          @skip_semantic = false
+          @semantic_sample_override = 1.0
+        end
+
+        def semantic_full? = @semantic_sample_override.to_f >= 1.0
+
+        # Within the block, on this thread, a due model read with no replayable answer is listed in
+        # +into+ instead of made, so the cheap findings of a whole corpus reach repair first and the
+        # caller reads the list afterwards under a budget (FixLoop::PassRunner::StreamStage). Read
+        # inline at a minute and a half a file, twenty files hold the first repair for half an hour.
+        # Other threads, a repair verifying its own edit among them, still read inline.
+        def deferring_semantic(into, &) = scoped(:@deferral, into, &)
+
+        # Within the block, on this thread, a model read is made only while +budget+ is open, and its
+        # wall time is charged to it.
+        def budgeting_semantic(budget, &) = scoped(:@semantic_budget, budget, &)
+
+        # Semantic outages are explicit evidence, separate from files that failed
+        # mechanical measurement. They prevent DONE without hiding deterministic
+        # findings from the same file.
+        def semantic_gaps
+          @semantic_gap_mutex.synchronize { @semantic_gaps.dup }
+        end
+
+        def reset_semantic_gaps!
+          @semantic_gap_mutex.synchronize do
+            @semantic_gaps.clear
+            @semantic_gap_notice_emitted = false
+            @unmodelled_notice_emitted = false
+          end
+          self
+        end
+
+        # The model tier off for the length of one block, then back as it was.
+        # A tree-wide observation is a mechanical reading: 75% of RAILS files
+        # carry a finding, so "run the model when the cheap passes found
+        # something" put about 5,000 model calls of 50 to 190 seconds each
+        # inside one walk. The operator asking for every file to be read
+        # (MASTER_SCAN_SEMANTIC_SAMPLE=1, or a mode at 1.0) still wins. A
+        # requested /fix's own full_semantic! does not: it is set on the shared
+        # scanner for the repair's budgeted passes, and leaking into the
+        # re-observe it sent all 2,049 MASTER files to the model inline.
+        def mechanical_only
+          previous = @skip_semantic
+          @skip_semantic = true unless Master::Ground::ModePosture.semantic_sample >= 1.0
+          yield
+        ensure
+          @skip_semantic = previous
+        end
+
+        private
+
+        # Constructor state of the model tier, kept beside the methods that read it.
+        def init_semantic_tier_state(skip_semantic:, cache_root:)
+          @skip_semantic = skip_semantic
+          @semantic_gap_mutex = Mutex.new
+          @semantic_gaps = {}
+          @semantic_gap_notice_emitted = false
+          @semantic_reads = FindingCache.new(root: cache_root, dir: SEMANTIC_DIR)
+          @deferral = nil
+          @semantic_budget = nil
+        end
+
+        # A replay costs nothing and is always taken; a fresh read waits while the pass defers, and is
+        # refused once the pass's budget is spent.
+        def semantic_findings(found, reading)
+          return skipped(reading, OUTSIDE_SAMPLE) unless semantic_due?(found, reading.path)
+          return [] if (reading = modelled(reading)).laws.empty?
+          return skipped(reading, INCONCLUSIVE) if semantic_gap?(reading.path)
+
+          fresh_semantic_findings(reading)
+        end
+
+        def fresh_semantic_findings(reading)
+          replayed = @semantic_reads.replay(reading.subject(relative_progress_path(reading.path)))
+          return skipped(reading, UNCHANGED) + replayed unless replayed.nil?
+          return defer(reading) if on_this_thread(@deferral)
+          return skipped(reading, OVER_BUDGET) unless semantic_budget_open?
+
+          budgeted_read(reading)
+        end
+
+        def skipped(reading, reason)
+          note_skip(path: reading.path, laws: reading.laws, reason:)
+          []
+        end
+
+        def defer(reading)
+          into = on_this_thread(@deferral)
+          @semantic_gap_mutex.synchronize { into << reading.path }
+          skipped(reading, DEFERRED)
+        end
+
+        def semantic_budget_open?
+          budget = on_this_thread(@semantic_budget)
+          budget.nil? || budget.open?
+        end
+
+        # An unchanged file whose semantic evidence is already inconclusive
+        # cannot become measurable during this run. Keep the gap visible, but
+        # do not spend each convergence pass rediscovering the same limit.
+        def semantic_gap?(path)
+          @semantic_gap_mutex.synchronize { @semantic_gaps.key?(relative_progress_path(path)) }
+        end
+
+        def budgeted_read(reading)
+          started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          read_semantic(**reading.to_h)
+        ensure
+          on_this_thread(@semantic_budget)&.charge(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started)
+        end
+
+        def scoped(ivar, value)
+          previous = instance_variable_get(ivar)
+          instance_variable_set(ivar, [Thread.current, value])
+          yield
+        ensure
+          instance_variable_set(ivar, previous)
+        end
+
+        def on_this_thread(pair) = pair&.first == Thread.current ? pair.last : nil
+
+        # Fraction of otherwise-clean files that still get the semantic pass, from
+        # Ground::ModePosture. Keyed on the path digest rather than rand, so two scans
+        # of the same tree ask the same questions and their reports can be compared.
+        def semantic_sample
+          return @semantic_sample_override if @semantic_sample_override
+
+          Master::Ground::ModePosture.semantic_sample
+        end
+
+        # Relative to the repo, not the absolute path: keyed on the latter, two
+        # checkouts of the same tree sample different files and a scan is not
+        # reproducible off the machine that ran it. Relative also holds still
+        # while the file is edited, so a law does not switch on and off under
+        # someone's keystrokes.
+        def sample_key(path)
+          path.to_s.delete_prefix("#{Master::ROOT}/")
+        end
+
+        # A read is kept, clean or not, only when every semantic law answered: an inconclusive read leaves a
+        # gap and is asked again. Asking about unchanged text again re-rolls the answer and buys nothing,
+        # at 50 to 190 seconds a call; the next edit to the file, its laws or the scanner asks afresh.
+        def read_semantic(path:, code:, ast:, laws:)
+          semantic = run_law_pass(pass: :semantic, laws:, code:, ast:, path:)
+          relative = relative_progress_path(path)
+          answered = !@semantic_gap_mutex.synchronize { @semantic_gaps.key?(relative) }
+          return semantic unless answered && !relative.start_with?("/")
+
+          @semantic_reads.record(FindingCache::Subject.new(relative, code, laws, ast), semantic)
+          semantic
+        end
+
+        def note_skip(path:, laws:, reason:)
+          @bus&.publish("scan:semantic_skipped", path:, law_count: laws.size, reason:)
+        end
+
+        # 74 of the 225 declared rules reach a file only through the semantic
+        # pass, and the pass ran only when the cheap passes had already found
+        # something. So a file that read as clean was never asked the 74
+        # questions — and reported "0 findings", which is a claim about the whole
+        # law set rather than about the third of it that ran.
+        #
+        # The cost check is real: one LLM call per file is not free on a tree this
+        # size. Keeping it, but sampling a deterministic slice so clean files are
+        # not permanently exempt, and saying so when a file is skipped.
+        def semantic_due?(findings, path)
+          return false if @skip_semantic || CheckFocus.blockers?
+          return true unless findings.empty?
+          return false if semantic_sample <= 0
+
+          window = (semantic_sample * 1000).round
+          bucket = Digest::SHA256.hexdigest(sample_key(path))[0, 8].to_i(16) % 1000
+          (bucket - (rotation_day * window)) % 1000 < window
+        end
+
+        # Recorded where an unanswered semantic read is, so the file blocks DONE as
+        # inconclusive while the rest of the walk goes on.
+        def unmeasured(path, error)
+          relative = relative_progress_path(path)
+          @semantic_gap_mutex.synchronize { @semantic_gaps[relative] ||= "INCONCLUSIVE: #{error.message}"[0, 240] }
+          @bus&.publish("scan:inconclusive", path: relative, reason: error.message)
+          Master::Trace::Dmesg.status("scan0", "inconclusive, #{error.message}"[0, 200]) if Master::Trace::Dmesg.trace?
+          Result.ok([])
+        end
+
+        def semantic_inconclusive?(error)
+          error.is_a?(Review::Scan::Detector::SemanticAssessmentInconclusive)
+        end
+
+        def record_semantic_inconclusive(path:, law:, error:)
+          relative = relative_progress_path(path)
+          law_id = law.respond_to?(:id) ? law.id.to_s : law.class.name.to_s
+          detail = "#{law_id}: #{error.message.to_s[0, 220]}"
+          first_file, announce = @semantic_gap_mutex.synchronize do
+            next [false, false] if @semantic_gaps.key?(relative)
+
+            @semantic_gaps[relative] = detail
+            first_notice = !@semantic_gap_notice_emitted
+            @semantic_gap_notice_emitted = true
+            [true, first_notice]
+          end
+          return unless first_file
+
+          @bus&.publish("scan:semantic_inconclusive", path: relative, law: law_id, message: detail)
+          Master::Trace::Dmesg.status("law0", "semantic assessment inconclusive; details recorded for #{relative}"[0, 200]) if
+            announce && Master::Trace::Dmesg.trace?
+        end
+
+        public
+
         RUBY_EXT = %w[.rb .rake .gemspec].freeze
         include FileLock
         include UnmodelledTier
