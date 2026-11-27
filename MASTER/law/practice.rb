@@ -671,19 +671,7 @@ end
 
 Law.define(:ENGINEERING_FIT) do
   source "MASTER constitution: engineering fit"
-  practice <<~TEXT
-    Match the solution to the load and its failure modes. Classify the problem
-    as under-engineered, over-engineered, or well-fitted and state why. Name the
-    users, observed workload and expected envelope, edge cases, lifetimes,
-    external dependencies, and blast radius that justify the machinery. For
-    capacity or scale claims, distinguish deployed and measured capability
-    from a target or design intent; state the workload, environment and evidence,
-    or mark the claim INCONCLUSIVE. When materially different shapes remain
-    viable, compare their trade-offs (including reuse or no change) and choose
-    the smallest correct fit; do not manufacture an alternatives quota. Add
-    only what the artifact actually carries; strip machinery the artifact
-    never loads.
-  TEXT
+  practice Master.laws_document.fetch("ENGINEERING_FIT").fetch("statement")
   fix "State the load and failure modes, then remove everything that does not earn its complexity."
   bad  "a registry and adapter for a single call site with no distinct load"
   good "the smallest coherent solution that covers the observed load"
@@ -754,4 +742,20 @@ Law.define(:MINIMAL_FOOTPRINT) do
   fix "Narrow the change to the request, and ask before the irreversible or outward step."
   bad  "reformats unrelated files while fixing a bug, then force-pushes"
   good "changes the named paths, lists what else needs attention, and asks before the push"
+end
+
+Law.define(:TEST_DRIVEN_DEVELOPMENT) do
+  source "master.yml recovery - test-first regression and behavior proof"
+  practice Master.laws_document.fetch("TEST_DRIVEN_DEVELOPMENT").fetch("statement")
+  fix "Observe the regression fail before the repair, then prove it passes."
+  bad "changes behavior first and writes an assertion that cannot fail"
+  good "reproduces the defect with a focused failing test, repairs it, and runs the same test"
+end
+
+Law.define(:TEST_ISOLATION) do
+  source "master.yml recovery - deterministic independent tests"
+  practice Master.laws_document.fetch("TEST_ISOLATION").fetch("statement")
+  fix "Isolate test state and make repeatable assertions against controlled inputs."
+  bad "uses the operator's live credentials and leaves shared state for another test"
+  good "uses a scratch directory, controlled inputs and independent assertions"
 end

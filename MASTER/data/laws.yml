@@ -379,6 +379,53 @@ RAMS_THOROUGH:
   resolution: review
   lineage: "Dieter Rams, principles of good design"
 
+ENGINEERING_FIT:
+  parent: KISS
+  statement: >
+    Match the solution to the load and failure modes. Classify the problem as
+    under-engineered, over-engineered or well-fitted and state why. Name
+    users, observed workload and expected envelope, edge cases, lifetimes,
+    external dependencies and blast radius. Measure before optimizing:
+    establish a reproducible baseline and demonstrated bottleneck; compare
+    latency, resource use and maintenance cost on the same workload.
+    Distinguish deployed measured capability from a target or design intent;
+    report INCONCLUSIVE without evidence. Prefer proven tools over framework
+    churn. Compare materially different viable shapes, including reuse and no
+    change, under the applicable candidate contract. Choose the smallest
+    correct fit; do not manufacture a quota. Remove machinery the artifact
+    never loads.
+  severity: warning
+  resolution: review
+
+TEST_DRIVEN_DEVELOPMENT:
+  parent: STEWARDSHIP
+  statement: >
+    For a reproducible defect or changed behavior, write a focused regression
+    test and observe the expected failure before the repair when feasible.
+    Separate setup, action and assertions. Then implement the smallest correct
+    change and observe the test pass against the same contract. When a
+    baseline failure cannot safely be reproduced, record the reason and
+    alternative evidence. Exercise relevant boundaries, failure and recovery
+    paths; do not weaken tests to make a repair pass. A test written but not
+    executed is not proof.
+  severity: warning
+  resolution: review
+
+TEST_ISOLATION:
+  parent: ROBUSTNESS
+  statement: >
+    Tests isolate filesystem state, processes, clocks, randomness, network and
+    credentials from unrelated tests and operator state. Control inputs or
+    record seeds, use scratch paths and restore temporary state. For the same
+    inputs and environment, a deterministic test gives the same result
+    independently of execution order. Exercise actual boundary behavior with
+    independent assertions; do not substitute a mock for the thing being
+    proved. Distinguish intentionally stochastic tests, integration
+    prerequisites and real host proof from isolated unit tests. Report missing
+    prerequisites and flaky outcomes, never disguise them as a pass.
+  severity: warning
+  resolution: review
+
 # Governing and named principle details
 
 APPLICATION_IS_UNIFORM_skipped_law:
@@ -3348,6 +3395,8 @@ law_catalogue:
     SINGULARITY_architectural_tangle: {definition_sources: [MASTER/law/universal.rb], severity: warning}
     TRUTHFUL_STATUS_causal_trace_is_evidence: {definition_sources: [MASTER/law/universal.rb], severity: warning}
     TRUTHFUL_STATUS_profile_is_not_intent: {definition_sources: [MASTER/law/universal.rb], severity: warning}
+    TEST_DRIVEN_DEVELOPMENT: {definition_sources: [MASTER/law/practice.rb], severity: warning}
+    TEST_ISOLATION: {definition_sources: [MASTER/law/practice.rb], severity: warning}
     TRUTHFUL_STATUS_test_precedes_report: {definition_sources: [MASTER/law/universal.rb], severity: error, autofix: never}
     ROBUSTNESS_least_authority_tracing: {definition_sources: [MASTER/law/universal.rb], severity: warning}
     ROBUSTNESS_immune_pattern: {definition_sources: [MASTER/law/universal.rb], severity: warning}
@@ -5170,7 +5219,7 @@ law_map:
       "confidence": 0.75, "operation": "clarify_affordance", "law_ids": ["AFFORDANCE_CLARITY"], "status": "covered",
       "root": "reach", "tags": ["aesthetic", "ui"]}
     arrange_act_assert: {"meaning": "Structure tests clearly in three phases  ", "detects": "unclear_test",
-      "severity": "high", "confidence": 0.8, "operation": "organize", "law_ids": [], "status": "gap", "tags": ["code"]}
+      "severity": "high", "confidence": 0.8, "operation": "organize", "law_ids": ["TEST_DRIVEN_DEVELOPMENT"], "status": "covered", "tags": ["code"]}
     audit_logging: {"meaning": "record who did what when", "detects": "unaudited_actions", "severity": "high",
       "confidence": 0.85, "operation": "add_logging", "law_ids": ["AUDIT_APPEND_ONLY"], "status": "covered",
       "root": "least_authority", "tags": ["code"]}
@@ -5189,8 +5238,8 @@ law_map:
       "severity": "medium", "confidence": 0.7, "operation": "clarify", "law_ids": ["COMMENTS_AS_DEODORANT"],
       "status": "covered", "root": "no_surplus", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     avoid_premature_optimization: {"meaning": "clarity first, optimize when needed",
-      "detects": "premature_optimization", "severity": "low", "confidence": 0.8, "operation": "simplify", "law_ids": [],
-      "status": "gap", "root": "no_surplus", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
+      "detects": "premature_optimization", "severity": "low", "confidence": 0.8, "operation": "simplify", "law_ids": ["ENGINEERING_FIT"],
+      "status": "covered", "root": "no_surplus", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     avoid_primitive_obsession: {"meaning": "Use objects instead of primitives for domain concepts  ",
       "detects": "primitive_obsession", "severity": "medium", "confidence": 0.75, "operation": "simplify",
       "law_ids": ["PRIMITIVE_OBSESSION"], "status": "covered", "root": "no_surplus", "tags": ["clean_code"],
@@ -5205,7 +5254,7 @@ law_map:
       "severity": "low", "confidence": 0.75, "operation": "improve", "law_ids": [], "status": "gap",
       "tags": ["aesthetic"]}
     boring_technology: {"meaning": "use proven tools, avoid framework churn", "detects": "trendy_stack",
-      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
+      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": ["ENGINEERING_FIT"], "status": "covered",
       "root": "stewardship", "tags": ["engineering"], "source": "master.yml@30dad7ead"}
     boy_scout_mandatory: {"meaning": "every change must improve surroundings", "detects": "quality_regression",
       "severity": "medium", "confidence": 0.85, "operation": "improve", "law_ids": ["LINT_BEAUTIFY", "BROKEN_WINDOWS", "ENTROPY_RESISTANCE"], "status": "covered",
@@ -5271,7 +5320,7 @@ law_map:
       "confidence": 0.75, "operation": "improve", "law_ids": ["MAGIC_COLOR", "TYPE_HIERARCHY", "TYPE_TITLE_TOKEN",
       "EIGHT_PX_RHYTHM"], "status": "covered", "tags": ["aesthetic"]}
     content_driven_design: {"meaning": "Content determines structure  ", "detects": "weak_structure",
-      "severity": "high", "confidence": 0.8, "operation": "organize", "law_ids": [], "status": "gap", "tags": ["code"]}
+      "severity": "high", "confidence": 0.8, "operation": "organize", "law_ids": ["FORM_FOLLOWS_FUNCTION", "STYLE_FOLLOWS_STRUCTURE"], "status": "covered", "tags": ["code"]}
     content_prioritized: {"meaning": "Information over decoration  ", "detects": "decorative_code", "severity": "low",
       "confidence": 0.8, "operation": "improve", "law_ids": ["AESTHETIC_MINIMALISM", "NO_EYEBROW_LABEL",
       "TYPE_HIERARCHY"], "status": "covered", "root": "proportion", "tags": ["visual_design"],
@@ -5312,7 +5361,7 @@ law_map:
       "confidence": 0.75, "operation": "simplify", "law_ids": ["NO_DECORATIVE_FX", "FORM_FOLLOWS_FUNCTION"],
       "status": "covered", "tags": ["aesthetic"]}
     deterministic_tests: {"meaning": "same input always produces same result", "detects": "flaky_tests",
-      "severity": "high", "confidence": 0.9, "operation": "remove_randomness", "law_ids": [], "status": "gap",
+      "severity": "high", "confidence": 0.9, "operation": "remove_randomness", "law_ids": ["TEST_ISOLATION"], "status": "covered",
       "tags": ["code"]}
     no_silent_test_skip: {"meaning": "a skipped test says why", "detects": "silent_skip", "severity": "medium",
       "confidence": 0.9, "operation": "add_reason", "law_ids": ["NO_SILENT_TEST_SKIP"], "status": "covered",
@@ -5359,8 +5408,8 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "add_whitespace", "law_ids": ["WHITESPACE_RHYTHM"],
       "status": "covered", "root": "proportion", "tags": ["aesthetic"]}
     encapsulate_variable: {"confidence": 0.75, "detects": "unclear_intent",
-      "meaning": "Protect direct access to data  ", "operation": "simplify", "severity": "medium", "law_ids": [],
-      "status": "gap", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
+      "meaning": "Protect direct access to data  ", "operation": "simplify", "severity": "medium", "law_ids": ["INFORMATION_HIDING"],
+      "status": "covered", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
     encapsulate_what_changes: {"meaning": "isolate variation points", "detects": "exposed_variation",
       "severity": "medium", "confidence": 0.75, "operation": "encapsulate", "law_ids": ["INFORMATION_HIDING"],
       "status": "covered", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
@@ -5817,8 +5866,8 @@ law_map:
       "NO_EYEBROW_LABEL"], "status": "covered", "root": "no_surplus", "tags": ["visual_design"],
       "source": "master.yml@30dad7ead"}
     rename_variable: {"confidence": 0.75, "detects": "unclear_intent",
-      "meaning": "Give variable more meaningful name  ", "operation": "rename", "severity": "medium", "law_ids": [],
-      "status": "gap", "root": "reach", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
+      "meaning": "Give variable more meaningful name  ", "operation": "rename", "severity": "medium", "law_ids": ["MEANINGFUL_NAMES", "RENAME"],
+      "status": "covered", "root": "reach", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
     replace_magic_numbers: {"confidence": 0.9, "detects": "unclear_intent", "meaning": "Use named constants  ",
       "operation": "rename", "severity": "medium", "law_ids": ["NO_MAGIC"], "status": "covered", "root": "proportion",
       "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
@@ -5957,10 +6006,10 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "delete", "law_ids": [], "status": "gap",
       "tags": ["ux_laws"], "source": "master.yml@30dad7ead"}
     test_driven_development: {"meaning": "Write tests before implementation  ", "detects": "no_tests",
-      "severity": "high", "confidence": 0.75, "operation": "add_tests", "law_ids": [], "status": "gap",
+      "severity": "high", "confidence": 0.75, "operation": "add_tests", "law_ids": ["TEST_DRIVEN_DEVELOPMENT"], "status": "covered",
       "tags": ["code"]}
     test_isolation: {"meaning": "tests independent, no shared state", "detects": "flaky_tests", "severity": "high",
-      "confidence": 0.9, "operation": "isolate", "law_ids": [], "status": "gap", "root": "least_authority",
+      "confidence": 0.9, "operation": "isolate", "law_ids": ["TEST_ISOLATION"], "status": "covered", "root": "least_authority",
       "tags": ["code"]}
     test_pyramid: {"meaning": "many unit tests, fewer integration, fewest e2e", "detects": "inverted_pyramid",
       "severity": "medium", "confidence": 0.8, "operation": "rebalance", "law_ids": [], "status": "gap",

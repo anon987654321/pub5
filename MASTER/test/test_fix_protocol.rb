@@ -67,7 +67,8 @@ class TestFixProtocol < Minitest::Test
 
     document = Master.laws_document
     %w[PRESERVE_FIRST DO_THE_WORK_NOW BE_CONCISE OPERATOR_AUTONOMY
-       SCAN_SWEEP_CONVERGENCE COUNCIL_WHEN_RISKY LINT_BEAUTIFY].each do |id|
+       SCAN_SWEEP_CONVERGENCE COUNCIL_WHEN_RISKY LINT_BEAUTIFY ENGINEERING_FIT
+       TEST_DRIVEN_DEVELOPMENT TEST_ISOLATION].each do |id|
       assert_equal document.fetch(id).fetch("statement"), ::Law.definitions.fetch(id.to_sym).practice, id
     end
   end

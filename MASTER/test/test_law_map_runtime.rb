@@ -29,6 +29,14 @@ class TestLawMapRuntime < Minitest::Test
     assert_empty map["natural_ventilation"].law_ids, "physical performance needs separate evidence"
   end
 
+  def test_recovered_testing_and_optimization_concepts_have_named_owners
+    map = Master::Ground::Map::LawMap.load(root: @root)
+    assert_equal ["ENGINEERING_FIT"], map["avoid_premature_optimization"].law_ids
+    assert_equal ["TEST_DRIVEN_DEVELOPMENT"], map["test_driven_development"].law_ids
+    assert_equal ["TEST_ISOLATION"], map["deterministic_tests"].law_ids
+    assert_equal ["TEST_ISOLATION"], map["test_isolation"].law_ids
+  end
+
   def test_mode_posture_defaults_and_set
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "data"))
