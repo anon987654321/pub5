@@ -285,6 +285,9 @@ The core execution path is `lib/core/`: an admitted effect passes through Consti
 
 `--read-only` and `--dry-run` are unconditional no-write requests and override `--apply`. Audit and visual modes cannot be made write-enabled by also passing `--apply`. A direct named request, for example `/fix MASTER/lib/cli`, authorizes scoped repair. Bare or inferred `/fix` previews; `--apply` without a target is refused. Elevate and all reuse the existing file, pass, stall and resource budgets; they do not bypass sacred-path, rendered-value, transaction or restructuring proof gates.
 
+The one-shot CLI and `bin/operator fix status` read split flags such as
+`--mode audit` and `--lane code` before interpreting the target queue.
+
 The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/review`, `/critique` and `/council` select audit; `/scan` selects the read-only repair preview (`--mode=repair --dry-run`); `/visual` and `/style` select visual; `/elevate` and `/map` select elevate; `/all`, `/workflow`, `/triad`, `/sweep`, `/through` and `/self` select all. Use `/fix --mode=repair|audit|visual|elevate|all` for explicit mode selection. New instructions and scripts should call `/fix` directly.
 
 The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The canonical execution owners are the Ruby implementations under `lib/core/`, `lib/fix/kernel/` and `lib/execution.rb`; tests pin the public ownership and recovery boundaries.

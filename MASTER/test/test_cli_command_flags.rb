@@ -2,8 +2,6 @@
 
 require_relative "test_helper"
 
-# bin/master is a script, so the two argv helpers are evaluated from its source
-# rather than booting the runtime.
 class TestCliCommandFlags < Minitest::Test
   SOURCE = File.read(File.expand_path("../bin/master", __dir__))
   HELPERS = SOURCE[/^COMMAND_FLAG.*?(?=^# Flags that affect boot)/m] ||
@@ -49,6 +47,22 @@ class TestCliCommandFlags < Minitest::Test
     message = @host.method(:initial_message_from_argv).call(argv)
 
     assert_equal "/fix MASTER --dry-run --no-autofix --only=critique", message
+  end
+
+  def test_read_only_survives_even_with_apply
+    argv = %w[/fix RAILS --READ-ONLY --apply]
+
+    message = @host.initial_message_from_argv(argv)
+    options = Master::CLI::CommandRegistry.send(:fix_dispatch_options, message.delete_prefix("/fix "), nil)
+
+    assert_equal "RAILS", options.fetch(:target)
+    assert_equal false, options.fetch(:apply)
+  end
+
+  def test_split_lane_and_intent_survive
+    argv = %w[/fix --lane code RAILS BIZ --intent=content_only]
+
+    assert_equal "/fix RAILS BIZ --lane code --intent=content_only", @host.initial_message_from_argv(argv)
   end
 
   def test_fix_flags_do_not_raise_an_option_error

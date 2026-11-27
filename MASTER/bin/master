@@ -188,12 +188,11 @@ if ARGV.first == "--self-test"
   exec(RbConfig.ruby, File.join(master_root, "tools", "self_test.rb"), *ARGV.drop(1))
 end
 
-# Flags the slash commands read from their own argument text (/fix --max-files=25,
-# /fix --no-critique, /fix --dry-run). The top-level parser does not know them and
-# must not reject them or drop them: a dropped --dry-run is a write run.
-COMMAND_FLAG = %r{\A--(?:(?:autofix|max-files|only|lane|mode)=|
-                 (?:dry-run|no-autofix|apply|list-recipes|(?:no-)?critique|no-aesthetic|blockers|plan|until-checks|normal|quiet|host-evidence)\z)}x
-COMMAND_FLAG_WITH_VALUE = %w[--only --recipe --mode].freeze
+# The slash command owns these flags. Dropping a preview flag can enable writes.
+COMMAND_FLAG = %r{\A--(?:(?:autofix|max-files|only|lane|mode|intent)=|
+                 (?:dry-run|read-only|no-autofix|apply|list-recipes|(?:no-)?critique|no-aesthetic|
+                    blockers|plan|until-checks|normal|quiet|host-evidence|simplify|security)\z)}ix
+COMMAND_FLAG_WITH_VALUE = %w[--only --recipe --mode --lane].freeze
 
 def initial_message_from_argv(argv)
   kept = []

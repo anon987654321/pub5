@@ -35,7 +35,7 @@ Paid operations and external rights decisions retain their existing gates.
 - [ ] Require and verify durable handoffs from mission link to budget, plan, pass, proof and delivery; name a missing edge as `transition_missing`.
 - [ ] Stream phase-owned child output and process exits into the existing event bus and run receipt.
 - [ ] Show only run-scoped current progress in status; reject historical logs, stale heartbeats and PID-only claims.
-- [ ] Parse flagged `/fix` targets consistently in process status, mission routing and lifecycle receipts.
+- [x] Parse flagged `/fix` targets consistently in process status, mission routing and lifecycle receipts.
 - [ ] Supervise blocking phases outside the repair process; on missed liveness, capture bounded diagnostics, terminate the process group, roll back and release the lease.
 - [ ] Resume from the last completed phase, with its recorded recovery action, rather than from an opaque active run.
 - [ ] Replace competing fixed pass/time displays with evidence-driven convergence, dynamic phase deadlines and one policy-owned outer safety boundary.
@@ -450,7 +450,7 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 - [ ] Recover DeepSeek handoff and reconcile migration/restoration reports.
 - [ ] Inspect TODO/FIXME and unimplemented-method matches; distinguish tests, abstract interfaces and real debt.
 - [ ] Reconcile stale contracts and source/asset ownership.
-- [ ] Recheck branch divergence before any approved orphan-branch cleanup.
+- [x] Recheck branch divergence before any approved orphan-branch cleanup.
 - [ ] Review private media/history and rotate exposed credentials through authorized owners.
 - [ ] [Issue #5](https://github.com/anon987654321/pub5/issues/5): brokered Chromium acceptance.
 - [ ] [Issue #6](https://github.com/anon987654321/pub5/issues/6): end-to-end completion.
@@ -490,5 +490,10 @@ distinguish an interrupted phase from the last completed phase. The plan
 phase now includes durable plan binding. Journal and restart suites passed
 37 tests and 162 assertions. The stalled-preflight supervisor and end-to-end
 transition checks remain open.
+
+On 2026-11-27, the CLI retained `--read-only` alongside `--apply` and process
+status used the dispatcher's target parser. The CLI argument and status suites
+passed 39 tests and 138 assertions. GitHub compared all 29 non-main branch tips
+with `main@2b78bcb`. None had unique commits.
 
 Five-tree acceptance remains open.

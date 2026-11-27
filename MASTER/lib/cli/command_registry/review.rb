@@ -347,6 +347,13 @@ module Master
 
       private_class_method :fix_dispatch_options, :fix_dispatch_run
 
+      def observed_fix_target(raw)
+        raw = lane_flag_joined(raw.to_s.strip)
+        return if convergence_read?(raw) || raw == "--list-recipes" || raw.start_with?("--recipe")
+
+        fix_dispatch_options(raw, nil)[:target]
+      end
+
       # The execution overrides a single dispatch sets, and what the next
       # command inherits: set the run's mode, lane and pin, yield the run,
       # then restore — the same one-command lifetime the critique pin has.

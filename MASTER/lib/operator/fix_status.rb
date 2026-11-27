@@ -12,15 +12,7 @@ require_relative "../boot/paths"
 require_relative "../fix/kernel"
 
 module Operator
-  # One screen about /fix, read from what /fix already writes: the run journal
-  # (.master/fix_runs.json), the mission (.master/mission.json), the per-tree
-  # logs bin/fix-here leaves in .master/, the process table and git. It writes
-  # nothing and boots nothing, so it answers while a run is mid-flight and
-  # while the runtime cannot start.
-  #
-  # The target queue exists only as a dmesg line, so it is rebuilt from the
-  # arguments of the live /fix process the way dispatch_fix reads them: a
-  # string of governed trees runs in the order it was typed.
+  # Read the run journal, mission, logs, process table and Git without starting a repair.
   class FixStatus
     TREES = MasterPaths::TREES
     JOURNAL = "fix_runs.json"
@@ -71,13 +63,16 @@ module Operator
       (detail ? detailed_lines(data) : summary_lines(data)).join("\n")
     end
 
-    # Queue as /fix received it: governed trees only, typed order, no repeats.
     def self.queue_from(command)
-      tokens = command.to_s.split(/\s+/).drop_while { |token| token != "/fix" }.drop(1)
-      named = tokens.reject { |token| token.start_with?("-") }
-      return [] unless named.any? && named.all? { |token| TREES.include?(token) }
+      _, marker, raw = command.to_s.partition(/(?:\A|\s)\/fix(?:\s+|\z)/)
+      return [] if marker.empty?
 
-      named.uniq
+      require_relative "../master"
+      target = Master::CLI::CommandRegistry.observed_fix_target(raw)
+      tree_target = Master::CLI::Pipeline::TreeTarget
+      return tree_target.names(target).uniq if tree_target.list?(target)
+
+      TREES.include?(target) ? [target] : []
     end
 
     private

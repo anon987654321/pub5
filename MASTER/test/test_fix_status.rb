@@ -39,6 +39,15 @@ class TestFixStatus < Minitest::Test
     assert_empty Operator::FixStatus.queue_from("bin/master /fix RAILS/brgen/app")
   end
 
+  def test_queue_uses_dispatch_target_parsing_for_flags
+    status = Operator::FixStatus
+
+    assert_equal %w[RAILS BIZ], status.queue_from("bin/master /fix --lane code RAILS,BIZ --only fix")
+    assert_equal %w[STUDIO MASTER], status.queue_from("bin/master /fix --mode audit STUDIO MASTER --quiet")
+    assert_empty status.queue_from("bin/master /fix --mode unknown RAILS MASTER")
+    assert_empty status.queue_from("bin/master /fix --prove RAILS MASTER")
+  end
+
   def test_single_tree_is_one_target_and_many_follow_argument_order
     root = "/tmp/pub5"
     registry = Master::CLI::CommandRegistry
