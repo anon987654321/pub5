@@ -1,15 +1,6 @@
 # frozen_string_literal: true
 
-# bin/master laws [--json ID] [--reindex] - the per-law dictionary.
-#
-# The session that wished for this fetched detector source by hand to learn
-# that NO_PUTS exempts the REPL, that TIME_ZONE_UNSAFE spares .utc and .to_i,
-# that PATH_PURPOSE judges MASTER only. One index answers instead: id to
-# statement, severity, mode, lifecycle, languages, surfaces, path scope,
-# exemptions, fixtures, proved_by. The catalogue in data/laws.yml stays the
-# single source of truth; this command reads it and never restates it, and
-# --reindex regenerates the committed artifact an outside agent can fetch
-# without running anything.
+# Read the committed Law dictionary without loading the detector runtime.
 
 require "yaml"
 require "json"
@@ -29,6 +20,10 @@ module Master
           flags = argv.grep(/\A--/)
           argv.delete_if { |a| a.start_with?("--") }
           return reindex if flags.include?("--reindex")
+          unless File.file?(index_path)
+            warn "laws: index missing; run bin/master laws --reindex"
+            return 66
+          end
 
           id = argv.first
           if flags.include?("--json") || !id.nil?
@@ -43,12 +38,7 @@ module Master
         end
 
         def index
-          # This reader is also used by the zero-dependency agent tier. It may
-          # read a stale committed projection, but it must never load Prism or
-          # rebuild the index as a side effect. The full-runtime fast gate owns
-          # regeneration and reports its result explicitly.
-          write_index! unless File.file?(index_path)
-          @index ||= JSON.parse(File.read(index_path))
+          JSON.parse(File.read(index_path))
         end
 
         def input_paths
@@ -73,13 +63,8 @@ module Master
         end
 
         def one(id)
-          row = index.fetch("laws").fetch(id, nil)
-          if row.nil?
-            # Case-insensitive second look, then the parent chain: a child id
-            # like APPLICATION_IS_UNIFORM_skipped_law carries its requirement
-            # from its parent row.
-            row = index.fetch("laws").values.find { |l| l["id"].casecmp?(id) }
-          end
+          laws = index.fetch("laws")
+          row = laws[id] || laws.values.find { |law| law["id"].casecmp?(id) }
           unless row
             warn "laws: no law named #{id}; the nearest ids are listed under laws --json"
             exit(64)
@@ -122,7 +107,7 @@ module Master
           rows = law_index_rows(inputs)
           payload = law_index_payload(rows)
           File.write(index_path, "#{JSON.pretty_generate(payload)}\n")
-          @index = payload
+          payload
         end
 
         def law_index_inputs

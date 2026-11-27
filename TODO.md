@@ -501,4 +501,12 @@ declared in `data/voice.yml`. Ten voice-chain tests and the generated-runtime
 contract passed. Chromium's `OfflineAudioContext` confirmed both frequency
 responses. Listening acceptance remains open.
 
+The local-only five-tree run stopped during the MASTER pre-repair suite when
+the workspace restarted. The last progress line counted 4,607 tests, with
+121 failures and 74 errors so far. The run left no terminal receipt.
+
+The fast gate now reports a stale or missing Law index without writing it.
+The regenerated index contains 566 entries. Five focused tests passed, and
+the fast gate reported a current index while preserving its bytes.
+
 Five-tree acceptance remains open.

@@ -1,8 +1,9 @@
 {
   "schema": 1,
-  "generated_at": "2026-11-22T19:25:21Z",
-  "revision": "c0c389f7c25553ed889bef154b4b7be1ea57045d",
-  "law_count": 560,
+  "generated_at": "2026-11-27T15:14:44Z",
+  "revision": "c9504758a2dded17f5ce8903b2e73e52d5682536",
+  "input_fingerprint": "066c3e63770eb9aefdd4f6f0bc3fe5cc60505f9f8c5d1f23e25587b02fc747c2",
+  "law_count": 566,
   "laws": {
     "A_FINDING_IS_A_HYPOTHESIS": {
       "id": "A_FINDING_IS_A_HYPOTHESIS",
@@ -51,7 +52,7 @@
     },
     "ABSTRACTION": {
       "id": "ABSTRACTION",
-      "statement": "Right level; no leaky boundary; appropriate hiding. A boundary that requires the caller to know the implementation has no boundary.\n",
+      "statement": "Expose what matters; hide implementation details behind coherent boundaries.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "trusted",
@@ -113,6 +114,7 @@
         "status": "test",
         "proof": "test/test_adversarial_law.rb"
       },
+      "proved_by": "test/test_adversarial_law.rb",
       "definition_sources": [
         "MASTER/law/semantic.rb"
       ],
@@ -442,6 +444,7 @@
         "status": "test",
         "proof": "test/test_ast_omission_law.rb"
       },
+      "proved_by": "test/test_ast_omission_law.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -614,7 +617,7 @@
         "status": "fixture",
         "file": "/repo/app/views/example.html.erb",
         "bad": "<input type=\"text\" name=\"full-name\" autocomplete=\"fullname\">",
-        "good": "<input type=\"text\" name=\"given-name\" autocomplete=\"given-name\">\n<input type=\"text\" name=\"postcode\" autocomplete=\"section-shipping postal-code\">"
+        "good": "<input type=\"text\" name=\"given-name\" autocomplete=\"given-name\">\n<input type=\"text\" name=\"postcode\" autocomplete=\"section-shipping postal-code\">\n<input type=\"text\" name=\"city\" autocomplete=\"address-level2\">"
       },
       "definition_sources": [
         "MASTER/law/html.rb"
@@ -818,6 +821,7 @@
         "status": "test",
         "proof": "test/test_smell_detectors.rb"
       },
+      "proved_by": "test/test_smell_detectors.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -1363,6 +1367,7 @@
         "status": "test",
         "proof": "test/test_co_change_coupling_law.rb"
       },
+      "proved_by": "test/test_co_change_coupling_law.rb",
       "definition_sources": [
         "MASTER/law/graph.rb"
       ],
@@ -1384,6 +1389,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -1503,6 +1509,7 @@
         "status": "test",
         "proof": "test/test_comment_drift_law.rb"
       },
+      "proved_by": "test/test_comment_drift_law.rb",
       "definition_sources": [
         "MASTER/law/semantic.rb"
       ],
@@ -1719,6 +1726,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -2048,6 +2056,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -2070,6 +2079,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -2193,6 +2203,7 @@
         "status": "test",
         "proof": "test/test_operator_lint.rb"
       },
+      "proved_by": "test/test_operator_lint.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -2216,6 +2227,7 @@
         "bad": "class Money; attr_reader :cents; end; Tax.total(money)\n",
         "good": "class Money; attr_reader :cents; def taxed(rate); cents * rate; end; end\n"
       },
+      "proved_by": "test/test_structural_shape_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -2237,6 +2249,7 @@
         "status": "test",
         "proof": "test/test_smell_detectors.rb"
       },
+      "proved_by": "test/test_smell_detectors.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -2440,7 +2453,7 @@
     },
     "DENSITY": {
       "id": "DENSITY",
-      "statement": "Information-dense; no noise. What is absent cannot be wrong.",
+      "statement": "Remove what serves no purpose; preserve meaningful space and complexity.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "trusted",
@@ -2477,6 +2490,7 @@
         "bad": "class Checkout; def call; Stripe::Charge.create; end; end\n",
         "good": "class Checkout; def initialize(payments:); @payments = payments; end; end\n"
       },
+      "proved_by": "test/test_solid_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -2699,6 +2713,94 @@
       ],
       "bare_detector": false
     },
+    "DOCUMENT_FOLIO_IN_THE_FOOT": {
+      "id": "DOCUMENT_FOLIO_IN_THE_FOOT",
+      "statement": "A printed document's pages carry a folio in the foot, built into the page's own margin boxes, so every sheet the reader holds names its place.\n",
+      "parent": "PRINT_PAGE_CANON",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/document.rb"
+      ],
+      "bare_detector": false
+    },
+    "DOCUMENT_HEADING_STAYS_WITH_BODY": {
+      "id": "DOCUMENT_HEADING_STAYS_WITH_BODY",
+      "statement": "A printed document's heading stays with the body block it names: the page never breaks between a heading and its first paragraph.\n",
+      "parent": "PRINT_PAGE_CANON",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/document.rb"
+      ],
+      "bare_detector": false
+    },
+    "DOCUMENT_TABULAR_FIGURES": {
+      "id": "DOCUMENT_TABULAR_FIGURES",
+      "statement": "A printed document's numeric tables set tabular figures, so amounts and counts align in their columns instead of jittering by glyph width.\n",
+      "parent": "PRINT_PAGE_CANON",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/document.rb"
+      ],
+      "bare_detector": false
+    },
+    "DOCUMENT_WIDOW_ORPHAN_CONTROL": {
+      "id": "DOCUMENT_WIDOW_ORPHAN_CONTROL",
+      "statement": "A printed document's paragraphs set widow and orphan control, so a page never opens or closes on a single stray line.\n",
+      "parent": "PRINT_PAGE_CANON",
+      "severity": "warning",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [
+        "css",
+        "html"
+      ],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "definition_sources": [
+        "MASTER/law/document.rb"
+      ],
+      "bare_detector": false
+    },
     "DOLLAR_PAREN": {
       "id": "DOLLAR_PAREN",
       "severity": "warning",
@@ -2769,6 +2871,28 @@
       "statement": "Do the work now. A clearly authorised request is an instruction to execute, not an invitation to produce another plan or backlog row. Do not create planning TODOs, deferred checklists or parallel backlog files for work that can be performed with current tools, credentials and authority. Finish independent in-scope steps, record evidence, and leave only a precisely named remainder that genuinely needs an unavailable credential, device, human decision, external consent, remote authority or unmet dependency. Completing the independent work while a remainder is blocked is required; promising later work that could have been done now is a stewardship failure.\n",
       "parent": "STEWARDSHIP",
       "severity": "error",
+      "mode": "violation",
+      "lifecycle": "active",
+      "autofix": "review",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/practice.rb"
+      ],
+      "bare_detector": false
+    },
+    "DMESG_TRANSCRIPT": {
+      "id": "DMESG_TRANSCRIPT",
+      "statement": "Operational terminal output is an append-only, plain-text transcript: one factual event per line, named by a stable subsystem unit, with explicit PASS, FAIL, BLOCKED, SKIPPED or INCONCLUSIVE state where applicable. Animation, colour and cursor motion may enhance an interactive terminal but never carry meaning absent from the text. Report cause before a reliable recovery action; omit heartbeat noise and decorative hierarchy.\n",
+      "parent": "TRUTHFUL_STATUS",
+      "severity": "warning",
       "mode": "violation",
       "lifecycle": "active",
       "autofix": "review",
@@ -2872,6 +2996,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -2890,6 +3017,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -2910,6 +3040,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -2928,6 +3061,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -2948,6 +3084,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -2966,6 +3105,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -2986,6 +3128,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -2993,7 +3138,7 @@
     },
     "ROBUSTNESS_mutation_requires_explicit_authorization": {
       "id": "ROBUSTNESS_mutation_requires_explicit_authorization",
-      "statement": "A mutating /fix repair runs without an explicit --apply authorization, an explicit requested mode and a named governed repository target.\n",
+      "statement": "A mutating /fix runs without an operator-requested named governed target or an admitted scoped task; inferred commands, missing targets, read-only flags, audit and visual modes never authorize mutation.\n",
       "parent": "ROBUSTNESS",
       "severity": "error",
       "mode": "violation",
@@ -3004,6 +3149,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -3024,6 +3172,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -3042,6 +3193,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -3062,6 +3216,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -3081,6 +3238,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/universal.rb"
       ],
@@ -3099,6 +3259,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -3692,6 +3855,7 @@
         "bad": "def total(order); order.items.sum { |i| i.price * i.qty }; end\n",
         "good": "class Order; def total; items.sum { |i| i.price * i.qty }; end; end\n"
       },
+      "proved_by": "test/test_feature_envy_law.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -3783,6 +3947,7 @@
         "status": "test",
         "proof": "test/test_structural_shape_laws.rb"
       },
+      "proved_by": "test/test_structural_shape_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -3806,6 +3971,7 @@
         "status": "test",
         "proof": "test/test_file_sequence_name.rb"
       },
+      "proved_by": "test/test_file_sequence_name.rb",
       "definition_sources": [
         "MASTER/law/naming.rb"
       ],
@@ -3829,6 +3995,7 @@
         "bad": "lib/foo/bar.rb\n",
         "good": "lib/foo.rb\n"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -3852,6 +4019,7 @@
         "status": "test",
         "proof": "test/test_vague_words.rb"
       },
+      "proved_by": "test/test_vague_words.rb",
       "definition_sources": [
         "MASTER/law/naming.rb"
       ],
@@ -4767,7 +4935,10 @@
         "kinds": []
       },
       "fixtures": {
-        "status": "docs"
+        "status": "fixture",
+        "file": "-",
+        "bad": "<h1>Orders</h1>\n<h3>Recent orders</h3>\n<h4>Today</h4>\n",
+        "good": "<h1>Orders</h1>\n<h2>Recent orders</h2>\n<h3>Today</h3>\n"
       },
       "definition_sources": [
         "MASTER/law/recovered_design_semantics.rb"
@@ -5135,7 +5306,7 @@
     },
     "INTER_MODEL_CONTRACT": {
       "id": "INTER_MODEL_CONTRACT",
-      "statement": "Every council turn uses a validated structured request and returns evidence-backed findings.\n",
+      "statement": "Use validated structured requests and evidence-backed findings in every council turn.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "active",
@@ -5182,6 +5353,26 @@
       ],
       "bare_detector": false
     },
+    "INTENTIONAL_TEMPORAL_FORM": {
+      "id": "INTENTIONAL_TEMPORAL_FORM",
+      "severity": "info",
+      "mode": "opportunity",
+      "lifecycle": "advisory",
+      "autofix": "never",
+      "languages": [],
+      "surfaces": [],
+      "exemptions": {
+        "path_exclude": [],
+        "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
+      },
+      "definition_sources": [
+        "MASTER/law/universal.rb"
+      ],
+      "bare_detector": false
+    },
     "INTERACTION_SEMANTICS": {
       "id": "INTERACTION_SEMANTICS",
       "severity": "warning",
@@ -5220,6 +5411,7 @@
         "status": "test",
         "proof": "test/test_interconnect_law.rb"
       },
+      "proved_by": "test/test_interconnect_law.rb",
       "definition_sources": [
         "MASTER/law/graph.rb"
       ],
@@ -5243,6 +5435,7 @@
         "bad": "class Printer; def print; end; def scan; raise NotImplementedError; end; end\n",
         "good": "Printable = Data.define; Scannable = Data.define\n"
       },
+      "proved_by": "test/test_solid_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -5343,7 +5536,7 @@
     },
     "KISS": {
       "id": "KISS",
-      "statement": "Keep It Simple, Stupid. The simplest solution that works. Every layer of indirection, every abstraction, every configuration option must earn its existence by removing more than it adds. When an agent trajectory has been proven by causal traces and evidence, prefer compiling it to ordinary deterministic code so the model is no longer required on the hot path; a living agent for a settled workflow is surplus.\n",
+      "statement": "Keep It Simple, Stupid. The simplest solution that works. Every layer of indirection, every abstraction, every configuration option must earn its existence by removing more than it adds. When an agent trajectory has been proven by causal traces and evidence, prefer compiling it to ordinary deterministic code so the model is no longer required on the hot path; a living agent for a settled workflow is surplus. Judge total complexity across owners and callers, not local line counts. A shallow wrapper, decorative container or configuration section must earn its boundary; flatten it when no capability or contract is lost.\n",
       "severity": "warning",
       "mode": "violation",
       "lifecycle": "active",
@@ -5405,6 +5598,7 @@
         "status": "test",
         "proof": "test/test_law_coverage_law.rb"
       },
+      "proved_by": "test/test_law_coverage_law.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -5452,6 +5646,7 @@
         "bad": "class NameHelper; def call(x); x.name; end; end\n",
         "good": "user.name\n"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -5498,6 +5693,7 @@
         "status": "test",
         "proof": "test/test_learned_smells_law.rb"
       },
+      "proved_by": "test/test_learned_smells_law.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -5579,6 +5775,7 @@
         "status": "test",
         "proof": "test/test_lib_root_discipline_law.rb"
       },
+      "proved_by": "test/test_lib_root_discipline_law.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -5612,7 +5809,7 @@
     },
     "LINEARITY": {
       "id": "LINEARITY",
-      "statement": "Sequential flow; minimal branches; one clear path.",
+      "statement": "Make progression clear; avoid needless branches.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "trusted",
@@ -5696,6 +5893,7 @@
         "bad": "class ReadOnlyStore < Store; def save(x); raise \"no\"; end; end\n",
         "good": "class ReadOnlyStore < ReadStore; end\n"
       },
+      "proved_by": "test/test_solid_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -5794,6 +5992,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -6086,6 +6285,7 @@
         "bad": "def name; @user.name; end; def email; @user.email; end\n",
         "good": "attr_reader :user\n"
       },
+      "proved_by": "test/test_structural_shape_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -6603,6 +6803,7 @@
         "status": "test",
         "proof": "test/test_structural_shape_laws.rb"
       },
+      "proved_by": "test/test_structural_shape_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -7044,6 +7245,7 @@
         "bad": "class Application; def users; end; def billing; end; def render; end; def mail; end; end\n",
         "good": "class Users; end; class Billing; end\n"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -7132,7 +7334,7 @@
       "surfaces": [],
       "exemptions": {
         "path_exclude": [
-          "/law/fix_hygiene\\.rb\\z"
+          "/law/ruby\\.rb\\z"
         ],
         "kinds": []
       },
@@ -7143,7 +7345,7 @@
         "good": "UNMEASURED_SCORE = 1_000_000_000"
       },
       "definition_sources": [
-        "MASTER/law/fix_hygiene.rb"
+        "MASTER/law/ruby.rb"
       ],
       "bare_detector": false
     },
@@ -7729,7 +7931,7 @@
     },
     "SPARE_COMMENTS": {
       "id": "SPARE_COMMENTS",
-      "statement": "Code a reader must decode is not finished: rename and reshape until the code says what it does. A comment is the last resort - one present-tense line stating a reason the reader cannot derive. Any comment narrating what the code used to be, or where it came from, goes in the git commit message instead, and a rationale that must outlive the code goes in README.md prose.\n",
+      "statement": "Code a reader must decode is not finished: rename and reshape until the code says what it does. A comment is the last resort - one present-tense line stating a reason the reader cannot derive. Any comment narrating what the code used to be, or where it came from, goes in the git commit message instead, and a rationale that must outlive the code goes in README.md prose. Remove punctuation-only comment dividers; preserve directives, meaningful explanations and literal content.\n",
       "severity": "warning",
       "mode": "violation",
       "lifecycle": "active",
@@ -7961,6 +8163,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -8047,7 +8250,7 @@
       "surfaces": [],
       "exemptions": {
         "path_exclude": [
-          "/law/fix_hygiene\\.rb\\z"
+          "/law/ruby\\.rb\\z"
         ],
         "kinds": []
       },
@@ -8058,7 +8261,7 @@
         "good": "body.scan(/phantom:\\(?:detected|halt|recovery)/)"
       },
       "definition_sources": [
-        "MASTER/law/fix_hygiene.rb"
+        "MASTER/law/ruby.rb"
       ],
       "bare_detector": false
     },
@@ -8503,6 +8706,7 @@
         "status": "test",
         "proof": "test/test_smell_detectors.rb"
       },
+      "proved_by": "test/test_smell_detectors.rb",
       "definition_sources": [
         "MASTER/law/naming.rb"
       ],
@@ -8634,6 +8838,7 @@
         "bad": "case format; when :json; render_json; when :xml; render_xml; end\n",
         "good": "renderers.fetch(format).call(document)\n"
       },
+      "proved_by": "test/test_solid_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -8814,6 +9019,7 @@
         "status": "test",
         "proof": "test/test_parameterized_slug.rb"
       },
+      "proved_by": "test/test_parameterized_slug.rb",
       "definition_sources": [
         "MASTER/law/naming.rb"
       ],
@@ -8900,6 +9106,7 @@
         "status": "test",
         "proof": "test/test_path_purpose_law.rb"
       },
+      "proved_by": "test/test_path_purpose_law.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -8923,6 +9130,7 @@
         "bad": "if cache.hit?; cache.read; else; fetch; cache.write; end\n",
         "good": "result = Cache.fetch(key) { fetch }\n"
       },
+      "proved_by": "test/test_pattern_extraction_law.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -9223,7 +9431,7 @@
     },
     "PRESERVE_FIRST": {
       "id": "PRESERVE_FIRST",
-      "statement": "Preserve working code and behaviour before improving it; never break what exists to build what does not yet exist.",
+      "statement": "Preserve working behavior, meaning and deliberate choices before improving. Develop the whole through transformations that strengthen existing relationships. Compare materially different alternatives and retain demonstrated lessons.\n",
       "parent": "STEWARDSHIP",
       "severity": "error",
       "mode": "violation",
@@ -9257,6 +9465,9 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "docs"
+      },
       "definition_sources": [
         "MASTER/law/practice.rb"
       ],
@@ -9276,6 +9487,13 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "test",
+        "proof": "test/test_structural_shape_laws.rb",
+        "bad": "def ready?; @ready = true; save!; end\n",
+        "good": "def ready?; !!@ready; end\ndef mark_ready; @ready = true; save!; end\n"
+      },
+      "proved_by": "test/test_structural_shape_laws.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -9299,6 +9517,7 @@
         "bad": "email = \"a@b.com\"; Email.send(email)\n",
         "good": "email = EmailAddress.parse(raw); Mailer.send(email)\n"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural_questions.rb"
       ],
@@ -9669,7 +9888,7 @@
     },
     "PROXIMITY": {
       "id": "PROXIMITY",
-      "statement": "Related things live together; a module is cohesive, not a shelf.",
+      "statement": "Keep related things together.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "trusted",
@@ -9701,6 +9920,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -10189,6 +10411,7 @@
         "status": "test",
         "proof": "test/test_external_linter_laws.rb"
       },
+      "proved_by": "test/test_external_linter_laws.rb",
       "definition_sources": [
         "MASTER/law/linters.rb"
       ],
@@ -10371,7 +10594,7 @@
     },
     "ROBUSTNESS": {
       "id": "ROBUSTNESS",
-      "statement": "Fail safe; security first; least authority; edge cases handled.",
+      "statement": "Anticipate failure. Fail safely, minimize authority and handle edge cases.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "trusted",
@@ -10403,6 +10626,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -10445,6 +10671,7 @@
         "status": "test",
         "proof": "test/test_external_linter_laws.rb"
       },
+      "proved_by": "test/test_external_linter_laws.rb",
       "definition_sources": [
         "MASTER/law/linters.rb"
       ],
@@ -10643,6 +10870,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/meta.rb"
       ],
@@ -10825,6 +11053,7 @@
         "status": "test",
         "proof": "test/test_semantic_law_scope.rb"
       },
+      "proved_by": "test/test_semantic_law_scope.rb",
       "definition_sources": [
         "MASTER/law/semantic.rb"
       ],
@@ -11136,7 +11365,7 @@
     },
     "SINGULARITY": {
       "id": "SINGULARITY",
-      "statement": "Every fact has one definition. Copies drift silently.",
+      "statement": "Give every fact one authoritative source.",
       "severity": "error",
       "mode": "violation",
       "lifecycle": "trusted",
@@ -11168,6 +11397,9 @@
       "exemptions": {
         "path_exclude": [],
         "kinds": []
+      },
+      "fixtures": {
+        "status": "docs"
       },
       "definition_sources": [
         "MASTER/law/universal.rb"
@@ -11218,6 +11450,7 @@
         "file": "/repo/app/models/example.rb",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -11239,6 +11472,7 @@
         "status": "test",
         "proof": "test/test_scan_law_contracts.rb"
       },
+      "proved_by": "test/test_scan_law_contracts.rb",
       "definition_sources": [
         "MASTER/law/structural.rb"
       ],
@@ -11786,6 +12020,12 @@
         "path_exclude": [],
         "kinds": []
       },
+      "fixtures": {
+        "status": "fixture",
+        "file": "/repo/MASTER/lib/cli/fixture.rb",
+        "bad": "Master::Trace::Dmesg.status(\"mov0\", \"init     $HOME/Downloads\")\nMaster::Trace::Dmesg.status(\"disk0\", \"check    8.4GB available\")\n",
+        "good": "Master::Trace::Dmesg.status(\"mov0\", \"initializing $HOME/Downloads\")\nMaster::Trace::Dmesg.status(\"disk0\", \"8.4GB available\")\n"
+      },
       "definition_sources": [
         "MASTER/law/typesetting.rb"
       ],
@@ -12219,6 +12459,7 @@
         "status": "test",
         "proof": "test/test_smell_detectors.rb"
       },
+      "proved_by": "test/test_smell_detectors.rb",
       "definition_sources": [
         "MASTER/law/naming.rb"
       ],
@@ -12638,6 +12879,7 @@
         "status": "test",
         "proof": "test/test_veto_pattern_law.rb"
       },
+      "proved_by": "test/test_veto_pattern_law.rb",
       "definition_sources": [
         "MASTER/law/veto.rb"
       ],

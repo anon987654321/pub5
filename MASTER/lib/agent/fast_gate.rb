@@ -1,15 +1,6 @@
 # frozen_string_literal: true
 
-# bin/master selfcheck --fast - the seconds-scale self-consistency gate.
-#
-# The constitution broke its own rules between full audits: a body budget
-# overrun of 958 lines, a bin door past its ceiling, a RUNBOOK cron table
-# that drifted from fourteen jobs to eleven. None of that needs 48 minutes;
-# all of it is mechanical. This gate reads the same declared numbers the
-# full ratchets read (spine.yml's ceilings, the RUNBOOK's own table, the
-# mirror crontab) and answers in seconds. A green always carries the
-# revision it measured; a gate that could not run a check marks it NOT_RUN,
-# never PASS.
+# Check the same budgets and registries as the full gate without booting MASTER.
 
 require "yaml"
 require "open3"
@@ -230,12 +221,9 @@ module Master
           expected = LawIndex.input_fingerprint
           return check("laws_index", "PASS", "source fingerprint #{expected[0, 12]} is current") if index["input_fingerprint"] == expected
 
-          previous = index["input_fingerprint"] || "missing"
-          LawIndex.write_index!
-          refreshed = LawIndex.index
-          return check("laws_index", "PASS", "index regenerated for source fingerprint #{expected[0, 12]}") if refreshed["input_fingerprint"] == expected
-
-          check("laws_index", "FAIL", "index regeneration did not match current inputs (previous: #{previous})")
+          check("laws_index", "FAIL", "source fingerprint changed; run bin/master laws --reindex")
+        rescue Errno::ENOENT
+          check("laws_index", "FAIL", "index missing; run bin/master laws --reindex")
         rescue JSON::ParserError => e
           check("laws_index", "FAIL", "laws_index.json is not valid JSON: #{e.message}")
         end
