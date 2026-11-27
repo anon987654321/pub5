@@ -76,9 +76,21 @@ class TestBinMaster < Minitest::Test
     out, status = run_master("--help")
 
     assert status.success?, out
-    ["bin/master core", "bin/master replay", "--fix-context", "--model", "--headless", "--fast"].each do |form|
+    ["bin/master core", "bin/master replay", "--fix-context", "--tts-local", "--model", "--headless", "--fast"].each do |form|
       assert_includes out, form
     end
+  end
+
+  def test_contract_only_exports_commands_without_inspecting_the_target
+    path = "private-missing-target-for-contract-test"
+    out, status = run_master("--fix-context", path, "--contract-only")
+
+    assert status.success?, out
+    assert_includes out, "MASTER external-agent contract"
+    assert_includes out, "--only critique"
+    assert_includes out, "--tts-local"
+    refute_includes out, path
+    refute_includes out, "LIVE TARGET"
   end
 
   def test_replay_without_a_sequence_is_a_usage_error

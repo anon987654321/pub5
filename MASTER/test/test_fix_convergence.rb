@@ -2374,13 +2374,25 @@ end
     assert_empty unsafe
   end
 
-  def test_clean_tree_ideation_demands_anchored_candidates
-    critique = Master::Review::Council::Critique.new(mode: :general, agent: nil)
-    prompt = critique.send(:ideation_prompt, [])
+  def test_audit_critique_uses_the_named_source_and_keeps_proposals_ephemeral
+    source = File.join(Master::ROOT, "lib", "core.rb")
+    deliberation = Struct.new(:agent).new(Object.new)
+    pass = Master::CLI::Pipeline::Pass.new(scanner: nil, fix_loop: nil, root: Master::ROOT, deliberation:)
+    captured = nil
+    panel = Object.new
+    panel.define_singleton_method(:run) do
+      Master::Result.ok(coverage: { read: 1, excerpts: 1 }, cherry_picks: [], reason: nil)
+    end
+    result = Master::Review::Council::Critique.stub(:new, ->(**options) { captured = options; panel }) do
+      Master::CLI::Pipeline::Pass.stub(:new, ->(**) { pass }) do
+        Master::CLI::CommandRegistry.run_pass({}, target: source, source_critique: true, apply: false, only: "critique")
+      end
+    end
 
-    assert_includes prompt, "5 to 20 materially different candidates"
-    assert_includes prompt, "repository-relative file and stable line or symbol"
-    assert_includes prompt, "Do not invent defects"
+    assert_equal [source], captured.fetch(:files)
+    assert_equal false, captured.fetch(:harvest)
+    assert_equal :inconclusive, result.category
+    assert_includes result.message, "source coverage is partial"
   end
 
   def test_pending_wishlist_becomes_part_of_the_next_fix_mission
@@ -2898,7 +2910,8 @@ end
   end
 
   def panel_review(adapter:, before:, after:)
-    result = Master::Result.ok(feedback: [{ persona: "Judge", feedback: "APPROVE\nR1: EIGHT_PX_RHYTHM — aligned" }])
+    result = Master::Result.ok(feedback: [{ persona: "Judge", position: "concur",
+      structured_findings: [{ "location" => "R1", "evidence" => "EIGHT_PX_RHYTHM — aligned" }] }])
     panel = Object.new.tap { _1.define_singleton_method(:run) { result } }
     seen = nil
     Master::Review::Council::Critique.stub(:new, ->(**kwargs) { seen = kwargs; panel }) do
@@ -2920,7 +2933,8 @@ end
       assert_equal :ui, seen.fetch(:mode)
       assert_equal before, seen.dig(:visual_image, :path)
       assert_equal [after], seen.fetch(:visual_images).map { _1.fetch(:path) }
-      assert_includes seen.fetch(:briefing), "Judge must answer APPROVE or REJECT"
+      assert_includes seen.fetch(:briefing), "position `concur` to approve"
+      refute seen.fetch(:explore)
     end
   end
 

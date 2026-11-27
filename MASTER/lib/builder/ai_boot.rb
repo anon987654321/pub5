@@ -85,7 +85,6 @@ module Master
       end
       ctx = CLI::ContextWindow.new(session: infra[:session], agent:, model_context: Master.context_window(agent.model),
         event_bus: bus, root:)
-      ctx.check_and_compact!
       agent.wire_context_window(ctx)
       agent_pool = Review::AgentPool.new(governor: infra[:governor], tools:, event_bus: bus)
       { agent:, tools:, soul: soul_doc, context_window: ctx, agent_pool: }
@@ -94,7 +93,7 @@ module Master
     def build_council(agent:, bus:, root:)
       personas = Review::Council::Personas.load(Master::COUNCIL_PATH)
       axioms = Ground::Laws.new(root:)
-      deliberation = Review::Council::Deliberation.new(personas:, agent:, event_bus: bus, axioms:)
+      deliberation = Review::Council::Deliberation.new(personas:, agent:, event_bus: bus, axioms:, local_only: true)
       ideation = Review::Council::Ideation.new(agent:, event_bus: bus)
       { axioms:, deliberation:, ideation: }
     end

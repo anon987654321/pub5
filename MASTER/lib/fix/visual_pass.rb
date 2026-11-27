@@ -286,11 +286,16 @@ module Master
       def review_captures(captures, sources, anchors, pass, graph:, coverage:)
         critique, image = run_critique(captures, sources, anchors, graph:)
         return inconclusive("#{critique.message}") if critique.err?
-        return inconclusive("council did not complete") if critique.value![:status].to_s == "inconclusive"
+        value = critique.value!
+        return inconclusive(value[:reason].to_s.empty? ? "council did not complete" : value[:reason]) if
+          value[:status].to_s == "inconclusive"
 
         artifact = keep_artifact(captures, image, pass)
         findings = anchored_findings(critique, sources, anchors)
         return findings if findings.is_a?(Result)
+        if findings.empty? && Array(value[:issues]).any?
+          return inconclusive("council raised visual issues without a supported repair")
+        end
 
         @bus&.publish("fix_loop:visual_review", pass:, surfaces: captures.map { |c| c[:surface].id }, findings: findings.size, coverage: coverage[:ratio], graph: graph&.context)
         surface_evidence = captures.map do |capture|

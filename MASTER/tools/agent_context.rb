@@ -89,8 +89,10 @@ module Operator
     end
 
     # Canonical context for an external model asked to execute /fix.
-    def fix_context(target: REPO_ROOT, full: false)
+    def fix_context(target: REPO_ROOT, full: false, contract_only: false)
       load_master
+      return Master::Fix::Protocol.integration_contract if contract_only
+
       target = File.expand_path(target, Dir.pwd)
       Master::Fix::Protocol.context(root: REPO_ROOT, target:, full:)
     rescue StandardError => e
@@ -111,7 +113,7 @@ module Operator
           target = File.expand_path(arg, Dir.pwd) if !arg.start_with?("--") && target == REPO_ROOT
         end
       end
-      [target, full]
+      [target, full, argv.include?("--contract-only")]
     end
 
     def tree_args(argv)
@@ -326,8 +328,8 @@ end
 
 if $PROGRAM_NAME == __FILE__
   if (options = Operator::AgentContext.fix_context_args(ARGV))
-    target, full = options
-    puts Operator::AgentContext.fix_context(target:, full:)
+    target, full, contract_only = options
+    puts Operator::AgentContext.fix_context(target:, full:, contract_only:)
   elsif ARGV.include?("--json")
     require "json"
     tree = ARGV.include?("--tree")

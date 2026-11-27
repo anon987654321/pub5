@@ -49,6 +49,10 @@ For local handwritten archives, `/documents analyze ~/Photos` reads a bounded se
 
 `bin/master` is the interactive assistant and command entrypoint. From the `pub5/` repository root, start it with `MASTER/bin/master`; from inside `MASTER/`, use `bin/master`. The tracked launcher already has executable mode, so a normal checkout does not need `chmod`. `bin/operator` is the operations surface for status, checks, tests and supported host tasks. The browser face and speech runtime live under `web/`; their policy belongs in the relevant data sources rather than duplicated literals. Music plays only after an explicit operator request; startup never begins audio on its own.
 
+Terminal-only startup prepares optional voice services in the background. `MASTER_BOOT_TIMING=1 bin/master` reports the measured boot stages. `show status` reads local state without a model call.
+
+External agents can load the portable instructions with `MASTER/bin/master --fix-context --contract-only`. It exports the procedure and command interface without inspecting a target tree. Execute the commands on the operator’s machine and keep the resulting source evidence there. `MASTER/bin/master --tts-local` reads approved text from stdin and writes audio to stdout using local `say` or eSpeak. eSpeak returns WAV. macOS returns M4A when `afconvert` is available and AIFF otherwise.
+
 ### Android and Termux
 
 Run `sh MASTER/bin/master-mobile-install --auto` from Termux to provision the supported Ubuntu or Debian guest and write `~/.local/bin/master`. Use that launcher for normal sessions; it enters the guest once through a non-login zsh command and does not update the checkout on every start. Rerun the installer when you want to fast-forward a clean checkout and refresh the guest.
@@ -289,6 +293,12 @@ The one-shot CLI and `bin/operator fix status` read split flags such as
 `--mode audit` and `--lane code` before interpreting the target queue.
 
 The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/review`, `/critique` and `/council` select audit; `/scan` selects the read-only repair preview (`--mode=repair --dry-run`); `/visual` and `/style` select visual; `/elevate` and `/map` select elevate; `/all`, `/workflow`, `/triad`, `/sweep`, `/through` and `/self` select all. Use `/fix --mode=repair|audit|visual|elevate|all` for explicit mode selection. New instructions and scripts should call `/fix` directly.
+
+In audit mode, the critique stage reads the named source even on a clean checkout. Directory reviews sample a bounded set of eligible files and report partial coverage. `/fix --mode=audit --only critique MASTER/lib/cli/turn_router.rb` runs the council stage alone. The pre-ship review still reads the Git diff.
+
+The critique council gathers 10–50 text-distinct repair directions per review window (`MASTER_FIX_CANDIDATES`, default 10) when it finds actionable issues. Specialists exchange objections and refinements before the judge records a verdict for each candidate. Only candidates the judge keeps can become repair recommendations. An incomplete candidate set or invalid verdict leaves the review inconclusive. Repairs still pass through their existing verification gates. Approval of an already applied visual repair uses the before/after evidence and a verdict for each changed region.
+
+`/fix` and the source council use local model routes. Enable an allowlisted Ollama model with `MASTER_OLLAMA_ENABLED=1`, or a loopback OpenAI-compatible server with `MASTER_LOCAL_SERVERS=1`. Image review requires a loopback vision server. An unavailable model leaves semantic and visual findings inconclusive. Source reports stay in the terminal and local receipts.
 
 The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The canonical execution owners are the Ruby implementations under `lib/core/`, `lib/fix/kernel/` and `lib/execution.rb`; tests pin the public ownership and recovery boundaries.
 

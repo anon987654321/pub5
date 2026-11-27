@@ -10,11 +10,12 @@ module Master
       # Evidence-first orchestration shared by UI, sound, Dilla, /fix and
       # future information-flow, 3D, particle, face and body probes.
       class Tribunal
-        def initialize(agent:, event_bus: nil, judge_enabled: true, speak_personas: false)
+        def initialize(agent:, event_bus: nil, judge_enabled: true, speak_personas: false, candidate_limit: nil)
           @agent = agent
           @bus = event_bus
           @judge_enabled = judge_enabled
           @speak_personas = speak_personas
+          @candidate_limit = candidate_limit
         end
 
         def review(evidence:, personas:, context:, image: nil, required_veto_roles: [])
@@ -34,6 +35,8 @@ module Master
             event_bus: @bus,
             judge_enabled: @judge_enabled,
             voice_personas: @speak_personas,
+            candidate_limit: @candidate_limit,
+            local_only: true,
           ).review_convergent(payload, context:, image:, required_veto_roles:)
 
           return result unless result.ok?

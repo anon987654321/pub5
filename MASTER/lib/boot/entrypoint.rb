@@ -255,6 +255,7 @@ module Master
 
       def write_boot_receipt!(root:, out:)
         require "json"
+        require "tempfile"
         path = File.join(root, ".master", "boot.json")
         payload = {
           "pid" => Process.pid,
@@ -268,13 +269,13 @@ module Master
         dir = File.dirname(path)
         FileUtils.mkdir_p(dir, mode: 0o700)
         close_state_directory_to_others(dir)
-        tmp = "#{path}.#{Process.pid}.tmp"
-        File.write(tmp, JSON.generate(payload) + "\n", mode: "w", encoding: "UTF-8", perm: 0o600)
-        File.rename(tmp, path)
+        Tempfile.create(".boot-", dir, encoding: "UTF-8") do |tmp|
+          tmp.puts(JSON.generate(payload))
+          tmp.flush
+          File.rename(tmp.path, path)
+        end
       rescue StandardError => e
         Master::Trace::Dmesg.status("boot0", "receipt unavailable, #{e.class}: #{e.message}", io: out)
-      ensure
-        File.delete(tmp) if defined?(tmp) && tmp && File.exist?(tmp)
       end
 
       # Clear "other", keep the group: rc.d/master shares MASTER/.master as

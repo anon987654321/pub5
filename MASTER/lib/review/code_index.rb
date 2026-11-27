@@ -133,6 +133,7 @@ module Master
           return self if @build_thread&.alive?
 
           @build_thread = Thread.new do
+            Thread.current.priority = -3
             begin
               build
             ensure

@@ -128,6 +128,31 @@ module Master
             end
           end
 
+          def repair_key(finding)
+            finding.values_at("location", "proposed_repair").map { |value| value.to_s.gsub(/\s+/, " ").strip }
+          end
+
+          def actionable?(finding) = finding["claim"] != "no actionable issue under charge"
+
+          def proposed?(finding)
+            repair = repair_key(finding).last
+            actionable?(finding) && !repair.empty? && !repair.casecmp?("none")
+          end
+
+          def distinct_findings(findings)
+            repairs = Hash.new { |rows, location| rows[location] = [] }
+            findings.select do |finding|
+              next false unless proposed?(finding)
+
+              location, repair = repair_key(finding)
+              seen = repairs[location.downcase]
+              next false if seen.any? { |kept| kept.casecmp?(repair) || text_overlap(kept, repair) >= SIMILARITY_THRESHOLD }
+
+              seen << repair
+              true
+            end
+          end
+
           # Jaccard-ish overlap normalized by the larger side, so a long idea
           # cannot score highly by containing many words.
           def text_overlap(one, other)

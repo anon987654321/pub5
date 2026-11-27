@@ -85,6 +85,8 @@ module Master
           @rules = axioms
           @judge_enabled = options.fetch(:judge_enabled, true)
           @voice_personas = options.fetch(:voice_personas, false)
+          @candidate_limit = options[:candidate_limit]
+          @local_only = options.fetch(:local_only, false)
           @mode = options.fetch(:mode, :parallel)
           @persona_failures = []
           @persona_failures_lock = Mutex.new
@@ -106,25 +108,38 @@ module Master
         def review_convergent(code, context: nil, max_rounds: nil, image: nil, required_veto_roles: [])
           max_rounds ||= CONVERGENCE_ROUNDS
           history = []
-          round_context = context
+          candidates = []
           max_rounds.times do |index|
+            previous = history.last || []
+            round_context = feedback_summary(previous, context)
+            if @candidate_limit
+              open = index < max_rounds - 1 && candidates.size < @candidate_limit
+              round_context = [round_context, candidate_brief(candidates, open:)].compact.join("\n\n")
+            end
             @bus&.publish(:council_round_start, round: index + 1, max: max_rounds)
-            result = review(code, context: round_context, image:, required_veto_roles:, synthesize: false)
+            result = review(code, context: round_context, image:, required_veto_roles:, synthesize: false,
+              prior_findings: previous.flat_map { |entry| Array(entry[:structured_findings]) }.uniq)
             return result if result.err?
 
             history << result.value!.map { |entry| entry.merge(round: index + 1) }
-            if history.size >= 3 && converged?(history[-2], history[-1])
-              @bus&.publish(:council_converged, round: index + 1, basis: :stable_findings)
+            if @candidate_limit && open
+              candidates = collect_candidates(candidates, history.last)
+            end
+            compared = @candidate_limit && !open && candidates.size >= @candidate_limit
+            stable = candidates.empty? && converged?(previous, history.last)
+            if history.size >= 3 && (compared || stable)
+              @bus&.publish(:council_converged, round: index + 1, basis: compared ? :candidate_comparison : :stable_findings)
               break
             end
-            round_context = feedback_summary(history.flatten(1), context)
           end
           feedback = history.flatten(1)
-          append_judge_synthesis(feedback:, code:, context:, image:) if @judge_enabled
+          judge_context = @candidate_limit ? [context, candidate_judge_brief(candidates)].compact.join("\n\n") : context
+          append_judge_synthesis(feedback:, code:, context: judge_context, image:) if @judge_enabled
           return deadline_result(feedback) if Master::Review::LLMDispatcher::PassClock.expired?
           if @judge_enabled && feedback.none? { |entry| entry[:persona] == "Judge" }
             return Result.err("council: final arbitration unavailable", category: :inconclusive)
           end
+          feedback.last[:candidates] = candidates if @candidate_limit && @judge_enabled
 
           Result.ok(feedback)
         end
@@ -157,13 +172,20 @@ module Master
           review(code, context:, image:, required_veto_roles: ["Security"])
         end
 
-        def review(code, context: nil, personas: nil, image: nil, required_veto_roles: [], synthesize: true)
+        def review(code, context: nil, personas: nil, image: nil, required_veto_roles: [], synthesize: true, prior_findings: [])
+          if @local_only && (local_candidates.empty? || !@agent.respond_to?(:ask_once))
+            return Result.err("council: no loopback model available for source review", category: :inconclusive)
+          end
+          if @local_only && image && local_candidates(image:).empty?
+            return Result.err("council: no loopback vision model available", category: :inconclusive)
+          end
+
           active = active_personas(personas, required_veto_roles:)
           configuration_error = veto_role_configuration_error
           return configuration_error if configuration_error
           capacity_error = veto_role_capacity_error
           return capacity_error if capacity_error
-          if active.empty? || !Deliberation.reachable_for?(@agent)
+          if active.empty? || (!@local_only && !Deliberation.reachable_for?(@agent))
             return unconvened("council: no personas, or no provider reached", :validation, Gap.new(horizon: :never, cost_to_check: :minutes))
           end
 
@@ -176,8 +198,9 @@ module Master
 
           context = reflexion_context(context)
           @panel_size = active.size
+          @answered = 0
           @active_persona_names = active.map { |persona| persona.name.to_s }
-          feedback = collect_feedback(active, code, context, image:)
+          feedback = collect_feedback(active, code, context, image:, prior_findings:)
 
           speak_persona_feedback(feedback) if @voice_personas
           veto = enforce_veto(feedback)
@@ -334,6 +357,7 @@ module Master
         SPEND = %i[spent].freeze
 
         def panel_blocked?
+          return false if @local_only
           return false if Io::LaneState.usable?(nil, sources: SPEND)
 
           lanes = Array(@agent.candidate_models(task_type: :review)) if @agent.class.method_defined?(:candidate_models)
@@ -342,6 +366,7 @@ module Master
         end
 
         def local_floor_available?
+          return local_candidates.any? if @local_only
           router = @agent.respond_to?(:model_router) ? @agent.model_router : nil
           return false unless router.respond_to?(:pool)
 
@@ -352,6 +377,7 @@ module Master
         end
 
         def cloud_floor_available?
+          return false if @local_only
           router = @agent.respond_to?(:model_router) ? @agent.model_router : nil
           return false unless router.respond_to?(:pool)
 
@@ -374,9 +400,9 @@ module Master
           context
         end
 
-        def collect_feedback(personas, code, context, image: nil)
+        def collect_feedback(personas, code, context, image: nil, prior_findings: [])
           method = @mode == :sequential ? :collect_sequential : :collect_parallel
-          send(method, code:, context:, personas:, image:)
+          send(method, code:, context:, personas:, image:, prior_findings:)
         end
 
         def quorum_error(feedback)
@@ -477,7 +503,7 @@ module Master
           }
         end
 
-        def collect_parallel(code:, context:, personas: @personas, image: nil)
+        def collect_parallel(code:, context:, personas: @personas, image: nil, prior_findings: [])
           return [] if circuit_open? || panel_blocked?
 
           deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + [TOTAL_BUDGET_S, Master::Review::LLMDispatcher::PassClock.remaining || TOTAL_BUDGET_S].min
@@ -493,7 +519,7 @@ module Master
               batch.each do |persona|
                 threads << [persona, Thread.new do
                   Thread.current.report_on_exception = false
-                  ask_persona(persona:, code:, context:, image:)
+                  ask_persona(persona:, code:, context:, image:, prior_findings:)
                 end]
               end
             rescue StandardError => error
@@ -533,14 +559,16 @@ module Master
           end
         end
 
-        def collect_sequential(code:, context:, personas: @personas, image: nil)
+        def collect_sequential(code:, context:, personas: @personas, image: nil, prior_findings: [])
           deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + TOTAL_BUDGET_S
           personas.each_with_object([]) do |persona, feedback|
             break feedback if panel_blocked? || Master::Review::LLMDispatcher::PassClock.expired?
             break feedback if Process.clock_gettime(Process::CLOCK_MONOTONIC) >= deadline || circuit_open?(persona)
 
             turn_context = feedback.empty? ? context : "#{context}\n\nprior turns:\n#{format_prior_turns(feedback)}"
-            entry = ask_persona(persona:, code:, context: turn_context, image:)
+            prior = prior_findings
+            prior += feedback.flat_map { |row| Array(row[:structured_findings]) } if @candidate_limit
+            entry = ask_persona(persona:, code:, context: turn_context, image:, prior_findings: prior.uniq)
             feedback << entry if entry
           end
         end
@@ -566,6 +594,7 @@ module Master
         end
 
         def candidate_models_for(_persona)
+          return local_candidates if @local_only
           if ENV["MASTER_LOCAL_ONLY"] == "1"
             router = @agent.respond_to?(:model_router) ? @agent.model_router : nil
             return Array(router.local_models) + Array(router.local_server_models) if router
@@ -576,21 +605,24 @@ module Master
           @agent.respond_to?(:model) ? Array(@agent.model) : []
         end
 
-        def ask_persona(persona:, code:, context:, image: nil)
+        def ask_persona(persona:, code:, context:, image: nil, prior_findings: [])
           # Checked here as well as per batch: the four threads of a batch
           # queue behind the dispatcher's CLI slots, so the ones still waiting
           # when the first comes back refused can be spared their own refusal.
           model = lane_for(persona, image:)
+          return if @local_only && model.nil?
           refused = lane_verdict(model)
           return lane_skipped(persona, refused) unless refused.usable?
 
           temperature = persona.respond_to?(:temperature) ? persona.temperature : nil
-          request_prompt = build_prompt(persona:, code:, context:)
+          request_prompt = build_prompt(persona:, code:, context:, prior_findings:)
           response = InterModelContract.exchange(
-            prompt: request_prompt, role: "critic", bus: @bus, model:,
+            prompt: request_prompt, role: "critic", bus: @bus, model:, prior_findings:,
           ) do |outbound, retrying|
             chosen_temperature = retrying ? 0.0 : temperature
-            if model
+            if @local_only
+              @agent.ask_once(outbound, model:, image:, temperature: chosen_temperature, local_only: true)
+            elsif model
               @agent.ask_once(outbound, model:, temperature: chosen_temperature, image:)
             else
               @agent.ask(outbound, temperature: chosen_temperature, image:)
@@ -623,11 +655,30 @@ module Master
         # dead lanes and free models excluded while a live lane exists. nil
         # leaves the choice to the agent, as for an agent with no lane list.
         def lane_for(persona, image: nil)
+          if @local_only
+            return Io::LaneSelection.spread(@personas.map(&:name), local_candidates(image:))[persona.name]
+          end
           return if ENV["MASTER_LOCAL_ONLY"] == "1" || !@agent.respond_to?(:candidate_models)
 
           @lane_candidates_lock.synchronize { @lane_candidates ||= Array(@agent.candidate_models(task_type: :review)) }
           names = (@personas.map(&:name) | [persona.name])
           Io::LaneSelection.spread(names, @lane_candidates, vision: !image.nil? && image != "")[persona.name]
+        end
+
+        def local_candidates(image: nil)
+          candidates = @lane_candidates_lock.synchronize do
+            if @local_candidates.nil? || @local_candidates.empty?
+              router = @agent.model_router if @agent.respond_to?(:model_router)
+              local = router.respond_to?(:local_models) ? router.local_models : []
+              servers = router.respond_to?(:local_server_models) ? router.local_server_models : []
+              @local_candidates = (Array(local) + Array(servers)).uniq.select { |model| Io::LaneHealth.local_model?(model) }
+            else
+              @local_candidates
+            end
+          end
+          return candidates unless image
+
+          candidates.select { |model| model.start_with?("local:") && Io::LaneSelection.vision?(model) }
         end
 
         # A persona that never got asked. Tallied apart from the ones that did,
@@ -674,6 +725,7 @@ module Master
         end
 
         def speak_persona_feedback(feedback)
+          return if @local_only
           return unless defined?(Master::Voice::Playback)
           return unless Master::Voice::Playback.enabled? && Master::Voice::Playback.available?
 

@@ -175,19 +175,17 @@ class TestRenderedVisualConvergence < Minitest::Test
     assert_includes brief, "its own task and identity"
   end
 
-  def test_ui_critique_excludes_judge_from_issue_numbering
+  def test_ui_critique_reports_structured_panel_issues_only
     critic = Master::Review::Council::Critique.new(mode: :ui, agent: nil, files: [])
     feedback = [
-      { persona: "Typographer", feedback: "Body text is 13px on mobile.\nmore" },
-      { persona: "Judge", feedback: "Verdict: two issues stand." },
-      { persona: "Layout", feedback: "The feed card overflows at 390px." },
+      { persona: "Typographer", structured_findings: [{ "claim" => "Body text is 13px on mobile." }] },
+      { persona: "Judge", structured_findings: [{ "claim" => "Verdict: one issue stands." }] },
+      { persona: "Layout", structured_findings: [{ "claim" => "no actionable issue under charge" }] },
     ]
 
-    prompt = critic.send(:ideation_prompt, feedback)
+    issues = critic.send(:panel_issue_entries, feedback)
 
-    assert_includes prompt, "1. Body text is 13px on mobile."
-    assert_includes prompt, "2. The feed card overflows at 390px."
-    refute_includes prompt, "Verdict"
+    assert_equal ["Body text is 13px on mobile."], issues.map { |issue| issue[:summary] }
     assert(Master::Review::Council::Critique::Modes::TABLE[:ui][:constraints].any? { |c| c.include?("state VISUAL_CLEAN explicitly") },
            "the ui panel must be able to say the render is clean")
   end

@@ -184,7 +184,7 @@ module Master
       # Below the visitor check, as every route to the registry is.
       def imperative_shorthand(text)
         value = text.to_s.strip
-        return "/status" if value.match?(/\Astatus[?.!]?\z/i)
+        return "/status" if value.match?(/\A(?:show\s+)?status[?.!]?\z/i)
         return "/fix" if value.match?(/\A(?:go|go on|keep going|carry on|continue)[.!]?\z/i)
 
         nil

@@ -551,6 +551,31 @@ class TestLLMDispatcher < Minitest::Test
     ENV["MASTER_LOCAL_ONLY"] = previous
   end
 
+  def test_private_dispatch_rejects_hosted_and_cloud_tagged_models
+    dispatcher = Master::Review::LLMDispatcher.allocate
+    dispatcher.define_singleton_method(:answering_model) { |*| flunk "private dispatch consulted the global pin" }
+    messages = [{ role: "user", content: "source evidence" }]
+
+    ["anthropic/claude-sonnet-4", "ollama:example:cloud", "local:example-cloud"].each do |model|
+      result = dispatcher.send_with_cache(model, messages, local_only: true)
+
+      assert result.err?
+      assert_equal :offline, result.category
+    end
+  end
+
+  def test_local_server_requires_a_loopback_url_before_constructing_the_request
+    dispatcher = Master::Review::LLMDispatcher.allocate
+    router = Object.new
+    router.define_singleton_method(:local_server_for) { |*| "https://example.com/v1" }
+    dispatcher.instance_variable_set(:@model_router, router)
+
+    result = dispatcher.send(:send_local_server, "local:model", [], sys: "source evidence")
+
+    assert result.err?
+    assert_equal :policy, result.category
+  end
+
   # Two claude subprocesses at once, process-wide: four-way contention doubles
   # per-call latency and CLI calls die empty-stderr under it.
   def test_agy_model_predicate
@@ -1195,6 +1220,8 @@ class TestLLMDispatcher < Minitest::Test
   # events on the way.
   def test_the_lane_assembles_an_event_stream_into_one_answer
     server = TCPServer.new("127.0.0.1", 0)
+    first_delta = Queue.new
+    deltas = []
     thread = Thread.new do
       socket = server.accept
       while (line = socket.gets.to_s.strip) != "" do end
@@ -1205,7 +1232,9 @@ class TestLLMDispatcher < Minitest::Test
         "data: [DONE]", "", "event: ping", 'data: {"choices":[{"delta":{"content":" ignored"}}]}', "",
       ]
       socket.print("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n")
-      socket.print(events.join("\n") + "\n")
+      socket.print(events.take(2).join("\n") + "\n")
+      Timeout.timeout(2) { first_delta.pop }
+      socket.print(events.drop(2).join("\n") + "\n")
       socket.close
     end
     dispatcher, = build_dispatcher
@@ -1214,9 +1243,13 @@ class TestLLMDispatcher < Minitest::Test
     router.define_singleton_method(:local_server_for) { |_id| base }
     dispatcher.instance_variable_set(:@model_router, router)
 
-    result = dispatcher.send(:send_local_server, "local:Qwen/Qwen3-4B", [{ role: "user", content: "hi" }], sys: nil)
+    result = dispatcher.send(:send_local_server, "local:Qwen/Qwen3-4B", [{ role: "user", content: "hi" }], sys: nil) do |delta|
+      first_delta << true if deltas.empty?
+      deltas << delta
+    end
 
     assert_equal "hello world", result.value!
+    assert_equal ["hello ", "world"], deltas
   ensure
     thread&.kill
     server&.close
@@ -1346,6 +1379,7 @@ class TestLLMDispatcher < Minitest::Test
       url = parts.last.fetch(:image_url).fetch(:url)
       assert_equal "data:image/png;base64,#{[ "PNGBYTES" ].pack("m0")}", url
       assert_equal({ type: "text" }, { type: parts.first.fetch(:type) })
+      assert_includes parts.first.fetch(:text), "look"
     end
   end
 

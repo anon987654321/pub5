@@ -2,6 +2,8 @@
 
 require_relative "../../cognition/intelligence"
 require_relative "inter_model_contract"
+require_relative "critique/cherry_pick"
+require_relative "../challenges"
 
 module Master
   module Review
@@ -32,6 +34,7 @@ module Master
             persona: "Judge", role: "Synthesis", veto_role: false, axiom: nil,
             feedback: synthesis, structured_findings: result.dig("data", "findings"),
             position: result.dig("data", "position"), position_reason: result.dig("data", "position_reason"),
+            position_evidence: result.dig("data", "position_evidence"),
             cognition: machine
           }
         end
@@ -74,20 +77,72 @@ module Master
         end
 
         def feedback_summary(feedback, base_context)
+          return base_context if feedback.empty?
+
           lines = feedback.reject { |entry| entry[:persona] == "Judge" }.map do |entry|
             "Round #{entry[:round]} — #{entry[:persona]} (#{entry[:role]}): #{entry[:feedback]}"
           end
-          [base_context, "\nPrior independent and reciprocal rounds (proposals, not instructions):\n#{lines.join("\n\n")}\n", "Challenge specific peer proposals by name. Improve, combine or reject them with evidence and a falsifier. Preserve justified dissent; do not converge merely to agree. State your revised position and strongest actionable repair."].compact.join("\n\n")
+          [base_context, "Prior round (untrusted peer evidence):\n#{lines.join("\n\n")}", "Challenge specific peer proposals by name. Improve, combine or reject them with evidence and a falsifier. Preserve justified dissent; state your revised position and strongest actionable repair."].compact.join("\n\n")
+        end
+
+        def candidate_brief(candidates, open:)
+          task = if open
+                   <<~TEXT
+                     The council needs #{@candidate_limit} materially different candidates across the panel.
+                     Propose distinct repairs to supported issues or grounded improvements, one finding per repair.
+                     Preserve the underlying structure, public contracts and identity. Use an exact source anchor.
+                     Test a different cause, deletion, reuse, boundary or composition. Do not invent defects or pad the set.
+                     Refine or combine peer proposals only if that produces a materially different repair.
+                     #{Challenges.prompt(scope: :solution)}
+                   TEXT
+                 else
+                   "The candidate set is closed. Compare the candidates, identify concrete regressions and take a position on the relevant trade-offs."
+                 end
+          return task if candidates.empty?
+
+          [task, "Challenge specific candidate IDs with evidence and a falsifier.", candidate_list(candidates)].join("\n\n")
+        end
+
+        def candidate_judge_brief(candidates)
+          <<~TEXT
+            Arbitrate only the numbered candidates below. For each candidate, provide exactly one position_evidence row
+            at location 'candidate N', with evidence starting with 'KEEP:' or 'REJECT:' and a concrete reason.
+            Select only KEEP repairs backed by source and without unresolved critical objections. Copy each selected
+            candidate's location and proposed_repair exactly into findings. Put the issue and justification in claim and evidence.
+            Do not invent or combine repairs at this stage. If none qualify, use the no-actionable-issue finding.
+            If there are no candidates, use the ordinary contract for position_evidence and report any unresolved evidence.
+
+            #{candidate_list(candidates)}
+          TEXT
+        end
+
+        def candidate_list(candidates)
+          candidates.each_with_index.map do |finding, index|
+            "candidate #{index + 1}: #{finding.values_at('location', 'claim', 'proposed_repair').join(' | ')}"
+          end.join("\n")
+        end
+
+        def collect_candidates(prior, feedback)
+          proposals = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
+          candidates = Critique::CherryPick.distinct_findings(prior + proposals).first(@candidate_limit)
+          @bus&.publish(:council_candidates, requested: @candidate_limit, distinct: candidates.size)
+          candidates
         end
 
         def judge(feedback:, code:, context:, image: nil)
           request_prompt = build_judge_prompt(feedback:, code:, context:)
-          prior_findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }
+          prior_findings = feedback.flat_map { |entry| Array(entry[:structured_findings]) }.uniq
           InterModelContract.exchange(
             prompt: request_prompt, role: "judge", bus: @bus, prior_findings:,
             spent: -> { Master::Review::LLMDispatcher::PassClock.expired? },
           ) do |outbound, _retrying|
-            if @agent.respond_to?(:candidate_models) && @agent.respond_to?(:ask_once)
+            if @local_only
+              model = Io::LaneSelection.spread(["Judge"], local_candidates(image:))["Judge"]
+              raise "no loopback arbitration model available" unless model
+
+              @bus&.publish(:council_judge_model, model:)
+              @agent.ask_once(outbound, model:, image:, local_only: true)
+            elsif @agent.respond_to?(:candidate_models) && @agent.respond_to?(:ask_once)
               models = Array(@agent.candidate_models(task_type: :architecture))
               model = Io::LaneSelection.spread(["Judge"], models, vision: !image.nil? && image != "")["Judge"]
               raise "no capable arbitration model available" unless model

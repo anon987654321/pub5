@@ -559,6 +559,25 @@ end
         JSON.pretty_generate(payload)
       end
 
+      def integration_contract
+        <<~TEXT
+          MASTER external-agent contract v#{VERSION}
+
+          Use the operator's local checkout to run these commands:
+          - Laws: MASTER/bin/master laws LAW_ID
+          - Critique: MASTER/bin/master '/fix --mode=audit --only critique MASTER/PATH'
+          - Preview: MASTER/bin/master '/fix --dry-run MASTER/PATH'
+          - Repair, with operator authorisation: MASTER/bin/master '/fix --apply MASTER/PATH'
+          - Speech: MASTER/bin/master --tts-local < approved-text.txt > audio
+
+          Keep repository source, diffs, model prompts and detailed receipts on the operator's machine.
+          Share only the minimal operator-approved summary. Missing model, coverage or proof is INCONCLUSIVE.
+          Speak only text the operator has approved. eSpeak returns WAV. macOS say returns M4A or AIFF.
+
+          #{instruction}
+        TEXT
+      end
+
       def context(root:, target:, files: nil, skipped: nil, full: false)
         atlas = Master::AI::Orientation.repository_atlas(File.realpath(root))
         <<~TEXT

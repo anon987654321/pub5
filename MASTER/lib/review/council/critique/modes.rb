@@ -22,9 +22,6 @@ module Master
                 ../MASTER/web/app/views/chat/index.html.erb lib/design.rb
               ],
               quality_kind: :design,
-              ideation_prompt: "Generate concrete multi-solution improvements for this web UI. " \
-                               "For each issue, propose materially different repair directions before selecting the strongest one.",
-              cycles_default: 1,
               start_event: :ui_critique_start,
               done_event: :ui_critique_done,
               constraints: [
@@ -59,9 +56,6 @@ module Master
                 lib/voice/production_dna.rb
               ],
               quality_kind: :sound,
-              ideation_prompt: "For each issue, propose 3 concrete solutions, then cherry-pick the best " \
-                               "for MASTER sound design, voice playback, sonic timing, and audio feedback.",
-              cycles_default: 2,
               start_event: :sound_critique_start,
               done_event: :sound_critique_done,
               include_mix_metrics: true,
@@ -94,11 +88,6 @@ module Master
                 lib/voice/dilla.rb lib/voice/production_dna.rb
               ],
               quality_kind: :sound,
-              ideation_prompt: "Review the Dilla engine and measured mix. For EACH problem the panel " \
-                               "raises, generate 3 distinct solutions (ENV knobs, bus EQ, groove density, " \
-                               "harmony locks - no producer-name modes). Then cherry-pick the single best " \
-                               "fix per problem that preserves pad-forward single-style dilla character.",
-              cycles_default: 2,
               start_event: :sound_critique_start,
               done_event: :sound_critique_done,
               include_mix_metrics: true,
@@ -122,10 +111,6 @@ module Master
               panel: nil,
               files: [].freeze,
               quality_kind: :general,
-              ideation_prompt: "For each issue, propose 3 concrete solutions, then cherry-pick the " \
-                               "single best fix per problem -- prefer the smallest change that actually " \
-                               "resolves it over a rewrite.",
-              cycles_default: 1,
               start_event: :general_critique_start,
               done_event: :general_critique_done,
               constraints: [

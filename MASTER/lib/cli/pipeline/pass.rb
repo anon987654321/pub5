@@ -4,6 +4,7 @@ require "json"
 require_relative "../../operator/check_chain"
 require_relative "../../fix/outcome_policy"
 require_relative "../../fix/task_contract"
+require_relative "../../fix/tree"
 require_relative "pass_result"
 require_relative "target_resolver"
 require_relative "proof"
@@ -119,10 +120,12 @@ module Master
         STAGE_ALIASES = { "converge" => "fix", "council" => "critique", "cosmetic" => "style",
                           "typography" => "style" }.freeze
 
-        def call(target: nil, apply: nil, critique: nil, aesthetic: true, only: nil, cancellation: nil)
+        def call(target: nil, apply: nil, critique: nil, aesthetic: true, only: nil, cancellation: nil,
+                 source_critique: false)
           resolved = resolve_target(target)
           @resolved = resolved
           @cancellation = cancellation
+          @source_critique = source_critique
           posture = Master::Ground::ModePosture.current(root: @root)
           @only = normalize_stages(only)
           apply = default_apply?(posture) if apply.nil?
@@ -402,7 +405,64 @@ module Master
           return "critique failed: deliberation not configured"
         end
 
+        return source_critique(abs) if @source_critique
+
         [swarm_review(abs), deliberation_critique(abs)].compact.join("\n")
+      end
+
+      def source_critique(abs)
+        files = reviewable_sources(abs)
+        sample = files.first(Master::Fix::FixLoop::CouncilRound::FILES_PER_ROUND)
+        result = Master::Review::Council::Critique.new(
+          mode: :general, agent: @deliberation.agent, event_bus: @bus, files: sample, harvest: false,
+          briefing: "Preserve public contracts, write authority and user intent. " \
+                    "Report missing context and unmeasured behavior."
+        ).run
+        return incomplete_critique(result.message) if result.err?
+
+        source_critique_report(result.value!, available: files.size)
+      rescue StandardError => e
+        stage_failure("critique", "crit0", e)
+      end
+
+      def source_critique_report(value, available:)
+        coverage = value.fetch(:coverage)
+        diversity = value[:diversity]
+        lines = ["source evidence: #{coverage[:read]}/#{available} files, #{coverage[:excerpts]} excerpts"]
+        if diversity
+          lines << "candidates: #{diversity[:distinct]}/#{diversity[:requested]} text-distinct, " \
+                   "#{value[:cherry_picks].size} selected"
+        end
+        Array(value[:issues]).each do |issue|
+          lines << [issue[:location], issue[:summary]].compact.join(" — ")
+        end
+        lines.concat(value[:cherry_picks])
+        reason = value[:reason]
+        if !reason && (coverage[:read] < available || coverage[:excerpts].positive?)
+          reason = "source coverage is partial"
+        end
+        lines << incomplete_critique(reason) if reason
+        lines.join("\n")
+      end
+
+      def reviewable_sources(abs)
+        root = File.realpath(Master::REPO_ROOT)
+        paths = if File.file?(abs)
+                  [abs]
+                else
+                  Master::Fix::Tree.new(root:, target: abs).files.map { |path| File.join(root, path) }
+                end
+        paths.select do |path|
+          !File.symlink?(path) && Master::Io::PathGuard.inside_real_root?(path, root) &&
+            !Master::Io::PathGuard.secret?(path) && !Master.binary_file?(path) &&
+            (File.file?(abs) || !Master::Fix::Scanner.skip_path?(path, root:))
+        end
+      end
+
+      def incomplete_critique(reason)
+        fail_stage("critique", reason)
+        Master::Trace::Dmesg.status("crit0", "INCONCLUSIVE, #{reason}")
+        "critique INCONCLUSIVE: #{reason}"
       end
 
       # Review::Swarm::Coordinator is built under MASTER_FULL_BOOT=1, placed in

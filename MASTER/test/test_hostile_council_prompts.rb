@@ -10,8 +10,6 @@ class HostileCouncilPromptsTest < Minitest::Test
     def veto? = !!veto_role
   end
 
-  FEEDBACK = [{ persona: "Skeptic", feedback: "the nav wraps on narrow phones" }].freeze
-
   # Never asked: the prompt is built, not sent.
   class SilentAgent
     def ask(*, **) = raise("the prompt test sent a prompt")
@@ -30,15 +28,15 @@ class HostileCouncilPromptsTest < Minitest::Test
   end
 
   def test_solution_generation_attacks_the_field_before_cherry_pick
-    critic = Master::Review::Council::Critique.new(mode: :general, agent: nil, files: [])
-    prompt = critic.send(:ideation_prompt, FEEDBACK)
+    delib = Master::Review::Council::Deliberation.new(personas: [], agent: SilentAgent.new, candidate_limit: 10)
+    prompt = delib.send(:candidate_brief, [], open: true)
 
     assert_includes prompt, "SOLUTION RED-TEAM"
     ["hidden assumption", "smallest deletion", "counterexample state", "invert that assumption"].each do |phrase|
       assert_includes prompt, phrase
     end
-    assert_operator prompt.index("SOLUTION RED-TEAM"), :<, prompt.index("1. the nav wraps on narrow phones"),
-                    "the red-team comes after the issues it should shape"
+    assert_includes prompt, "10 materially different candidates"
+    assert_includes prompt, "Do not invent defects"
   end
 
   def test_visual_fix_adds_visual_counterfactuals

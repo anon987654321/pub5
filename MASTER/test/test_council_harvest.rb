@@ -2,6 +2,7 @@
 
 require "tmpdir"
 require_relative "test_helper"
+require_relative "support_council_answer"
 require "master"
 
 # The directive this pins (operator, 2026-08-18): a critique is harvested
@@ -40,27 +41,27 @@ class TestCouncilHarvest < Minitest::Test
     end
   end
 
-  def test_ideation_prompt_carries_the_panel_issues
-    critic = Master::Review::Council::Critique.new(mode: :general, agent: nil, files: [])
-    prompt = critic.send(:ideation_prompt, FEEDBACK)
+  def test_critique_shares_candidates_before_the_judge_selects_one
+    value, prompts = run_critique
 
-    assert_includes prompt, "apps.yml notes have grown into changelog prose"
-    # A field to choose from, and numbered so the cherry-pick can keep one per
-    # issue: two proposals give it nothing to reject.
-    assert_includes prompt, "5 to 20 materially different repairs"
-    assert_includes prompt, "1. apps.yml notes have grown into changelog prose"
-    refute_includes prompt, "more detail", "took the whole feedback body instead of the issue line"
+    assert_equal :observed, value[:status], value[:reason]
+    assert_equal 10, value.dig(:diversity, :distinct)
+    assert_equal 10, value.dig(:ideas, :ideas).size
+    assert_equal 1, value[:cherry_picks].size
+    assert_includes value[:cherry_picks].first, "Reuse the registry"
+    assert prompts.any? { |prompt| prompt.include?("Prior round") && prompt.include?("candidate 10:") }
+    assert prompts.any? { |prompt| prompt.include?("Arbitrate only") && prompt.include?("candidate 10:") }
   end
 
-  # With no issue raised, the mode's prompt leads and a clean-tree improvement
-  # review follows it (ed94d7850), anchored and forbidden to invent defects.
-  def test_ideation_prompt_without_feedback_keeps_the_mode_prompt
-    critic = Master::Review::Council::Critique.new(mode: :general, agent: nil, files: [])
-    prompt = critic.send(:ideation_prompt, [])
+  def test_incomplete_or_unauthorized_selections_never_become_repairs
+    [[1, "KEEP", false, /1\/10 distinct/], [10, "REJECT", false, /rejected or unreviewed/],
+     [10, "KEEP", true, /rejected or unreviewed/]].each do |count, verdict, invent, reason|
+      value, = run_critique(count:, verdict:, invent:)
 
-    assert prompt.start_with?(critic.instance_variable_get(:@mode)[:ideation_prompt])
-    assert_includes prompt, "clean-tree improvement review"
-    assert_includes prompt, "Do not invent defects"
+      assert_equal :inconclusive, value[:status]
+      assert_empty value[:cherry_picks]
+      assert_match reason, value[:reason]
+    end
   end
 
   # The prompt was reworded from "Attack each idea ... VERDICT: keep/reject"
@@ -77,5 +78,46 @@ class TestCouncilHarvest < Minitest::Test
     assert_includes challenge, "Do not omit or invent candidates"
     assert_includes challenge, "KEEP"
     assert_includes challenge, "REJECT:"
+  end
+
+  private
+
+  def run_critique(count: 10, verdict: "KEEP", invent: false)
+    repairs = ["Reuse the registry", "Freeze the inputs", "Delete the wrapper", "Link two receipts",
+               "Partition the batch", "Defer checkout inspection", "Merge the duplicate prompts",
+               "Validate at dispatch", "Reuse the stored snapshot", "Limit candidate authors"]
+    findings = repairs.first(count).map do |repair|
+      { "location" => "MASTER/test/test_council_harvest.rb:1", "evidence" => "The supplied source.",
+        "severity" => "warning", "claim" => "The review loses candidate evidence.", "proposed_repair" => repair }
+    end
+    prompts = Queue.new
+    agent = Object.new
+    router = Struct.new(:local_models, :local_server_models).new([], ["local:gemma3:4b"])
+    agent.define_singleton_method(:model_router) { router }
+    agent.define_singleton_method(:ask) { |*| raise "source critique must use the local dispatcher" }
+    agent.define_singleton_method(:ask_once) do |prompt, model:, local_only:, **|
+      raise "source escaped the local lane" unless local_only && model == "local:gemma3:4b"
+
+      prompts << prompt
+      answer = JSON.parse(CouncilAnswer.json)
+      answer["position"] = "mixed" if prompt.match?(/"prior_findings"\s*:\s*\[/)
+      if prompt.include?(%q{"role": "judge"})
+        answer["findings"] = [invent ? findings.first.merge("proposed_repair" => "Invent a new repair") : findings.first]
+        answer["position_evidence"] = findings.each_index.map do |index|
+          { "location" => "candidate #{index + 1}", "evidence" => "#{index.zero? ? verdict : 'REJECT'}: cite the stated trade-off" }
+        end
+      else
+        answer["findings"] = findings
+      end
+      JSON.generate(answer)
+    end
+    council = Master::Review::Council
+    critique = council::Critique
+    result = Master::Fix::UserSimulation.stub(:candidate_count, 10) do
+      source = File.join(Master::ROOT, "lib", "review", "council", "harvest.rb")
+      critique.new(mode: :general, agent:, files: [source], harvest: false).run
+    end
+    assert result.ok?, (result.message if result.err?)
+    [result.value!, Array.new(prompts.size) { prompts.pop }]
   end
 end

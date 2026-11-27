@@ -149,6 +149,15 @@ module Master
 
       def last_error = @last_error
 
+      def synthesize_local(text)
+        clean = clean_text(text)
+        return if clean.empty?
+        audio = synthesize_say(clean) if macos_host? && say_available?
+        return audio if audio
+
+        synthesize_espeak(clean) if espeak_path
+      end
+
       # Which synthesis engine produced the most recent audio: "edge", "espeak",
       # "say", "transcendent" or "human". A host receipt that names the mouth
       # the operator heard can read it instead of inferring it from absence.

@@ -443,12 +443,28 @@ module Master
       boot_timed("device setup") { set_up_device }
 
       boot_timed("pledge stage 1") { Ground::Pledge.stage1_boot!(root) }
-      service_ok = boot_timed("voice services") { ensure_services!(root:) }
-      Trace::Dmesg.status("master0", "continuing in degraded presentation mode") unless service_ok
+      cli_only = ENV["MASTER_WEB"] == "0"
+      boot_timed("voice services") { check_voice_services(root:) } unless cli_only
       container = boot_timed("container") { bootstrap_container(root:) }
       boot_timed("pledge stage 2") { Ground::Pledge.stage2_lock! }
-      boot_timed("web server") { CLI::WebServer.start(container[:config]) unless ENV["MASTER_WEB"] == "0" }
+      boot_timed("web server") { CLI::WebServer.start(container[:config]) } unless cli_only
+      start_background_voice_services(root:) if cli_only && ENV["MASTER_SKIP_TTS"] != "1"
       container
+    end
+
+    def check_voice_services(root:)
+      return if ensure_services!(root:)
+
+      Trace::Dmesg.status("master0", "continuing in degraded presentation mode")
+    end
+
+    def start_background_voice_services(root:)
+      Thread.new do
+        Thread.current.priority = -3
+        check_voice_services(root:)
+      rescue StandardError, ScriptError => error
+        mark_tts_degraded!(error.class.name)
+      end
     end
   end
 end

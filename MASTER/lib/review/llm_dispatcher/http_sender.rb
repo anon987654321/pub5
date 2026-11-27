@@ -40,12 +40,13 @@ module Master
         def local_server_model?(model_id) = model_id.to_s.start_with?("local:")
 
         # The router found which server listed the model; the call goes there.
-        def send_local_server(selected_model, messages, sys:, temperature: nil)
+        def send_local_server(selected_model, messages, sys:, temperature: nil, image: nil, &on_text)
           base = @model_router&.local_server_for(selected_model)
           return Result.err("no local server lists #{selected_model}", category: :model_missing) unless base
+          return Result.err("local model endpoint must use loopback HTTP", category: :policy) unless Io::LaneHealth.local?(base)
 
           messages = fit_to_window(selected_model, messages)
-          openai_chat(base, selected_model.delete_prefix("local:"), messages, sys:, temperature:, lane: "local server")
+          openai_chat(base, selected_model.delete_prefix("local:"), messages, sys:, temperature:, lane: "local server", image:, &on_text)
         end
 
         # Context-safe degradation: compact the history to the target's window
@@ -69,7 +70,7 @@ module Master
         # openai_compatible; the key rides along only when one is set.
         def hosted_lane?(model_id) = !@model_router&.hosted_endpoint_for(model_id).nil?
 
-        def send_hosted(selected_model, messages, sys:, temperature: nil, image: nil, sensitivity: :normal)
+        def send_hosted(selected_model, messages, sys:, temperature: nil, image: nil, sensitivity: :normal, &on_text)
           endpoint = @model_router.hosted_endpoint_for(selected_model)
           name, model = selected_model.split(":", 2)
           # A request tagged :sensitive rides only lanes whose declared
@@ -96,7 +97,7 @@ module Master
           messages = fit_to_window(selected_model, messages)
           request = lambda do
             openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:,
-                        lane: name, fold_system: endpoint[:fold_system] == true, image:)
+                        lane: name, fold_system: endpoint[:fold_system] == true, image:, &on_text)
           end
           return request.call unless endpoint[:max_concurrency]
 
@@ -121,7 +122,7 @@ module Master
           [{ role: "user", content: head[:content].to_s }] + rows.drop(1)
         end
 
-        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {}, fold_system: false, image: nil)
+        def openai_chat(base, model, messages, sys:, temperature:, lane:, headers: {}, fold_system: false, image: nil, &on_text)
           rows = ollama_messages(messages, sys)
           rows = fold_long_system(rows) if fold_system
           rows = with_hosted_image_rows(rows, image) if image
@@ -130,7 +131,7 @@ module Master
           request = Net::HTTP::Post.new(URI("#{base.chomp('/')}/chat/completions").request_uri,
                                         headers.merge("Content-Type" => "application/json"))
           request.body = JSON.generate(body)
-          reply = read_streaming_lane(base, request, lane)
+          reply = read_streaming_lane(base, request, lane, &on_text)
           return reply if reply.is_a?(Result)
 
           Result.ok(reply)
@@ -145,14 +146,17 @@ module Master
         # primary image rides first and its :extra list follows it, matching
         # the attachment order RubyLLMSender and the CLI lane send.
         def with_hosted_image_rows(rows, image)
+          last = rows.last
+          replace = last.is_a?(Hash) && last[:role] == "user"
           images = [image, *Array(image[:extra]).reject(&:nil?)]
           parts = images.each_with_index.flat_map do |one, index|
-            [{ type: "text", text: index.zero? ? IMAGE_LEAD : IMAGE_EXTRA_LEAD },
+            lead = index.zero? ? IMAGE_LEAD : IMAGE_EXTRA_LEAD
+            lead = [last[:content], lead].join("\n") if index.zero? && replace
+            [{ type: "text", text: lead },
              { type: "image_url", image_url: { url: hosted_image_data_uri(one) } }]
           end
           row = { role: "user", content: parts }
-          last = rows.last
-          last.is_a?(Hash) && last[:role] == "user" ? rows[...-1] + [row] : rows + [row]
+          replace ? rows[...-1] + [row] : rows + [row]
         end
 
         IMAGE_LEAD = "The image attached to this request belongs to the question above.".freeze
@@ -177,7 +181,7 @@ module Master
         # takes; one that goes silent dies at the idle budget, not sooner.
         # A dead handshake raises and falls through to the circuit breaker's
         # failure accounting.
-        def read_streaming_lane(base, request, lane)
+        def read_streaming_lane(base, request, lane, &on_text)
           uri = URI("#{base.chomp('/')}/chat/completions")
           http = if local_http_uri?(uri)
                    Net::HTTP.new(uri.hostname, uri.port, nil)
@@ -204,7 +208,7 @@ module Master
               end
 
               answer = if response["Content-Type"].to_s.include?("event-stream")
-                         assemble_stream(response, lane)
+                         assemble_stream(response, lane, &on_text)
                        else
                          parsed = JSON.parse(bounded_response_body(response))
                          parsed.dig("choices", 0, "message", "content").to_s
@@ -272,7 +276,10 @@ module Master
                 next unless event.nil? || event == "message"
 
                 delta = JSON.parse(payload).dig("choices", 0, "delta", "content")
-                content << delta if delta.is_a?(String)
+                next unless delta.is_a?(String) && !delta.empty?
+
+                content << delta
+                yield delta if block_given?
               when "" then event = nil # the blank line ends the event
               end
             end

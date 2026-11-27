@@ -87,7 +87,7 @@ module Master
       # and the outcome is recorded against it; the conversation probe asks by
       # operation, so a bare `model` argument is not enough.
       def ask_once(prompt, system: nil, law: true, model: nil, image: nil, temperature: nil, format: nil,
-                   failover: true, operation: nil)
+                   failover: true, operation: nil, local_only: false)
         Thread.current[:master_llm_answer_model] = nil
         messages = [{ role: "user", content: prompt }]
         chosen = model || (operation ? model_for(operation:) : self.model)
@@ -98,9 +98,13 @@ module Master
         ) do
           response = @dispatcher.send_with_cache(
             chosen, copy_message_context(messages), system: copy_message_context(sys),
-            stream: false, image:, temperature:, format:
+            stream: false, image:, temperature:, format:, local_only:
           )
-          failover ? retry_on_broke_lane(response, chosen, messages, system: sys, image:, temperature:, promote: model.nil?) : response
+          if failover && !local_only
+            retry_on_broke_lane(response, chosen, messages, system: sys, image:, temperature:, promote: model.nil?)
+          else
+            response
+          end
         end
         record_capability_outcome(operation:, selected_model: chosen, result:)
         remember_answer_model(result, chosen)

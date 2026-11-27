@@ -181,7 +181,31 @@ if ARGV.first == "--fix-context"
     "--fix-context",
     target,
     *(["--full"] if full),
+    *(["--contract-only"] if ARGV.include?("--contract-only")),
   )
+end
+
+if ARGV.first == "--tts-local"
+  abort "usage: bin/master --tts-local < text.txt > audio" unless ARGV.one?
+  input = $stdin.binmode.read(16_385)
+  text = input.to_s.force_encoding(Encoding::UTF_8)
+  unless text.valid_encoding? && text.bytesize.between?(1, 16_384) && !text.strip.empty?
+    abort "tts: supply 1–16384 bytes of UTF-8 text"
+  end
+
+  require_relative "../lib/boot/entrypoint"
+  Master::Boot::Entrypoint.prepare!(root: master_root)
+  $LOAD_PATH.unshift File.join(master_root, "lib")
+  require "master"
+  audio = Master::Voice::Speech.synthesize_local(text)
+  abort "tts: no local synthesis result (requires say or eSpeak)" unless audio
+
+  begin
+    IO.copy_stream(audio, $stdout.binmode)
+  ensure
+    File.unlink(audio)
+  end
+  exit 0
 end
 
 if ARGV.first == "--self-test"
@@ -239,7 +263,8 @@ HELP_USAGE = <<~HELP
     bin/master --fold "<goal>"
     bin/master -p "<goal>" --output-format json [--model ID] [--permission-mode plan] [--allowedTools "Read Edit"]
     bin/master core [--root PATH] [--max-turns N] [--real [--model ID]] GOAL
-    bin/master --fix-context [target] [--full]
+    bin/master --fix-context [target] [--full|--contract-only]
+    bin/master --tts-local < text.txt > audio
     bin/master replay <sequence>
     bin/master --daemon
     bin/master --fast

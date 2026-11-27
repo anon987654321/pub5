@@ -131,13 +131,19 @@ module Master
       # enforces it while decoding; the other providers ignore it, and the
       # caller's parser stays the backstop.
       def send_with_cache(selected_model, messages, system: nil, stream: false, image: nil, temperature: nil, format: nil,
-                          &blk)
+                          local_only: false, &blk)
         call_started = false
         completed_result = nil
         started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        selected_model = answering_model(selected_model, image)
-        refusal = local_only_refusal(selected_model) || refusal_before_send(selected_model)
+        local_only ||= ENV["MASTER_LOCAL_ONLY"] == "1"
+        selected_model = answering_model(selected_model, image) unless local_only
+        refusal = local_only_refusal(selected_model, required: true) if local_only
+        refusal ||= refusal_before_send(selected_model)
         return refusal if refusal
+
+        if local_only && image_present?(image) && !local_server_model?(selected_model)
+          return Result.err("source review requires a loopback vision server for images", category: :inconclusive)
+        end
 
         call_started = true
         @bus&.publish("llm:send", model: selected_model)
@@ -173,7 +179,7 @@ module Master
           with_progress_deadline(selected_model, stream:, progress: -> { last_progress }) do
             @cache.fetch(cache_key, selected_model) do
               provider_started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-              send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, &stream_handler)
+              send_llm_request(selected_model, messages, system:, stream:, image:, temperature:, format:, local_only:, &stream_handler)
             end
           end
         end
@@ -391,19 +397,15 @@ module Master
         Result.err(Master.no_api_key_message, category: :no_api_key)
       end
 
-      def local_only_refusal(model)
-        return unless ENV["MASTER_LOCAL_ONLY"] == "1"
+      def local_only_refusal(model, required: false)
+        return unless required || ENV["MASTER_LOCAL_ONLY"] == "1"
         return if local_model_id?(model)
 
         Result.err("local-only mode rejects non-local model #{model}", category: :offline)
       end
 
       def local_model_id?(model)
-        id = model.to_s
-        return true if id.start_with?("local:", "local_uncensored:")
-        return false unless id.start_with?("ollama:", "ollama/")
-
-        !id.sub(%r{\Aollama[:/]}, "").match?(/\A.+(?::cloud|-cloud)\z/)
+        (local_server_model?(model) || ollama_model?(model)) && Io::LaneHealth.local_model?(model)
       end
 
       def forced_lane_unavailable(model)
@@ -560,7 +562,7 @@ module Master
       end
 
       def send_llm_request(selected_model, messages, system: nil, stream: false, image: nil, temperature: nil, format: nil,
-                           &blk)
+                           local_only: false, &blk)
         sys = system || system_prompt
         # The Redactor used to stand only on the log and persistence paths; the
         # outbound provider call was the one path it never covered, so content
@@ -573,6 +575,11 @@ module Master
         # already makes.
         messages = redact_outbound_messages(messages)
         sys = sys.nil? ? nil : Ground::Redactor.text(sys.to_s)
+        if local_only
+          return send_local_server(selected_model, messages, sys:, temperature:, image:, &blk) if local_server_model?(selected_model)
+
+          return send_ollama(selected_model, messages, sys:, stream:, temperature:, format:, &blk)
+        end
         if Master::Trace::Dmesg.detail_enabled?
           prompt = messages.map do |entry|
             role = entry[:role] || entry["role"] || "message"
@@ -616,8 +623,8 @@ module Master
 
       def dispatch_general_provider(request)
         model, messages, sys, stream, image, temperature, format, on_text = request.deconstruct
-        return send_local_server(model, messages, sys:, temperature:) if local_server_model?(model)
-        return send_hosted(model, messages, sys:, temperature:, image:) if hosted_lane?(model)
+        return send_local_server(model, messages, sys:, temperature:, image:, &on_text) if local_server_model?(model)
+        return send_hosted(model, messages, sys:, temperature:, image:, &on_text) if hosted_lane?(model)
         return send_replicate_chat(model, messages, sys:) if replicate_chat_model?(model)
         return send_ollama(model, messages, sys:, stream:, temperature:, format:, &on_text) if ollama_model?(model)
 

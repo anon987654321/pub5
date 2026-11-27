@@ -1,21 +1,17 @@
 # frozen_string_literal: true
 
 require_relative "tribunal"
-require_relative "../challenges"
+require_relative "../../fix/best_of_n"
 require_relative "../../fix/taste_memory"
 
 module Master
   module Review
     module Council
-      # Mode-dispatched council critique. Replaces UiCritique + SoundCritique.
-      #
-      # Orchestration only: pick the panel, assemble the payload, deliberate,
-      # ideate, cherry-pick. The mode table lives in Critique::Modes, the panel's
-      # briefing in Critique::Context, and the ranking in Critique::CherryPick.
+      # Evidence, specialist panel, reciprocal critique, and final arbitration.
       class Critique
         MODES = Modes::TABLE
 
-        def initialize(budget: nil, mode:, agent:, event_bus: nil, audio_path: nil, files: nil, visual_image: nil, visual_images: nil, visual_context: nil, briefing: nil, speak_personas: false)
+        def initialize(budget: nil, mode:, agent:, event_bus: nil, audio_path: nil, files: nil, visual_image: nil, visual_images: nil, visual_context: nil, briefing: nil, speak_personas: false, explore: true, harvest: true)
           @mode = MODES.fetch(mode) { raise ArgumentError, "unknown critique mode: #{mode}" }
           @agent = agent
           @bus = event_bus
@@ -26,6 +22,8 @@ module Master
           @briefing = briefing.to_s.strip
           @speak_personas = speak_personas
           @budget = budget
+          @candidate_limit = Master::Fix::UserSimulation.candidate_count if explore
+          @harvest = harvest
         end
 
         # One council is one wall-clock budget (PassClock): a panel that has not
@@ -41,40 +39,68 @@ module Master
           result = deliberate(panel, payload)
           return result unless result.ok?
 
-          build_run_result(preset, payload, result.value!)
+          build_run_result(payload, result.value!)
         end
 
         private
 
-        def build_run_result(_preset, payload, feedback)
+        def build_run_result(payload, feedback)
           return inconclusive_run_result(payload, feedback) if feedback_inconclusive?(feedback)
 
           issues = panel_issue_entries(feedback)
           judge = Array(feedback).find { |entry| entry[:persona] == "Judge" }
           return Master::Result.err("critique: final judge missing", category: :inconclusive) unless judge
 
-          # Only the final judge may select repairs. Do not resurrect rejected
-          # alternatives through lexical similarity or a second ideation pass.
-          cherry = Array(judge[:structured_findings]).filter_map do |finding|
-            repair = finding.fetch("proposed_repair", "").to_s.strip
-            next if repair.empty? || repair.casecmp?("none")
-
-            [finding.fetch("location"), finding.fetch("claim"), repair].join(" — ").gsub(/\s+/, " ")
-          end.uniq
-          ideation_result = Master::Result.ok(ideas: [], final: judge[:feedback])
-          visual_clean = @mode[:preset_key] == "ui_critique" && issues.empty? && cherry.empty?
-          @bus&.publish(@mode[:done_event], cherry_picks: cherry.size, visual_clean:)
-          harvest = harvest_path(payload:, feedback:, ideation_result:, cherry:)
+          candidates = Array(judge[:candidates])
+          selected = Array(judge[:structured_findings]).select { |finding| CherryPick.proposed?(finding) }
+          reason = selection_error(candidates, selected, judge, issues:) if @candidate_limit
+          cherry = reason ? [] : selected.map { |finding| format_repair(finding) }.uniq
+          ideas = { ideas: candidates.map { |finding| format_repair(finding) }, final: judge[:feedback] }
+          visual_clean = !reason && @mode[:preset_key] == "ui_critique" && issues.empty? && cherry.empty?
+          status = reason ? :inconclusive : :observed
+          diversity = { requested: @candidate_limit, distinct: candidates.size, method: :anchored_lexical_overlap }
+          @bus&.publish(@mode[:done_event], status:, diversity:, cherry_picks: cherry.size, visual_clean:)
+          harvest = harvest_path(payload:, feedback:, ideas:, cherry:, reason:) if @harvest
           Master::Result.ok({
             feedback:,
             issues:,
             visual_clean:,
-            ideas: CherryPick.ideation_value(ideation_result),
+            ideas:,
             cherry_picks: cherry,
+            diversity:,
+            status:,
+            reason:,
             metrics: payload[:metrics],
+            coverage: payload[:coverage],
             mode: @mode[:preset_key],
             harvest:,
           })
+        end
+
+        def selection_error(candidates, selected, judge, issues:)
+          if candidates.size < @candidate_limit && (issues.any? || selected.any?)
+            return "candidate exploration incomplete: #{candidates.size}/#{@candidate_limit} distinct proposals"
+          end
+          return if candidates.empty?
+
+          verdicts = Array(judge[:position_evidence]).filter_map do |entry|
+            index = entry["location"].to_s[/\Acandidate ([1-9]\d*)\z/i, 1]&.to_i
+            verdict = entry["evidence"].to_s[/\A(KEEP|REJECT):\s*\S/i, 1]&.upcase
+            [index, verdict] if index && verdict
+          end
+          ids = (1..candidates.size).to_a
+          return "judge did not assess each candidate exactly once" unless verdicts.map(&:first).sort == ids
+
+          eligible = verdicts.filter_map do |index, verdict|
+            CherryPick.repair_key(candidates.fetch(index - 1)) if verdict == "KEEP"
+          end
+          return "judge selected a rejected or unreviewed repair" unless selected.all? { |finding| eligible.include?(CherryPick.repair_key(finding)) }
+
+          nil
+        end
+
+        def format_repair(finding)
+          finding.values_at("location", "claim", "proposed_repair").join(" — ").gsub(/\s+/, " ")
         end
 
         def deliberate(panel, payload)
@@ -84,6 +110,7 @@ module Master
             event_bus: @bus,
             judge_enabled: true,
             speak_personas: @speak_personas,
+            candidate_limit: @candidate_limit,
           ).review(
             evidence: evidence_for(payload),
             personas: panel,
@@ -105,9 +132,11 @@ module Master
             ideas: [],
             cherry_picks: [],
             metrics: payload[:metrics],
+            coverage: payload[:coverage],
             mode: @mode[:preset_key],
             harvest: nil,
             status: :inconclusive,
+            reason: feedback[:reason],
           })
         end
 
@@ -126,76 +155,22 @@ module Master
           )
         end
 
-        def ideate(preset, feedback: nil)
-          return Master::Result.err(Master::Review::LLMDispatcher::PassClock.refusal, category: :timeout) if Master::Review::LLMDispatcher::PassClock.expired?
-
-          Ideation.new(agent: @agent, event_bus: @bus).ideate(
-            ideation_prompt(feedback),
-            constraints: @mode[:constraints],
-            cycles: (preset["cycles"] || @mode[:cycles_default]).to_i,
-          )
-        end
-
-        # Ideation used to run on the mode's canned prompt alone, blind to what
-        # the panel just found — proposals for nothing in particular, ranked
-        # against complaints they never addressed. The panel's issues ARE the
-        # prompt, and each wants a field to choose from: two proposals give the
-        # cherry-pick nothing to reject, and twenty restatements of one idea
-        # give it nothing either. Materially different means the repairs differ
-        # in what they change, not in how they are worded.
-        IDEAS_PER_ISSUE = (5..20).freeze
-
-        SOLUTION_ATTACK_PROMPT = Challenges.prompt(scope: :solution).freeze
-
-        def ideation_prompt(feedback)
-          issues = panel_issues(feedback)
-          hard = @briefing.empty? ? nil : "Apply the HARD REVIEW BRIEFING above to solution generation too. Reject proposals that add authority layers, bypass evidence, widen scope, or duplicate an existing primitive."
-          if issues.empty?
-            return [@mode[:ideation_prompt], hard, "No registered violation was found. Conduct a clean-tree improvement review: find real, evidence-backed micro-improvements in simplification, naming, duplication, complexity, prose, accessibility, layout or maintainability. Generate 5 to 20 materially different candidates, and anchor every actionable candidate to a repository-relative file and stable line or symbol. Do not invent defects, redesign working systems, or use taste as evidence."].compact.join("\n\n")
-          end
-
-          <<~PROMPT
-            #{@mode[:ideation_prompt]}
-            #{hard}
-
-            The council raised the issues below. For each one, propose
-            #{IDEAS_PER_ISSUE.first} to #{IDEAS_PER_ISSUE.last} materially different repairs - different in what
-            they change, not in how they are phrased. Number each proposal and
-            name the issue it repairs. The weakest are discarded, so a field of
-            near-identical proposals is a field of one.
-
-            #{SOLUTION_ATTACK_PROMPT}
-            #{issues.each_with_index.map { |issue, index| "#{index + 1}. #{issue}" }.join("\n")}
-          PROMPT
-        end
-
-        # The first line of each critique: the issue, without the argument for it.
-        def panel_issues(feedback)
-          panel_issue_entries(feedback).map { |entry| entry[:summary] }
-        end
-
         def panel_issue_entries(feedback)
-          seen = {}
-          Array(feedback).reject { |entry| entry[:persona].to_s == "Judge" }.filter_map do |entry|
-            summary = entry[:feedback].to_s.lines.map(&:strip).find { |line| !line.empty? }.to_s
-            next if summary.empty? || seen.key?(summary)
-
-            seen[summary] = true
-            {
-              persona: entry[:persona].to_s,
-              summary:,
-              feedback: entry[:feedback].to_s,
-            }
-          end.first(12)
+          Array(feedback).reject { |entry| entry[:persona] == "Judge" }.flat_map do |entry|
+            Array(entry[:structured_findings]).select { |finding| CherryPick.actionable?(finding) }.map do |finding|
+              { persona: entry[:persona], summary: finding["claim"], feedback: finding["evidence"], location: finding["location"] }
+            end
+          end.uniq { |issue| issue.values_at(:location, :summary) }.first(12)
         end
 
-        def harvest_path(payload:, feedback:, ideation_result:, cherry:)
+        def harvest_path(payload:, feedback:, ideas:, cherry:, reason:)
           Harvest.write(
             mode: @mode[:preset_key],
             files: payload[:files],
             feedback:,
-            ideas: CherryPick.ideation_value(ideation_result),
+            ideas:,
             cherry:,
+            reason:,
           )
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "Critique.harvest", severity: :load_bearing)
@@ -215,7 +190,9 @@ module Master
         def build_context
           base = Context.new(preset_key: @mode[:preset_key], quality_kind: @mode[:quality_kind]).to_s
           taste = @mode[:preset_key] == "ui_critique" ? Master::Fix::TasteMemory.summary(Master::ROOT) : nil
-          [base, @briefing.empty? ? nil : "HARD REVIEW BRIEFING\n#{@briefing}", taste].compact.join("\n\n")
+          constraints = @mode[:constraints].join("\n- ") if @candidate_limit
+          [base, constraints && "Preserve these constraints:\n- #{constraints}",
+           @briefing.empty? ? nil : "REVIEW BRIEFING\n#{@briefing}", taste].compact.join("\n\n")
         end
 
         def load_preset
@@ -230,6 +207,8 @@ module Master
         end
 
         def pin_preset_key
+          return unless defined?(Master::Fix::CritiquePin)
+
           pin = Master::Fix::CritiquePin
           return "simplify_critique" if pin.simplify?
           return "security_critique" if pin.security?
@@ -284,11 +263,18 @@ module Master
                   else
                     Array(preset["files"]).any? ? preset["files"] : @mode[:files]
                   end
-          combined = files.filter_map { |rel| read_truncated(rel) }.join("\n\n")
+          source_limit = @mode[:max_bytes]
+          if @mode[:quality_kind] == :general && files.any?
+            # Reserve room for the envelope and give every named source a share of the input.
+            source_limit = (Deliberation::MAX_CODE_BYTES * 3 / 4) / files.size
+          end
+          sources = files.filter_map { |file| read_source(file, source_limit) }
+          combined = sources.map { |source| source[:text] }.join("\n\n")
           metrics = mix_metrics_block if @mode[:include_mix_metrics]
           combined = [metrics, combined].compact.join("\n\n") if metrics
           combined = [@visual_context, combined].compact.join("\n\n") if @visual_context
-          { combined:, files:, metrics:, visual_image: @visual_image }
+          coverage = { supplied: files.size, read: sources.size, excerpts: sources.count { |row| row[:excerpt] } }
+          { combined:, files:, metrics:, coverage:, visual_image: @visual_image }
         end
 
         def mix_metrics_block
@@ -301,16 +287,20 @@ module Master
           "mix metrics unavailable: #{e.message}"
         end
 
-        def read_truncated(rel)
+        def read_source(rel, limit)
           # @files_override entries (whatever /scan or /fix just processed)
           # come in as absolute paths already; preset/mode file lists are
           # MASTER-root-relative.
           path = rel.to_s.start_with?("/") ? rel.to_s : File.join(Master::ROOT, rel)
           return unless File.file?(path)
 
-          raw = File.read(path, encoding: "UTF-8")
-          raw = raw.byteslice(0, @mode[:max_bytes]) + "\n... [truncated]" if raw.bytesize > @mode[:max_bytes]
-          "file: #{rel}\n#{raw}"
+          label = File.expand_path(path).delete_prefix("#{Master::REPO_ROOT}/")
+          raw = File.binread(path, limit + 1).to_s
+          return if raw.empty? || raw.include?("\0")
+
+          excerpt = raw.bytesize > limit
+          text = raw.byteslice(0, limit).force_encoding(Encoding::UTF_8).scrub
+          { text: "file: #{label}\n#{text}#{"\n... [source excerpt]" if excerpt}", excerpt: }
         end
       end
     end

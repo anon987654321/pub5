@@ -598,6 +598,28 @@ class TestSpeech < Minitest::Test
     assert_nil Master::Voice::Speech.synthesize_bytes("")
   end
 
+  def test_local_synthesis_passes_approved_text_only_to_the_native_engine
+    speech = Master::Voice::Speech
+    status = Struct.new(:success?).new(true)
+    runner = lambda do |binary, *args, stdin_data:, timeout:|
+      assert_equal "espeak", binary
+      assert_includes args, "--stdin"
+      assert_equal "Read this locally.", stdin_data
+      assert_operator timeout, :>, 0
+      File.binwrite(args.fetch(args.index("-w") + 1), "RIFF")
+      ["", "", status]
+    end
+
+    stub_speech(macos_host?: false, espeak_path: "espeak") do
+      Master::Io::Exec.stub(:capture3, runner) do
+        audio = speech.synthesize_local("Read this locally.")
+        assert_equal "RIFF", File.binread(audio)
+      ensure
+        File.unlink(audio) if audio && File.exist?(audio)
+      end
+    end
+  end
+
   def test_synthesize_audio_returns_mpeg_for_mp3
     fake_path = "/tmp/m3_tts_test_fake.mp3"
 

@@ -712,7 +712,15 @@ module Master
         return "REJECT: critique panel unavailable - #{panel.message.to_s[0, 120]}" if panel.err?
 
         judge = Array(panel.value![:feedback]).find { |entry| entry[:persona].to_s == "Judge" }
-        judge ? judge[:feedback].to_s : "REJECT: critique panel returned no final judge"
+        return "REJECT: critique panel returned no final judge" unless judge
+        return "REJECT: #{judge[:position_reason]}" unless judge[:position] == "concur"
+
+        regions = Array(judge[:structured_findings]).filter_map do |finding|
+          region = finding["location"].to_s
+          evidence = finding["evidence"].to_s
+          "#{region}: #{evidence}" if region.match?(/\AR[1-9]\d*\z/) && !evidence.empty?
+        end
+        ["APPROVE", *regions].join("\n")
       end
 
       def visual_approval_panel(primary:, extra:, brief:)
@@ -724,6 +732,7 @@ module Master
           visual_image: { path: primary, name: "visual-review-before-after.png", mime: "image/png" },
           visual_images: extra.map { |path| { path:, name: File.basename(path), mime: "image/png" } },
           briefing: visual_approval_brief(brief),
+          explore: false,
         )
       end
 
@@ -733,8 +742,9 @@ module Master
 
           This is an approval review of one already-applied visual repair. The first image pair is
           the whole before/after viewport; remaining images are changed-region crops. The final
-          Judge must answer APPROVE or REJECT on its first line. An APPROVE must include one
-          `R<n>: Law — observed improvement` line for every changed region. Reject when the
+          Judge must use position `concur` to approve or `dissent` to reject the repair. For approval,
+          return one finding per changed region with location `R<n>`, evidence `Law — observed improvement`,
+          and proposed_repair `none`. Reject when the
           evidence is incomplete, the change harms product identity, or any region cannot be explained.
         TEXT
       end

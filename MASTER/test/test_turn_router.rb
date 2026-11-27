@@ -661,6 +661,15 @@ class TurnRouterTest < Minitest::Test
     assert_match(/status-ok/, result.value[:rendered].to_s)
   end
 
+  def test_show_status_skips_model_intent_inference
+    Master::CLI::OperatorIntent.stub(:new, ->(**) { flunk "status reached semantic intent inference" }) do
+      result = Master::CLI::TurnRouter.call(message: "Show status?", container: build_container)
+
+      assert result.ok?
+      assert_match(/status-ok/, result.value[:rendered].to_s)
+    end
+  end
+
   def test_slash_command_context_keeps_the_turn_cancellation_token
     token = Master::Core::CancellationToken.new
     seen = nil

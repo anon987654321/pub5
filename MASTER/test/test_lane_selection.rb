@@ -521,25 +521,17 @@ class TestLaneSelection < Minitest::Test
     assert_equal 1, agent.candidate_calls, "the lane list is read once per council"
   end
 
-  def test_a_critique_panel_reaches_the_selection
+  def test_source_critique_never_falls_back_to_cloud_selection
     Quota.note(AGY, AGY_REPLY)
     agent = CountingAgent.new([AGY, ANTHROPIC_OPUS, NEMOTRON, GROK])
     critique = Master::Review::Council::Critique.new(mode: :general, agent:, files: [__FILE__])
 
-    counting(:spread) do |calls|
-      # The wiring under test is critique -> panel -> spread, not host
-      # reachability: a box with no keys and no CLI would otherwise skip the
-      # panel before it convenes. Reachability has its own tests.
-      Master::Review::Council::Deliberation.stub(:reachable_for?, true) do
-        critique.run
-      end
-      refute_empty calls, "Critique#run never reached LaneSelection.spread"
-    end
+    result = critique.run
 
-    refute_empty agent.asked
-    named = agent.asked.compact - [:routed]
-    refute_empty named, "no persona was given a lane"
-    assert(named.all? { |m| [ANTHROPIC_OPUS, GROK].include?(m) }, "asked: #{agent.asked.tally}")
+    assert result.err?
+    assert_equal :inconclusive, result.category
+    assert_includes result.message, "no loopback model"
+    assert_empty agent.asked
   end
 
   # A real router with its probes and telemetry replaced by pass-throughs, so the

@@ -82,6 +82,23 @@ class MasterBootTest < Minitest::Test
     Master.define_singleton_method(:validate_data!, original) if original
   end
 
+  def test_voice_setup_can_wait_without_holding_the_cli_boot
+    started = Queue.new
+    release = Queue.new
+    ensure_services = ->(root:) { started << root; release.pop; true }
+
+    Master.stub(:ensure_services!, ensure_services) do
+      worker = Master.start_background_voice_services(root: Master::ROOT)
+      begin
+        assert_equal Master::ROOT, Timeout.timeout(1) { started.pop }
+        assert worker.alive?
+      ensure
+        release << true
+        worker.join(1)
+      end
+    end
+  end
+
   def test_master_boot_module_exposes_boot_entrypoints
     assert Master.respond_to?(:boot)
     assert Master.respond_to?(:prepare_runtime!)

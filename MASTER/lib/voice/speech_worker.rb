@@ -292,12 +292,12 @@ module Master
 
       def synthesize_espeak(text)
         audio_path = "/tmp/m_tts_#{SecureRandom.hex(8)}.wav"
-        ok = system(
+        _stdout, _stderr, status = Master::Io::Exec.capture3(
           espeak_path, "-s", "162", "-p", "42", "-a", "125",
-          "-w", audio_path, text.to_s,
-          out: File::NULL, err: File::NULL
+          "-w", audio_path, "--stdin",
+          stdin_data: text.to_s, timeout: Speech::WORKER_TIMEOUT,
         )
-        return audio_path if ok && File.exist?(audio_path) && File.size(audio_path) > 0
+        return audio_path if status&.success? && File.size?(audio_path)
 
         warn_tts("espeak failed or produced empty audio")
         cleanup_failed_audio(audio_path)

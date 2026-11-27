@@ -361,6 +361,8 @@ module Master
         Master::Fix::Kernel.with_settings_lock do
           previous = fix_state_before
           begin
+            ENV["MASTER_LOCAL_ONLY"] = "1"
+            ENV["MASTER_SKIP_TTS"] = "1"
             Master::Fix::AutofixGuard.mode = overrides[:autofix_mode] if overrides[:autofix_mode]
             Master::Fix::RunLedger.max_files = overrides[:max_files] if overrides[:max_files]
             Master::Fix::CheckFocus.blockers! if overrides[:blockers]
@@ -386,10 +388,14 @@ module Master
           plan: Master::Fix::CheckFocus.plan?,
           until_checks: Master::Fix::CheckFocus.until_checks?,
           lane: Master::Fix::WorkLane.current,
+          local_only: ENV["MASTER_LOCAL_ONLY"],
+          skip_tts: ENV["MASTER_SKIP_TTS"],
         }
       end
 
       def restore_fix_state(previous)
+        ENV["MASTER_LOCAL_ONLY"] = previous[:local_only]
+        ENV["MASTER_SKIP_TTS"] = previous[:skip_tts]
         Master::Fix::AutofixGuard.restore_mode_override(previous[:mode])
         Master::Fix::RunLedger.restore_max_files_override(previous[:max_files])
         Master::Fix::CheckFocus.restore_blockers(previous[:blockers])
@@ -712,9 +718,11 @@ module Master
                               trace_scope:, host_evidence: nil)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
-        phase_refusal = run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:,
-                                              cancellation:, writes_requested:, trace_scope:, host_evidence:)
-        return phase_refusal if phase_refusal
+        unless mode == "audit" && only
+          phase_refusal = run_fix_review_phases(scanner:, fix_loop:, deliberation:, bus:, targets:,
+                                                cancellation:, writes_requested:, trace_scope:, host_evidence:)
+          return phase_refusal if phase_refusal
+        end
 
         results, audit_lines = run_fix_target_passes(
           scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, targets:, cancellation:,
@@ -728,6 +736,8 @@ module Master
 
         rendered_run = [results.join("\n"), audit_lines.join("\n")]
                        .reject { |part| part.to_s.strip.empty? }.join("\n")
+        return rendered_run if mode == "audit" && only
+
         # The run ends with its record: the governed wishlist, an honest state
         # per workstream — what /fix still owes the trees. Wishlist failure is
         # tail evidence, never a failed repair.
@@ -784,10 +794,10 @@ module Master
           run_fix_target(
             scanner:, fix_loop:, root:, deliberation:, bus:, swarm:,
             target: fix_target, writes_requested:, effective_critique:, critique:, aesthetic:, only:,
-            cancellation:, task_intent:
+            cancellation:, task_intent:, source_critique: mode == "audit"
           )
         end
-        audit_lines = mode == "audit" ? run_audit_probes(targets:, cancellation:) : []
+        audit_lines = mode == "audit" && only.nil? ? run_audit_probes(targets:, cancellation:) : []
         [results, audit_lines]
       end
 
@@ -812,7 +822,7 @@ module Master
 
       def run_fix_target(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:,
                          writes_requested:, effective_critique:, critique:, aesthetic:, only:, cancellation: nil,
-                         task_intent: "functional_change")
+                         task_intent: "functional_change", source_critique: false)
         check_label = ::Operator::CheckChain.baseline_scope_key(target)
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
 
@@ -824,7 +834,7 @@ module Master
 
         value = run_fix_target_pass(
           scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:, writes_requested:,
-          effective_critique:, aesthetic:, only:, cancellation:, task_intent:
+          effective_critique:, aesthetic:, only:, cancellation:, task_intent:, source_critique:
         )
         return cancelled_fix_result(cancellation) if cancellation&.cancelled?
         return value if !writes_requested || visual_repair
@@ -874,10 +884,11 @@ module Master
       end
 
       def run_fix_target_pass(scanner:, fix_loop:, root:, deliberation:, bus:, swarm:, target:,
-                              writes_requested:, effective_critique:, aesthetic:, only:, cancellation:, task_intent:)
+                              writes_requested:, effective_critique:, aesthetic:, only:, cancellation:, task_intent:,
+                              source_critique: false)
         run_pass({ scanner:, fix_loop:, root:, deliberation:, bus:, swarm: },
           task_intent:, target:, apply: writes_requested, critique: effective_critique,
-          aesthetic:, only:, cancellation:)
+          aesthetic:, only:, cancellation:, source_critique:)
       end
 
       def verify_fix_target_delivery(value:, scanner:, fix_loop:, root:, deliberation:, bus:, swarm:,
@@ -1046,7 +1057,13 @@ module Master
       end
 
       def run_pass(deps, task_intent: "functional_change", **call_args)
-        Master::CLI::Pipeline::Pass.new(**deps, task_intent:).call(**call_args).render
+        pass = Master::CLI::Pipeline::Pass.new(**deps, task_intent:).call(**call_args)
+        rendered = pass.render
+        if call_args[:source_critique] && call_args[:only] && pass.failed_stages.include?("critique")
+          return Master::Result.err(rendered, category: :inconclusive)
+        end
+
+        rendered
       end
 
       # /fix may select a read-only stage with --only. Apply permission never

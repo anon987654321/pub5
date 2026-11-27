@@ -125,7 +125,9 @@ module Master
         end
 
         spoken = spoken_form(text)
-        unless Master::Trace::Dmesg.log_voice_active? ||
+        routed = ok.value.command.to_s if ok.value.respond_to?(:command)
+        unless routed == "fix" || Master::CLI::TurnRouter::PIPELINE_SLASH.include?(command) ||
+               Master::Trace::Dmesg.log_voice_active? ||
                Master::Trace::Dmesg.log_voice_spoken_recently?(spoken)
           Master::Voice::Playback.speak(spoken)
         end

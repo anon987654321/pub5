@@ -16,19 +16,20 @@ module Master
 
         module_function
 
-        def write(mode:, files:, feedback:, ideas:, cherry:, root: Master::ROOT)
+        def write(mode:, files:, feedback:, ideas:, cherry:, reason: nil, root: Master::ROOT)
           dir = File.join(root, ".master", DIR)
           FileUtils.mkdir_p(dir)
           slug = mode.to_s.gsub(/[^a-z0-9]+/i, "_").downcase
           path = File.join(dir, "#{slug}_#{Time.now.utc.strftime('%Y%m%dT%H%M%SZ')}.md")
-          body = render(mode:, files:, feedback:, ideas:, cherry:)
+          body = render(mode:, files:, feedback:, ideas:, cherry:, reason:)
           File.write(path, body)
           File.write(File.join(dir, "#{slug}_latest.md"), body)
           path
         end
 
-        def render(mode:, files:, feedback:, ideas:, cherry:)
+        def render(mode:, files:, feedback:, ideas:, cherry:, reason: nil)
           lines = ["# council critique - #{mode}", "", "files: #{Array(files).join(', ')}", ""]
+          lines.push("INCONCLUSIVE - #{reason}", "") if reason
           lines << "## panel"
           Array(feedback).each do |entry|
             lines << "### #{entry[:persona]}"

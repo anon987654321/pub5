@@ -25,8 +25,7 @@ module Master
         The remaining attached images are the changed regions of the re-rendered page, cropped and enlarged 400%
         so edges, alignment and baselines read at the pixel. Each is listed as R<n> x,y wxh below,
         followed by the findings and computed values the browser reported.
-        Answer APPROVE or REJECT on the first line. After APPROVE give one line a region,
-        "R<n>: <which Law this change satisfies and how>"; a region you cannot explain means REJECT.
+        Approve only if you can explain which Law the change satisfies and how for every region.
       TEXT
 
       module_function

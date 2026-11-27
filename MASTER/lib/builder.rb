@@ -104,6 +104,7 @@ module Master
       infra = build_infrastructure(root)
       ai = build_ai(root, infra)
       _pipeline, _gateway, runtime = build_runtime(root:, infra:, ai:)
+      infra[:code_index].build_async
       runtime
     end
 
@@ -167,7 +168,6 @@ module Master
       # hands the pipeline a stub renderer must still get a container it can run.
       output_guard = Voice::OutputGuard.new
       code_index = Review::CodeIndex.new(root: workspace, event_bus: bus, persist: true)
-      code_index.build_async
       reference_graph = Review::ReferenceGraph.new(root: workspace, event_bus: bus)
       ecology = Review::RepoEcology.new(root: workspace, event_bus: bus, code_index:)
       subscribe_ecology_reindex(bus:, ecology:)
