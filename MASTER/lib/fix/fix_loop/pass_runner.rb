@@ -506,7 +506,7 @@ module Master
           restructures = WorkLane.runs?(:restructure_drive) ? engine.restructure_proposals(files:) : []
           coverage = Improve::Domains.coverage(files:)
           found += ideas_to_findings(ideas, pass:)
-          found += restructure_to_findings(restructures, pass:)
+          @bus&.publish("fix_loop:structural_candidates", pass:, count: restructures.size, delivery: "structural_sweep")
           record_improvement_assessment!(
             pass:, findings: found.size, ideas: ideas.size, restructures: restructures.size,
             files_seen: coverage.fetch(:files_seen), measured_files: coverage.fetch(:measured_files),
@@ -567,18 +567,6 @@ module Master
               severity: Improve::SEVERITY, confidence: Improve::CONFIDENCE,
               message: "elevation[ideate] #{idea.kind}: #{idea.title}",
               fix: "Record this idea where it belongs (doc, issue or implementation); an idea only counts when written down." }
-          end
-        end
-
-        def restructure_to_findings(proposals, pass:)
-          Array(proposals).first(3).filter_map do |proposal|
-            next unless File.file?(proposal.from)
-
-            relative = proposal.from.delete_prefix("#{@root}/")
-            { law: Improve::LAW_ID, kind: :improvement, file: relative, line: 1,
-              severity: Improve::SEVERITY, confidence: Improve::CONFIDENCE,
-              message: "elevation[restructure] #{proposal.kind}: #{proposal.reason}",
-              fix: "#{proposal.kind == :merge ? 'Merge' : 'Flatten'} #{File.basename(proposal.from)} into #{proposal.to} through restructure_sweep's proof machinery (syntax, references, manifests) so every contract test still passes." }
           end
         end
 

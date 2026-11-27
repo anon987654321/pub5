@@ -38,7 +38,7 @@ module Master
       # Paths that mean something outside the tree. OPENBSD/mirror/etc, var, usr, home
       # and dotfiles mirror the box file for file; RAILS migrations and schema
       # are history the database has already run; MASTER/tools data is read by name.
-      OFF_LIMITS = %r{\A(?:OPENBSD/(?:etc|var|usr|home|dotfiles)/|RAILS/.+/db/(?:migrate|schema))}x
+      OFF_LIMITS = %r{\A(?:OPENBSD/(?:mirror/)?(?:etc|var|usr|home|dotfiles)/|RAILS/.+/db/(?:migrate|schema))}x
 
       # Master and the directory modules open nearly every file, so a search for
       # what names a moved file leaves them out or finds the whole tree.
@@ -109,7 +109,10 @@ module Master
         before = @proof.baseline(plan)
         originals = snapshot(plan)
         apply(plan)
-        reviewed_diff = diff(plan, originals)
+        reviewed_diff = diff(plan, originals, applied: true)
+        if reviewed_diff.lines.size > REVIEW_DIFF_LINES
+          return undo(originals, "complete diff exceeds #{REVIEW_DIFF_LINES}-line review budget; split the plan")
+        end
         failure = review.call(reviewed_diff) || @proof.failure(plan, before)
         failure ||= delivery_safety_failure(plan, message, reviewed_diff)
         return undo(originals, failure) if failure
@@ -341,22 +344,23 @@ module Master
       end
 
       # The whole change as one unified diff, new and deleted files included.
-      def diff(plan, originals)
+      def diff(plan, originals, applied: false)
         Dir.mktmpdir("restructure") do |dir|
-          lines = plan.paths.flat_map { |path| file_diff(dir, path, originals[path]) }
-          next lines.join if lines.size <= REVIEW_DIFF_LINES
-
-          "#{lines.first(REVIEW_DIFF_LINES).join}... #{lines.size - REVIEW_DIFF_LINES} more lines\n"
+          plan.paths.flat_map do |path|
+            proposed = applied ? read(path) : plan.writes[path]
+            file_diff(dir, path, originals[path], proposed)
+          end.join
         end
       end
 
-      def file_diff(dir, path, original)
+      def file_diff(dir, path, original, proposed)
         before = File.join(dir, "before")
         after = File.join(dir, "after")
         File.write(before, original.to_s)
-        File.write(after, File.exist?(full(path)) ? File.read(full(path), encoding: "UTF-8") : "")
-        out, = Master::Io::Exec.capture2e("git", "diff", "--no-index", "--no-color", "-U4", before, after)
-        ["--- #{original ? path : "/dev/null"}\n+++ #{File.exist?(full(path)) ? path : "/dev/null"}\n",
+        File.write(after, proposed.to_s)
+        out, status = Master::Io::Exec.capture2e("git", "diff", "--no-index", "--no-color", "-U4", before, after)
+        raise "could not construct complete diff for #{path}" unless [0, 1].include?(status.exitstatus)
+        ["--- #{original ? path : "/dev/null"}\n+++ #{proposed.nil? ? "/dev/null" : path}\n",
          *out.lines.drop_while { |line| !line.start_with?("@@") }]
       end
 

@@ -407,6 +407,34 @@ class TestRestructure < Minitest::Test
     assert_includes text, "Related file, MASTER/lib/user_policy.rb:"
   end
 
+  def test_related_context_reads_complete_files
+    related = 5.times.map do |index|
+      path = "MASTER/lib/related_#{index}.rb"
+      write(path, ("# detail\n" * 200) + "# final evidence #{index}\n")
+      File.join(@repo, path)
+    end
+    context = Master::Fix::RestructureSweep::Context.new(@repo, File.join(@repo, "MASTER/lib/big.rb"), related:)
+    text = context.to_s
+
+    5.times { |index| assert_includes text, "final evidence #{index}" }
+    refute_includes text, "truncated at"
+  end
+
+  def test_large_diff_is_previewable_but_not_partially_reviewed
+    path = "MASTER/lib/big.rb"
+    old = read(path)
+    body = (1..850).map { |i| "# detail #{i}\n" }.join + old
+    plan = Restructure::Plan.new(summary: "Large change", operations: ["reflow"], writes: { path => body }, deletes: [])
+    preview = restructure.preview(plan, allowed_operations: ["reflow"])
+    assert preview.ok?, -> { preview.message }
+    assert_includes preview.value!.fetch(:diff), "detail 850"
+
+    result = restructure.call(plan, message: "Large change", review: ->(_diff) { flunk "partial review" }, allowed_operations: ["reflow"])
+    refute result.ok?
+    assert_includes result.message, "review budget"
+    assert_equal old, read(path)
+  end
+
   def test_context_finds_reverse_references_in_manifests_and_lockfiles
     source = "MASTER/lib/retired_component.rb"
     write(source, "class RetiredComponent; end\n")
@@ -540,7 +568,7 @@ class TestRestructure < Minitest::Test
   end
 
   def test_destructive_restructure_refuses_inconclusive_or_live_dynamic_references
-    plan = Struct.new(:operations).new(["remove"])
+    plan = Struct.new(:operations, :paths, :deletes).new(["remove"], ["MASTER/lib/big.rb"], ["MASTER/lib/big.rb"])
     problem = Struct.new(:files).new([File.join(@repo, "MASTER/lib/big.rb")])
     complete = [
       "purpose=obsolete helper with no current runtime role",
@@ -568,6 +596,11 @@ class TestRestructure < Minitest::Test
     graph.define_singleton_method(:unresolved_for) { |_path| [] }
     safe = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo, reference_graph: graph)
     assert_nil safe.send(:decommission_blocker, problem, plan, complete)
+
+    extra = Struct.new(:operations, :paths, :deletes).new(["simplify"], ["MASTER/lib/tiny.rb"], ["MASTER/lib/tiny.rb"])
+    graph.define_singleton_method(:includes_path?) { |path| !path.end_with?("tiny.rb") }
+    assert_match(/files absent from the reference graph/, safe.send(:decommission_blocker, problem, extra, complete))
+    graph.define_singleton_method(:includes_path?) { |_path| true }
 
     graph.define_singleton_method(:dynamic_for) { |_path| [{ name: "send", line: 12 }] }
     assert_match(/dynamic lookup site/,

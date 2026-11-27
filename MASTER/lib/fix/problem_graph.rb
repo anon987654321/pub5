@@ -20,6 +20,8 @@ module Master
         "PARALLEL_HIERARCHY" => "merge",
         "CYCLIC_DEPENDENCY" => "decouple",
         "FILE_SPRAWL" => "flatten",
+        "MERGE" => "merge",
+        "FLATTEN" => "flatten",
         "STRUCTURAL_COHESION" => "merge",
         "DRY" => "simplify",
         "COPY_PASTE_BLOCK" => "merge",

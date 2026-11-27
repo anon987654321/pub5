@@ -2,7 +2,7 @@
 
 # The re-opened parts of this class, one responsibility each; every path is
 # listed in data/autoload.yml under autoload.reopens_a_constant_defined_elsewhere.
-require_relative "../fix_loop/structural_stage"
+require_relative "../improve/restructure"
 
 module Master
   module Fix
@@ -126,7 +126,7 @@ module Master
           end
           return if hits.empty?
 
-          "Production references:\n#{hits.first(REFERENCE_LINES).join("\n")}"
+          "Production references:\n#{hits.join("\n")}"
         end
 
         def reference_section
@@ -135,7 +135,7 @@ module Master
           end
           return if hits.empty?
 
-          "Lines elsewhere that name it:\n#{hits.first(REFERENCE_LINES).join("\n")}"
+          "Lines elsewhere that name it:\n#{hits.join("\n")}"
         end
 
         def requirer_section
@@ -185,10 +185,8 @@ module Master
         public
 
         SOURCE_EXT = %w[.rb .rake .js .mjs].freeze
-        REFERENCE_LINES = 80
         REQUIRERS = 5
         SMALL = 400
-        RELATED_LINES = 180
         PROSE_EXTENSIONS = %w[.md .txt].freeze
         COMMAND_EXTENSIONS = %w[.rb .rake .sh .zsh].freeze
         COMMAND_ROOTS = %w[bin tools].freeze
@@ -200,6 +198,7 @@ module Master
 
         # [path, law_id, message, related_paths] for every actionable structural finding.
         def self.structural_findings(target)
+          require_relative "../fix_loop"
           laws = structural_laws(target)
           local = tracked(target).flat_map do |path|
             code = File.read(path, encoding: "UTF-8")
@@ -213,7 +212,15 @@ module Master
           cohesion = FixLoop::StructuralStage.structural_findings(files: production_files(target)).map do |finding|
             [finding.fetch(:file), finding.fetch(:law), finding.fetch(:message), finding.fetch(:related_paths)]
           end
-          local + cohesion + cross_file_findings(target) + dead_subtree_findings(target) + surface_findings(target)
+          local + cohesion + sprawl_findings(target) + cross_file_findings(target) + dead_subtree_findings(target) + surface_findings(target)
+        end
+
+        def self.sprawl_findings(target)
+          Improve::Restructure.new(root: target).proposals(files: production_files(target), limit: nil).map do |proposal|
+            law = proposal.kind == :merge ? "MERGE" : "FLATTEN"
+            related = File.file?(proposal.to) ? [proposal.to] : []
+            [proposal.from, law, proposal.reason, related]
+          end
         end
 
         def self.dead_subtree_findings(target)
@@ -443,21 +450,13 @@ module Master
         end
 
         def related_section
-          paths = @related.reject { |path| path == @path }.first(4)
+          paths = @related.reject { |path| path == @path }.uniq
           return if paths.empty?
 
           rows = paths.map do |path|
-            lines = File.foreach(path, encoding: "UTF-8").first(RELATED_LINES)
-            suffix = File.foreach(path, encoding: "UTF-8").count > RELATED_LINES ? "\n... truncated at #{RELATED_LINES} lines" : ""
-            "Related file, #{relative(path)}:\n#{numbered_lines(lines)}#{suffix}"
-          rescue StandardError
-            "Related file, #{relative(path)}"
+            "Related file, #{relative(path)}:\n#{numbered(path)}"
           end
           rows.join("\n\n")
-        end
-
-        def numbered_lines(lines)
-          lines.each_with_index.map { |line, index| format("%4d  %s", index + 1, line) }.join
         end
 
         def directory_section

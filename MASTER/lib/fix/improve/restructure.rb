@@ -25,7 +25,7 @@ module Master
           @root = File.expand_path(root)
         end
 
-        def proposals(files:)
+        def proposals(files:, limit: MAX_PROPOSALS)
           scope = files.map { |path| File.expand_path(path, @root) }.to_set
           return [] if scope.empty?
 
@@ -35,7 +35,7 @@ module Master
           singles = evidence.fetch(:single_file_dirs, []).map { |dir| File.expand_path(dir, @root) }
           list = []
           tiny.each do |path|
-            break if list.size >= MAX_PROPOSALS
+            break if limit && list.size >= limit
             target = merge_target_for(path)
             next unless target && scope.include?(target)
 
@@ -45,7 +45,7 @@ module Master
             )
           end
           singles.each do |dir|
-            break if list.size >= MAX_PROPOSALS
+            break if limit && list.size >= limit
             member = scope.find { |path| File.dirname(path) == dir }
             next unless member && File.file?(member)
             destination = File.join(File.dirname(dir), File.basename(member))
@@ -53,7 +53,7 @@ module Master
 
             list << Proposal.new(
               kind: :flatten, from: member, to: destination,
-              reason: "#{dir.sub("#{@root}/", "")} holds one file; flatten only if its namespace and path convey no useful contract"
+              reason: "#{dir.sub("#{@root}/", "")} holds one tracked direct file; flatten only if its namespace and path convey no useful contract"
             )
           end
           list
