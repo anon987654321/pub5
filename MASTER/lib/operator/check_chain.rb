@@ -247,8 +247,11 @@ module Operator
       # The target trees' own content, not the whole checkout's: another writer's commit or edit
       # in a different tree changed the key and the baseline ladder ran again.
       tree_names = Array(trees).map(&:to_s).reject(&:empty?)
-      head = tree_names.map { |tree| committed_version(root, tree) }.join(",")
-      diff, diff_status = Master::Io::Exec.capture2("git", "diff", "HEAD", "--binary", "--", *tree_names, chdir: root)
+      # Rails proof also executes MASTER's shared checks and design rules.
+      inputs = tree_names.dup
+      inputs << "MASTER" if tree_names.include?("RAILS") && !inputs.include?("MASTER")
+      head = inputs.map { |tree| committed_version(root, tree) }.join(",")
+      diff, diff_status = Master::Io::Exec.capture2("git", "diff", "HEAD", "--binary", "--", *inputs, chdir: root)
       raise "check baseline fingerprint: git diff failed" unless diff_status.success?
 
       untracked, untracked_status = Master::Io::Exec.capture2(
@@ -257,13 +260,13 @@ module Operator
       raise "check baseline fingerprint: git ls-files failed" unless untracked_status.success?
 
       paths = untracked.split("\0").reject(&:empty?).select do |relative|
-        tree_names.any? { |tree| relative == tree || relative.start_with?("#{tree}/") }
+        inputs.any? { |tree| relative == tree || relative.start_with?("#{tree}/") }
       end
       untracked_fingerprint = paths.sort.map { |relative| fingerprint_untracked(root, relative) }.join("\0")
       scope = baseline_scope_key_for(tree_names)
       # The lane is part of the key: a code-lane baseline measured no browser check.
       Digest::SHA256.hexdigest([head.strip, scope, diff, untracked_fingerprint, verification_only.join(","),
-                                Master::Fix::WorkLane.current].join("\0"))
+                                Master::Fix::WorkLane.current, RUBY_DESCRIPTION, RUBY_PLATFORM].join("\0"))
     end
 
     # The bytes of every changed or untracked path in the whole repository, root-level files
