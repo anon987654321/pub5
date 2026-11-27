@@ -453,3 +453,46 @@ test("mobile keyboard cannot reserve the terminal's space for the face", () => {
   const inset = readFileSync(join(publicDir, "viewport_inset.js"), "utf8");
   assert.match(inset, /addEventListener\("focusin", schedule/);
 });
+
+test("face state preserves active work across visibility and late DOM boot", () => {
+  const listeners = new Map();
+  const document = {
+    hidden: false,
+    documentElement: { dataset: {}, style: { setProperty() {} } },
+    body: { dataset: {} },
+    getElementById: () => null,
+    addEventListener: (name, callback) => listeners.set("document:" + name, callback)
+  };
+  const window = {
+    addEventListener: (name, callback) => listeners.set(name, callback)
+  };
+  let now = 100;
+  runInNewContext(readFileSync(join(publicDir, "face_state.js"), "utf8"), {
+    window, document, performance: { now: () => now }, navigator: {}, devicePixelRatio: 1,
+    matchMedia: () => ({ matches: false })
+  });
+  const state = window.MASTER_FACE_STATE;
+  state.setMode("working", { confidence: 0.93, phase: "verification" });
+  now = 200;
+  listeners.get("DOMContentLoaded")();
+  assert.equal(state.snapshot().mode, "working");
+  assert.equal(state.snapshot().phase, "verification");
+  assert.equal(state.snapshot().age_ms, 100);
+  document.hidden = true;
+  listeners.get("document:visibilitychange")?.();
+  assert.equal(state.renderBudget().fps, 0);
+  now = 300;
+  document.hidden = false;
+  listeners.get("document:visibilitychange")?.();
+  assert.equal(state.snapshot().mode, "working");
+  assert.equal(state.snapshot().age_ms, 200);
+  assert.equal(document.body.dataset.mode, "working");
+  document.body.dataset.runtimeProfile = "battery";
+  assert.equal(state.renderBudget().fps, 12);
+  listeners.get("tts:playback:end")();
+  assert.equal(state.snapshot().mode, "working");
+  listeners.get("tts:playback:start")();
+  assert.equal(state.snapshot().mode, "speaking");
+  listeners.get("tts:playback:end")();
+  assert.equal(state.snapshot().mode, "idle");
+});

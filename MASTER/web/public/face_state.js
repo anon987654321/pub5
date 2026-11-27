@@ -235,7 +235,7 @@
     const reducedMotion = reducedMotionEnabled();
     const reducedMotionParticles = Number(budget.reduced_motion_particles) || 64;
     const effectiveParticles = reducedMotion ? Math.min(particles, reducedMotionParticles) : particles;
-    const profile = document.documentElement?.dataset?.runtimeProfile || "";
+    const profile = document.body?.dataset?.runtimeProfile || document.documentElement?.dataset?.runtimeProfile || "";
     const idle = state.mode === "idle" || state.mode === "sleeping";
     let fps = Number(idle ? budget.idle_fps : budget.active_fps) || (idle ? 12 : 24);
     if (reducedMotion) fps = Math.min(fps, Number(budget.reduced_motion_fps) || 8);
@@ -248,7 +248,7 @@
       particles: effectiveParticles,
       reduced_motion_particles: reducedMotionParticles,
       dpr,
-      fps: document.hidden ? (Number(budget.hidden_fps) ?? 0) : fps,
+      fps: document.hidden ? clamp(budget.hidden_fps, 0, 0, fps) : fps,
       pulse_limit: Number(budget.pulse_limit) ?? 24,
       hud_labels: Number(budget.hud_labels) ?? 5
     });
@@ -258,11 +258,9 @@
   window.addEventListener("master:emotion", (ev) => apply(ev.detail || {}), { passive: true });
 
   window.addEventListener("tts:playback:start", () => setMode("speaking"));
-  window.addEventListener("tts:playback:end", () => setMode("idle"));
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) return;
-    apply({ mode: "idle", confidence: state.confidence, entropy: state.entropy });
-  }, { passive: true });
+  window.addEventListener("tts:playback:end", () => {
+    if (state.mode === "speaking") setMode("idle");
+  });
 
   window.MASTER_FACE_STATE = Object.freeze({
     MODES,
@@ -280,7 +278,5 @@
     renderBudget
   });
 
-  window.addEventListener("DOMContentLoaded", () => {
-    apply({ mode: "idle", confidence: state.confidence, entropy: state.entropy });
-  }, { once: true });
+  window.addEventListener("DOMContentLoaded", () => reflect(), { once: true });
 })();
