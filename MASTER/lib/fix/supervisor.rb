@@ -65,9 +65,21 @@ module Master
         with_lease_guard { @fix_loop.run(@target) }
       rescue StandardError => e
         @bus&.publish("fix_supervisor:attempt_failed", error: "#{e.class}: #{e.message}")
-        mission = Mission.new(root: @root)
-        mission.defer!(reason: "supervisor: #{e.class}: #{e.message}", seconds: 60)
+        defer_owned_attempt(record, e)
         :error
+      end
+
+      def defer_owned_attempt(record, error)
+        return unless record
+
+        current = Mission.current(root: @root)
+        return unless current && current["id"] == record["id"] && current["state"] == "running"
+        return unless current["lease_owner"] == Mission.instance_id
+
+        Mission.new(root: @root).defer!(reason: "supervisor: #{error.class}: #{error.message}",
+                                       expected_id: current["id"], expected_lease_owner: current["lease_owner"])
+      rescue Mission::Fenced
+        nil
       end
 
       def with_lease_guard
@@ -132,12 +144,13 @@ module Master
       def next_wait_seconds
         record = Mission.current(root: @root)
         return poll_interval unless record && record["scope"].to_s == relative_target
+        return poll_interval unless %w[running waiting].include?(record["state"].to_s)
 
         wake = record["next_wake_at"]
         return poll_interval if wake.to_s.empty?
 
         delay = Time.iso8601(wake.to_s) - Time.now.utc
-        [[delay, 0.0].max, poll_interval].min
+        [[delay, 1.0].max, poll_interval].min
       rescue ArgumentError
         # An unreadable wake time is due (due?), so waiting zero here re-ran the loop without pause.
         poll_interval

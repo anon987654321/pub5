@@ -737,10 +737,11 @@ module Master
         true
       end
 
-      def defer!(reason:, seconds: nil, expected_id: nil, expected_lease_owner: nil)
+      def defer!(reason:, seconds: nil, expected_id: nil, expected_lease_owner: nil, retry_key: nil)
         # delay/retries are read after with_lock returns; block locals die with it.
         delay = 0
         retries = 0
+        blocked = false
         with_lock do
           load_expected_or_writable_unlocked!(expected_id:, expected_lease_owner:)
           return self unless @record
@@ -755,10 +756,30 @@ module Master
           @record["lease_owner"] = nil
           @record["lease_until"] = nil
           @record["last_seen_at"] = now
+          blocked = record_retry_streak!(retry_key)
           persist!
         end
-        emit("mission:deferred", id: @id, reason:, delay_seconds: delay, retry_count: retries)
+        if blocked
+          emit("mission:block", id: @id, reason: @record["wake_reason"])
+        else
+          emit("mission:deferred", id: @id, reason:, delay_seconds: delay, retry_count: retries)
+        end
         self
+      end
+
+      # Only explicitly keyed, unchanged zero-yield attempts consume this fuse.
+      private def record_retry_streak!(retry_key)
+        key = retry_key.to_s
+        count = !key.empty? && @record["retry_key"] == key ? @record["retry_streak"].to_i + 1 : 1
+        @record["retry_key"] = key.empty? ? nil : key
+        @record["retry_streak"] = key.empty? ? 0 : count
+        return false if key.empty? || count < 3
+
+        @record["state"] = "blocked"
+        @record["auto_continue"] = false
+        @record["next_wake_at"] = nil
+        @record["wake_reason"] = "three unchanged zero-yield attempts; changed evidence or a new manual request required"
+        true
       end
 
       def block!(reason:, expected_id: nil, expected_lease_owner: nil)

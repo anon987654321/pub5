@@ -33,6 +33,35 @@ class FixSupervisorTest < Minitest::Test
     end
   end
 
+  def test_three_unchanged_keyed_retries_block_but_changed_evidence_resets_the_streak
+    Dir.mktmpdir do |root|
+      mission = queue_mission(root)
+      2.times { mission.defer!(reason: "timeout", retry_key: "old", seconds: 1) }
+      assert_equal "waiting", Master::Fix::Mission.current(root:)["state"]
+      2.times { mission.defer!(reason: "timeout", retry_key: "new", seconds: 1) }
+      assert_equal "waiting", Master::Fix::Mission.current(root:)["state"]
+      mission.defer!(reason: "timeout", retry_key: "new", seconds: 1)
+      saved = Master::Fix::Mission.current(root:)
+      assert_equal "blocked", saved["state"]
+      assert_nil saved["next_wake_at"]
+      assert_equal 3, saved["retry_streak"]
+    end
+  end
+
+  def test_supervisor_does_not_defer_a_replaced_mission
+    Dir.mktmpdir do |root|
+      mission = queue_mission(root)
+      supervisor = Master::Fix::Supervisor.new(root:, target: root, fix_loop: Object.new)
+      observed = mission.record.dup
+      replacement = observed.merge("id" => "other", "state" => "running", "lease_owner" => Master::Fix::Mission.instance_id)
+      Master::Fix::Mission.stub(:current, replacement) do
+        Master::Fix::Mission.stub(:new, ->(**) { flunk "replacement mission must not be deferred" }) do
+          supervisor.send(:defer_owned_attempt, observed, RuntimeError.new("old attempt failed"))
+        end
+      end
+    end
+  end
+
   def test_event_during_running_attempt_is_latched_for_the_next_attempt
     Dir.mktmpdir do |root|
       mission = Master::Fix::Mission.new(root:).start!(goal: "fix #{root}", scope: root)

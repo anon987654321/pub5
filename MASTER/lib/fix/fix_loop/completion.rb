@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "digest"
+
 require "json"
 require "time"
 
@@ -209,7 +211,8 @@ module Master
           elsif %i[human_decision blocked].include?(state)
             mission&.block!(reason: result.to_s)
           else
-            mission&.defer!(reason: "attempt #{state}: #{result.to_s}")
+            retry_key = zero_yield_retry_key(state, plan_evidence)
+            mission&.defer!(reason: "attempt #{state}: #{result.to_s}", retry_key:)
           end
 
           target_label = fix_target_label(target)
@@ -230,6 +233,17 @@ module Master
           @bus&.publish("fix_loop:terminal", **outcome)
 
           result
+        end
+
+        def zero_yield_retry_key(state, plan)
+          return unless %i[timeout plateau inconclusive].include?(state) && plan
+          return unless RunLedger.checkpoint_metrics[:verified_checkpoints].zero?
+
+          dimensions = %w[source_digest scope_digest law_digest law_source_digest toolchain_digest adapter_digest authority_digest]
+          values = dimensions.map { |key| plan[key].to_s }
+          return if values.any?(&:empty?)
+
+          Digest::SHA256.hexdigest([state, *values].join("\0"))
         end
 
         # Publish the run's log to a gist/pastebin and announce where it went.
