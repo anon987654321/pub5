@@ -90,12 +90,15 @@ module Master
           reason = skip_reason(files:, budget:)
           if reason
             @bus&.publish("fix_loop:improvement_council_skipped", pass:, trigger: "clean_streak", reason:)
-            return
+            return if %i[council_disabled hard_critique_disabled].include?(reason)
+
+            return Master::Result.err("improvement council not run: #{reason}", category: :inconclusive)
           end
 
           selected = rotating_files(files, pass)
           result = critique(selected, budget:)
-          return unless result&.ok?
+          return result if result&.err?
+          return Master::Result.err("improvement council returned no evidence", category: :inconclusive) unless result&.ok?
 
           value = result.value!
           winners = Master::Review::Council::Critique::CherryPick.one_per_issue(value[:cherry_picks])
@@ -110,10 +113,13 @@ module Master
             "fix0",
             "pass #{pass}, improvement council #{Master::Trace::Dmesg.counted(findings.size, "candidate")}",
           )
+          if winners.any? && findings.empty?
+            return Master::Result.err("selected improvements lack usable source anchors", category: :inconclusive)
+          end
           findings
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "fix_loop.improvement_council", event_bus: @bus)
-          nil
+          Master::Result.err("improvement council failed: #{e.class}", category: :inconclusive)
         end
 
         private

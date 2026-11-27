@@ -2292,6 +2292,20 @@ end
     refute_empty asked.first[:files]
   end
 
+  def test_unavailable_improvement_council_records_a_proof_gap
+    council = Object.new
+    council.define_singleton_method(:improve) do |**|
+      Master::Result.err("no local model available", category: :inconclusive)
+    end
+    runner = build_loop([], council:).instance_variable_get(:@pass_runner)
+    runner.define_singleton_method(:elevation_findings) { |**| [] }
+    found, shed = runner.send(:supplement_with_improvements, [], pass: 1, files: [File.join(@root, "dummy.yml")], deadline: Time.now + 60, consecutive_clean: 0)
+    assert_empty found
+    assert_nil shed
+    assert runner.gaps?
+    assert_match(/no local model available/, runner.gaps.fetch(:stage_failures).fetch(:improvements).first)
+  end
+
   def test_council_improvements_require_a_file_and_line_or_symbol_anchor
     file = File.join(@root, "dummy.yml")
     round = Master::Fix::FixLoop::CouncilRound.new(agent: nil, root: @root, bus: @bus)

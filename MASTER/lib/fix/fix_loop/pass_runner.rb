@@ -476,8 +476,13 @@ module Master
             end
 
             enter_phase(:council_improve, pass)
-            council = Array(@council&.improve(files:, pass:, deadline:))
-            return [found + elevation + council, nil]
+            review = @council&.improve(files:, pass:, deadline:)
+            if review.respond_to?(:err?) && review.err?
+              stage_failures[:improvements] << "pass #{pass}: #{review.message}"
+              @bus&.publish("fix_loop:improvement_council_inconclusive", pass:, reason: review.message)
+              return [found + elevation, nil]
+            end
+            return [found + elevation + Array(review), nil]
           end
           [found + elevation, nil]
         end
