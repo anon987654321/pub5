@@ -685,8 +685,15 @@ module Master
         return true unless ENV["MASTER_LOCAL_ONLY"] == "1"
 
         selection = Master::Io::LaneSelection
-        local = selection.catalogue.select { |id| Master::Io::LaneHealth.local_model?(id) }
-        selection.order(local).any? { |id| selection.alive?(id) }
+        router = @agent.model_router if @agent.respond_to?(:model_router)
+        candidates = selection::CATALOGUE_TIERS.flat_map { |tier| selection.tier(tier) }
+        candidates += Array(router.local_models) if router.respond_to?(:local_models)
+        discovered = router.respond_to?(:local_server_models) ? Array(router.local_server_models) : []
+        local = (candidates + discovered).select { |id| Master::Io::LaneHealth.local_model?(id) }
+
+        selection.order(local).any? do |id|
+          discovered.include?(id) || selection.alive?(id)
+        end
       end
 
       # The lane proves only what its resweep shows, so a repaired but unmeasured group never

@@ -183,6 +183,25 @@ class TestVisualLane < Minitest::Test
     end
   end
 
+  def test_no_model_lane_does_not_spend_budget_or_attempt_a_proposal
+    asked = []
+    run_lane(world(asked:, mechanical: false), model_groups: 1, model_available: -> { false }) do |outcome, rows|
+      assert_empty asked
+      assert_equal 5, outcome.remaining
+      assert rows.all? { |row| row.fetch("fix_detail").include?("no usable model lane; not attempted") }
+    end
+  end
+
+  def test_unmapped_groups_do_not_consume_the_model_budget
+    asked = []
+    repair = ->(group) { asked << group.id; :no_source_file }
+    run_lane(world(mechanical: false, repair:), model_groups: 1) do |outcome, rows|
+      assert_equal 5, asked.size
+      assert_equal 5, outcome.remaining
+      assert rows.none? { |row| row.fetch("fix_detail").include?("model budget") }
+    end
+  end
+
   def test_no_repair_means_no_resweep_and_nothing_called_cleared
     resweeps = []
     run_lane(world(resweeps:, mechanical: false), model_groups: 2) do |outcome, rows|

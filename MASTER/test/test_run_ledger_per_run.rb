@@ -46,6 +46,22 @@ class TestRunLedgerPerRun < Minitest::Test
     assert lines.any? { |line| line.include?("lib/b.rb") && line.include?("not_attempted_budget") && line.include?("operator-owned") }
   end
 
+  def test_checkpoint_metrics_deduplicate_commits_and_reset_between_runs
+    Ledger.begin_run!
+    assert_nil Ledger.checkpoint_metrics.fetch(:first_checkpoint_s)
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    Ledger.record_verified_checkpoint("one", clock: started + 2)
+    Ledger.record_verified_checkpoint("one", clock: started + 3)
+    Ledger.record_verified_checkpoint("two", clock: started + 4)
+    metrics = Ledger.checkpoint_metrics(clock: started + 60)
+    assert_equal 2, metrics.fetch(:verified_checkpoints)
+    assert_in_delta 2, metrics.fetch(:first_checkpoint_s), 0.05
+    assert_in_delta 2, metrics.fetch(:checkpoints_per_minute), 0.05
+    Ledger.begin_run!
+    assert_equal 0, Ledger.checkpoint_metrics.fetch(:verified_checkpoints)
+    assert_nil Ledger.checkpoint_metrics.fetch(:first_checkpoint_s)
+  end
+
   def test_a_new_run_forgets_the_last_runs_rejections_and_keeps_its_file_cap
     Ledger::MAX_REJECTS_PER_FILE.times { Ledger.reject(:new_violations, file: "lib/a.rb") }
     Ledger.record_discovery(file: "lib/a.rb", law: "NO_GOD_CLASS", line: 4, message: "fixture")
