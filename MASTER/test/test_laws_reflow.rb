@@ -4,7 +4,7 @@ require_relative "test_helper"
 require "yaml"
 
 class TestLawsReflow < Minitest::Test
-  def test_nine_invariant_nodes_are_first_and_follow_document_order
+  def test_nine_invariant_nodes_follow_document_order
     data = Master.load_yaml(File.join(Master::ROOT, "data", "laws.yml"))
     node_ids = data.filter_map { |id, row| id if row.is_a?(Hash) && row["node"] }
 
@@ -21,10 +21,34 @@ class TestLawsReflow < Minitest::Test
   end
 
   def test_catalogue_has_no_retired_numeric_ranking_or_path_scope
-    source = File.read(File.join(Master::ROOT, "data", "laws.yml"), encoding: "UTF-8")
+    data = YAML.safe_load_file(File.join(Master::ROOT, "data", "laws.yml"), aliases: false)
+    assert_empty retired_fields(data)
+  end
 
-    refute_match(/^\s+(?:priority|tier):/m, source)
-    refute_match(/^\s+(?:applies_to|domain|path|path_pattern|exclude):/m, source)
+  def test_retired_fields_check_distinguishes_law_policy_from_runtime_configuration
+    data = {
+      "EXAMPLE" => { "statement" => "A rule", "root" => "no_surplus", "priority" => 1 },
+      "law_catalogue" => { "defaults" => { "tier" => 2 }, "entries" => {
+        "EXAMPLE" => { "path" => "lib", "path_exclude" => "test" },
+      } },
+      "runtime" => { "path" => "MASTER", "applies_to" => ["MASTER"] },
+    }
+
+    assert_equal(
+      { "EXAMPLE" => ["priority"], "defaults" => ["tier"], "entries.EXAMPLE" => ["path"] },
+      retired_fields(data),
+    )
+  end
+
+  def test_governing_and_famous_laws_precede_the_invariant_details
+    data = Master.load_yaml(File.join(Master::ROOT, "data", "laws.yml"))
+    ids = Master::FlatLawCatalogue.entries(data).map { |row| row.fetch("id") }
+    assert_equal %w[APPLICATION_IS_UNIFORM PRESERVE_FIRST DO_THE_WORK_NOW DRY KISS], ids.first(5)
+    first_node = ids.index("TRUTHFUL_STATUS")
+
+    Master::FlatLawCatalogue::FAMOUS_NAMES.each do |id|
+      assert_operator ids.index(id), :<, first_node, id
+    end
   end
 
   def test_source_does_not_declare_duplicate_top_level_law_ids
@@ -35,5 +59,18 @@ class TestLawsReflow < Minitest::Test
     end
 
     assert_equal ids.uniq.sort, ids.sort
+  end
+  private
+
+  def retired_fields(data)
+    policy = data.fetch("law_catalogue")
+    rows = Master::FlatLawCatalogue.entries(data).to_h { |row| [row.fetch("id"), row] }
+    rows["defaults"] = policy.fetch("defaults")
+    policy.fetch("entries").each { |id, row| rows["entries.#{id}"] = row }
+    forbidden = Master::FlatLawCatalogue::SCOPE_FIELDS + Master::FlatLawCatalogue::LEGACY_RANK_FIELDS
+    rows.filter_map do |id, row|
+      fields = row.keys & forbidden
+      [id, fields] unless fields.empty?
+    end.to_h
   end
 end
