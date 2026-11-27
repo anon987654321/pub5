@@ -241,7 +241,7 @@ canvas#face { background: var(--face-bg); }
   min-block-size: 40px;
   color: rgb(170 170 170 / 78%);
 }
-body[data-mode="listening"] .mic-indicator { color: #C7C7C7; }
+body[data-mode="listening"] .mic-indicator { color: var(--c-accent); }
 
 #primer {
   padding: clamp(24px, 5vw, 64px);
