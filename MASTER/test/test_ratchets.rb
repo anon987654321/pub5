@@ -79,6 +79,21 @@ class TestRatchets < Minitest::Test
     end
   end
 
+  def test_deep_measure_counts_names_once
+    calls = 0
+    names = -> { calls += 1; [] }
+    with_stubs(QUIET - [:name_rows], []) do
+      Operator::Ratchets.stub(:name_rows, names) do
+        Operator::Ratchets.stub(:cached, []) do
+          Operator::Ratchets.stub(:shell_row, nil) do
+            Operator::Ratchets.all(deep: true, trees: ["MASTER"])
+          end
+        end
+      end
+    end
+    assert_equal 1, calls
+  end
+
   # law_trace is a deep row, so it is built here with the rake command unrun.
   def test_law_trace_reads_the_recorded_ceiling
     unrun = lambda do |name, _dir, _command, _pattern, ceiling|
