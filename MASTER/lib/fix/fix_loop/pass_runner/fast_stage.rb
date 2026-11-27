@@ -85,8 +85,8 @@ module Master
 
             snapshot = files.to_h { |path| [path, File.binread(path)] }
             corrected = rubocop_run(files, root)
-            settle_rubocop(snapshot, root)
-            corrected
+            retained = settle_rubocop(snapshot, root)
+            retained.sum { |path| corrected.fetch(path, 0) }
           end
 
           # What RuboCop may open: not protected, not capped out, not already
@@ -107,7 +107,7 @@ module Master
           # against it. dry puts every file back and keeps the diff. Only a kept write is attested:
           # attesting every file RuboCop opened claimed another writer's edit to one it left alone.
           def settle_rubocop(snapshot, _root)
-            snapshot.each do |path, before|
+            snapshot.each_with_object([]) do |(path, before), retained|
               after = File.binread(path)
               next if after == before
 
@@ -122,6 +122,7 @@ module Master
               else
                 Master::Fix::AutofixGuard.note_written(path, before:)
                 @committer&.attest_written!(path)
+                retained << path
               end
             end
           end
@@ -149,7 +150,10 @@ module Master
             report = JSON.parse(out.to_s)
             rows = report.fetch("files", [])
             stuck = uncorrected_files(rows, root)
-            corrected = rows.sum { |entry| entry.fetch("offenses", []).count { |offense| offense["corrected"] == true } }
+            corrected_by_file = rows.to_h do |entry|
+              [File.expand_path(entry.fetch("path"), root), entry.fetch("offenses", []).count { |offense| offense["corrected"] == true }]
+            end
+            corrected = corrected_by_file.values.sum
             stuck.each { |path| @bus&.publish("fix_loop:rubocop_file_failed", file: path) }
             summary = if stuck.empty?
                         corrected.zero? ? "clean" : "corrected #{corrected} offense(s)"
@@ -158,11 +162,11 @@ module Master
                       end
             summary = "failed: no machine-readable report" if !status.success? && rows.empty?
             Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "rubocop #{summary}, checked #{Master::Trace::Dmesg.counted(files.size, "file")}")
-            corrected
+            corrected_by_file
           rescue JSON::ParserError
             @bus&.publish("fix_loop:rubocop_report_unreadable", files: files.map { |path| path.delete_prefix("#{@root}/") })
             Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "rubocop inconclusive: JSON report unreadable")
-            0
+            {}
           end
 
           # The JSON report is the source of truth: a file with no remaining offenses
