@@ -53,6 +53,20 @@ Terminal-only startup prepares optional voice services in the background. `MASTE
 
 External agents can load the portable instructions with `MASTER/bin/master --fix-context --contract-only`. It exports the procedure and command interface without inspecting a target tree. Execute the commands on the operator’s machine and keep the resulting source evidence there. `MASTER/bin/master --tts-local` reads approved text from stdin and writes audio to stdout using local `say` or eSpeak. eSpeak returns WAV. macOS returns M4A when `afconvert` is available and AIFF otherwise.
 
+### Keyless gateway and runtime verification
+
+A configured oxllm gateway uses `MASTER_GATEWAY_MODE=oxllm` and serves `gateway:basic` or `gateway:strong` at `http://127.0.0.1:8080/v1`. Set `MASTER_FREE_ONLY=1` to omit API credentials. A loopback gateway may still forward requests elsewhere; local-only mode must not use it. Keyless transport does not prove that the upstream provider charges nothing.
+
+On 2026-11-27 a fresh-home pseudo-terminal run of `bin/master --fast --no-web --model gateway:basic` reached a loopback test gateway and exited zero. Both catalogue and completion requests omitted Authorization. The reconciled routing and catalogue tests passed on Ruby 3.3.8 (75 tests, 252 assertions). Neither result proves live upstream inference.
+
+The separate Vercel runtime build verified Ruby 4.0.10 ([source](https://github.com/ruby/ruby/tree/a704b7cd95a42cc0cf5f307137bf3aac0285b915)) linked to LibreSSL 4.4.1 ([source](https://github.com/libressl/portable/tree/c4a8f5f86d15b08eb2f5dfb2aa44e90a0c1f6a3d)). LibreSSL passed all 144 upstream tests; Ruby passed `make test`. The sandbox expired before the Ruby 4 MASTER regression results could be recovered. Rebuild in a persistent test sandbox and verify the library version before running the suite:
+
+```zsh
+ruby -ropenssl -e 'puts RUBY_DESCRIPTION, OpenSSL::OPENSSL_LIBRARY_VERSION; abort unless RUBY_VERSION.start_with?("4.") && OpenSSL::OPENSSL_LIBRARY_VERSION.start_with?("LibreSSL")'
+```
+
+Use the repository's pinned bundle and the local regression suite. Do not treat a different Ruby or TLS library as proof of this runtime.
+
 ### Android and Termux
 
 Run `sh MASTER/bin/master-mobile-install --auto` from Termux to provision the supported Ubuntu or Debian guest and write `~/.local/bin/master`. Use that launcher for normal sessions; it enters the guest once through a non-login zsh command and does not update the checkout on every start. Rerun the installer when you want to fast-forward a clean checkout and refresh the guest.
