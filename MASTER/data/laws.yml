@@ -35,7 +35,7 @@
 #   derives the graph. Modalities are lexical, semantic and visual; mechanical
 #   means deterministic enforcement, of which lexical is one technique.
 #
-# 1. THE AXIOM
+# 1. GOVERNING PRACTICE
 
 APPLICATION_IS_UNIFORM:
   question: "Which laws apply at each scale, and what evidence is missing?"
@@ -54,27 +54,6 @@ APPLICATION_IS_UNIFORM:
   mechanical: Master::Pipeline#apply_all
   semantic: human
 
-APPLICATION_IS_UNIFORM_skipped_law:
-  parent: APPLICATION_IS_UNIFORM
-  statement: "A file passed through without one of the laws."
-  resolution: never
-
-APPLICATION_IS_UNIFORM_unrecorded_finding:
-  parent: APPLICATION_IS_UNIFORM
-  statement: "A finding made and not emitted."
-  resolution: never
-
-APPLICATION_IS_UNIFORM_legacy_reach_is_not_global:
-  parent: APPLICATION_IS_UNIFORM
-  statement: "Catalogue entries own language, surface and negative path reach; a Ruby Law definition owns its positive path constraint. Effective applicability is the intersection of those declared constraints, with universal-by-default behavior when catalogue filters are absent."
-  resolution: never
-
-
-APPLICATION_IS_UNIFORM_constitution_self_governed:
-  parent: APPLICATION_IS_UNIFORM
-  statement: "The law catalogue or its validator is treated as exempt from the laws it declares."
-  resolution: never
-
 PRESERVE_FIRST:
   parent: STEWARDSHIP
   question: "What must survive, and how does the whole improve?"
@@ -91,16 +70,6 @@ PRESERVE_FIRST:
     for every capability, invariant and contract before and after; compress
     representation without compressing behavior or weakening enforcement.
   resolution: review
-
-PRESERVE_FIRST_media_provenance:
-  parent: PRESERVE_FIRST
-  severity: error
-  statement: >
-    A source media asset or approved prior take is overwritten, degraded or
-    published without preserving its original bytes and identity, recording
-    relevant source, rights or consent provenance and generation inputs, and
-    keeping qualitative human acceptance distinct from automated measurements.
-  resolution: never
 
 DO_THE_WORK_NOW:
   parent: STEWARDSHIP
@@ -120,7 +89,7 @@ DO_THE_WORK_NOW:
   mechanical: human
   semantic: human
 
-# 2. THE NAMED PRINCIPLES
+# 2. NAMED PRINCIPLES
 
 DRY:
   parent: SINGULARITY
@@ -180,6 +149,112 @@ SOLID:
   semantic: human
   lineage: "Robert C. Martin"
 
+POLA:
+  root: least_surprise
+  statement: >
+    Principle of Least Astonishment. A system behaves the way a person
+    who has not read the source will expect. If a necessary feature
+    astonishes, redesign the feature rather than document the surprise.
+    Agent and council behaviour, error surfaces, and status reports must
+    also obey least astonishment: a causal trace or status that surprises
+    the operator about what the system actually did is a POLA failure.
+  severity: warning
+  resolution: review
+  mechanical: composite (POLA_mental_models, POLA_intuitive_navigation, POLA_bem_in_views, POLA_meaningless_name)
+  semantic: human
+  lineage: "IEEE Standard 610.12; colloquially 'Principle of Least Surprise'"
+
+YAGNI:
+  root: no_surplus
+  statement: >
+    You Aren't Gonna Need It. Build only what the current requirement
+    demands. An unused feature is not an investment; it is code that
+    will drift, mislead a reader, and cost more to remove than it saved
+    to write.
+  severity: warning
+  resolution: review
+  mechanical: composite (DENSITY_dead_code, SPECULATIVE_GENERALITY)
+  semantic: human
+  lineage: "Ron Jeffries, Extreme Programming"
+
+UNIX_PHILOSOPHY:
+  parent: SRP
+  statement: >
+    Do one thing well. Compose focused units through clear interfaces; split
+    unrelated responsibilities without creating one-use indirection.
+  severity: info
+  resolution: review
+  lineage: "Doug McIlroy, Unix philosophy"
+
+STRUNK_WHITE:
+  parent: DENSITY
+  statement: >
+    The Elements of Style. Prose is a machine for transmitting thought
+    from one mind to another; every word the reader must read and does
+    not need is a cost the writer imposed on the reader.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Prose#all
+  semantic: human
+  lineage: "Strunk & White, The Elements of Style"
+
+BRINGHURST:
+  parent: PROPORTION
+  statement: >
+    Honour content through typography. Compose measure, leading, scale,
+    rhythm, alignment and contrast as relationships; refine optical balance,
+    letterspacing, numerals and punctuation for the language and medium.
+    Judge reading and meaning, not numerical conformity alone.
+    At detail scale inspect glyph, word, line and column spacing separately;
+    at composition scale inspect their hierarchy and relationship to images.
+  severity: info
+  resolution: review
+  mechanical: Master::Law::Typography#all
+  semantic: human
+  lineage: "Robert Bringhurst, The Elements of Typographic Style"
+
+CQS:
+  root: one_responsibility
+  statement: >
+    Command-Query Separation. A method either answers a question or
+    changes a thing, not both. A method that does both cannot be called
+    without a side effect, which means it cannot be called safely from
+    anywhere that needs only the answer.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#cqs
+  calibration: measurement_only
+  semantic: human
+  lineage: "Bertrand Meyer"
+
+LAW_OF_DEMETER:
+  root: stable_contract
+  statement: >
+    Only talk to your immediate friends. A method calls methods on
+    itself, its parameters, objects it creates, and its own components.
+    A method that reaches through a chain of strangers has bound itself
+    to the shape of an object it does not own.
+  severity: warning
+  resolution: review
+  mechanical: Master::Law::Structural#law_of_demeter
+  semantic: human
+  lineage: "Lieberherr & Holland, 1987"
+
+RAILS_DOCTRINE:
+  root: stewardship
+  statement: >
+    The Rails Doctrine. A framework's posture toward its programmer is
+    a design decision, and Rails chose: optimize for programmer
+    happiness, trust convention over configuration, and treat the
+    whole stack as one integrated system rather than a bag of parts. Common
+    workflows have sensible, context-aware defaults: the operator should not
+    have to memorize flags or environment variables to get expected behaviour.
+  severity: info
+  resolution: review
+  mechanical: Master::Law::Rails#doctrine
+  semantic: human
+  lineage: "David Heinemeier Hansson, The Rails Doctrine"
+
 SRP:
   parent: SOLID
   statement: >
@@ -190,16 +265,6 @@ SRP:
   resolution: review
   mechanical: Master::Law::Structural#responsibility
   semantic: human
-
-SRP_no_god_class:
-  parent: SRP
-  statement: "A class with one name and ten responsibilities."
-  resolution: review
-
-SRP_feature_envy:
-  parent: SRP
-  statement: "A method that reaches into another object's data more than its own."
-  resolution: review
 
 OCP:
   parent: SOLID
@@ -247,20 +312,111 @@ DIP:
   mechanical: Master::Law::Structural#dependency_inversion
   semantic: human
 
-POLA:
-  root: least_surprise
+PROGRESSIVE_DISCLOSURE:
+  parent: BOUNDED_LOAD
   statement: >
-    Principle of Least Astonishment. A system behaves the way a person
-    who has not read the source will expect. If a necessary feature
-    astonishes, redesign the feature rather than document the surprise.
-    Agent and council behaviour, error surfaces, and status reports must
-    also obey least astonishment: a causal trace or status that surprises
-    the operator about what the system actually did is a POLA failure.
-  severity: warning
+    Lead with the common path. Reveal advanced controls when the task requires
+    them; keep every necessary action discoverable and accessible.
+  severity: info
   resolution: review
-  mechanical: composite (POLA_mental_models, POLA_intuitive_navigation, POLA_bem_in_views, POLA_meaningless_name)
-  semantic: human
-  lineage: "IEEE Standard 610.12; colloquially 'Principle of Least Surprise'"
+  lineage: "Jakob Nielsen, Nielsen Norman Group"
+
+AESTHETIC_MINIMALISM:
+  parent: DENSITY
+  statement: >
+    Subtract what serves neither the task nor deliberate identity. Prefer
+    hierarchy, alignment and meaningful space over framing and repetition;
+    preserve capability, accessible affordances and rendered behavior.
+  severity: info
+  resolution: review
+  lineage: "Jakob Nielsen, heuristic 8"
+
+RAMS_USEFUL:
+  parent: STEWARDSHIP
+  statement: >
+    Every element serves an identifiable purpose for the person using it.
+    Remove ornament or functionality that cannot justify its presence.
+  severity: info
+  resolution: review
+  lineage: "Dieter Rams, principles of good design"
+
+RAMS_UNDERSTANDABLE:
+  parent: POLA
+  statement: >
+    Make purpose and operation clear through structure, names and controls. A
+    person should not need to decode the interface before acting.
+  severity: info
+  resolution: review
+  lineage: "Dieter Rams, principles of good design"
+
+RAMS_UNOBTRUSIVE:
+  parent: DENSITY
+  statement: >
+    Let the work take precedence over its interface. Avoid interruption and
+    decoration that compete with the user's task.
+  severity: info
+  resolution: review
+  lineage: "Dieter Rams, principles of good design"
+
+RAMS_HONEST:
+  parent: TRUTHFUL_STATUS
+  statement: >
+    Never imply capability, progress, value or certainty that the evidence
+    does not establish.
+  severity: info
+  resolution: review
+  lineage: "Dieter Rams, principles of good design"
+
+RAMS_THOROUGH:
+  parent: STEWARDSHIP
+  statement: >
+    Account for every relevant state, including failure, empty data and
+    recovery. Verify the details rather than treating them as optional polish.
+  severity: info
+  resolution: review
+  lineage: "Dieter Rams, principles of good design"
+
+# Governing and named principle details
+
+APPLICATION_IS_UNIFORM_skipped_law:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "A file passed through without one of the laws."
+  resolution: never
+
+APPLICATION_IS_UNIFORM_unrecorded_finding:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "A finding made and not emitted."
+  resolution: never
+
+APPLICATION_IS_UNIFORM_legacy_reach_is_not_global:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "Catalogue entries own language, surface and negative path reach; a Ruby Law definition owns its positive path constraint. Effective applicability is the intersection of those declared constraints, with universal-by-default behavior when catalogue filters are absent."
+  resolution: never
+
+APPLICATION_IS_UNIFORM_constitution_self_governed:
+  parent: APPLICATION_IS_UNIFORM
+  statement: "The law catalogue or its validator is treated as exempt from the laws it declares."
+  resolution: never
+
+PRESERVE_FIRST_media_provenance:
+  parent: PRESERVE_FIRST
+  severity: error
+  statement: >
+    A source media asset or approved prior take is overwritten, degraded or
+    published without preserving its original bytes and identity, recording
+    relevant source, rights or consent provenance and generation inputs, and
+    keeping qualitative human acceptance distinct from automated measurements.
+  resolution: never
+
+SRP_no_god_class:
+  parent: SRP
+  statement: "A class with one name and ten responsibilities."
+  resolution: review
+
+SRP_feature_envy:
+  parent: SRP
+  statement: "A method that reaches into another object's data more than its own."
+  resolution: review
 
 POLA_mental_models:
   parent: POLA
@@ -282,62 +438,10 @@ POLA_meaningless_name:
   statement: "A name that does not state the present meaning of the thing."
   resolution: review
 
-YAGNI:
-  root: no_surplus
-  statement: >
-    You Aren't Gonna Need It. Build only what the current requirement
-    demands. An unused feature is not an investment; it is code that
-    will drift, mislead a reader, and cost more to remove than it saved
-    to write.
-  severity: warning
-  resolution: review
-  mechanical: composite (DENSITY_dead_code, SPECULATIVE_GENERALITY)
-  semantic: human
-  lineage: "Ron Jeffries, Extreme Programming"
-
-CQS:
-  root: one_responsibility
-  statement: >
-    Command-Query Separation. A method either answers a question or
-    changes a thing, not both. A method that does both cannot be called
-    without a side effect, which means it cannot be called safely from
-    anywhere that needs only the answer.
-  severity: warning
-  resolution: review
-  mechanical: Master::Law::Structural#cqs
-  calibration: measurement_only
-  semantic: human
-  lineage: "Bertrand Meyer"
-
-LAW_OF_DEMETER:
-  root: stable_contract
-  statement: >
-    Only talk to your immediate friends. A method calls methods on
-    itself, its parameters, objects it creates, and its own components.
-    A method that reaches through a chain of strangers has bound itself
-    to the shape of an object it does not own.
-  severity: warning
-  resolution: review
-  mechanical: Master::Law::Structural#law_of_demeter
-  semantic: human
-  lineage: "Lieberherr & Holland, 1987"
-
 LAW_OF_DEMETER_train_wreck:
   parent: LAW_OF_DEMETER
   statement: "A chain of accessors that traverses more than one intermediary."
   resolution: review
-
-STRUNK_WHITE:
-  parent: DENSITY
-  statement: >
-    The Elements of Style. Prose is a machine for transmitting thought
-    from one mind to another; every word the reader must read and does
-    not need is a cost the writer imposed on the reader.
-  severity: warning
-  resolution: review
-  mechanical: Master::Law::Prose#all
-  semantic: human
-  lineage: "Strunk & White, The Elements of Style"
 
 STRUNK_WHITE_omit_needless_words:
   parent: STRUNK_WHITE
@@ -396,21 +500,6 @@ STRUNK_WHITE_keep_related_together:
   statement: "Words that modify each other separated by intervening matter."
   resolution: review
 
-BRINGHURST:
-  parent: PROPORTION
-  statement: >
-    Honour content through typography. Compose measure, leading, scale,
-    rhythm, alignment and contrast as relationships; refine optical balance,
-    letterspacing, numerals and punctuation for the language and medium.
-    Judge reading and meaning, not numerical conformity alone.
-    At detail scale inspect glyph, word, line and column spacing separately;
-    at composition scale inspect their hierarchy and relationship to images.
-  severity: info
-  resolution: review
-  mechanical: Master::Law::Typography#all
-  semantic: human
-  lineage: "Robert Bringhurst, The Elements of Typographic Style"
-
 BRINGHURST_measure:
   parent: BRINGHURST
   statement: "Prose measured outside 45-75 characters; 66 where one number must serve. Terminal prose wraps at 72."
@@ -435,21 +524,6 @@ BRINGHURST_alignment:
   parent: BRINGHURST
   statement: "Prose justified or space-padded into a fake table."
   resolution: review
-
-RAILS_DOCTRINE:
-  root: stewardship
-  statement: >
-    The Rails Doctrine. A framework's posture toward its programmer is
-    a design decision, and Rails chose: optimize for programmer
-    happiness, trust convention over configuration, and treat the
-    whole stack as one integrated system rather than a bag of parts. Common
-    workflows have sensible, context-aware defaults: the operator should not
-    have to memorize flags or environment variables to get expected behaviour.
-  severity: info
-  resolution: review
-  mechanical: Master::Law::Rails#doctrine
-  semantic: human
-  lineage: "David Heinemeier Hansson, The Rails Doctrine"
 
 RAILS_DOCTRINE_optimize_for_programmer_happiness:
   parent: RAILS_DOCTRINE
@@ -906,7 +980,6 @@ SINGULARITY_LAW_POLICY_HAS_ONE_OWNER:
   parent: SINGULARITY
   statement: "Per-Law severity, mode, lifecycle, autofix and reach metadata has one owner in laws.yml#law_catalogue; runtime configuration must not duplicate that policy."
   resolution: never
-
 
 SINGULARITY_NORMATIVE_GUIDANCE_HAS_ONE_LAW_IDENTITY:
   parent: SINGULARITY
@@ -1799,14 +1872,6 @@ SPARE_COMMENTS:
   mechanical: composite (NO_CHANGELOG_COMMENT, WHY_NOT_WHAT, DENSITY_comments_as_deodorant)
   semantic: human
 
-# ---
-
-# ---
-
-# ---
-
-# ---
-
 CHROME_COPY_CALM:
   parent: STRUNK_WHITE
   statement: "Interface copy states facts without exclamation marks."
@@ -1869,7 +1934,6 @@ ELLIPSIS_SPACE_BEFORE:
   statement: "An ellipsis in copy breathes: a space before the three dots."
   severity: info
   resolution: review
-
 
 PARAGRAPH_SEPARATION_ONE_DEVICE:
   parent: BRINGHURST
@@ -1976,7 +2040,6 @@ BUSPLAN_PRINT_PAIR:
     reads as suspect until reprinted.
   severity: warning
   resolution: review
-
 
 EMPHASIS_ONE_DEVICE:
   parent: BRINGHURST
@@ -2462,6 +2525,7 @@ LINT_BEAUTIFY:
     Verify no new smells, regressions or unaccounted complexity; a clean changed
     line does not prove a clean file.
   resolution: review
+  enforcement: MASTER/law/practice.rb (practice guidance)
 
 OPERATOR_AUTONOMY:
   parent: STEWARDSHIP
