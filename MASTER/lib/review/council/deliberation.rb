@@ -128,8 +128,9 @@ module Master
               candidates = collect_candidates(candidates, history.last)
             end
             if @candidate_limit && !open && candidates.size >= @candidate_limit
-              comparison_rounds += 1
-              @bus&.publish(:council_candidate_comparison, round: index + 1, completed: comparison_rounds, required: CANDIDATE_COMPARISON_ROUNDS, candidates: candidates.size)
+              coverage = candidate_comparison_coverage(candidates, history.last)
+              comparison_rounds += 1 if coverage.values.all? { |reviewers| reviewers.size >= 2 }
+              @bus&.publish(:council_candidate_comparison, round: index + 1, completed: comparison_rounds, required: CANDIDATE_COMPARISON_ROUNDS, candidates: candidates.size, coverage:)
             end
             compared = comparison_rounds >= CANDIDATE_COMPARISON_ROUNDS
             stable = candidates.empty? && converged?(previous, history.last)
@@ -642,7 +643,7 @@ module Master
           end
           record_answer(persona:, response:, model:)
         rescue StandardError => e
-          note_persona_failure(persona, e)
+          note_persona_failure(persona, e, model:)
           nil
         end
 
@@ -650,6 +651,7 @@ module Master
           entry = persona_entry(persona, response.fetch("feedback"), model)
           entry[:position] = response.dig("data", "position")
           entry[:position_reason] = response.dig("data", "position_reason")
+          entry[:position_evidence] = response.dig("data", "position_evidence")
           entry[:structured_findings] = response.dig("data", "findings")
           entry[:inter_model_repaired] = response.fetch("repair_attempted")
 
@@ -711,11 +713,11 @@ module Master
         # personas. QuotaCheck announces the first and returns false to everyone
         # after it, so the remaining personas only add to the tally — which is
         # what the operator reads anyway.
-        def note_persona_failure(persona, error)
+        def note_persona_failure(persona, error, model: nil)
           @bus&.publish("council:persona_error", persona: persona.name, error: error.message)
           limited = Io::QuotaCheck.trip_if_limited(
             source: "council persona #{persona.name}", message: error.message,
-            model: lane_for(persona)
+            model:
           )
           unless limited
             Master::Trace::Dmesg.status(

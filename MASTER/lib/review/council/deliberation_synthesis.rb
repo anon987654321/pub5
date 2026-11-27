@@ -96,11 +96,27 @@ module Master
                      #{Challenges.prompt(scope: :solution)}
                    TEXT
                  else
-                   "The candidate set is closed. Compare the candidates against the evidence and preservation constraints. Respond to specific peer objections, identify concrete regressions, and explain which objections survive or were resolved. State your revised position; do not silently equate agreement with proof."
+                   "The candidate set is closed. Compare the candidates against the evidence and preservation constraints. Respond to specific peer objections, identify concrete regressions, and explain which objections survive or were resolved. State your revised position; do not silently equate agreement with proof. In position_evidence, use location candidate N and evidence starting KEEP: or REJECT: followed by a concrete reason and a falsifier. Cover the candidates within your expertise; each needs two distinct specialists before arbitration."
                  end
           return task if candidates.empty?
 
           [task, "Challenge specific candidate IDs with evidence and a falsifier.", candidate_list(candidates)].join("\n\n")
+        end
+
+        def candidate_comparison_coverage(candidates, feedback)
+          coverage = (1..candidates.size).to_h { |id| [id, []] }
+          feedback.each do |entry|
+            persona = entry[:persona].to_s
+            next if persona.empty? || persona == "Judge"
+
+            Array(entry[:position_evidence]).each do |evidence|
+              id = evidence["location"].to_s[/\Acandidate ([1-9]\d*)\z/i, 1]&.to_i
+              next unless coverage.key?(id) && evidence["evidence"].to_s.match?(/\A(?:KEEP|REJECT):\s*\S/i)
+
+              coverage.fetch(id) << persona unless coverage.fetch(id).include?(persona)
+            end
+          end
+          coverage
         end
 
         def candidate_judge_brief(candidates)

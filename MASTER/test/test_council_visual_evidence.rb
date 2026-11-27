@@ -4,7 +4,9 @@ require_relative "test_helper"
 
 class CouncilVisualEvidenceTest < Minitest::Test
   def test_judge_receives_the_review_brief
-    delib = Master::Review::Council::Deliberation.new(personas: [], agent: Object.new)
+    agent = Object.new
+    agent.define_singleton_method(:ask) { |*| raise "unexpected model call" }
+    delib = Master::Review::Council::Deliberation.new(personas: [], agent:)
     prompt = delib.send(:build_judge_prompt, feedback: [], context: "Keep the canonical renderer and terminal.")
 
     assert_includes prompt, "Keep the canonical renderer and terminal."

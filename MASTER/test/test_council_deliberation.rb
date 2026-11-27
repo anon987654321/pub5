@@ -334,7 +334,7 @@ class TestCouncilDeliberation < Minitest::Test
     delib.define_singleton_method(:note_persona_failure) { |persona, error| failures << [persona.name, error.message] }
     result = Queue.new
     coordinator = Thread.new do
-      result << delib.collect_parallel(code: "x = 1", context: nil, personas:)
+      result << delib.send(:collect_parallel, code: "x = 1", context: nil, personas:)
     end
 
     assert_equal %w[FAIL SLOW], [started.pop, started.pop].sort
@@ -376,7 +376,7 @@ class TestCouncilDeliberation < Minitest::Test
         release << :continue
       end
     }) do
-      feedback = delib.collect_parallel(code: "x = 1", context: nil, personas:)
+      feedback = delib.send(:collect_parallel, code: "x = 1", context: nil, personas:)
       assert_equal ["FIRST"], feedback.map { |entry| entry[:persona] }
     end
 
@@ -391,6 +391,7 @@ class TestCouncilDeliberation < Minitest::Test
     lookup_started = Queue.new
     release_lookup = Queue.new
     agent = Object.new
+    agent.define_singleton_method(:ask) { |*| raise "unexpected model call" }
     agent.define_singleton_method(:candidate_models) do |task_type:|
       lookup_started << task_type
       release_lookup.pop

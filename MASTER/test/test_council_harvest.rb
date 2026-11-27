@@ -81,9 +81,16 @@ class TestCouncilHarvest < Minitest::Test
     assert_includes challenge, "REJECT:"
   end
 
+  def test_candidate_count_alone_cannot_authorize_arbitration
+    result, prompts = run_critique(compare: false, expect_error: true)
+    assert result.err?
+    assert_match(/candidate comparison incomplete/, result.message)
+    refute prompts.any? { |prompt| prompt.include?(%q{"role": "judge"}) }
+  end
+
   private
 
-  def run_critique(count: 10, verdict: "KEEP", invent: false)
+  def run_critique(count: 10, verdict: "KEEP", invent: false, compare: true, expect_error: false)
     repairs = ["Reuse the registry", "Freeze the inputs", "Delete the wrapper", "Link two receipts",
                "Partition the batch", "Defer checkout inspection", "Merge the duplicate prompts",
                "Validate at dispatch", "Reuse the stored snapshot", "Limit candidate authors"]
@@ -109,6 +116,11 @@ class TestCouncilHarvest < Minitest::Test
         end
       else
         answer["findings"] = findings
+        if compare && prompt.include?("The candidate set is closed")
+          answer["position_evidence"] = findings.each_index.map do |index|
+            { "location" => "candidate #{index + 1}", "evidence" => "KEEP: inspect the source boundary; reject if the contract changes" }
+          end
+        end
       end
       JSON.generate(answer)
     end
@@ -118,6 +130,7 @@ class TestCouncilHarvest < Minitest::Test
       source = File.join(Master::ROOT, "lib", "review", "council", "harvest.rb")
       critique.new(mode: :general, agent:, files: [source], harvest: false).run
     end
+    return [result, Array.new(prompts.size) { prompts.pop }] if expect_error
     assert result.ok?, (result.message if result.err?)
     [result.value!, Array.new(prompts.size) { prompts.pop }]
   end
