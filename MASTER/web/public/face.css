@@ -2111,7 +2111,8 @@ body.mission-control code {
    with the particle canvas. Keep the existing face, input and voice owners. */
 body[data-layout="face"] {
   --terminal-font-size: 1rem;
-  --face-region-height: clamp(120px, 44dvh, 540px);
+  --face-available-height: max(0px, calc(100dvh - var(--face-bar-height) - var(--safe-top) - var(--safe-bottom) - var(--keyboard-inset, 0px)));
+  --face-region-height: min(clamp(120px, 44dvh, 540px), max(0px, calc(var(--face-available-height) - 144px)));
   --face-region-top: calc(var(--face-bar-height) + var(--safe-top));
   --terminal-region-top: calc(var(--face-region-top) + var(--face-region-height));
 }
@@ -2175,7 +2176,7 @@ body[data-layout="face"] .msg-body {
   font-variant-ligatures: none;
 }
 @media (max-height: 500px) {
-  body[data-layout="face"] { --face-region-height: 30dvh; }
+  body[data-layout="face"] { --face-region-height: min(30dvh, max(0px, calc(var(--face-available-height) - 144px))); }
 }
 @media (min-width: 480px) {
   body[data-layout="face"] { --terminal-font-size: 1.25rem; }

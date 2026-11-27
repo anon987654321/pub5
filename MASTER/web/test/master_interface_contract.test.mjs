@@ -398,3 +398,29 @@ test("CLI owns the browser source grammar", () => {
   assert.match(chat, /window\.MASTER_TERMINAL_GRAMMAR/);
   assert.match(chat, /grammar\?\.grammars\?\.\[lang\]/);
 });
+
+test("face renderer preserves camera proportions even when the canvas is shallow", () => {
+  const src = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
+  const start = src.indexOf("const scale = Math.min(Math.max(FACE_RENDER_SCALE");
+  const end = src.indexOf("camera.updateProjectionMatrix();", start);
+  assert.ok(start >= 0 && end > start);
+  for (const [W, H] of [[1440, 396], [390, 360], [390, 80], [320, 600], [1920, 1080]]) {
+    const camera = {};
+    let size;
+    const renderer = { setPixelRatio() {}, setSize(w, h) { size = [w, h]; } };
+    runInNewContext(src.slice(start, end), {
+      W, H, FACE_RENDER_SCALE: 0.72, FACE_BUFFER_MAX_W: 960, FACE_BUFFER_MAX_H: 640,
+      DPR: 1, renderer, camera
+    });
+    assert.equal(camera.aspect, W / H);
+    assert.ok(size[0] <= 960 && size[1] <= 640);
+    assert.ok(Math.abs(size[0] / W - size[1] / H) <= 1 / Math.min(W, H));
+  }
+});
+
+test("mobile keyboard cannot reserve the terminal's space for the face", () => {
+  assert.match(faceChrome, /--face-available-height:.*var\(--keyboard-inset, 0px\)/);
+  assert.match(faceChrome, /--face-region-height: min\(clamp\(120px, 44dvh, 540px\), max\(0px, calc\(var\(--face-available-height\) - 144px\)\)\)/);
+  const inset = readFileSync(join(publicDir, "viewport_inset.js"), "utf8");
+  assert.match(inset, /addEventListener\("focusin", schedule/);
+});

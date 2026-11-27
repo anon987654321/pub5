@@ -35,6 +35,7 @@
     vv.addEventListener("resize", schedule, { passive: true });
     vv.addEventListener("scroll", schedule, { passive: true });
   }
+  window.addEventListener("focusin", schedule, { passive: true });
   window.addEventListener("focusout", schedule, { passive: true });
   apply();
 })();
