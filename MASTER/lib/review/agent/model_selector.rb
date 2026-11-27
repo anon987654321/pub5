@@ -17,6 +17,7 @@ module Master
 
         def routed_models(message = nil, task_type: nil)
           chain = routed_chain(message, task_type:)
+          return chain.select { |id| Io::LaneHealth.local_model?(id) } if local_only?
           return chain if normalize_task_type(task_type || @config.task_type) == :nsfw
 
           pin_boot_model_once!
