@@ -47,7 +47,10 @@ APPLICATION_IS_UNIFORM:
     an artifact from the review population.
     Review the constitution, its detectors and fixtures by the same Laws. Check
     literal compliance and intended effect; syntax that defeats a Law's purpose
-    fails semantic review.
+    fails semantic review. Keep one normative owner for each requirement;
+    overlapping Laws may retain distinct intellectual lineage, applicability
+    or evidence, but must not create competing execution policy. Consolidate
+    only when the original meaning and coverage survive.
   root: visible_state
   severity: error
   resolution: never
@@ -489,6 +492,10 @@ AESTHETIC_MINIMALISM:
     Subtract what serves neither the task nor deliberate identity. Prefer
     hierarchy, alignment and meaningful space over framing and repetition;
     preserve capability, accessible affordances and rendered behavior.
+    Compare against the existing work and a subtractive alternative.
+    A quieter surface must not conceal essential state, navigation or
+    identity. Judge reduction by retained function and improved clarity,
+    not by element count.
   severity: info
   resolution: review
   lineage: "Jakob Nielsen, heuristic 8"
@@ -883,10 +890,15 @@ TRUTHFUL_STATUS:
   node: truthful_status
   question: "What proves the claim?"
   statement: >
-    Report observed state, not intent. Support claims with evidence of the right class.
-    Distinguish a hypothesis, proposal, attempt, measurement and verified
-    delivery. State the problem, evidence and cost of doing nothing before
-    choosing a consequential repair.
+    Report observed state, not intent. Support claims with evidence of the
+    right class. Distinguish hypothesis, inference, prediction, proposal,
+    attempt, measurement and independently verified delivery; mark uncertainty,
+    stale or partial observations. For execution, retain the action, target,
+    revision, exit status or receipt, and relevant output. Redact secrets
+    without disguising the result. A write receipt is not a test receipt;
+    a test receipt is not a deployment or live-use receipt.
+    State the problem, evidence and cost of doing nothing before choosing
+    a consequential repair.
   severity: error
   resolution: never
   mechanical: Master::Law::Interface#capability_status
@@ -1007,7 +1019,14 @@ EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
 ROBUSTNESS:
   node: robustness
   question: "What happens when this fails?"
-  statement: "Anticipate failure. Fail safely, minimize authority and handle edge cases."
+  statement: >
+    Anticipate failure. Fail safely, minimize authority and handle edge cases.
+    Specify the failure boundary, resource and retry budget, recovery state
+    and observable success condition. Retry only transient failures and only
+    when repetition is safe; reconcile uncertain side effects before repeating
+    a write. Degrade only to an authorized mode that preserves essential
+    contracts, confidentiality and user intent. Test failure, recovery and
+    partial completion as well as success.
   severity: error
   resolution: review
   mechanical: Master::Law::Robustness#all
@@ -1166,7 +1185,10 @@ ROBUSTNESS_homeostasis:
     A failed provider must not discard the active task, conversation context
     or declared capability requirements. The system routes only to another
     healthy, authorised and compatible provider within bounded retry and
-    resource budgets. When no eligible provider answers, it preserves
+    resource budgets. Provider substitution must preserve the original
+    data-disclosure boundary; missing credentials are not consent to send
+    source, derived prompts or evidence elsewhere. When no eligible provider
+    answers, it preserves
     resumable mission state and reports the unrecovered remainder explicitly.
     Keep the last independently verified state and its revision, scope, evidence
     and pending work recoverable. Reject regressions and restore that state
@@ -1187,8 +1209,14 @@ ROBUSTNESS_morphological_exploration:
     alternatives within the budget; structural candidate maps retain their
     declared minimum of 15 when defensible. Include retaining the current state,
     challenge assumptions, compare costs, risks and benefits, and combine the
-    strongest compatible elements. Record rejected alternatives and reasons;
-    report a shortfall rather than inventing candidates.
+    strongest compatible elements. Compare structural, subtractive and
+    behavioral changes rather than cosmetic permutations. For visual work,
+    preserve the underlying product contracts and compare actual renders
+    when available; for architecture, compare dependencies and causal traces.
+    Send consequential alternatives through the interdisciplinary council
+    before selection. Record rejected alternatives and reasons; report a
+    shortfall rather than inventing candidates. Mechanical repairs with
+    a single demonstrated solution need no artificial candidate set.
   resolution: review
 
 ROBUSTNESS_antigen_memory:
@@ -1395,7 +1423,14 @@ ABSTRACTION_leaky_boundary:
 DENSITY:
   node: density
   question: "What can disappear without loss?"
-  statement: "Remove what serves no purpose; preserve meaningful space and complexity."
+  statement: >
+    Remove what serves no purpose; preserve meaningful space and complexity.
+    Judge semantic density by distinct information and decisions, structural
+    density by dependencies and indirection, cognitive density by the effort
+    to understand and act, and visual density by hierarchy, spacing and
+    competing signals. Optimize the whole, not raw line count or empty area.
+    Do not trade clear names, meaningful repetition, readable scale,
+    accessibility or necessary complexity for brevity.
   severity: error
   resolution: review
   mechanical: Master::Law::Universal#density
@@ -1463,7 +1498,18 @@ DENSITY_kanso:
   severity: error
   resolution: review
   mechanical: Master::Density#kanso
-  lineage: "Japanese aesthetic of kanso"
+  lineage: "Shinichi Hisamatsu, Zen and the Fine Arts (1971); kanso"
+  note: >
+    Hisamatsu's seven characteristics form one interpretive framework, not
+    an exhaustive definition of Japanese aesthetics. Kanso is simplicity;
+    fukinsei is asymmetry; koko is austere sublimity; shizen is naturalness;
+    yugen is subtle profundity; datsuzoku is freedom from attachment; seijaku
+    is tranquillity. In applying them, balance without forced symmetry,
+    prefer restraint without sterility, respect the nature of the material,
+    suggest depth without obscuring essential information, question habitual
+    conventions without violating POLA, and create calm without hiding state.
+    These are qualitative interpretations; no deterministic coverage is
+    implied for all seven.
 
 DENSITY_kanso_visual_noise:
   parent: DENSITY_kanso
@@ -1518,13 +1564,19 @@ DENSITY_ma:
   statement: >
     Negative space treated as a gap rather than a measure: silence and rests,
     photographic space, visual grouping, architectural void and paragraph
-    breaks should serve the whole rather than be filled by habit.
+    breaks should serve the whole rather than be filled by habit. Judge the
+    interval by the elements and events it separates or connects; it can
+    clarify grouping, expectation or rhythm. Neither maximal whitespace
+    nor maximal compression is the objective.
   resolution: review
   lineage: "Japanese aesthetic of ma"
 
 DENSITY_shibui:
   parent: DENSITY
-  statement: "Something added to be noticed."
+  statement: >
+    Conspicuous decoration displaces quiet, sustained refinement. Prefer
+    subtle depth in material, rhythm and proportion over novelty for its own
+    sake. A necessary warning, focal point or affordance may be conspicuous.
   resolution: review
   lineage: "Japanese aesthetic of shibui"
 
@@ -1534,21 +1586,30 @@ DENSITY_wabi_sabi:
     Intentional material imperfection treated as failure, or artificial wear
     imposed to hide a defect. Preserve expressive texture without confusing
     it with broken anatomy, clipping, inaccessible controls or unsafe structure.
+    Authentic aging and irregularity may carry meaning; fabricated damage
+    or nostalgia alone does not establish authenticity.
   resolution: review
   lineage: "Japanese aesthetic of wabi-sabi"
 
 DENSITY_yugen:
   parent: DENSITY
-  statement: "The work states everything and implies nothing."
+  statement: >
+    Expressive work exhausts its subject through literal explanation where
+    suggestion, depth or reserve would serve it better. Preserve ambiguity
+    in artistic interpretation, never in safety, consent, instructions,
+    navigation or the consequences of an action.
   resolution: review
   lineage: "Japanese aesthetic of yugen"
 
 DENSITY_tadao_ando:
   parent: DENSITY
   statement: >
-    Concrete, light, emptiness in tension. Irregular composition;
-    fewer sections than feel necessary; negative space is the
-    composition; delete anything decorative.
+    Use honest material, elementary geometry, light, enclosure and void
+    to shape an experience. Compose the sequence of arrival, transition,
+    focus and release; make boundaries and intervals intentional.
+    Prefer restraint to ornament, not arbitrary irregularity or a forced
+    concrete aesthetic. Translate the principle to the medium and respect
+    accessibility, necessary information and local identity.
   resolution: review
 
 DENSITY_no_eyebrow_label:
@@ -1614,7 +1675,14 @@ PAGE_WEIGHT_RATCHET:
 OPERATOR_RENDERED:
   node: operator_rendered
   question: "Which choices must remain unchanged?"
-  statement: "Preserve and identify operator-owned choices; never substitute them without authority."
+  statement: >
+    Preserve and identify operator-owned choices; never substitute them
+    without authority. Distinguish universal requirements such as accessibility,
+    truthful state and functional hierarchy from the product's chosen
+    typography, palette, material, composition and creative direction.
+    Improve the former while preserving the latter; propose alternatives
+    to deliberate identity separately. Where identity conflicts with a hard
+    requirement, expose the conflict and seek the smallest compliant change.
   severity: error
   resolution: never
   mechanical: Master::Visual::Identity#substitution
@@ -1672,7 +1740,12 @@ INTER_MODEL_CONTRACT:
     Use validated structured requests and evidence-backed findings in every council turn.
     For consequential decisions, specialists independently challenge evidence,
     exchange objections and revised proposals, and synthesize the strongest
-    compatible parts by evidence. Challenge confirmation, anchoring,
+    compatible parts by evidence. Each finding identifies its source,
+    observation, inference, uncertainty and applicable Law; each response
+    addresses the objection rather than restating the original proposal.
+    Keep disagreement and missing evidence explicit. Record candidate
+    disposition and the evidence that changed the decision; a majority or
+    a model's reputation is not proof. Challenge confirmation, anchoring,
     availability, recency, sunk cost, optimism, overconfidence, authority and
     bandwagon bias. A veto is not outvoted by an aggregate score.
   severity: error
@@ -1757,7 +1830,14 @@ DUAL_MODALITY:
   root: visible_state
   statement: >
     Every executable Law has a truthful assessment contract. Deterministic
-    detectors, semantic assessments and human assessors are distinct. Evidence
+    detectors, semantic assessments and human assessors are distinct.
+    Lexical checks use syntax, tokens and deterministic patterns; semantic
+    review evaluates meaning, architecture, contracts and intent; visual
+    review examines rendered composition, typography and interaction.
+    Interdisciplinary deliberation combines these assessments without
+    pretending to be an additional detector. Use cheap deterministic
+    checks for mechanical facts and reserve costly judgment for questions
+    those checks cannot settle. Evidence
     classes also remain distinct: source reads establish what was inspected;
     diffs establish what changed; command and test output establish what ran;
     rendered evidence establishes captured presentation; runtime evidence
@@ -2606,7 +2686,15 @@ COUNCIL_WHEN_RISKY:
     enables it; scan and sweep is the default loop. Have applicable
     specialists challenge proposals for security, maintenance, architecture,
     simplicity, performance, cost, novice comprehension, user needs,
-    skepticism and failure. Exchange counterarguments before synthesis. Record
+    skepticism and failure. For consequential semantic, visual or
+    interdisciplinary choices, include specialists relevant to the artifact,
+    including design, accessibility or music where applicable. Require
+    independent initial findings, then at least two rounds of substantive
+    cross-specialist objection and revision before synthesis. The synthesizer
+    compares surviving alternatives, resolves objections with evidence and
+    records unresolved dissent. Do not substitute one model's simulated
+    panel for independent review. If the budget or an authorized provider
+    prevents completion, report incomplete deliberation. Record
     the trigger, whether review ran and completed, the outcome and whether
     Security exercised its veto. Distinguish review not required from not run,
     unavailable, incomplete or blocked. A declared panel, requested review,
