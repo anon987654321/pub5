@@ -28,6 +28,7 @@ class TestCheckRunnerRegistry < Minitest::Test
   def test_failed_script_reports_a_bounded_redacted_output_excerpt
     fixture = File.join(File.dirname(RUNNER), "diagnostic-#{Process.pid}.rb")
     File.write(fixture, <<~RUBY)
+      $stdout.sync = true
       puts "first diagnostic line"
       warn "provider returned API_KEY=sk-abcdefghijklmnopqrstuvwxyz123456"
       warn "Authorization: Bearer ghp_abcdefghijklmnopqrstuvwxyz123456"
@@ -69,6 +70,34 @@ class TestCheckRunnerRegistry < Minitest::Test
   ensure
     File.delete(fixture) if fixture && File.file?(fixture)
   end
+  def test_bundle_required_class_boots_and_scripts_are_unbundled
+    dir = File.dirname(RUNNER)
+    klass = File.join(dir, "bundle-probe-#{Process.pid}.rb")
+    script = File.join(dir, "bundle-child-#{Process.pid}.rb")
+    File.write(klass, <<~RUBY)
+      require "zeitwerk"
+      class CheckBundleProbe
+        def self.run
+          result = Deploy::CheckResult.new
+          result.checked!
+          result
+        end
+      end
+    RUBY
+    File.write(script, 'abort "foreign bundle" if ENV["BUNDLE_GEMFILE"]')
+    Bundler.with_unbundled_env do
+      run_registry(
+        "bundle_probe" => { "require" => File.basename(klass), "class" => "CheckBundleProbe", "bundle" => "master" },
+        "child" => { "script" => File.basename(script) },
+      ) do |output, status|
+        assert status.success?, output
+        assert_includes output, "2 pass"
+      end
+    end
+  ensure
+    [klass, script].compact.each { |path| FileUtils.rm_f(path) }
+  end
+
   def test_registry_rejects_rows_that_declare_both_class_and_script
     run_registry(
       "ambiguous" => { "class" => "Deploy::CheckResult", "script" => "architecture.rb" },

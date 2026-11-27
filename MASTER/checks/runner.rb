@@ -17,6 +17,7 @@ Encoding.default_external = Encoding::UTF_8
 ROOT = File.expand_path("../..", __dir__)
 CHECKS_DIR = __dir__
 REGISTRY_DEFAULT = File.join(CHECKS_DIR, "checks.yml")
+ORIGINAL_ARGS = ARGV.dup.freeze
 CHECK_UNIT = "checks0"
 CHECK_PARENT = ENV.fetch("PUB5_DEPLOY_APP", "rails")
 SUBPROCESS_INCONCLUSIVE = 3
@@ -102,6 +103,8 @@ invalid_registry_rows = CHECKS.filter_map do |name, row|
       "#{name} class:/script: must be a non-empty string when declared"
     elsif [class_value, script_value].count { |value| !value.nil? } != 1
       "#{name} must declare exactly one of class: or script:"
+    elsif row.key?("bundle") && (row["bundle"] != "master" || class_value.nil?)
+      "#{name} bundle: must be master on a class check"
     elsif !script_value.to_s.strip.empty? && (problem = declared_path_problem(name, "script", script_value))
       problem
     elsif !row["require"].to_s.strip.empty? && (problem = declared_path_problem(name, "require", row["require"]))
@@ -190,6 +193,19 @@ def constant_for(name)
   name.split("::").inject(Object) { |owner, part| owner.const_get(part, false) }
 end
 
+# Activate dependencies in a fresh process before default gems are loaded.
+def ensure_check_bundle(names)
+  return unless names.any? { |name| registry.fetch(name)["bundle"] == "master" }
+
+  gemfile = File.join(ROOT, "MASTER", "Gemfile")
+  return if defined?(Bundler) && Bundler.default_gemfile.to_s == gemfile &&
+            $LOADED_FEATURES.any? { |path| path.end_with?("/bundler/setup.rb") }
+
+  launch = -> { exec({ "BUNDLE_GEMFILE" => gemfile }, RbConfig.ruby, "-rbundler/setup",
+                     File.expand_path(__FILE__), *ORIGINAL_ARGS) }
+  defined?(Bundler) ? Bundler.with_unbundled_env(&launch) : launch.call
+end
+
 def require_check(row)
   path = row["require"].to_s
   return if path.empty?
@@ -246,7 +262,8 @@ end
 def run_script(path, args, gap: nil, timeout: SCRIPT_TIMEOUT_S)
   command = [RbConfig.ruby, path, *args]
   begin
-    stdout, status = Master::Io::Exec.capture2e(ENV.to_h, *command, chdir: ROOT, timeout:, raise_on_timeout: true)
+    run = -> { Master::Io::Exec.capture2e(ENV.to_h, *command, chdir: ROOT, timeout:, raise_on_timeout: true) }
+    stdout, status = defined?(Bundler) ? Bundler.with_unbundled_env(&run) : run.call
   rescue Master::Io::Exec::TimeoutError => e
     result = Deploy::CheckResult.new
     result.fail("#{File.basename(path)} timed out after #{timeout}s")
@@ -408,6 +425,7 @@ end
 
 names = selected_names(all: options[:all], requested: options[:args])
 names = registry.keys if names.empty?
+ensure_check_bundle(names)
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 results = {}
 

@@ -89,6 +89,7 @@ frontend_auditor:
   covered_by: layout_suite
 
 baymard_ux:
+  bundle: master
   require: lib/research/baymard_law
   class: Deploy::BaymardUXCheck
   pass: "baymard UX source checks measured; participant evidence reported separately"
@@ -279,6 +280,7 @@ stimulus_wiring:
   covered_by: layout_suite
 
 layout_suite:
+  bundle: master
   require: lib/layout_suite
   class: Deploy::LayoutSuiteCheck
   pass: "Layout suite passed (source laws plus complete rendered geometry, snapshots and browser diagnostics)."
