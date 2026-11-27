@@ -16,7 +16,7 @@ class TestKeylessRouting < Minitest::Test
       ZAI_API_KEY REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
       MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_WEB_CHAT MASTER_LOCAL_ONLY MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_OLLAMA_ENABLED
       MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LOCAL_SERVERS MASTER_LLM_GATEWAY_URL
-      MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY MASTER_GATEWAY_MODE
+      MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY MASTER_GATEWAY_MODE MASTER_FREE_ONLY
     ].to_h { |key| [key, ENV[key]] }
     @saved_env.each_key { |key| ENV.delete(key) }
     # Neutralize both local subscription CLIs so these tests grade keyless and
@@ -771,6 +771,29 @@ class TestKeylessRouting < Minitest::Test
     ENV["MASTER_GATEWAY_MODE"] = "oxllm"
     ENV.delete("MASTER_LLM_GATEWAY_URL")
     assert Master::Io::LaneSelection.key_present_for?("gateway:basic")
+  end
+
+  def test_oxllm_default_selects_only_discovered_keyless_models_in_free_only_mode
+    ENV["MASTER_GATEWAY_MODE"] = "oxllm"
+    ENV["MASTER_FREE_ONLY"] = "1"
+    selection = Master::Io::LaneSelection
+    endpoint = { key: nil }
+    selection.stub(:hosted_endpoint_for, endpoint) do
+      assert_equal "gateway:basic", Master.default_model
+    end
+    selection.stub(:hosted_endpoint_for, ->(id) { endpoint if id == "gateway:strong" }) do
+      assert_equal "gateway:strong", Master.default_model
+    end
+    selection.stub(:hosted_endpoint_for, { key: "test" }) do
+      assert_equal Master.openrouter_default, Master.default_model
+    end
+    selection.stub(:hosted_endpoint_for, nil) do
+      assert_equal Master.openrouter_default, Master.default_model
+    end
+    ENV["MASTER_LOCAL_ONLY"] = "1"
+    selection.stub(:hosted_endpoint_for, ->(*) { flunk "local-only gateway discovery" }) do
+      assert_equal Master.openrouter_default, Master.default_model
+    end
   end
 
   def test_gateway_cost_classification_requires_discovered_keyless_endpoint

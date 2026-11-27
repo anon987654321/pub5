@@ -146,6 +146,14 @@ module Master
     end
 
     def default_model
+      if ENV["MASTER_GATEWAY_MODE"] == "oxllm" && ENV["MASTER_LOCAL_ONLY"] != "1"
+        gateway = %w[gateway:basic gateway:strong].find do |id|
+          endpoint = Master::Io::LaneSelection.hosted_endpoint_for(id)
+          endpoint && (!free_only? || endpoint[:key].nil?)
+        end
+        return gateway if gateway
+      end
+
       # MASTER_FREE_ONLY asks no lane that needs a key, so the keyed floors
       # below and incidental hosted discovery are skipped.
       return openrouter_default if free_only?
