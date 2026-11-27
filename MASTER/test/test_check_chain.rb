@@ -385,6 +385,15 @@ class TestCheckChain < Minitest::Test
     end
   end
 
+  def test_rails_baseline_includes_shared_master_proof_code
+    Dir.mktmpdir do |root|
+      committed_repo(root)
+      before = G.baseline_key("RAILS", root:, trees: ["RAILS"])
+      File.write(File.join(root, "MASTER", "a.rb"), "A = 2\n")
+      refute_equal before, G.baseline_key("RAILS", root:, trees: ["RAILS"])
+    end
+  end
+
   def test_pre_repair_baseline_names_its_read_only_phase_and_subsequent_repair
     stage = G::Stage.new(name: "lexical", purpose: "measurement", mutates: false, run: -> {})
     captured = nil
