@@ -46,6 +46,7 @@ class TestCouncilHarvest < Minitest::Test
 
     assert_equal :observed, value[:status], value[:reason]
     assert_equal 10, value.dig(:diversity, :distinct)
+    assert_operator value.dig(:diversity, :comparison_rounds), :>=, 2
     assert_equal 10, value.dig(:ideas, :ideas).size
     assert_equal 1, value[:cherry_picks].size
     assert_includes value[:cherry_picks].first, "Reuse the registry"

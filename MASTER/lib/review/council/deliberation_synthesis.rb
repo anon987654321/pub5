@@ -96,7 +96,7 @@ module Master
                      #{Challenges.prompt(scope: :solution)}
                    TEXT
                  else
-                   "The candidate set is closed. Compare the candidates, identify concrete regressions and take a position on the relevant trade-offs."
+                   "The candidate set is closed. Compare the candidates against the evidence and preservation constraints. Respond to specific peer objections, identify concrete regressions, and explain which objections survive or were resolved. State your revised position; do not silently equate agreement with proof."
                  end
           return task if candidates.empty?
 

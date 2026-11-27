@@ -41,7 +41,8 @@ module Master
         # informed one-line change rather than a guess.
         TOTAL_BUDGET_S = 600
         MIN_QUORUM = 3
-        CONVERGENCE_ROUNDS = 4
+        CONVERGENCE_ROUNDS = 5
+        CANDIDATE_COMPARISON_ROUNDS = 2
         # How much of the council must agree before a round counts as converged.
         # The same number lived twice: here as a literal, and in council.yml as
         # `parameters.consensus_threshold`, which nothing read. Two copies of one
@@ -109,11 +110,12 @@ module Master
           max_rounds ||= CONVERGENCE_ROUNDS
           history = []
           candidates = []
+          comparison_rounds = 0
           max_rounds.times do |index|
             previous = history.last || []
             round_context = feedback_summary(previous, context)
             if @candidate_limit
-              open = index < max_rounds - 1 && candidates.size < @candidate_limit
+              open = index < max_rounds - CANDIDATE_COMPARISON_ROUNDS && candidates.size < @candidate_limit
               round_context = [round_context, candidate_brief(candidates, open:)].compact.join("\n\n")
             end
             @bus&.publish(:council_round_start, round: index + 1, max: max_rounds)
@@ -125,7 +127,11 @@ module Master
             if @candidate_limit && open
               candidates = collect_candidates(candidates, history.last)
             end
-            compared = @candidate_limit && !open && candidates.size >= @candidate_limit
+            if @candidate_limit && !open && candidates.size >= @candidate_limit
+              comparison_rounds += 1
+              @bus&.publish(:council_candidate_comparison, round: index + 1, completed: comparison_rounds, required: CANDIDATE_COMPARISON_ROUNDS, candidates: candidates.size)
+            end
+            compared = comparison_rounds >= CANDIDATE_COMPARISON_ROUNDS
             stable = candidates.empty? && converged?(previous, history.last)
             if history.size >= 3 && (compared || stable)
               @bus&.publish(:council_converged, round: index + 1, basis: compared ? :candidate_comparison : :stable_findings)
@@ -133,13 +139,19 @@ module Master
             end
           end
           feedback = history.flatten(1)
+          if @candidate_limit && candidates.size >= @candidate_limit && comparison_rounds < CANDIDATE_COMPARISON_ROUNDS
+            return Result.err("council: candidate comparison incomplete (#{comparison_rounds}/#{CANDIDATE_COMPARISON_ROUNDS})", category: :inconclusive)
+          end
           judge_context = @candidate_limit ? [context, candidate_judge_brief(candidates)].compact.join("\n\n") : context
           append_judge_synthesis(feedback:, code:, context: judge_context, image:) if @judge_enabled
           return deadline_result(feedback) if Master::Review::LLMDispatcher::PassClock.expired?
           if @judge_enabled && feedback.none? { |entry| entry[:persona] == "Judge" }
             return Result.err("council: final arbitration unavailable", category: :inconclusive)
           end
-          feedback.last[:candidates] = candidates if @candidate_limit && @judge_enabled
+          if @candidate_limit && @judge_enabled
+            feedback.last[:candidates] = candidates
+            feedback.last[:comparison_rounds] = comparison_rounds
+          end
 
           Result.ok(feedback)
         end

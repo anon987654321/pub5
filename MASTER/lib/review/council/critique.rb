@@ -58,7 +58,7 @@ module Master
           ideas = { ideas: candidates.map { |finding| format_repair(finding) }, final: judge[:feedback] }
           visual_clean = !reason && @mode[:preset_key] == "ui_critique" && issues.empty? && cherry.empty?
           status = reason ? :inconclusive : :observed
-          diversity = { requested: @candidate_limit, distinct: candidates.size, method: :anchored_lexical_overlap }
+          diversity = { requested: @candidate_limit, distinct: candidates.size, comparison_rounds: judge[:comparison_rounds], method: :anchored_lexical_overlap }
           @bus&.publish(@mode[:done_event], status:, diversity:, cherry_picks: cherry.size, visual_clean:)
           harvest = harvest_path(payload:, feedback:, ideas:, cherry:, reason:) if @harvest
           Master::Result.ok({
