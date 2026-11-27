@@ -762,8 +762,6 @@ EXTERNAL_RESEARCH_IS_EVIDENCE_NOT_AUTHORITY:
   mechanical: Master::Review::BaymardLaw.validate_profile!
   semantic: human
 
-# ---
-
 ROBUSTNESS:
   node: robustness
   question: "What happens when this fails?"
@@ -982,8 +980,6 @@ ROBUSTNESS_sclerotium:
     compiling from one green run or missing evidence is unsafe.
   resolution: review
 
-# ---
-
 SINGULARITY:
   node: singularity
   question: "Where is this truth owned?"
@@ -1051,8 +1047,6 @@ SINGULARITY_magic_color:
   resolution: review
   calibration: measurement_only
 
-# ---
-
 LINEARITY:
   node: linearity
   question: "Is there a clearer progression?"
@@ -1079,8 +1073,6 @@ CURRENT_LOCATION_MARKED:
   statement: "Navigation marks where the reader is, in markup and in more than colour."
   severity: error
   resolution: review
-
-# ---
 
 PROXIMITY:
   node: proximity
@@ -1137,8 +1129,6 @@ NEGATIVE_SPACE_GROUPING_particle_face:
     competing portrait field on the canonical carriers.
   resolution: review
 
-# ---
-
 ABSTRACTION:
   node: abstraction
   question: "What does the recipient need to know?"
@@ -1159,8 +1149,6 @@ ABSTRACTION_leaky_boundary:
   parent: ABSTRACTION
   statement: "A boundary that requires the caller to know the implementation."
   resolution: review
-
-# ---
 
 DENSITY:
   node: density
@@ -1381,8 +1369,6 @@ PAGE_WEIGHT_RATCHET:
   severity: error
   resolution: review
 
-# ---
-
 OPERATOR_RENDERED:
   node: operator_rendered
   question: "Which choices must remain unchanged?"
@@ -1436,8 +1422,6 @@ OPERATOR_RENDERED_semantic_motion:
   parent: OPERATOR_RENDERED
   statement: "A morph animates without a grounded semantic cause, bounded stages, or a reduced-motion final state."
   resolution: review
-
-# ---
 
 INTER_MODEL_CONTRACT:
   node: inter_model_contract
@@ -1504,8 +1488,6 @@ SACRED_AUTHORSHIP_soul_paths_are_soul_owned:
     declaration may be shadowed by laws.yml, runtime metadata or other Ruby constants.
   resolution: never
 
-# ---
-
 SOUL_SUBORDINATE_TO_LAW:
   root: least_authority
   statement: "Soul owns system identity, preservation principles and source authority; laws.yml alone owns individual Law identities and requirement statements. The Soul manifest must not create or redefine those Law records."
@@ -1528,8 +1510,6 @@ SOUL_SUBORDINATE_TO_LAW_no_shadow_vocabulary:
   parent: SOUL_SUBORDINATE_TO_LAW
   statement: "Soul duplicates a per-Law severity, priority, root or enforcement vocabulary owned by laws.yml."
   resolution: review
-
-# ---
 
 DUAL_MODALITY:
   root: visible_state
@@ -1560,8 +1540,6 @@ DUAL_MODALITY_semantic_gap:
   parent: DUAL_MODALITY
   statement: "A law whose semantic test is human."
   resolution: never
-
-# ---
 
 FINDING_HYGIENE:
   root: visible_state
@@ -1879,8 +1857,6 @@ DESIGN_REFERENCE_MAPPINGS_PRESERVE_PRODUCT_IDENTITY:
   severity: error
   resolution: review
 
-# ---
-
 ATTESTATION_IS_NOT_FINDING:
   root: visible_state
   statement: >
@@ -1933,8 +1909,6 @@ ACTION_LABEL_BRIEF:
   statement: "A button or action label is at most three words and leads with the verb."
   severity: info
   resolution: review
-
-# ---
 
 QUOTES_BY_LOCALE:
   parent: BRINGHURST
@@ -2221,8 +2195,6 @@ TYPEFACE_PAIR_CONTRAST:
   resolution: review
   lineage: "Hoefler & Co. typographic guidance (typography.com)"
 
-# ---
-
 # UNIVERSAL LAWS
 
 BOUNDED_LOAD:
@@ -2269,8 +2241,6 @@ BOUNDED_LOAD_abc_size:
   parent: BOUNDED_LOAD
   statement: "A class whose burden exceeds the reader's reach."
   resolution: review
-
-# ---
 
 PROPORTION:
   root: proportion
@@ -2325,8 +2295,6 @@ ALIGNMENT_NEAR_MISS:
   statement: "Elements that look aligned are aligned to the pixel, and a narrow screen uses at most three left edges."
   severity: error
   resolution: review
-
-# ---
 
 REACH:
   root: reach
@@ -2492,8 +2460,6 @@ PERSUASION_truth_bearing:
     render time. A persuasive element that requires a fact to be false, hidden,
     or louder than the fact it decorates fails this Law.
   resolution: review
-
-# ---
 
 STEWARDSHIP:
   root: stewardship
@@ -2792,8 +2758,6 @@ KIND_UNREGISTERED:
   severity: error
   resolution: review
 
-# ---
-
 RATCHET_REACH_UNREACHABLE:
   root: visible_state
   statement: "Laws with no enforcement surface."
@@ -2909,8 +2873,6 @@ RATCHET_EXEMPTIONS_EXPIRED:
   value: 0
   may_only: fall
 
-# ---
-
 LINT_SEVERITY_IN_VOCABULARY:
   root: visible_state
   statement: "Every severity is one of info, warning, error, critical, veto."
@@ -3007,8 +2969,6 @@ LINT_FAMOUS_NAMES_PRESERVED:
   severity: error
   resolution: never
   enforcement: Master::FlatLawCatalogue.validate! (lib/flat_law_catalogue.rb#validate_famous_names!)
-
-# ---
 
 META_SCHEMA:
   root: visible_state
@@ -3993,11 +3953,9 @@ law_catalogue:
 # priority constitutional parity gate only if matching MASTER detector coverage
 # is added; aesthetic choices remain operator-owned.
 
-# ----------------------------------------------------------------------------
 # Runtime configuration: scanner, veto, plugin, /fix and operator-owned
 # execution policy. These sections implement but never override the Law
 # identities above.
-# ----------------------------------------------------------------------------
 # Runtime sections are grouped by concern: scanner/reach, transformations,
 # adapters, topology, runtime and operator-owned configuration.
 
@@ -6249,7 +6207,6 @@ face_ascii:
     colour_values_operator_owned: true
     web_file_access: forbidden
     no_random_geometry: true
-
 
 # Canonical inventory of every executable Law identity. Law policy and its
 # cross-modal reach are declared here; Ruby sources implement detectors and
