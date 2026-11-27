@@ -79,6 +79,32 @@ class TestRatchetCache < Minitest::Test
     end
   end
 
+  def test_fingerprint_failure_cannot_reuse_or_replace_receipt
+    with_repo do
+      calls = []
+      measure(calls)
+      before = File.read(@cache_path)
+      error = ->(*) { raise Cache::FingerprintError, "git unavailable" }
+      @cache.stub(:key_for, error) { measure(calls) }
+      assert_equal 2, calls.size
+      assert_equal before, File.read(@cache_path)
+    end
+  end
+
+  def test_runtime_change_invalidates_even_stale_receipt
+    with_repo do
+      calls = []
+      measure(calls)
+      @cache.stub(:runtime_key, "different-runtime") do
+        @cache.fetch("selftest", trees: %w[MASTER], row_class: Row, stale_ok: true) do
+          calls << 1
+          [SELFTEST]
+        end
+      end
+      assert_equal 2, calls.size
+    end
+  end
+
   def test_an_unreadable_row_is_never_kept
     with_repo do |root|
       calls = []

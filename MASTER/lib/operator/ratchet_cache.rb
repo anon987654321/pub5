@@ -21,6 +21,7 @@ module Operator
     ROOT = File.expand_path("../../..", __dir__)
     PATH = File.join(ROOT, "MASTER", ".master", "ratchet_cache.json")
     FIELDS = %i[name current ceiling direction source note members].freeze
+    class FingerprintError < StandardError; end
 
     def self.enabled? = ENV.fetch("MASTER_RATCHET_CACHE", "1") != "0"
 
@@ -39,8 +40,14 @@ module Operator
     def fetch(group, trees:, row_class:, stale_ok: false)
       return yield unless self.class.enabled?
 
-      key = key_for(trees)
+      begin
+        key = key_for(trees)
+      rescue FingerprintError => error
+        Master::Trace::Dmesg.status("measure0", "#{group}: #{error.message}; measuring without cache", io: $stderr)
+        return yield
+      end
       stored = read[group]
+      stored = nil if stored && stored["runtime"] != runtime_key
       if stale_ok && stored && stored["key"] != key && Array(stored["rows"]).any?
         Master::Trace::Dmesg.status(
           "measure0",
@@ -50,8 +57,12 @@ module Operator
       end
       return stored["rows"].map { |row| revive(row, row_class) } if stored && stored["key"] == key
 
+      started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      Master::Trace::Dmesg.status("measure0", "#{group}: measuring", io: $stderr)
       rows = Array(yield).compact
-      write(group, { "key" => key, "rows" => rows.map { |row| dump(row) } }) if rows.all?(&:readable?)
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+      Master::Trace::Dmesg.status("measure0", "#{group}: #{rows.size} rows in #{elapsed.round(1)}s", io: $stderr)
+      write(group, { "key" => key, "runtime" => runtime_key, "rows" => rows.map { |row| dump(row) } }) if rows.all?(&:readable?)
       rows
     end
 
@@ -66,20 +77,27 @@ module Operator
 
     def key_for(trees)
       prints = Array(trees).map(&:to_s).sort.uniq.map { |tree| tree_digest(tree) }
-      Digest::SHA256.hexdigest(prints.join("\0"))
+      Digest::SHA256.hexdigest([runtime_key, *prints].join("\0"))
     end
 
     private
 
     def tree_digest(tree)
-      head, = git("rev-parse", "HEAD:#{tree}")
-      diff, = git("diff", "HEAD", "--binary", "--", tree)
-      listing, = git("ls-files", "--others", "--exclude-standard", "-z", "--", tree)
+      head = git("rev-parse", "HEAD:#{tree}")
+      diff = git("diff", "HEAD", "--binary", "--", tree)
+      listing = git("ls-files", "--others", "--exclude-standard", "-z", "--", tree)
       untracked = listing.split("\0").reject(&:empty?).sort.map { |relative| file_print(relative) }
       Digest::SHA256.hexdigest([tree, head.strip, Digest::SHA256.hexdigest(diff), *untracked].join("\0"))
     end
 
-    def git(*args) = Master::Io::Exec.capture2("git", "-C", @root, *args)
+    def runtime_key = "#{RUBY_DESCRIPTION}:#{RUBY_PLATFORM}"
+
+    def git(*args)
+      output, status = Master::Io::Exec.capture2("git", "-C", @root, *args)
+      raise FingerprintError, "ratchet fingerprint: git #{args.first} failed" unless status.success?
+
+      output
+    end
 
     def file_print(relative)
       path = File.join(@root, relative)
