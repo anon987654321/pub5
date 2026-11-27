@@ -291,7 +291,7 @@ module Master
           value[:status].to_s == "inconclusive"
 
         artifact = keep_artifact(captures, image, pass)
-        findings = anchored_findings(critique, sources, anchors)
+        findings = anchored_findings(critique, sources, anchors, captures:)
         return findings if findings.is_a?(Result)
         if findings.empty? && Array(value[:issues]).any?
           return inconclusive("council raised visual issues without a supported repair")
@@ -307,7 +307,7 @@ module Master
             "app" => capture[:surface].app,
             "viewport" => capture[:surface].viewport,
             "url" => capture[:surface].url,
-            "rendered_status" => screenshot_ready && Deploy::GeometryProbe.ok?(payload) ? "assessed_clean" : "inconclusive",
+            "rendered_status" => rendered_status(capture, findings, screenshot_ready:),
             "screenshot_sha256" => screenshot_ready ? Digest::SHA256.file(screenshot).hexdigest : nil,
             "geometry_sha256" => Digest::SHA256.hexdigest(JSON.generate(payload)),
             "element_count" => Array(payload["elements"]).size,
@@ -333,19 +333,30 @@ module Master
         )
       end
 
+      def rendered_status(capture, findings, screenshot_ready:)
+        return "inconclusive" unless screenshot_ready && Deploy::GeometryProbe.ok?(capture[:payload])
+        return "violation_found" if findings.any? { |finding| finding[:surface] == capture[:surface].id }
+
+        "assessed_clean"
+      end
+
       def keep_artifact(captures, image, pass)
         VisualArtifact.new(root: @root).keep(target: repo_relative(@root), pass:, captures:, image:, bus: @bus)
       end
 
-      # The council's picks that point at source, or an inconclusive Result
-      # when it picked something and none of it could be anchored.
-      def anchored_findings(critique, sources, anchors)
+      # Every selected repair must belong to a captured surface and a source anchor.
+      def anchored_findings(critique, sources, anchors, captures:)
         picks = Array(critique.value![:cherry_picks]).map(&:to_s).reject(&:empty?)
-        findings = picks.filter_map { |pick| FixTrace.pick(pick, finding_for(pick, sources, anchors), sources, anchors) }
-        return findings unless picks.any? && findings.empty?
+        measured = captures.to_h { |capture| [capture[:surface].id, capture[:surface].viewport] }
+        findings = picks.filter_map do |pick|
+          finding = finding_for(pick, sources, anchors)
+          finding = nil unless finding && measured[finding[:surface]] == finding[:viewport]
+          FixTrace.pick(pick, finding, sources, anchors)
+        end
+        return findings if findings.size == picks.size
 
         Result.err(
-          "rendered visual review: INCONCLUSIVE - Council returned actionable visual picks, but none could be anchored to source evidence",
+          "rendered visual review: INCONCLUSIVE - Council returned visual picks that could not all be anchored to captured surfaces and source evidence",
           category: :inconclusive,
         )
       end
@@ -541,7 +552,7 @@ module Master
           file:,
           line:,
           severity: :warning,
-          confidence: 1.0, anchor: selector,
+          confidence: 1.0, anchor: selector, surface:, viewport:,
           message: "Rendered visual refinement: #{pick} - #{surface} / #{viewport} - laws: #{laws.join(", ")}",
           fix: "Use the attached rendered evidence as ground truth. Make the smallest source change that materially improves the cited visual issue while preserving accessibility, semantics and responsive behavior."
         }

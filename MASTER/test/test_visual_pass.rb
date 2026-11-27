@@ -279,6 +279,36 @@ class VisualPassContractTest < Minitest::Test
     end
   end
 
+  def test_selected_visual_repairs_must_all_match_captured_surfaces
+    with_tmp do |dir|
+      css = File.join(dir, "a.css")
+      File.write(css, ".hero { display: grid; }\n")
+      pass = Pass.new(agent: Object.new, root: dir)
+      law = Master::Fix::VisualUsability.ids.first
+      valid = "surface: master/chat/mobile viewport: mobile .hero laws: #{law}"
+      unseen = "surface: master/chat/desktop viewport: desktop .hero laws: #{law}"
+      captures = [{ surface: surface }]
+      trace = ->(_pick, finding, *) { finding }
+      Master::Fix::FixTrace.stub(:pick, trace) do
+        result = pass.send(:anchored_findings, Master::Result.ok(cherry_picks: [valid]), [css], { ".hero" => css }, captures:)
+        assert_equal "master/chat/mobile", result.first[:surface]
+        rejected = pass.send(:anchored_findings, Master::Result.ok(cherry_picks: [valid, unseen]), [css], { ".hero" => css }, captures:)
+        assert rejected.err?
+        assert_equal :inconclusive, rejected.category
+      end
+    end
+  end
+
+  def test_rendered_geometry_alone_cannot_mark_an_unresolved_surface_clean
+    pass = Pass.new(agent: Object.new, root: Dir.pwd)
+    capture = { surface: surface, payload: {} }
+    Probe.stub(:ok?, true) do
+      assert_equal "violation_found", pass.send(:rendered_status, capture, [{ surface: "master/chat/mobile" }], screenshot_ready: true)
+      assert_equal "assessed_clean", pass.send(:rendered_status, capture, [{ surface: "master/chat/desktop" }], screenshot_ready: true)
+      assert_equal "inconclusive", pass.send(:rendered_status, capture, [], screenshot_ready: false)
+    end
+  end
+
   def test_visual_review_uses_every_canonical_law
     catalogue = Master.law_catalogue.fetch("entries").keys.map(&:to_s).sort
 
