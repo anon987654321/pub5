@@ -21,6 +21,7 @@
 require "fileutils"
 require "net/http"
 require_relative "../../lib/io/exec"
+require_relative "../../lib/ground/redactor"
 require "yaml"
 require_relative "../../lib/operator/ruby_runner"
 require_relative "../../lib/fix/rails_app"
@@ -36,6 +37,7 @@ module Deploy
     BUNDLE = Operator::RubyRunner.bundle_cmd
     RUN_DIR = File.join(RAILS_ROOT, "tmp", "triangle")
     BOOT_TIMEOUT = Integer(ENV.fetch("TRIANGLE_BOOT_TIMEOUT", "180"))
+    PREPARE_TIMEOUT = Integer(ENV.fetch("TRIANGLE_PREPARE_TIMEOUT", "900"))
 
     # Ports come from apps.yml so this file cannot disagree with the checks.
     def self.apps
@@ -170,11 +172,21 @@ module Deploy
       seed_from_main(app)
       return false unless build_css(app)
 
-      out, status = Master::Io::Exec.capture2e(env_for(app), BUNDLE, "exec", RUBY, "bin/rails", "db:prepare", chdir: app[:dir], timeout: BOOT_TIMEOUT)
+      out, status = Master::Io::Exec.capture2e(env_for(app), BUNDLE, "exec", RUBY, "bin/rails", "db:prepare",
+                                             chdir: app[:dir], timeout: PREPARE_TIMEOUT, raise_on_timeout: true)
       return true if status.success?
 
-      warn "triangle: #{app[:name]} db:prepare failed\n#{out.lines.last(8).join}"
+      warn "triangle: #{app[:name]} db:prepare failed\n#{failure_excerpt(out)}"
       false
+    rescue Master::Io::Exec::TimeoutError => error
+      warn "triangle: #{app[:name]} db:prepare timed out after #{PREPARE_TIMEOUT}s\n#{failure_excerpt(Array(error.result).first)}"
+      false
+    end
+
+    def self.failure_excerpt(output)
+      lines = output.to_s.lines.map(&:strip).reject(&:empty?)
+      chosen = lines.first(4) | lines.last(4)
+      chosen.map { |line| Master::Ground::Redactor.text(line)[0, 300] }.join("\n")
     end
 
     # Propshaft pins the digest it serves through public/assets/.manifest.json,

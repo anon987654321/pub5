@@ -6,6 +6,24 @@ require "tmpdir"
 require_relative "../tools/rails/triangle"
 
 class TestTriangleOwnership < Minitest::Test
+  def test_prepare_budget_is_independent_of_http_readiness
+    app = { name: "brgen", dir: Dir.tmpdir, port: 1234 }
+    runner = Deploy::Triangle
+    calls = []
+    capture = ->(*args, **opts) { calls << opts; raise Master::Io::Exec::TimeoutError.new("timeout", result: ["Bundler::GemNotFound: missing gem\n" + "stack\n" * 20]) }
+    runner.stub(:seed_from_main, nil) do
+      runner.stub(:build_css, true) do
+        Master::Io::Exec.stub(:capture2e, capture) do
+          _, err = capture_io { refute runner.migrate(app) }
+          assert_includes err, "timed out after #{runner::PREPARE_TIMEOUT}s"
+          assert_includes err, "Bundler::GemNotFound: missing gem"
+        end
+      end
+    end
+    assert_equal runner::PREPARE_TIMEOUT, calls.first.fetch(:timeout)
+    assert calls.first.fetch(:raise_on_timeout)
+  end
+
   def test_apps_use_the_shared_installed_ruby_and_bundler
     assert_equal Operator::RubyRunner.ruby_cmd, Deploy::Triangle::RUBY
     assert_equal Operator::RubyRunner.bundle_cmd, Deploy::Triangle::BUNDLE
