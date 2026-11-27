@@ -1189,6 +1189,39 @@ class TestLLMDispatcher < Minitest::Test
     old.nil? ? ENV.delete("MASTER_FREE_ONLY") : ENV["MASTER_FREE_ONLY"] = old
   end
 
+  def test_oxllm_affinity_header_is_stable_and_gateway_only
+    old = ENV.values_at("MASTER_GATEWAY_MODE", "MASTER_FREE_ONLY")
+    ENV["MASTER_GATEWAY_MODE"] = "oxllm"
+    ENV["MASTER_FREE_ONLY"] = "1"
+    Dir.mktmpdir do |dir|
+      dispatcher, = build_dispatcher
+      session = Master::Trace::Session.new(root: dir)
+      dispatcher.instance_variable_set(:@session, session)
+      router = Object.new
+      router.define_singleton_method(:hosted_endpoint_for) do |model|
+        base = model.start_with?("gateway:") ? "http://127.0.0.1:8080/v1" : "https://provider.example/v1"
+        { base:, key: nil, posture: :unknown }
+      end
+      dispatcher.instance_variable_set(:@model_router, router)
+      dispatcher.define_singleton_method(:fit_to_window) { |_model, messages| messages }
+      sent = []
+      dispatcher.define_singleton_method(:openai_chat) do |*args, **kwargs|
+        sent << kwargs.fetch(:headers)
+        Master::Result.ok("ok")
+      end
+      %w[gateway:basic gateway:strong other:model].each do |model|
+        dispatcher.send(:send_hosted, model, [], sys: nil)
+      end
+      assert_equal({ "X-Session-Id" => session.gateway_affinity_id }, sent.fetch(0))
+      assert_equal sent.fetch(0), sent.fetch(1)
+      assert_empty sent.fetch(2)
+    end
+  ensure
+    %w[MASTER_GATEWAY_MODE MASTER_FREE_ONLY].zip(old).each do |key, value|
+      value.nil? ? ENV.delete(key) : ENV[key] = value
+    end
+  end
+
   def test_false_free_only_value_keeps_the_hosted_key_at_send_time
     old = ENV["MASTER_FREE_ONLY"]
     ENV["MASTER_FREE_ONLY"] = "0"

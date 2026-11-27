@@ -3,6 +3,26 @@
 require_relative "test_helper"
 
 class TestSession < Minitest::Test
+  def test_gateway_affinity_is_conversation_scoped_and_ephemeral
+    Dir.mktmpdir do |dir|
+      session = Master::Trace::Session.new(root: dir)
+      local = session.gateway_affinity_id
+      assert_match(/\A[0-9a-f]{32}\z/, local)
+      assert_equal local, session.gateway_affinity_id
+      fork = session.fork!(target_key: "affinity-fork")
+      session.switch!(fork)
+      fork_id = session.gateway_affinity_id
+      refute_equal local, fork_id
+      session.save!
+      refute_includes File.read(File.join(dir, ".master", "session.json")), local
+      refute_includes File.read(File.join(dir, ".master", "conversations.json")), fork_id
+      session.clear!
+      refute_equal fork_id, session.gateway_affinity_id
+      restored = Master::Trace::Session.new(root: dir).load!
+      refute_equal local, restored.gateway_affinity_id
+    end
+  end
+
   def test_save_prunes_old_messages_to_summaries
     Dir.mktmpdir("session_test") do |dir|
       session = Master::Trace::Session.new(root: dir)

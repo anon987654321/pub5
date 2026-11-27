@@ -94,6 +94,9 @@ module Master
                   Io::KeyRotator.active_key_for(name) || endpoint[:key]
                 end
           headers = key ? { "Authorization" => "Bearer #{key}" } : {}
+          if name == "gateway" && ENV["MASTER_GATEWAY_MODE"] == "oxllm" && endpoint[:base] == "http://127.0.0.1:8080/v1"
+            headers["X-Session-Id"] = @session.gateway_affinity_id
+          end
           messages = fit_to_window(selected_model, messages)
           request = lambda do
             openai_chat(endpoint[:base], model, messages, sys:, temperature:, headers:,

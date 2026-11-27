@@ -307,6 +307,11 @@ module Master
       # existing reader expects the same array identity it always got.
       def messages(key = nil) = @mutex.synchronize { conversation(key || current_key)[:messages] }
 
+      # Opaque per-conversation token; persistence and forks omit it.
+      def gateway_affinity_id
+        @mutex.synchronize { conversation(current_key)[:gateway_affinity_id] ||= SecureRandom.hex(16) }
+      end
+
       def add_message(role:, content:, layer: :conversation)
         normalized_layer = Master::CLI::ContextLayers.normalize(layer)
         msg = { role:, content:, layer: normalized_layer, ts: Time.now.to_i }
