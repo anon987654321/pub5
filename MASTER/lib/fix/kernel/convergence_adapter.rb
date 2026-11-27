@@ -510,7 +510,7 @@ module Master
       # graph node are explicit gaps, not permission to guess.
       def prepare_dependency_map!(files)
         graph = @reference_graph
-        snapshot = graph.build(refresh: true, required_paths: files)
+        snapshot = graph.build(refresh: true, required_paths: files, summary: true)
         failures = Array(snapshot[:analysis_failures])
         missing = Array(files).reject { |path| graph.includes_path?(path) }
         unless failures.empty? && missing.empty?
@@ -533,7 +533,7 @@ module Master
         Master::Trace::CausalTrace.step(
           kind: :context, name: "reference_graph.ready",
           input: { files: snapshot[:nodes].size },
-          output: { nodes: snapshot[:nodes].size, edges: snapshot[:edges].size,
+          output: { nodes: snapshot[:nodes].size, edges: graph_metrics.fetch(:edge_count),
                     unresolved: graph_metrics[:unresolved_ruby_references].to_i + graph_metrics[:unresolved_local_imports].to_i,
                     dependency_cycles: graph_metrics[:dependency_cycle_count].to_i,
                     coupling_hotspots: graph_metrics[:coupling_hotspot_count].to_i,
@@ -541,7 +541,7 @@ module Master
         )
         Master::Trace::Dmesg.status(
           "understand0",
-          "text-source graph indexed, nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \
+          "text-source graph indexed, nodes=#{snapshot[:nodes].size}, edges=#{graph_metrics.fetch(:edge_count)}, " \
           "unresolved-ruby=#{graph_metrics[:unresolved_ruby_references]}, " \
           "unresolved-imports=#{graph_metrics[:unresolved_local_imports]}, " \
           "local-import-edges=#{graph_metrics[:resolved_local_import_edges]}, " \
@@ -550,7 +550,7 @@ module Master
         @bus&.publish(
           "fix_loop:dependency_map_ready",
           nodes: snapshot[:nodes].size,
-          edges: snapshot[:edges].size,
+          edges: graph_metrics.fetch(:edge_count),
           unresolved_ruby_references: graph_metrics[:unresolved_ruby_references],
           unresolved_local_imports: graph_metrics[:unresolved_local_imports],
           resolved_local_import_edges: graph_metrics[:resolved_local_import_edges],

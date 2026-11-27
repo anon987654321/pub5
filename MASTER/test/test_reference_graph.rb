@@ -6,6 +6,25 @@ require_relative "test_helper"
 require_relative "../lib/review/reference_graph"
 
 class TestReferenceGraph < Minitest::Test
+  def test_summary_preserves_all_admission_evidence_without_copying_graph_rows
+    Dir.mktmpdir("reference-graph-summary") do |root|
+      caller = File.join(root, "caller.rb")
+      target = File.join(root, "target.rb")
+      File.write(caller, "require_relative 'target'\nTarget.work\n")
+      File.write(target, "class Target; def self.work = 1; end\n")
+      graph = Master::Review::ReferenceGraph.new(root:)
+      summary = graph.build(refresh: true, required_paths: [caller], summary: true)
+      full = graph.build
+      assert_equal full.slice(:nodes, :metrics, :tangles, :analysis_failures), summary
+      assert_equal full[:edges].size, summary[:metrics][:edge_count]
+      assert graph.includes_path?(caller)
+      assert_equal Digest::SHA256.file(caller).hexdigest, graph.source_digest(caller)
+      assert_empty graph.instance_variable_get(:@ruby_references)
+      assert_empty graph.instance_variable_get(:@path_references)
+      assert_equal full, graph.build(refresh: true)
+    end
+  end
+
   def test_requested_files_are_indexed_across_symlinked_checkout_spellings
     Dir.mktmpdir("reference-graph") do |parent|
       real_root = File.join(parent, "real")

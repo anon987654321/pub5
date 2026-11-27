@@ -253,7 +253,7 @@ module Master
       # One complete source read builds the graph before repair. Repeated callers
       # reuse it; an operator-requested /fix explicitly refreshes it so stale
       # references from a previous run cannot authorize an edit.
-      def build(refresh: false, required_paths: [])
+      def build(refresh: false, required_paths: [], summary: false)
         required_paths = Array(required_paths)
         @build_lock.synchronize do
           missing_required = required_paths.reject { |path| @nodes.include?(relative(path)) }
@@ -270,25 +270,28 @@ module Master
             @external_references = 0
             files(extra_paths: required_paths).each { |file| analyze(file) }
             resolve_ruby_references!
+            @ruby_references.clear
+            @path_references.clear
             @built = true
           end
 
           tangles = tangle_report
           graph = {
             nodes: @nodes.to_a.sort,
-            edges: @edges.map(&:to_h),
             metrics: metrics.merge(tangles.fetch(:metrics)),
             tangles:,
             analysis_failures: @analysis_failures.map(&:dup),
-            ruby_definitions: @ruby_definitions.map(&:dup),
-            unresolved_references: @unresolved_references.map(&:dup),
-            dynamic_sites: @dynamic_sites.map(&:dup),
           }
+
+          unless summary
+            graph.merge!(edges: @edges.map(&:to_h), ruby_definitions: @ruby_definitions.map(&:dup),
+                         unresolved_references: @unresolved_references.map(&:dup), dynamic_sites: @dynamic_sites.map(&:dup))
+          end
 
           @bus&.publish(
             "reference_graph:built",
             nodes: graph[:nodes].size,
-            edges: graph[:edges].size,
+            edges: @edges.size,
             analysis_failures: graph[:analysis_failures].size,
           )
 
@@ -743,14 +746,13 @@ module Master
 
         components = strongly_connected_components(adjacency)
         cycles = components.filter_map do |component|
-          self_loop = component.one? && source_edges.any? do |edge|
-            edge.from == component.first && edge.to == component.first
-          end
+          self_loop = component.one? && adjacency.fetch(component.first).include?(component.first)
           next unless component.size > 1 || self_loop
 
           paths = component.sort
+          members = paths.to_set
           internal_edges = source_edges.select do |edge|
-            paths.include?(edge.from) && paths.include?(edge.to)
+            members.include?(edge.from) && members.include?(edge.to)
           end
           signature = internal_edges.map { |edge| [edge.type, edge.from, edge.to].join("|") }.sort.join("\n")
           {
@@ -844,24 +846,24 @@ module Master
       end
 
       def metrics
-        grouped = @edges.group_by(&:type)
+        counts = @edges.each_with_object(Hash.new(0)) { |edge, tally| tally[edge.type] += 1 }
         {
           node_count: @nodes.size,
           edge_count: @edges.size,
-          require_edges: grouped.fetch(:require, []).size,
-          constant_edges: grouped.fetch(:constant, []).size,
-          resolved_constant_edges: grouped.fetch(:constant_reference, []).size,
-          method_call_edges: grouped.fetch(:method_call, []).size,
-          dynamic_method_call_edges: grouped.fetch(:dynamic_method_call, []).size,
-          inheritance_edges: grouped.fetch(:inheritance, []).size,
-          mixin_edges: grouped.fetch(:mixin, []).size,
+          require_edges: counts.fetch(:require, 0),
+          constant_edges: counts.fetch(:constant, 0),
+          resolved_constant_edges: counts.fetch(:constant_reference, 0),
+          method_call_edges: counts.fetch(:method_call, 0),
+          dynamic_method_call_edges: counts.fetch(:dynamic_method_call, 0),
+          inheritance_edges: counts.fetch(:inheritance, 0),
+          mixin_edges: counts.fetch(:mixin, 0),
           unresolved_ruby_references: @unresolved_references.count { |row| row[:kind] != :import },
           external_ruby_references: @external_references,
           unresolved_local_imports: @unresolved_references.count { |row| row[:kind] == :import },
-          resolved_local_import_edges: grouped.fetch(:local_import, []).size,
+          resolved_local_import_edges: counts.fetch(:local_import, 0),
           dynamic_sites: @dynamic_sites.size,
-          event_edges: grouped.fetch(:event, []).size,
-          command_edges: grouped.fetch(:command, []).size,
+          event_edges: counts.fetch(:event, 0),
+          command_edges: counts.fetch(:command, 0),
         }
       end
 
