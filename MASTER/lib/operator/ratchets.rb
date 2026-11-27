@@ -694,10 +694,6 @@ def deep_rows(rails: true, stale_ok: false)
   law_trace_ceiling = Master.law("law_map").fetch("law_trace_ceiling")
 
   [
-    # Deep because it parses every tracked Ruby file in four top-level trees with Prism.
-    # Fast means "reads files" in this register and name_candidates reads 2,500
-    # of them through a parser, which is the line the header draws.
-    *name_rows,
         *cached("selftest", %w[MASTER], stale_ok:) do
           [shell_row("selftest", "MASTER", "bundle exec rake selftest", /self-test: (\d+) violation/, 0)]
         end,
