@@ -275,6 +275,20 @@ module Master
           bus&.publish("fix:visual_candidate_diversity",
                        diversity_receipt(requested:, generated: candidates.compact.size, distinct: pool.size))
         end
+        return nil if pool.empty?
+
+        raise SourceChanged, "source changed before original visual measurement" unless read.call == original
+        raise RestoreFailed, "original CSS rebuild failed" unless rebuild.call
+
+        baseline = LayoutScoreRender.scores(measurer.call(surfaces, root:), root:)
+        raise SourceChanged, "source changed during original visual measurement; concurrent content was preserved" unless read.call == original
+
+        expected = surfaces.map(&:id).uniq.sort
+        if expected.empty? || baseline.keys.sort != expected
+          bus&.publish("fix:visual_candidate_baseline_inconclusive", expected:, measured: baseline.keys)
+          return nil
+        end
+
         scored = pool.each_with_index.map do |source, i|
           raise SourceChanged, "source changed before visual candidate trial" unless read.call == original
 
@@ -283,7 +297,7 @@ module Master
             raise SourceChanged, "candidate write did not match the proposed source" unless read.call == source
 
             row = if rebuild.call
-                    score(source, original, measurer.call(surfaces, root:), root:, anchors:, expected: surfaces)
+                    score(source, original, measurer.call(surfaces, root:), root:, anchors:, expected: surfaces, baseline:)
                   else
                     Scored.new(source:, score: 0.0, problems: ["CSS rebuild failed"], diff: 0, floor: 0.0)
                   end
@@ -301,10 +315,14 @@ module Master
             raise SourceChanged, "source changed during original CSS rebuild" unless read.call == original
           end
         end
-        scored.select { |row| row.problems.empty? }.max_by { |row| [(row.floor / TIE).round, (row.score / TIE).round, -row.diff] }&.source
+        qualified = scored.select { |row| row.problems.empty? }
+        winner = qualified.max_by { |row| [(row.floor / TIE).round, (row.score / TIE).round, -row.diff] }
+        bus&.publish("fix:visual_candidate_measurement", baseline:, trials: scored.size, qualified: qualified.size,
+          selected: winner && { score: winner.score, floor: winner.floor, diff: winner.diff })
+        winner&.source
       end
 
-      def score(source, original, measured, root:, anchors:, expected: [])
+      def score(source, original, measured, root:, anchors:, expected: [], baseline: {})
         measured = LayoutScoreRender.valid_measurements(measured)
         return Scored.new(source:, score: 0.0, problems: ["not rendered"], diff: 0, floor: 0.0) if measured.empty?
 
@@ -312,6 +330,12 @@ module Master
         scores = LayoutScoreRender.scores(measured, root:)
         missing = expected.map(&:id) - scores.keys
         problems << "missing surfaces: #{missing.join(", ")}" unless missing.empty?
+        baseline.each do |id, prior|
+          current = scores[id]
+          if current && current < prior - LayoutScoreRender::EPSILON
+            problems << "original layout score regressed on #{id}: #{prior} -> #{current}"
+          end
+        end
         values = scores.values
         Scored.new(source:, score: values.sum / values.size, floor: values.min, problems:, diff: diff_size(original, source))
       end

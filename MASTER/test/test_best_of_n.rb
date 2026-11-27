@@ -151,12 +151,12 @@ class BestOfNTest < Minitest::Test
 
     assert_equal good, B.rank([mid, good], original: @original, surfaces: [@surface], root: @root,
                               measurer: measure, read:, write:, rebuild: build)
-    assert_equal [mid, @original, good, @original], builds
+    assert_equal [@original, mid, @original, good, @original], builds
   end
 
   def test_failed_candidate_build_is_never_rendered
     build = -> { File.read(@path) == @original }
-    measure = ->(*) { flunk "failed build must not be rendered" }
+    measure = ->(_surfaces, root:) { assert_equal @original, File.read(@path); measurer.call([@surface], root:) }
 
     assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root,
                        measurer: measure, read:, write:, rebuild: build)
@@ -267,6 +267,23 @@ class BestOfNTest < Minitest::Test
     assert_equal 50, B.n
   ensure
     ENV.delete("MASTER_FIX_BEST_OF")
+  end
+
+  def test_live_original_rejects_a_candidate_that_beats_only_the_old_baseline
+    candidate = ".a { margin: 12px; } /* kind-mid */\n"
+    measured = ->(_surfaces, root:) do
+      [[@surface, rendering(File.read(@path) == @original ? "good" : "mid")]]
+    end
+    assert_nil B.rank([candidate], original: @original, surfaces: [@surface], root: @root,
+                     measurer: measured, read:, write:, rebuild:)
+    assert_equal @original, File.read(@path)
+  end
+
+  def test_missing_original_measurement_prevents_candidate_writes
+    writes = []
+    assert_nil B.rank([".a{}"], original: @original, surfaces: [@surface], root: @root,
+                     measurer: ->(_surfaces, root:) { [] }, read:, write: ->(src) { writes << src }, rebuild:)
+    assert_empty writes
   end
 
   def test_missing_surface_rejects_candidate
