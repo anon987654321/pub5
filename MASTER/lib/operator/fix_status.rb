@@ -388,6 +388,7 @@ module Operator
     # The newest RunPulse line in any tree's log: the run's own account of where it is.
     def heartbeat_line(runs = [])
       return "awaiting lifecycle receipt" if runs.any? { |run| run["status_pending_receipt"] }
+      return "no live receipt" if runs.any? && live_receipt(runs).nil?
 
       heartbeat_logs.each do |path|
         line = heartbeat_in(path)
@@ -396,6 +397,10 @@ module Operator
       nil
     rescue SystemCallError
       nil
+    end
+
+    def live_receipt(runs)
+      runs.reverse.find { |run| run["state"] == "active" && alive?(run["pid"]) }
     end
 
     def heartbeat_logs

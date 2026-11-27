@@ -102,6 +102,13 @@ class TestFixStatus < Minitest::Test
     end
   end
 
+  def test_historical_heartbeat_cannot_describe_a_dead_receipt
+    write("fix_runs.json", JSON.generate("runs" => [run_record("RAILS", pid: 0)]))
+    write("fix-RAILS.log", "fix0: pass 1/8 scan0 files 1/2\n")
+
+    assert_equal "no live receipt", Operator::FixStatus.new(root: @root).payload[:heartbeat]
+  end
+
   def test_live_process_without_a_receipt_is_not_described_by_an_old_run
     write("fix_runs.json", JSON.generate("runs" => [run_record("RAILS", pid: 0)]))
     status = Operator::FixStatus.new(root: @root)
