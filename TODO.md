@@ -35,9 +35,11 @@ Paid operations and external rights decisions retain their existing gates.
 - [ ] Require and verify durable handoffs from mission link to budget, plan, pass, proof and delivery; name a missing edge as `transition_missing`.
 - [ ] Stream phase-owned child output and process exits into the existing event bus and run receipt.
 - [ ] Show only run-scoped current progress in status; reject historical logs, stale heartbeats and PID-only claims.
+- [ ] Parse flagged `/fix` targets consistently in process status, mission routing and lifecycle receipts.
 - [ ] Supervise blocking phases outside the repair process; on missed liveness, capture bounded diagnostics, terminate the process group, roll back and release the lease.
 - [ ] Resume from the last completed phase, with its recorded recovery action, rather than from an opaque active run.
 - [ ] Replace competing fixed pass/time displays with evidence-driven convergence, dynamic phase deadlines and one policy-owned outer safety boundary.
+- [ ] Verify an end-to-end stalled preflight: the supervisor emits `transition_missing`, terminalizes the receipt, releases the mission lease and permits a clean resume.
 
 - [ ] Ensure 10–50 materially distinct alternatives, not just requested counts.
 - [ ] Reject superficial variants without discarding genuinely different repairs.
