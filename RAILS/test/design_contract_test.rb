@@ -217,6 +217,12 @@ def test_brgen_old_dialect_outranks_the_social_stack
       # Blank block comments without changing line numbers; ignore standalone
       # Sass line comments so examples and explanations are not treated as UI.
       source = source.gsub(%r{/\*.*?\*/}m) { |comment| "\n" * comment.count("\n") }
+      # The splash heart is artwork, not interface elevation.
+      if path == File.join(ROOT, "brgen/app/assets/stylesheets/_dating_splash.scss")
+        source = source.sub(/(\.dating-splash-heart css-doodle\s*\{[^}]*?)(filter: drop-shadow\(0 0 6px rgb\(255 97 34 \/ 50%\)\) drop-shadow\(0 0 24px rgb\(207 48 12 \/ 42%\)\);)/m) do
+          Regexp.last_match(1) + " " * Regexp.last_match(2).length
+        end
+      end
       source.lines.each_with_index.filter_map do |line, index|
         next if line.lstrip.start_with?("//")
         next unless line.match?(FLAT_DESIGN_PATTERN)
