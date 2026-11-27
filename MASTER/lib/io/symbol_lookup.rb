@@ -16,7 +16,7 @@ module Master
       end
 
       def call(name:)
-        return Result.err("symbol_lookup: index not built yet", category: :validation) unless @index.built?
+        return Result.err("symbol_lookup: index not built yet", category: :validation) unless @index.prepare_query
 
         hits = @index.query(name)
         if hits.is_a?(Hash) && hits[:error]

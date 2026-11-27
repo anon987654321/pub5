@@ -623,7 +623,7 @@ class TestIoTools < Minitest::Test
   # --- SymbolLookup ------------------------------------------------------------
 
   FakeIndex = Struct.new(:built, :hits) do
-    def built? = built
+    def prepare_query = built
     def query(_name) = hits
   end
 

@@ -72,7 +72,8 @@ module Master
         @lock.synchronize { @references.dup.freeze }
       end
 
-      def initialize(root:, event_bus: nil, persist: false)
+      def initialize(root:, event_bus: nil, persist: false, deferred: false)
+        @deferred = deferred
         @root = File.realpath(root)
         @store = persist ? CodeIndexStore.new(root: @root) : nil
         @bus = event_bus
@@ -144,6 +145,15 @@ module Master
           end
         end
         self
+      end
+
+      # Explicit symbol queries may pay for the index; boot and status must not.
+      def prepare_query
+        if @deferred && !ready?
+          build_async
+          wait_for_build
+        end
+        built?
       end
 
       def ready?

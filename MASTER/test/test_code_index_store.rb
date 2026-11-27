@@ -24,6 +24,20 @@ class TestCodeIndexStore < Minitest::Test
     Prism.define_singleton_method(:parse, original)
   end
 
+  def test_deferred_index_builds_only_on_explicit_symbol_lookup
+    with_tree do |root|
+      index = Index.new(root:, deferred: true)
+      refute index.built?
+      assert_includes index.summary, "NOT_BUILT"
+      refute index.built?
+
+      result = Master::Io::SymbolLookup.new(code_index: index).call(name: "Alpha")
+      assert result.ok?, result.inspect
+      assert_includes result.value!, "Alpha"
+      assert index.complete?
+    end
+  end
+
   def test_repeated_async_build_requests_share_the_active_build
     with_tree do |root|
       entered = Queue.new
