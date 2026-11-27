@@ -40,6 +40,9 @@ module Master
           def hosted_endpoints
             configured = @rules.fetch("openai_compatible", {}) || {}
             base = ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip
+            if ENV["MASTER_GATEWAY_MODE"] == "oxllm"
+              base = "http://127.0.0.1:8080/v1"
+            end
             return configured if base.empty?
 
             configured.merge("gateway" => gateway_spec(base))
@@ -70,6 +73,11 @@ module Master
             # turn) cannot carry MASTER's constitution in a system role. When
             # MASTER_LLM_GATEWAY_FOLD_SYSTEM is set, the dispatcher folds an
             # over-limit system prompt into a leading user turn for this lane.
+            if ENV["MASTER_GATEWAY_MODE"] == "oxllm"
+              spec["keyless"] = { "allow" => %w[basic strong] }
+              spec["privacy_posture"] = "unknown"
+              spec["key_env"] = %w[MASTER_LLM_GATEWAY_KEY]
+            end
             spec["fold_system"] = true if fold_system_requested?
             spec
           end
@@ -111,7 +119,11 @@ module Master
                 endpoint[:concurrency_wait_seconds] = Float(spec.fetch("concurrency_wait_seconds", 15))
                 raise ArgumentError, "openai_compatible.#{name}.concurrency_wait_seconds cannot be negative" if endpoint[:concurrency_wait_seconds].negative?
               end
-              hosted_ids(spec, key).each { |id| index["#{name}:#{id}"] ||= endpoint }
+              ids = hosted_ids(spec, key)
+              if name == "gateway" && ENV["MASTER_GATEWAY_MODE"] == "oxllm"
+                ids &= %w[basic strong]
+              end
+              ids.each { |id| index["#{name}:#{id}"] ||= endpoint }
             end
           end
 
