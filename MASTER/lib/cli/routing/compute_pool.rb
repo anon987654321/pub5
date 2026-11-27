@@ -163,6 +163,8 @@ module Master
           private
 
           def candidate(id)
+            return unless Io::LaneState.usable?(id, sources: %i[dead])
+
             row = model_row(id)
             return unless row
 
