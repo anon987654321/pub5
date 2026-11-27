@@ -205,9 +205,6 @@ class FileLengthRatchetTest < Minitest::Test
     # reads VIEW_PATHS and the check class builds that in its own body after the
     # require. That is the load-order half of the trap this file already
     # records twice for __dir__ paths.
-    # 455 -> 449: the same inline-notice rule, in the sheet amber and
-    # bsdports share.
-    "__shared/app/assets/stylesheets/_minimal.scss" => 449,
     # First measured 2026-10-20, when the scan learned the sibling gems and __shared: debt that was invisible,
     # recorded so it can only fall. Split a file and lower its row; do not raise one.
     # dintero_checkout.rb left on 2026-11-05 at 348: the payout split it
@@ -217,9 +214,6 @@ class FileLengthRatchetTest < Minitest::Test
     # slack check exists so this row follows it down.
     # 2026-11-22: +5 for the guest cable identity and footer ownership block.
     "amber/app/views/layouts/application.html.erb" => 172,
-    "brgen/app/assets/stylesheets/_brgen_feed_posts.scss" => 508,
-    "brgen/app/assets/stylesheets/_brgen_marketplace.scss" => 925,
-    "brgen/app/assets/stylesheets/_brgen_messenger.scss" => 569,
     # 2026-11-22: +4 for the conversation header and message state.
     "brgen/app/views/conversations/show.html.erb" => 196,
     # 2026-11-15: +4 helper examples carried in the same work.
