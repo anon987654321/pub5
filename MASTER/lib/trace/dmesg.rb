@@ -102,21 +102,6 @@ module Master
         level
       end
 
-      CLI_VERBOSITY_OPTIONS = {
-        "--verbose" => "verbose",
-        "--boot-status" => "verbose",
-        "--trace" => "trace",
-        "--detail" => "everything",
-        "--everything" => "everything",
-      }.freeze
-
-      # Apply only terminal-level options before boot so startup itself follows
-      # the requested level. The parser later consumes the same flag normally.
-      def prime_cli_verbosity!(argv)
-        level = Array(argv).filter_map { |arg| CLI_VERBOSITY_OPTIONS[arg.to_s] }.last
-        configure_cli_verbosity(level) if level
-      end
-
       def with_verbosity(level)
         previous = @verbosity_override
         @verbosity_override = normalize_verbosity(level)

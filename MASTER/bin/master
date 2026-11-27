@@ -281,6 +281,8 @@ def initial_message_parser(options)
   OptionParser.new do |opts|
     opts.banner = "Usage: bin/master [-p PROMPT|-m MSG] [--continue [ID]|--session ID|--fork [ID]|--sessions] [--effort low|medium|high] [--model ID] [--output-format text|json|stream-json] [--permission-mode MODE] [--allowedTools LIST] [--headless] [--fast] [--daemon] [--verbose|--trace|--detail] [--web|--no-web]"
     opts.on("-h", "--help") { print_master_help }
+    opts.on("--daemon") {}
+    opts.on("--status") {}
     opts.on("-m", "--message TEXT") { |text| options[:message] = text }
     opts.on("-p", "--prompt TEXT") { |text| options[:message] = text }
     opts.on("--effort LEVEL", %w[low medium high]) { |level| ENV["MASTER_EFFORT"] = level }
@@ -344,41 +346,9 @@ end
 
 HEADLESS_DIRECT_COMMANDS = %w[/capabilities /doctor /help /laws /model /status].freeze
 
-def headless_direct_command?(argv)
-  Array(argv).any? { |arg| HEADLESS_DIRECT_COMMANDS.include?(arg) }
-end
-
-# Prime the process-wide runtime choices before Master.boot. The same flags are
-# parsed again below to construct the message; applying them twice is idempotent.
-def prime_cli_boot_options!(argv)
-  Array(argv).each_with_index do |arg, index|
-    value = argv[index + 1]
-    case arg
-    when "--headless" then activate_headless_mode!
-    when "--fast" then activate_fast_mode!
-    when "--fold" then ENV["MASTER_FOLD"] = "1"
-    when "--web" then ENV["MASTER_WEB"] = "1"
-    when "--no-web" then ENV["MASTER_WEB"] = "0"
-    when "--model" then ENV["MASTER_MODEL"] = value if value && !value.start_with?("--")
-    when "--effort" then ENV["MASTER_EFFORT"] = value if value && !value.start_with?("--")
-    when "--output-format"
-      if %w[text json stream-json].include?(value)
-        ENV["MASTER_OUTPUT_FORMAT"] = value
-        ENV["MASTER_FOLD"] = "1"
-      end
-    when "--permission-mode"
-      if %w[default acceptEdits plan bypassPermissions].include?(value)
-        ENV["MASTER_PERMISSION_MODE"] = value
-        ENV["MASTER_FOLD"] = "1"
-      end
-    when "--allowedTools", "--allowed-tools"
-      if value && !value.start_with?("--")
-        ENV["MASTER_ALLOWED_TOOLS"] = value
-        ENV["MASTER_FOLD"] = "1"
-      end
-    end
-  end
-  Master::Trace::Dmesg.prime_cli_verbosity!(argv)
+def headless_direct_command?(message)
+  command = message.to_s.strip.split(/\s+/, 2).first
+  HEADLESS_DIRECT_COMMANDS.include?(command)
 end
 
 def parse_initial_message_options(argv)
@@ -387,15 +357,10 @@ def parse_initial_message_options(argv)
   options
 end
 
-# Flags that affect boot/runtime defaults are applied before the boot; help still
-# prints without booting at all.
-prime_cli_boot_options!(ARGV)
-ENV["MASTER_FOLD"] = "0" if ENV["MASTER_HEADLESS"] == "1" && headless_direct_command?(ARGV)
-
-if ARGV.first == "--help" || ARGV.first == "-h"
-  require "optparse"
-  print_master_help
-end
+# Flags that affect boot and message dispatch share one parse before dependency
+# setup, so their runtime meaning cannot drift between separate code paths.
+initial_message = initial_message_from_argv(ARGV.dup)
+ENV["MASTER_FOLD"] = "0" if ENV["MASTER_HEADLESS"] == "1" && headless_direct_command?(initial_message)
 
 # Canonical first-run bootstrap gate. ruby bin/bootstrap exposes this exact
 # preflight for operators; ordinary startup always passes through it here.
@@ -484,7 +449,7 @@ unless internal_master_child || $MASTER_PROCESS_LOCK
   exit 75
 end
 
-if !$stdin.tty? && ENV["MASTER_FAST"] == "1" && !headless_direct_command?(ARGV)
+if !$stdin.tty? && ENV["MASTER_FAST"] == "1" && !headless_direct_command?(initial_message)
 
   $stdin.each_line do |line|
     command = line.strip
@@ -500,11 +465,6 @@ if !$stdin.tty? && ENV["MASTER_FAST"] == "1" && !headless_direct_command?(ARGV)
   end
   exit!(0)
 end
-
-# Parse once and reuse the result. OptionParser callbacks can emit warnings
-# and alter mode state; repeating this parse duplicated both effects.
-initial_message = initial_message_from_argv(ARGV.dup)
-ENV["MASTER_FOLD"] = "0" if ENV["MASTER_HEADLESS"] == "1" && HEADLESS_DIRECT_COMMANDS.include?(initial_message)
 
 cli = nil
 control_plane = nil
