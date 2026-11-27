@@ -316,8 +316,12 @@ module Master
                       "models.yml paid_tail", errors)
         paid = data["paid_tail"].is_a?(Hash) ? data["paid_tail"] : {}
         errors << "models.yml paid_tail.enabled must be boolean" unless [true, false].include?(paid["enabled"])
-        %w[max_prompt_usd_per_m max_completion_usd_per_m run_cap_usd].each do |field|
-          errors << "models.yml paid_tail.#{field} must be positive" unless paid[field].is_a?(Numeric) && paid[field].positive?
+        %w[max_prompt_usd_per_m max_completion_usd_per_m].each do |field|
+          errors << "models.yml paid_tail.#{field} must be finite and positive" unless paid[field].is_a?(Numeric) && paid[field].finite? && paid[field].positive?
+        end
+        cap = paid["run_cap_usd"]
+        unless cap.is_a?(Numeric) && cap.finite? && cap >= 0 && (paid["enabled"] != true || cap.positive?)
+          errors << "models.yml paid_tail.run_cap_usd must be finite and nonnegative (positive when enabled)"
         end
         errors << "models.yml paid_tail.max_models must be a positive integer" unless paid["max_models"].is_a?(Integer) && paid["max_models"].positive?
       end
