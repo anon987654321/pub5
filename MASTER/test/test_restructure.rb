@@ -90,6 +90,24 @@ class TestRestructure < Minitest::Test
     assert_empty sh("git", "status", "--porcelain", chdir: @repo)
   end
 
+  def test_structural_preview_obeys_registered_tree_boundaries
+    events = []
+    bus = Object.new
+    bus.define_singleton_method(:publish) { |name, **fields| events << [name, fields] }
+    sweep = Master::Fix::RestructureSweep.new(agent: nil, repo_root: @repo, bus:)
+    visited = []
+    sweep.define_singleton_method(:candidates) do |target, _run_id|
+      visited << target
+      []
+    end
+
+    assert_empty sweep.preview(target: File.join(@repo, "MASTER/lib/big.rb"))
+    assert_empty visited
+    assert_equal "fix_loop:restructure_preview_skipped", events.last.first
+    assert_empty sweep.preview(target: @repo)
+    assert_equal %w[MASTER RAILS], visited.map { |path| File.basename(path) }.sort
+  end
+
   def test_preview_refuses_a_symlinked_path_without_following_it
     outside = File.join(@tmp, "outside.rb")
     File.write(outside, "OUTSIDE = 1\n")

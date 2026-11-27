@@ -39,7 +39,7 @@ module Master
 
               if !structural_repaired && !deadline.expired? && structural_target?(target)
                 checkpoint_id = i.zero? ? run_id : "#{run_id}-pass-#{i + 1}"
-                if structure_checkpoint(target:, files:, run_id: checkpoint_id)
+                if structure_checkpoint(target:, files:, run_id:, checkpoint_id:)
                   state[:consecutive_clean] = 0
                   state[:history].clear
                   state[:seen_snapshots].clear
@@ -194,10 +194,10 @@ module Master
           Result.err("wishlist convergence failed: #{e.class}: #{e.message}", category: :unknown)
         end
 
-        def structure_checkpoint(target:, files:, run_id:)
+        def structure_checkpoint(target:, files:, run_id:, checkpoint_id: run_id)
           return false unless structural_enabled?
 
-          changes = sweep_tree(target, "#{run_id}-structure-checkpoint", phase: :structure_first)
+          changes = sweep_tree(target, "#{checkpoint_id}-structure-checkpoint", phase: :structure_first)
           return false if changes.empty?
 
           files.replace(@file_collector.collect(target))

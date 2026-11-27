@@ -2768,6 +2768,25 @@ end
     saved.nil? ? ENV.delete("MASTER_FIX_STRUCTURAL") : ENV["MASTER_FIX_STRUCTURAL"] = saved
   end
 
+  def test_structure_checkpoint_keeps_the_original_journal_run_id
+    target = File.join(@root, "RAILS")
+    loop = Master::Fix::FixLoop.allocate
+    loop.instance_variable_set(:@root, @root)
+    loop.instance_variable_set(:@fix_plan, Struct.new(:max_passes, :budget_seconds).new(3, 60))
+    collector = Object.new
+    collector.define_singleton_method(:collect) { |_target| [] }
+    loop.instance_variable_set(:@file_collector, collector)
+    loop.define_singleton_method(:structural_enabled?) { true }
+    loop.define_singleton_method(:sweep_tree) do |_target, _id, phase:|
+      [Object.new]
+    end
+    refreshed = []
+    loop.define_singleton_method(:refresh_fix_plan!) { |run_id:, **| refreshed << run_id }
+
+    assert loop.send(:structure_checkpoint, target:, files: [], run_id: "r1", checkpoint_id: "r1-pass-2")
+    assert_equal ["r1"], refreshed
+  end
+
   def test_structural_repair_does_not_trigger_a_second_first_pass_sweep
     target = File.join(@root, "RAILS")
     FileUtils.mkdir_p(target)

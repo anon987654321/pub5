@@ -530,7 +530,16 @@ module Master
       # deterministic finding clustering and candidate ordering as the live restructure
       # stage, but never asks the model, writes files, commits, or pushes.
       def preview(target:, run_id: "preview")
-        ranked_candidate_map(candidates(target, run_id)).map do |row|
+        targets = sweep_targets(target)
+        if targets.empty?
+          reason = "multi-file structural surgery requires a registered tree or repository root"
+          @bus&.publish("fix_loop:restructure_preview_skipped", target: relative(target), reason:)
+          Master::Trace::Dmesg.status("restructure0", "preview skipped: #{reason}")
+          return []
+        end
+
+        problems = targets.flat_map { |tree| candidates(tree, "#{run_id}-#{File.basename(tree)}") }
+        ranked_candidate_map(problems).map do |row|
           problem = row.fetch(:problem)
           {
             problem_id: problem.id,
