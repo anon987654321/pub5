@@ -1,16 +1,12 @@
 # frozen_string_literal: true
 
 require_relative "session/container"
-require_relative "session/signals"
-require_relative "session/command_ops"
 require_relative "session/thinking_indicator"
 require_relative "activity"
 require_relative "session/result_display"
-require_relative "session/background_scan"
-require_relative "session/reminders"
+require_relative "../ground/assistant_tasks"
 require_relative "session/repl_flow"
-require_relative "session/greeting"
-require_relative "session/bridge_run"
+require_relative "welcome"
 require_relative "operator_grammar"
 
 require "open3"
@@ -409,6 +405,323 @@ module Master
         )
       end
 
+      private
+
+      def setup_signals
+        trap("USR1") { on_usr1 }
+        trap("INT")  { on_int }
+      end
+
+      # Master::LOADER is the loader that owns lib/; reloading is on only under
+      # MASTER_DEV=1, and Zeitwerk raises on reload otherwise.
+      def on_usr1
+        unless Master::LOADER.reloading_enabled?
+          Master::Trace::Dmesg.status("reload0", "skipped, reloading is off without MASTER_DEV=1")
+          return
+        end
+
+        Master::LOADER.reload
+        Master::Trace::Dmesg.status("reload0", "complete")
+      rescue StandardError => e
+        Master::Trace::Dmesg.status("reload0", "failed, #{e.class}: #{e.message}")
+      end
+
+      # ^C cancels a running turn; at the prompt it ends the session. A trap
+      # interrupts the main thread wherever it stands, where taking a mutex
+      # raises ThreadError, so the cancel runs on a thread of its own and the
+      # prompt raises Interrupt for repl_loop to close in ordinary context.
+      def on_int
+        if @voice_listen_active
+          @voice_listen_stop = true
+          turn = @pipeline_thread
+          if turn&.alive?
+            return Thread.new { request_or_interrupt_turn(turn, @turn_children, reason: "ctrl_c") }
+          end
+          raise Interrupt
+        end
+
+        turn = @pipeline_thread
+        if turn&.alive?
+          # In the interactive queue, Ctrl+C has the same safe semantics as
+          # /stop: pause queued turns too. Do mutex work outside the signal trap.
+          return Thread.new { stop_interactive_queue(reason: "ctrl_c") } if @turn_worker&.alive?
+          return Thread.new do
+            @turn_queue_mutex.synchronize { @turn_cancel_requested = true }
+            request_or_interrupt_turn(turn, @turn_children, reason: "ctrl_c")
+          end
+        end
+
+        raise Interrupt
+      end
+
+      # Fold-owned work observes cancellation between model, policy and
+      # effect boundaries. Do not kill its thread mid-transaction; non-Fold
+      # commands retain the established immediate interruption path.
+      def request_or_interrupt_turn(turn, children, reason:)
+        token = @turn_cancellation
+        cancellation_reason = case reason.to_s
+                              when "ctrl_c" then "Ctrl-C requested cancellation"
+                              when "stop" then "/stop requested cancellation"
+                              else "operator requested cancellation"
+                              end
+        token&.cancel!(reason: cancellation_reason)
+        if token&.active?
+          answer_pending_terminal_ask("/deny") if terminal_ask_pending?
+          @refs.bus&.publish("user:interrupt", reason:, source: "cli", children:)
+        else
+          cancel_turn(turn, children, reason:)
+        end
+      end
+
+      # The thread first, so the turn takes no next step, then its children,
+      # which the thread is otherwise left waiting on. Preserve the initiating
+      # control in the receipt; /stop must not be recorded as Ctrl-C.
+      def cancel_turn(turn, children, reason: "ctrl_c")
+        turn.kill
+        @refs.bus&.publish("user:interrupt", reason:, source: "cli", children:)
+      end
+
+      private
+
+      def toggle_focus
+        @focus_mode = !@focus_mode
+        Master::Trace::Dmesg.status("focus0", @focus_mode ? "on" : "off")
+      end
+
+      private
+
+      def start_background_loop
+        # Built on the main thread, before either scanner thread exists, so both
+        # find the same check rather than racing to create one.
+        @scan_check = Mutex.new
+        @bg_thread = Thread.new do
+          loop do
+            break if background_stop_requested?
+
+            background_cycle unless @user_active
+          end
+        rescue StandardError => e
+          @refs.bus&.publish("cli:bg_error", error: e.message)
+        end
+      end
+
+      # Public: bin/master stops the loop on its way out.
+      public def stop_background_loop
+        @boot_scan_thread&.kill
+        @boot_scan_thread = nil
+        return unless @bg_thread
+
+        @bg_control << :stop
+        @bg_thread.join(2)
+        @bg_thread = nil
+      end
+
+      # A blocking pop with a timeout. A non-blocking pop raises ThreadError on
+      # every empty tick, and the swallow ledger would record one a second.
+      def background_stop_requested?
+        @bg_control.pop(timeout: IDLE_SLEEP_DEFAULT) == :stop
+      end
+
+      # The deep self-scan over lib/ runs 181 rules and takes north of a minute.
+      # Inline it held the prompt hostage for the whole boot, so the operator sat
+      # at "scan…" with no way to type. It reports when it lands instead.
+      def start_boot_scan
+        @boot_scan_thread = Thread.new do
+          # The scan is pure Ruby and holds the GVL for whole time slices, so a plain
+          # "hello" waited behind it for 58 seconds. MRI scales a thread's slice by its
+          # priority; the lowest keeps the prompt's turns short while the scan lands.
+          Thread.current.priority = -3
+          @scan_check.synchronize { Master::Trace::Dmesg.under("scan0") { boot_scan } }
+        end
+      end
+
+      # Rules that call the model (AdversarialRule, SemanticLaw, CommentDriftRule
+      # — anything mixing in Rules::NeedsModel) share the one local ollama process
+      # with the interactive turn. Running them here queued a plain "hey" behind
+      # 8 sequential model calls the operator never asked for — /fix
+      # still run the full rule set, deliberately, when a person asks for it.
+      def mechanical_scanner_rules
+        @refs.scanner.laws.reject { |law| law.respond_to?(:agent?) }
+      end
+
+      def boot_scan
+        result = Master::Review::Scan::SelfScan.new(scanner: @refs.scanner, root: @refs.root, event_bus: @refs.bus,
+          laws: mechanical_scanner_rules).call(autofix: false)
+        return unless result.ok?
+
+        summary = result.value!
+        set_violations(summary.violation_count)
+        Master::Trace::Dmesg.status("scan0", boot_scan_line(summary).delete_prefix("scan0: "))
+      rescue StandardError => e
+        @refs.bus&.publish("cli:warn", error: e.message)
+      end
+
+      # The count and the command that acts on it, in one line. A count alone
+      # invites "fix them", and a sentence reaches the read-only preview; /fix
+      # is the stage that writes.
+      def boot_scan_line(summary)
+        count = summary.violation_count
+        return "scan0: lib/ clean, #{summary.rule_count} rules" if count.zero?
+
+        "scan0: lib/ #{count} #{count == 1 ? 'violation' : 'violations'}, #{summary.rule_count} rules; /fix lib repairs them"
+      end
+
+      def run_self_scan
+        result = Master::Review::Scan::SelfScan.new(scanner: @refs.scanner, root: @refs.root, event_bus: @refs.bus).call(stream: true, autofix: true)
+        if result.ok?
+          Master::Trace::Dmesg.status("scan0", result.value!.line.delete_prefix("scan0: "))
+        else
+          Master::Trace::Dmesg.status("err0", result.message)
+        end
+      end
+
+      def scan_files(paths)
+        Result.ok(paths.map { |p| [p, @refs.scanner.scan(p, depth: :deep)] })
+      end
+
+      def count_violations(pairs)
+        pairs.sum do |_file, file_result|
+          file_result.ok? ? file_result.value!.size : 0
+        end
+      end
+
+      # Skips rather than queues: this fires every idle_sleep_seconds, and a tick
+      # that waited its turn would only start a redundant rescan of a tree the
+      # in-flight scan is already covering.
+      def background_cycle
+        return unless @scan_check.try_lock
+
+        begin
+          Master::Trace::Dmesg.under("scan0") { background_cycle! }
+        ensure
+          @scan_check.unlock
+        end
+      end
+
+      def background_cycle!
+        lib_dir = File.join(@refs.root, "lib")
+        result = @refs.scanner.scan_dir(lib_dir, depth: :deep, laws: mechanical_scanner_rules)
+        return unless result.ok?
+        n = count_violations(result.value!)
+        prev = violations_count
+        return if n == prev
+        delta = n - prev
+        set_violations(n)
+        sign = delta.positive? ? "+#{delta}" : delta.to_s
+        msg = n.positive? ? "scan0: lib/ #{n} violations, #{sign}" : "scan0: lib/ clean, #{sign}"
+        Master::Trace::Dmesg.status("scan0", msg.delete_prefix("scan0: "))
+        @refs.bus&.publish("cli:violation_delta", count: n, delta:, previous: prev)
+      rescue StandardError => e
+        @refs.bus&.publish("cli:bg_error", error: e.message)
+      end
+
+      def refresh_skills!
+        @refs.skills&.discover!
+      end
+
+      # Rings a task whose due time has passed, once: a remind0 line above the
+      # prompt, the same words spoken, and a reminder:due event for the face. Only
+      # an open interactive session rings; AssistantTasks::DELIVERY says so when a
+      # due time is accepted.
+      REMINDER_POLL_S = 30
+
+      private
+
+      def start_reminder_watch
+        return unless $stdin.tty? && $stdout.tty?
+        return if Fiber[:master_visitor] == true
+
+        @reminder_thread = Thread.new do
+          loop do
+            ring_due_reminders
+            sleep REMINDER_POLL_S
+          end
+        rescue StandardError => e
+          Master::Ground::Swallow.log(e, context: "cli.reminders", event_bus: @refs.bus)
+        end
+      end
+
+      def stop_reminder_watch
+        @reminder_thread&.kill
+        @reminder_thread = nil
+      end
+
+      def ring_due_reminders(tasks: Master::Ground::AssistantTasks.new(root: @refs.root, bus: @refs.bus))
+        tasks.due_reminders.each do |task|
+          next unless claim_reminder(tasks, task.fetch("id"))
+
+          terminal_puts("remind0: #{task.fetch('title')}")
+          redraw_active_input
+          @refs.bus&.publish("reminder:due", task_id: task.fetch("id"))
+          Master::Voice::Playback.speak("Reminder: #{task.fetch('title')}")
+        end
+      end
+
+      # Another session that rang it first wins; this one stays quiet.
+      def claim_reminder(tasks, id)
+        tasks.call(action: "reminded", id:)
+        true
+      rescue Master::Ground::AssistantTasks::Error
+        false
+      end
+
+      private
+
+      # The live-state welcome is enough at startup. A second model request can
+      # occupy the same provider lane as the operator's first turn.
+      # Keep the personal greeting available as an explicit opt-in.
+      # MASTER_GREETING=1 enables it.
+      def greet_from_model
+        return unless ENV["MASTER_GREETING"] == "1" && $stdout.tty?
+
+        Thread.new { deliver_greeting }
+      end
+
+      # A greeting that arrives after the operator has started talking is stale, and it printed onto the end of
+      # the first reply ("...or mainly you?Late for hard conversations, Johann."), so it stands down.
+      def deliver_greeting
+        text = @refs.agent.ask_once(greeting_prompt, law: false).to_s.strip
+        return if text.empty? || @user_active || !@last_input.to_s.empty? || @pipeline_thread
+
+        terminal_puts(@refs.renderer.render(text.lines.first.to_s.strip, mode: :dim))
+      rescue StandardError => e
+        Master::Ground::Swallow.log(e, context: "cli.greeting", event_bus: @refs.bus)
+      end
+
+      GREETING_LANGUAGES = { nb: "Norwegian Bokmål", ms: "Malay", en: "English" }.freeze
+
+      def greeting_prompt
+        context = Master::CLI::Welcome.context(Master::ROOT)
+        # Read only the language signal locally. The previous words and topic
+        # never enter the model greeting prompt or public boot scrollback.
+        session = Master::CLI::Welcome.read_session(Master::ROOT)
+        last_user = Array(session["messages"]).reverse.find { |message| message["role"] == "user" }
+        language = GREETING_LANGUAGES.fetch(Master::Voice::Language.detect(last_user&.fetch("content", nil)), "English")
+
+        <<~PROMPT
+          You are MASTER, greeting the operator as a terminal session opens. One natural line of at most
+          twelve words, in #{language}. Be warm without being familiar or theatrical. Do not quote, infer,
+          or refer to earlier conversation, personal history, mood, or private topics. Do not ask a question.
+
+          Now: #{context[:time]}. #{context[:line]}.
+        PROMPT
+      end
+
+      private
+
+      # The summary is the reply, so it sits at full weight under the units.
+      # The final streamed reply is spoken by result_display; speaking this
+      # summary here too queued the same turn a second time.
+      # The fold's own line comes from the units console when one ran, and
+      # from here when none did.
+      def print_bridge_footer(fold, state:)
+        summary = fold[:summary].to_s.strip
+        puts
+        unless summary.empty?
+          puts @refs.renderer.measure(summary, width: reply_measure)
+        end
+        Master::Trace::Dmesg.status("fold0", "#{fold[:reason]}, #{fold[:turns]} turns") unless @unit_sub
+      end
     end
   end
 end
