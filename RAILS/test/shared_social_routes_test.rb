@@ -30,10 +30,12 @@ class SharedSocialRoutesTest < Minitest::Test
       assert_includes routes, "__shared/config/routes/legal.rb", "#{app} must eval shared legal routes"
     end
     legal = File.read(File.join(ROOT, "__shared/config/routes/legal.rb"))
-    assert_includes legal, "PagesController::PAGES", "the legal routes draw from the controller's one list"
+    assert_includes legal, "Shared::LEGAL_PAGES.each", "routes must use the shared list without loading a controller"
     pages = File.read(File.join(ROOT, "__shared/app/controllers/pages_controller.rb"))
+    assert_match(/^  PAGES = Shared::LEGAL_PAGES$/, pages)
+    engine = File.read(File.join(ROOT, "__shared/lib/shared/engine.rb"))
     %w[privacy terms cookies safety rules].each do |page|
-      assert_match(/PAGES = %w\[[^\]]*\b#{page}\b/, pages)
+      assert_match(/LEGAL_PAGES = %w\[[^\]]*\b#{page}\b/, engine)
     end
   end
 
