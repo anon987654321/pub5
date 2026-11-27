@@ -242,7 +242,7 @@ module Master
         # On vm23 the control plane shares this process and owns Git sync + deploy.
         # Claim the same execution slot around an interactive /fix so the control
         # plane cannot fetch, rebase or deploy while the fix loop is mutating main.
-        claimed = Master::Ops::LoopOwner.with_claim("fix") do
+        claimed = with_fix_slot do
           head = git.head
           result = run_fix_loop(abs)
           verdict = fix_verdict(result, fix_commits_since(head))
@@ -251,13 +251,31 @@ module Master
         end
         return claimed unless claimed == false
 
-        holder = Master::Ops::LoopOwner.active || {}
-        fail_stage("fix", "loop slot held by #{holder["loop"]} pid #{holder["pid"]}")
-        Master::Trace::Dmesg.status("fix0", "failed, loop slot held by #{holder["loop"]} pid #{holder["pid"]}; no repair ran")
-        "fix failed: loop slot held by #{holder["loop"]} pid #{holder["pid"]}"
+        busy_fix_message
       rescue StandardError => e
         @fix_crashed = true
         stage_failure("fix", "fix0", e)
+      end
+
+      def with_fix_slot
+        return yield if @fix_slot_owned
+
+        Master::Ops::LoopOwner.with_claim("fix") do
+          @fix_slot_owned = true
+          begin
+            yield
+          ensure
+            @fix_slot_owned = false
+          end
+        end
+      end
+
+      def busy_fix_message
+        holder = Master::Ops::LoopOwner.active || {}
+        reason = "loop slot held by #{holder['loop']} pid #{holder['pid']}"
+        fail_stage("fix", reason)
+        Master::Trace::Dmesg.status("fix0", "failed, #{reason}; no repair ran")
+        "fix failed: #{reason}"
       end
 
       def fix_verdict(result, delivered)
@@ -558,7 +576,14 @@ module Master
     # :reek:ManualDispatch -- a loop without the check, as a test double has none, is not a broken one.
     def guarded_fix_sections(**)
       broken = @fix_loop.respond_to?(:instrument_failures) ? @fix_loop.instrument_failures : []
-      return fix_sections(**) if broken.empty?
+      if broken.empty?
+        return fix_sections(**) unless @apply
+
+        sections = with_fix_slot { fix_sections(**) }
+        return sections unless sections == false
+
+        return [["repair", busy_fix_message]]
+      end
 
       reason = broken.join("; ")
       fail_stage("instruments", reason)

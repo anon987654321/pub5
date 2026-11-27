@@ -23,6 +23,17 @@ class TestFixFailFast < Minitest::Test
     Pass::Result.new(target: "MASTER", mode: "strict", sections: [], ok:, unit: "review0", failed_stages:, causes:)
   end
 
+  def test_busy_slot_blocks_before_baseline_or_observation
+    Master::Ops::LoopOwner.stub(:claim, false) do
+      Master::Ops::LoopOwner.stub(:active, { "loop" => "fix", "pid" => 42 }) do
+        result = pass(broken: []).call(target: Master::ROOT, apply: true, critique: false, aesthetic: false)
+        assert_includes result.failed_stages, "fix"
+        assert_equal "loop slot held by fix pid 42", result.causes["fix"]
+        refute result.sections.to_h.key?("observe")
+      end
+    end
+  end
+
   def test_a_broken_instrument_stops_the_run_before_anything_is_read
     reason = "linter: rubocop: scan error, Configuration file not found: /x/.rubocop.yml"
     result = pass(broken: [reason]).call(target: Master::ROOT, apply: true, critique: false, aesthetic: false)
