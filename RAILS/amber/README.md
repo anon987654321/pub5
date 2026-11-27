@@ -44,7 +44,9 @@ collection headings and a clear garment detail hierarchy: image, identity, attri
 history, cost per wear and outfit relationships. Recommendations must explain their basis.
 Do not add shopping-cart chrome, fake stock pressure, discount language or purchase-first
 calls to action. Preserve Amber's original large masthead, warm-neutral tokens and truthful
-garment imagery. Amber should feel like a considered fashion editorial, not a retailer.
+garment imagery. Align the masthead mark, editorial navigation and look rail to Brgen's shared
+`--feed-max` reading measure; Amber's scale and pacing are the variation, not a separate shell.
+Amber should feel like a considered fashion editorial, not a retailer.
 
 ## Product boundary
 
