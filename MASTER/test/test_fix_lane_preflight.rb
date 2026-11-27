@@ -79,6 +79,13 @@ class TestFixLanePreflight < Minitest::Test
     end
   end
 
+  def test_local_only_admission_does_not_require_a_model
+    agent = Agent.new({})
+    agent.stub(:model_for, ->(**) { flunk "local-only admission must not route a model" }) do
+      assert_nil Preflight.check(agent:, env: { "MASTER_LOCAL_ONLY" => "1" })
+    end
+  end
+
   def test_preflight_leaves_provider_and_consensus_probes_to_their_owners
     agent = ProbingAgent.new({})
 
