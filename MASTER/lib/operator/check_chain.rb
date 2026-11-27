@@ -349,7 +349,7 @@ module Operator
 
     def verification_stages(target, stale_ok: false)
       trees = trees_for_target(target)
-      selected = stages(scan_only: true, trees:, stale_ok:).reject { |stage| stage.name == "council" }
+      selected = stages(scan_only: true, trees:, stale_ok:, strict_inconclusive: true).reject { |stage| stage.name == "council" }
       # The /fix pass owns lexical observation, repair and re-observation itself.
       # Calling the lexical ladder here starts another /fix preview, which then
       # builds a second full scanner before the first pass can repair anything.
@@ -517,11 +517,11 @@ module Operator
     # and brgen's suite is not a MASTER session's business. Two stages stay
     # whole under every --tree — the ratchets and the sprawl census are
     # repo-wide measurements by definition, and both are cheap.
-    def stages(scan_only:, trees: TREES, stale_ok: false)
+    def stages(scan_only:, trees: TREES, stale_ok: false, strict_inconclusive: false)
       scope = trees == TREES ? "all five governed trees" : trees.join(", ")
       [
         lexical_stage(scan_only:, trees:, scope:),
-        rails_stage(scan_only:, trees:),
+        rails_stage(scan_only:, trees:, strict_inconclusive:),
         openbsd_stage(trees:),
         rehearse_stage(trees:),
         suites_stage(trees:),
@@ -541,14 +541,14 @@ module Operator
       )
     end
 
-    def rails_stage(scan_only:, trees:)
+    def rails_stage(scan_only:, trees:, strict_inconclusive: false)
       return unless trees.include?("RAILS")
 
       Stage.new(
         name: "source",
         purpose: "every RAILS check, source/rendered repair, then full Rails verification",
         mutates: !scan_only,
-        run: -> { rails_verification(scan_only:) },
+        run: -> { rails_verification(scan_only:, strict_inconclusive:) },
       )
     end
 
@@ -754,8 +754,8 @@ module Operator
     # The repair-aware runner owns deterministic source/rendered corrections;
     # premerge is the read-only proof that every Rails test, coverage dimension
     # and PWA/runtime check survives the repaired tree.
-    def rails_verification(scan_only:)
-      ok, body, status = rails_checks(scan_only:)
+    def rails_verification(scan_only:, strict_inconclusive: false)
+      ok, body, status = rails_checks(scan_only:, strict_inconclusive:)
       return [ok, body, status] unless ok
 
       premerge = File.join(MASTER, "tools", "rails", "premerge.rb")

@@ -613,6 +613,26 @@ class TestCheckChain < Minitest::Test
     assert_equal "1", captured_envs[1].fetch("CHECK_STRICT_INCONCLUSIVE")
   end
 
+  def test_fix_baseline_and_strict_pass_share_rails_reading
+    old = ENV["MASTER_PROOF_STORE"]
+    ENV["MASTER_PROOF_STORE"] = "1"
+    G.instance_variable_set(:@rails_checks_kept, nil)
+    envs = []
+    capture = ->(*, **opts) { envs << opts.fetch(:env); [false, ["red"], 1] }
+    G.stub(:baseline_key, "same-bytes") do
+      G.stub(:capture, capture) do
+        stage = G.verification_stages("RAILS", stale_ok: true).find { |row| row.name == "source" }
+        assert_equal [false, ["red"], 1], stage.run.call
+        assert_equal [false, ["red"], 1], G.rails_checks(scan_only: true, strict_inconclusive: true)
+      end
+    end
+    assert_equal 1, envs.size
+    assert_equal "1", envs.first.fetch("CHECK_STRICT_INCONCLUSIVE")
+  ensure
+    ENV["MASTER_PROOF_STORE"] = old
+    G.instance_variable_set(:@rails_checks_kept, nil)
+  end
+
   def test_scan_only_rails_checks_run_once_per_unchanged_tree
     runs = 0
     capture = ->(*_args, **_kwargs) { runs += 1; [false, ["red"], 1] }
