@@ -34,6 +34,19 @@ module Operator
       out.split("\0").reject(&:empty?)
     end
 
+    # Check MASTER and the target's dependency tree before repair.
+    def paths_for(root, target)
+      base = File.expand_path(root)
+      absolute = File.expand_path(target, base)
+      return tracked(root) if absolute == base || !absolute.start_with?("#{base}/")
+
+      scope = absolute.delete_prefix("#{base}/")
+      scope = "RAILS" if scope.start_with?("RAILS/")
+      tracked(root).select do |path|
+        ["MASTER", scope].any? { |prefix| path == prefix || path.start_with?("#{prefix}/") }
+      end
+    end
+
     def failures(root, paths = tracked(root))
       paths.filter_map do |path|
         full = File.join(root, path)
