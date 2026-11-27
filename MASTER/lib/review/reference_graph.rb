@@ -44,7 +44,7 @@ module Master
         attr_reader :definitions, :references, :dynamic_sites
 
         def initialize(file:)
-          @file = file
+          @file = -file
           @namespaces = []
           @methods = []
           @definitions = []
@@ -166,16 +166,17 @@ module Master
         private
 
         def definition(fqn, name, kind, line, owner: nil, singleton: false)
-          { fqn:, name:, kind:, file: @file, line:, owner:, singleton: }
+          { fqn: -fqn, name: -name, kind:, file: @file, line:, owner: owner && -owner, singleton: }
         end
 
         def reference(line, kind, name, receiver: nil, receiver_explicit: false, scope: nil,
                       caller: nil, singleton_scope: false)
-          { from_file: @file, line:, kind:, name:, receiver:, receiver_explicit:, scope:, caller:, singleton_scope: }
+          { from_file: @file, line:, kind:, name: -name, receiver: receiver && -receiver, receiver_explicit:,
+            scope: scope && -scope, caller: caller && -caller, singleton_scope: }
         end
 
         def dynamic_site(line, name, reason)
-          { file: @file, line:, name:, reason: }
+          { file: @file, line:, name: -name, reason: -reason }
         end
 
         def qualify(name)
@@ -726,8 +727,8 @@ module Master
       def edge(from:, to:, type:, weight:)
         @edges << Edge.new(
           type:,
-          from:,
-          to:,
+          from: -from,
+          to: -to,
           weight:,
         )
       end
