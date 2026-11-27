@@ -197,6 +197,8 @@ module Master
       # Files the last run could not scan, read semantically, or finish a stage on, for its scorecard.
       def gap_count = Array(@pass_runner&.gaps&.values).sum(&:size)
 
+      def owns_observation? = true
+
       # What /fix measures with, tried before anything is read: the check run_journaled repeats on entry.
       def instrument_failures = InstrumentCheck.new(root: @root, bus: @bus).broken
 
@@ -692,7 +694,7 @@ module Master
         local = (candidates + discovered).select { |id| Master::Io::LaneHealth.local_model?(id) }
 
         selection.order(local).any? do |id|
-          discovered.include?(id) || selection.alive?(id)
+          Master::Io::LaneState.usable?(id) && (discovered.include?(id) || selection.alive?(id))
         end
       end
 

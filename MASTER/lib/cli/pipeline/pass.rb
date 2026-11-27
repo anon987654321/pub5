@@ -628,7 +628,12 @@ module Master
         @start_dirty = repo_git.changed_paths
       end
       run_aesthetic = aesthetic && posture[:scan_profile].to_s != "full"
-      sections = [observe_section(title: "observe", unit: "obs0", shell:, aesthetic: run_aesthetic)]
+      kernel_observes = @apply && @fix_loop.respond_to?(:owns_observation?) && @fix_loop.owns_observation?
+      sections = if kernel_observes
+                   [["observe", "repair lifecycle owns observation; no duplicate scan"]]
+                 else
+                   [observe_section(title: "observe", unit: "obs0", shell:, aesthetic: run_aesthetic)]
+                 end
       if critique && !(@only && !@only.include?("critique"))
         sections << critique_section(resolved, shell)
       end
@@ -649,7 +654,11 @@ module Master
       unproven = repair_unproven(changes)
       return sections << ["proof", unproven] if unproven
 
-      sections << reobserve_section(before:, resolved:, shell:, aesthetic: run_aesthetic)
+      if kernel_observes
+        sections << ["re-observe", "repair lifecycle owns re-observation; separate final proof follows if changes were delivered"]
+      else
+        sections << reobserve_section(before:, resolved:, shell:, aesthetic: run_aesthetic)
+      end
       return sections << ["proof", NOTHING_DELIVERED] if nothing_delivered?(before)
 
       sections << proof_section(resolved, baseline)

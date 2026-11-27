@@ -238,6 +238,32 @@ class TestPipeline < Minitest::Test
     Master::Ops::LoopOwner.release
   end
 
+  def test_write_pass_leaves_observation_to_the_repair_lifecycle
+    pass = Master::CLI::Pipeline::Pass.allocate
+    loop_stub = Object.new
+    loop_stub.define_singleton_method(:owns_observation?) { true }
+    pass.instance_variable_set(:@fix_loop, loop_stub)
+    pass.instance_variable_set(:@apply, true)
+    pass.define_singleton_method(:proof_baseline) { |_| :baseline }
+    pass.define_singleton_method(:repo_git) { Struct.new(:changed_paths).new([]) }
+    pass.define_singleton_method(:git) { Struct.new(:head).new("before") }
+    pass.define_singleton_method(:log_phase) { |*, &block| block.call }
+    pass.define_singleton_method(:run_fix) { |_| "DONE: clean" }
+    pass.define_singleton_method(:changes_section) { |_| "verified change" }
+    pass.define_singleton_method(:repair_unproven) { |_| nil }
+    pass.define_singleton_method(:nothing_delivered?) { |_| false }
+    pass.define_singleton_method(:proof_section) { |_, baseline| ["proof", baseline] }
+    pass.define_singleton_method(:put_back_autofix) {}
+    forbidden = ->(**) { flunk "duplicate observation" }
+    pass.stub(:observe_section, forbidden) do
+      pass.stub(:reobserve_section, forbidden) do
+        sections = pass.send(:fix_sections, resolved: "RAILS", shell: "RAILS", posture: {}, aesthetic: true, critique: false)
+        assert_equal %w[observe repair changes re-observe proof], sections.map(&:first)
+        assert_equal ["proof", :baseline], sections.last
+      end
+    end
+  end
+
   def test_fix_loop_receives_the_same_validated_task_contract_in_keyword_and_thread_scope
     contract = Master::Fix::TaskContract.build(
       intent: "functional_change",

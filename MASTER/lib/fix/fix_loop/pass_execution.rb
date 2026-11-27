@@ -270,6 +270,25 @@ module Master
             return cancellation_terminal
           end
 
+          visual_ran = false
+          if @visual_groups_pending && %i[continue clean plateau blockers_cleared].include?(result.status)
+            if deadline.expired? || RunBudget.stopping
+              @run_journal.pass_finish(run_id, pass, status: result.status, message: result.message)
+              return RunBudget.pass_boundary(pass) || timed_out(i, pass, budget_seconds)
+            end
+
+            @visual_groups_pending = false
+            RunBudget.current&.phase!("visual groups", target:)
+            run_visual_lane(target)
+            visual_ran = true
+            if cancellation_requested? || RunBudget.stopping
+              @run_journal.pass_finish(run_id, pass, status: result.status, message: result.message)
+              return cancellation_terminal if cancellation_requested?
+
+              return RunBudget.pass_boundary(pass) || timed_out(i, pass, budget_seconds)
+            end
+          end
+
           structural = structural_repair?(result, files:, target:, state:, run_id:, pass:)
           plan_changed = if @fix_plan
                            refresh_fix_plan!(
@@ -279,12 +298,13 @@ module Master
                          else
                            false
                          end
+          @reachability.verify!(target, files:, subset: CheckFocus.blockers?) if visual_ran
           if plan_changed
             state[:consecutive_clean] = 0
             state[:history].clear
             state[:seen_snapshots].clear
             state[:recurring_violations].clear
-            if PASS_ENDINGS[result.status] == :done
+            if PASS_ENDINGS[result.status] == :done || (visual_ran && result.status == :plateau)
               result = PassResult.new(
                 status: :continue, consecutive_clean: 0,
                 message: "source generation changed; fresh observation required"
