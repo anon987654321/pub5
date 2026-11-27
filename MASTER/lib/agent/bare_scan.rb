@@ -35,10 +35,40 @@ module Master
           files = discover(path)
           validate_files!(path, files)
 
+          output = observe(path:, options:, corpus:, files:)
+          emit_results(output, options[:format], path, corpus, files, output.fetch(:findings), output.fetch(:elapsed_s))
+          output.fetch(:findings).empty? ? 0 : 1
+        end
+
+        def observe(path:, options:, corpus:, files:)
           findings, elapsed = scan_files(corpus, files, options[:laws])
-          output = result_payload(path, options, corpus, files, findings, elapsed)
-          emit_results(output, options[:format], path, corpus, files, findings, elapsed)
-          findings.empty? ? 0 : 1
+          result_payload(path, options, corpus, files, findings, elapsed)
+        end
+
+        def lexical_critique(path, root:)
+          root = File.realpath(root)
+          target = File.realpath(File.expand_path(path, root))
+          raise ArgumentError, "critique target must be in a governed tree" unless governed_path?(target, root)
+
+          files = discover(target)
+          raise ArgumentError, "critique requires readable files" if files.empty?
+          unless files.all? { |file| governed_path?(File.realpath(file), root) }
+            raise ArgumentError, "critique scope contains a file outside governed trees"
+          end
+
+          options = { corpus: DEFAULT_CORPUS, laws: nil }
+          result = observe(path: target, options:, corpus: load_corpus(DEFAULT_CORPUS), files:)
+          result.merge(command: "critique", scope: "lexical", semantic: "NOT_RUN", visual: "NOT_RUN", council: "NOT_RUN")
+        rescue Errno::ENOENT, Errno::EACCES, Errno::ELOOP
+          raise ArgumentError, "critique target is missing or unreadable"
+        end
+
+        def governed_path?(path, root)
+          return false unless path.start_with?(root + File::SEPARATOR)
+
+          tree, *segments = path.delete_prefix(root + File::SEPARATOR).split(File::SEPARATOR)
+          %w[MASTER RAILS OPENBSD STUDIO BIZ].include?(tree) &&
+            segments.none? { |segment| %w[.git .master .bundle].include?(segment) }
         end
 
         def parse_options(argv)

@@ -263,7 +263,7 @@ HELP_USAGE = <<~HELP
     bin/master -p "<goal>" --output-format json [--model ID] [--permission-mode plan] [--allowedTools "Read Edit"]
     bin/master core [--root PATH] [--max-turns N] [--real [--model ID]] GOAL
     bin/master --fix-context [target] [--full|--contract-only]
-    bin/master --agent-jsonl help | laws [ID]
+    bin/master --agent-jsonl help | laws [ID] | critique --lexical PATH
     bin/master --tts-local < text.txt > audio
     bin/master replay <sequence>
     bin/master --daemon

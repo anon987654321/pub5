@@ -115,6 +115,7 @@ module Master
           command, *args = argv
           event = ->(type, payload) { io.puts(JSON.generate(schema: 1, event: type, command:, payload:)) }
           event.call("command.started", {})
+          status = "COMPLETE"
           case command
           when "help"
             raise ArgumentError, "help takes no arguments" unless args.empty?
@@ -127,11 +128,18 @@ module Master
             raise ArgumentError, "unknown Law ID: #{args.first}" unless result
 
             payload = { source: "MASTER/data/laws.yml", input_fingerprint: index.fetch("input_fingerprint"), result: }
+          when "critique"
+            unless args.length == 2 && args.first == "--lexical" && !args.last.start_with?("-")
+              raise ArgumentError, "usage: critique --lexical PATH"
+            end
+            require_relative "bare_scan"
+            payload = BareScan.lexical_critique(args.last, root: repo_root)
+            status = "INCONCLUSIVE"
           else
-            raise ArgumentError, "JSONL supports help and laws; other commands are not yet migrated"
+            raise ArgumentError, "JSONL supports help, laws and lexical critique; other commands are not yet migrated"
           end
           event.call("command.result", payload)
-          event.call("command.finished", { status: "COMPLETE" })
+          event.call("command.finished", { status: })
           0
         rescue ArgumentError => error
           event.call("command.failed", { status: "NOT_RUN", reason: error.message })
@@ -174,6 +182,7 @@ module Master
           {
             surface: "bin/master <command> - the zero-dependency agent tier (stdlib only)",
             commands: COMMANDS.keys,
+            jsonl_commands: ["help", "laws [ID]", "critique --lexical PATH"],
             forms: {
               "scan --bare PATH" => "lexical law corpus over PATH, JSON findings, no bundle",
               "laws [--json ID]" =>

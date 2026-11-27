@@ -114,6 +114,35 @@ module Master
         end
       end
 
+      def test_jsonl_lexical_critique_reports_partial_evidence
+        io = StringIO.new
+        path = "MASTER/lib/agent/agent_cli.rb"
+        assert_equal 0, CLI.run_jsonl(["critique", "--lexical", path], io:)
+        events = io.string.lines.map { |line| JSON.parse(line) }
+        report = events[1].fetch("payload")
+        assert_equal "lexical", report.fetch("scope")
+        assert_equal 1, report.fetch("files_scanned")
+        %w[semantic visual council].each { |stage| assert_equal "NOT_RUN", report.fetch(stage) }
+        assert_equal "INCONCLUSIVE", events.last.dig("payload", "status")
+      end
+
+      def test_lexical_critique_reuses_scan_and_refuses_escaped_scope
+        Dir.mktmpdir do |root|
+          tree = File.join(root, "MASTER")
+          FileUtils.mkdir_p(tree)
+          path = File.join(tree, "bad.rb")
+          source = scan_corpus.laws.fetch("NO_PUTS").fetch(:builder).meta[:bad]
+          File.write(path, source)
+          result = BareScan.lexical_critique("MASTER/bad.rb", root:)
+          assert_equal scan_corpus.scan_file(path), result.fetch(:findings)
+          assert_equal source, File.read(path)
+          File.write(File.join(root, "outside.rb"), source)
+          File.symlink(File.join(root, "outside.rb"), File.join(tree, "escape.rb"))
+          assert_raises(ArgumentError) { BareScan.lexical_critique("MASTER/escape.rb", root:) }
+          assert_raises(ArgumentError) { BareScan.lexical_critique("MASTER", root:) }
+        end
+      end
+
       def test_read_only_jsonl_refuses_mutating_and_unmigrated_commands
         [%w[laws --reindex], %w[critique MASTER], %w[fix --apply MASTER]].each do |argv|
           io = StringIO.new
