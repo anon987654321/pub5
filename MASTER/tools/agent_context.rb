@@ -238,7 +238,8 @@ module Operator
 
     def authority_lines
       authority = source_authority.map { |row| row.fetch("id") }.join(" > ")
-      ["Source authority (highest first): #{authority}", "MASTER conduct in force (law/practice.rb):"]
+      ["Source authority (highest first): #{authority}",
+       "MASTER conduct summaries (full conduct: ruby MASTER/tools/agent_context.rb --json):"]
     end
 
     def conduct_lines

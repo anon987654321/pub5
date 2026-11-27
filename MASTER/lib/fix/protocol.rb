@@ -548,7 +548,7 @@ end
             "laws" => law_rows.size,
             "registry" => registry_count,
           },
-          "laws" => full ? law_rows : law_rows.map { |entry| entry.slice("id", "severity", "mode", "languages", "question", "fix", "enforcement", "fix_strategy", "verify_strategy") },
+          "laws" => full ? law_rows : law_rows.map { |entry| compact_law_entry(entry) },
           "detector_matrix" => detector_matrix,
           "detector_summary" => ProtocolDetectorMatrix.summary(detector_matrix),
           "assessment_contract" => FourStreamAssessment.contract,
@@ -557,6 +557,13 @@ end
           "four_stream_law_coverage" => four_stream_law_coverage(laws),
         }
         JSON.pretty_generate(payload)
+      end
+
+      def compact_law_entry(entry)
+        row = entry.slice("id", "severity", "mode", "languages", "question", "fix",
+                          "enforcement", "fix_strategy", "verify_strategy")
+        row["practice"] = entry["practice"] unless entry["practice"].to_s.empty?
+        row
       end
 
       def integration_contract
@@ -617,6 +624,7 @@ end
           verification strategy: #{entry["verify_strategy"]}
           question: #{entry["question"].to_s}
           fix guidance: #{entry["fix"].to_s}
+          #{entry["practice"].to_s.empty? ? "" : "conduct guidance: #{entry["practice"]}"}
           forbidden example: #{entry["bad"].to_s}
           compliant example: #{entry["good"].to_s}
 

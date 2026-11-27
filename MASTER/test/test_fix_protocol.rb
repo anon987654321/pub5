@@ -72,6 +72,20 @@ class TestFixProtocol < Minitest::Test
     end
   end
 
+  def test_compact_protocol_retains_complete_conduct_without_full_fixtures
+    require File.join(Master::ROOT, "law", "definition") unless defined?(::Law)
+    ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
+
+    protocol = Master::Fix::Protocol
+    law = ::Law.definitions.fetch(:PRESERVE_FIRST)
+    entry = protocol.law_entry(law)
+    compact = protocol.compact_law_entry(entry)
+    assert_equal law.practice, compact.fetch("practice")
+    refute compact.key?("bad")
+    assert_includes protocol.law_prompt(law), law.practice
+    refute protocol.compact_law_entry({ "id" => "SAMPLE", "practice" => "" }).key?("practice")
+  end
+
   def test_practice_laws_name_full_source_docs_and_verified_checkpoint_contracts
     require File.join(Master::ROOT, "law", "definition") unless defined?(::Law)
     ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
@@ -147,6 +161,10 @@ class TestFixProtocol < Minitest::Test
       assert_equal "ruby", application.fetch("language")
       assert_includes application.fetch("governing_laws"), "SINGULARITY"
       assert_includes application.fetch("executable_laws"), "FROZEN_STRING_LITERAL"
+
+      conduct = payload.fetch("laws").find { |row| row.fetch("id") == "PRESERVE_FIRST" }
+      assert_equal Master.laws_document.fetch("PRESERVE_FIRST").fetch("statement"),
+                   conduct.fetch("practice")
     end
   end
 
