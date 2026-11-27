@@ -45,6 +45,9 @@ APPLICATION_IS_UNIFORM:
     path reach. An inapplicable Law is not a pass or an exemption; it is an
     explicit applicability outcome. No path or file kind may silently remove
     an artifact from the review population.
+    Review the constitution, its detectors and fixtures by the same Laws. Check
+    literal compliance and intended effect; syntax that defeats a Law's purpose
+    fails semantic review.
   root: visible_state
   severity: error
   resolution: never
@@ -77,7 +80,11 @@ APPLICATION_IS_UNIFORM_constitution_self_governed:
 TRUTHFUL_STATUS:
   node: truthful_status
   question: "What proves the claim?"
-  statement: "Report observed state, not intent. Support claims with evidence of the right class."
+  statement: >
+    Report observed state, not intent. Support claims with evidence of the right class.
+    Distinguish a hypothesis, proposal, attempt, measurement and verified
+    delivery. State the problem, evidence and cost of doing nothing before
+    choosing a consequential repair.
   severity: error
   resolution: never
   mechanical: Master::Law::Interface#capability_status
@@ -361,6 +368,10 @@ ROBUSTNESS_homeostasis:
     healthy, authorised and compatible provider within bounded retry and
     resource budgets. When no eligible provider answers, it preserves
     resumable mission state and reports the unrecovered remainder explicitly.
+    Keep the last independently verified state and its revision, scope, evidence
+    and pending work recoverable. Reject regressions and restore that state
+    within authorized scope; never restart from a worse state or discard context
+    silently.
   resolution: review
 
 ROBUSTNESS_morphological_exploration:
@@ -372,6 +383,12 @@ ROBUSTNESS_morphological_exploration:
     cost. A single linear proposal that has not been compared with
     alternatives is weaker evidence than a scored morphological set.
     Exploration without a pruning rule or antigen memory is waste.
+    For consequential /fix choices, generate 10–50 genuinely different
+    alternatives within the budget; structural candidate maps retain their
+    declared minimum of 15 when defensible. Include retaining the current state,
+    challenge assumptions, compare costs, risks and benefits, and combine the
+    strongest compatible elements. Record rejected alternatives and reasons;
+    report a shortfall rather than inventing candidates.
   resolution: review
 
 ROBUSTNESS_antigen_memory:
@@ -384,6 +401,9 @@ ROBUSTNESS_antigen_memory:
     classes at the same high-risk boundary, then down-weight or refuse them
     unless new evidence shows the pattern is resolved. Recognition without
     durable memory, or memory that is never consulted, is incomplete robustness.
+    When progress stalls, change approach rather than repeating the same failed
+    move. Record the alternative and outcome; stop at the authorized limit or
+    measured plateau, not at a promise of perfection.
   resolution: review
 
 ROBUSTNESS_sclerotium:
@@ -883,7 +903,13 @@ OPERATOR_RENDERED_semantic_motion:
 INTER_MODEL_CONTRACT:
   node: inter_model_contract
   question: "Can the recipient verify this finding?"
-  statement: "Use validated structured requests and evidence-backed findings in every council turn."
+  statement: >
+    Use validated structured requests and evidence-backed findings in every council turn.
+    For consequential decisions, specialists independently challenge evidence,
+    exchange objections and revised proposals, and synthesize the strongest
+    compatible parts by evidence. Challenge confirmation, anchoring,
+    availability, recency, sunk cost, optimism, overconfidence, authority and
+    bandwagon bias. A veto is not outvoted by an aggregate score.
   severity: error
   resolution: never
   mechanical: Master::Law::InterModel#contract
@@ -1355,6 +1381,9 @@ KISS:
     line counts. A shallow wrapper, decorative container or configuration
     section must earn its boundary; flatten it when no capability or
     contract is lost.
+    Treat numerical complexity, duplication and size as diagnostic signals, not
+    proof that a shorter implementation is better. Compare the whole dependency
+    and reader burden before and after.
   severity: warning
   resolution: review
   mechanical: composite (BOUNDED_LOAD, DENSITY, YAGNI)
@@ -2041,6 +2070,10 @@ BOUNDED_LOAD:
   statement: >
     Never exceed what the reader can hold at once. Capacity is a
     property of people, not of the design.
+    Bound context, recursion, retries and iteration. Keep goals, constraints,
+    decisions, sources and unresolved evidence recoverable across context
+    compaction. Never sacrifice required source or evidence for an appearance of
+    concision.
   severity: warning
   resolution: review
   mechanical: Master::Law::Structural#bounds
@@ -2307,6 +2340,11 @@ STEWARDSHIP:
   statement: >
     A change leaves what it touched better, and answers to what was
     already there. Nobody arrives at an empty site.
+    State the problem and baseline, examine alternatives, design and implement
+    the smallest justified improvement, validate against the baseline, deliver
+    verified work and codify demonstrated lessons in their existing owner. Each
+    phase consumes evidence from the preceding phase; a failed prerequisite
+    blocks its dependent step.
   severity: warning
   resolution: review
   mechanical: Master::Law::Stewardship#all
@@ -2329,6 +2367,14 @@ PRESERVE_FIRST:
     Preserve working behavior, meaning and deliberate choices before improving.
     Develop the whole through transformations that strengthen existing relationships.
     Compare materially different alternatives and retain demonstrated lessons.
+    Read the complete target and relevant callers, loaders, dependencies,
+    configuration, tests and public contracts before planning or mutation.
+    Record inventory, revision, content digests and completeness; excerpts and
+    failed reads are not evidence of understanding. Repository-wide MASTER
+    rewrites require a complete MASTER source inventory and read receipt.
+    Missing required reads block affected work, not independent work. Account
+    for every capability, invariant and contract before and after; compress
+    representation without compressing behavior or weakening enforcement.
   resolution: review
 
 PRESERVE_FIRST_media_provenance:
@@ -2373,6 +2419,57 @@ DO_THE_WORK_NOW:
   resolution: review
   mechanical: human
   semantic: human
+
+SCAN_SWEEP_CONVERGENCE:
+  parent: STEWARDSHIP
+  statement: >
+    Measure the baseline, repair actionable findings, re-observe the same
+    measures and repeat within the authorized budget. A fresh complete scan with
+    no actionable findings proves convergence; a round with no verified gain
+    proves only a plateau. Try a materially different approach when evidence
+    warrants it, retain the best verified state and stop at the applicable
+    terminal condition. Record remaining findings, unmeasured surfaces, failures
+    and blockers; never relabel them DONE.
+  resolution: review
+
+COUNCIL_WHEN_RISKY:
+  parent: ROBUSTNESS
+  statement: >
+    Use the existing council on risky changes and material multi-file decisions.
+    Challenge proposals from security, maintenance, architecture, simplicity,
+    performance, cost, novice comprehension, user needs, skepticism and failure
+    perspectives as applicable. Let specialists exchange counterarguments before
+    synthesis. Require the actual security review and honor its veto; an absent
+    review is not approval.
+  resolution: review
+
+BE_CONCISE:
+  parent: DENSITY
+  statement: >
+    Give the shortest complete result. Never truncate requested code, source,
+    diffs, artifacts or required evidence; use explicit boundaries or a complete
+    artifact when the delivery medium is limited. Keep decisive evidence,
+    uncertainties, failures, risks and approvals visible.
+  resolution: review
+
+LINT_BEAUTIFY:
+  parent: STEWARDSHIP
+  statement: >
+    On editing a file, inspect and lint its complete current body, correct
+    in-scope incidental defects and preserve behavior and meaningful comments.
+    Verify no new smells, regressions or unaccounted complexity; a clean changed
+    line does not prove a clean file.
+  resolution: review
+
+OPERATOR_AUTONOMY:
+  parent: STEWARDSHIP
+  statement: >
+    Carry an explicitly authorized direction through independent reversible
+    changes and verified delivery checkpoints without per-file approval. Stay
+    inside admitted scope, resource budget and authority; never infer consent to
+    disclosure, spending, destructive remote operations or unrelated mutation.
+    Ask only at a real unresolved authority or material product decision.
+  resolution: review
 
 # 6. THE TRANSFORMATIONS
 
@@ -2419,6 +2516,10 @@ RADICAL_STRUCTURE:
     and census contracts not explicitly suspended for the session are
     honoured or updated in the same change, and the suspended constraints
     are named in that receipt and expire with the session.
+    Compression and consolidation may remove redundancy, never a functional
+    capability, safety boundary, evidence gate or meaningful distinction. Keep
+    original behavior and enforcement coverage traceable through the receipt;
+    fewer files alone do not prove improvement.
   severity: warning
   resolution: review
   after: [MERGE]
