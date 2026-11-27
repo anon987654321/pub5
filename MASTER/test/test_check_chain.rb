@@ -394,6 +394,30 @@ class TestCheckChain < Minitest::Test
     end
   end
 
+  def test_pre_repair_ratchet_deadline_preserves_final_proof
+    timeouts = []
+    child = ->(*, timeout_s:, **) { timeouts << timeout_s; [false, ["timeout"], 124] }
+    G.stub(:child_timeout_s, 1800) do
+      G.stub(:capture, child) do
+        assert_equal 3, G.measure_ratchets([], pre_repair: true).last
+        assert_equal 124, G.measure_ratchets([], pre_repair: false).last
+      end
+    end
+    assert_equal [90, 1800], timeouts
+  end
+
+  def test_incomplete_baseline_is_not_cached
+    previous = G.instance_variable_get(:@last_results)
+    G.instance_variable_set(:@last_results, [
+      G::Result.new(stage: "ratchets", state: "skipped", summary: "timeout", changed: [], body: [])
+    ])
+    G.stub(:write_baseline, ->(*) { flunk "incomplete baseline cached" }) do
+      assert_empty G.persist_pre_repair_baseline(key: "test", selected: [], status: 3, changed: [])
+    end
+  ensure
+    G.instance_variable_set(:@last_results, previous)
+  end
+
   def test_pre_repair_baseline_names_its_read_only_phase_and_subsequent_repair
     stage = G::Stage.new(name: "lexical", purpose: "measurement", mutates: false, run: -> {})
     captured = nil
