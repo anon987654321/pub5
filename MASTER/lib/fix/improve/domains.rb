@@ -61,7 +61,9 @@ module Master
           domains = scoped.flat_map { |path| domains_for(path) }.uniq
           domains.flat_map do |domain|
             candidates = scoped.select { |path| domains_for(path).include?(domain) }
-            implementations.fetch(domain).call(root:, files: candidates.first(400))
+            candidates.each_slice(400).flat_map do |batch|
+              implementations.fetch(domain).call(root:, files: batch)
+            end
           end.sort_by { |opportunity| -opportunity.leverage }
         end
 
@@ -247,6 +249,7 @@ module Master
 
             if markdown
               findings.concat(scan_markdown_links(root:, path:, source:))
+              findings.concat(scan_reading_order(path, heading_rows)) if navigational
             end
 
             generic_link = source.match(/\[([^\]]+)\]\([^)]+\)/)
@@ -316,10 +319,47 @@ module Master
         end
 
         def markdown_headings(source)
+          fence = nil
           source.each_line.with_index.filter_map do |line, index|
-            match = line.match(/^\s*(\#{1,6})\s+\S/)
-            { level: match[1].length, line: index + 1 } if match
+            if (marker = line.match(/\A {0,3}(\x60{3,}|~{3,})/))
+              token = marker[1]
+              if fence
+                fence = nil if token[0] == fence[0] && token.length >= fence.length &&
+                  line.strip.match?(/\A(?:\x60+|~+)\z/)
+              else
+                fence = token
+              end
+              next
+            end
+            next if fence
+
+            match = line.match(/\A {0,3}(\#{1,6})[ \t]+(\S.*?)\s*\z/)
+            { level: match[1].length, line: index + 1, title: match[2] } if match
           end
+        end
+
+        # Only compare peer sections with explicit roles; a chapter sequence
+        # or a nested procedure may depend on its existing order.
+        def scan_reading_order(path, headings)
+          supporting = /\A(?:implementation details|internals|appendix|changelog|change log|history)\b/i
+          essential = /\A(?:overview|purpose|summary|quick start|quickstart|getting started|usage)\b/i
+          details = {}
+          headings.each do |row|
+            level = row.fetch(:level)
+            details.delete_if { |depth, _| depth > level }
+            title = row.fetch(:title)
+            details[level] ||= row if title.match?(supporting)
+            next unless title.match?(essential) && details[level]
+
+            earlier = details.fetch(level)
+            return [opportunity(
+              :prose, path, "importance_reflow",
+              "#{title.inspect} follows #{earlier.fetch(:title).inspect} at the same heading level",
+              7.0, "Move governing purpose and immediate usage before supporting detail if section dependencies permit. Preserve complete sections, links, anchors, examples and required procedure order.",
+              line: row.fetch(:line)
+            )]
+          end
+          []
         end
 
         def html_headings(source)

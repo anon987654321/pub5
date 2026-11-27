@@ -96,6 +96,25 @@ class TestImproveEngine < Minitest::Test
     assert findings.any? { |row| row[:message].include?("generic_link_text") }, findings.inspect
   end
 
+  def test_reflow_finds_late_overview_but_not_a_fenced_example
+    path = write("docs/guide.md", "# Guide\n\n## Internals\n\nDetails.\n\n## Overview\n\nPurpose.\n")
+    domains = Master::Fix::Improve::Domains
+    reflow = domains.scan(root: @root, files: [path]).find { |item| item.signal == "importance_reflow" }
+    refute_nil reflow
+    assert_equal 7, reflow.line
+
+    fenced = write("docs/example.md", "# Guide\n\n~~~markdown\n## Internals\n## Overview\n~~~\n")
+    refute domains.scan(root: @root, files: [fenced]).any? { |item| item.signal == "importance_reflow" }
+  end
+
+  def test_polish_scan_reaches_files_beyond_the_first_batch
+    files = 400.times.map { |i| write("lib/example_#{i}.js", "const x = 1;\n") }
+    last = write("lib/last.js", "window.alert('important');\n")
+    findings = Master::Fix::Improve::Domains.scan(root: @root, files: files + [last])
+
+    assert findings.any? { |item| item.path == last && item.signal == "native_dialog" }
+  end
+
   def test_html_image_and_icon_controls_need_accessible_names
     FileUtils.mkdir_p(File.join(@root, "docs", "views"))
     path = write("docs/views/index.html.erb",
