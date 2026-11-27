@@ -72,6 +72,11 @@ module Master
       # filtered index rather than maintaining a second, weaker copy of those
       # provider-specific rules here.
       def keyless_slug?(id, cfg)
+        if id.start_with?("gateway:")
+          endpoint = hosted_endpoint_for(id, cfg:)
+          return endpoint && endpoint[:key].nil?
+        end
+
         lane = cfg.dig("openai_compatible", provider(id))
         return false unless lane.is_a?(Hash) && lane["keyless"].is_a?(Hash)
 
@@ -475,7 +480,7 @@ module Master
         # A `gateway:` id now also sits in the declared tiers, so the answer is the URL's presence,
         # never the generic any-key floor below (which would call it alive on a machine with an
         # unrelated provider key and no gateway configured).
-        return !ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip.empty? if id.start_with?("gateway:")
+        return ENV["MASTER_GATEWAY_MODE"] == "oxllm" || !ENV["MASTER_LLM_GATEWAY_URL"].to_s.strip.empty? if id.start_with?("gateway:")
 
         envs = api_key_envs_for(id)
         envs ? envs.any? { |env| Master.api_key_present?(env) } : Master.any_api_key_present?
