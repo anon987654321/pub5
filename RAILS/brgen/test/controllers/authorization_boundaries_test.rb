@@ -35,7 +35,7 @@ class AuthorizationBoundariesTest < ActionDispatch::IntegrationTest
 
   def admin_email = ENV.fetch("BRGEN_ADMIN_EMAIL", "admin@brgen.no")
 
-  # --- moderation panel -----------------------------------------------------
+  # moderation panel
 
   test "the moderation queue turns away a signed-in non-admin" do
     ActsAsTenant.with_tenant(@city) do
@@ -108,7 +108,7 @@ class AuthorizationBoundariesTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
-  # --- blocks ---------------------------------------------------------------
+  # blocks
 
   test "blocking a user records it" do
     ActsAsTenant.with_tenant(@city) do

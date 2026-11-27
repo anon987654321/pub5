@@ -72,7 +72,7 @@ class ScaleLintTest < Minitest::Test
                  "one surface is exempt from a kind the other is measured on, which is how they diverge"
   end
 
-  # --- one scale, two surfaces --------------------------------------------
+  # one scale, two surfaces
 
   # The reason the face is in the corpus at all. MASTER's web face and the three
   # Rails apps are one family: design_tokens.yml already generates the face's
@@ -103,7 +103,7 @@ class ScaleLintTest < Minitest::Test
                  "the face's spacing drift moved; the baseline is the record of it"
   end
 
-  # --- the scale itself ---------------------------------------------------
+  # the scale itself
 
   def test_the_declared_scale_is_a_scale
     assert_equal LINT.space_px.sort, LINT.space_px, "the space scale is not in order"
@@ -143,7 +143,7 @@ class ScaleLintTest < Minitest::Test
     end
   end
 
-  # --- the instrument -----------------------------------------------------
+  # the instrument
   #
   # Verify the instrument before the finding: every wrong number this lint has
   # produced so far came from the tokeniser, not from the tree.
@@ -256,7 +256,7 @@ class ScaleLintTest < Minitest::Test
                  "an opted-out line still reported"
   end
 
-  # --- line-height --------------------------------------------------------
+  # line-height
 
   def test_an_absolute_line_height_is_reported_as_its_own_kind
     found = LINT.check_line_height("a.scss", 1, "line-height", "28px")
@@ -278,7 +278,7 @@ class ScaleLintTest < Minitest::Test
     assert_empty LINT.check_line_height("a.scss", 1, "line-height", "var(--line-relaxed)")
   end
 
-  # --- radius -------------------------------------------------------------
+  # radius
 
   def test_a_percentage_radius_is_a_shape_not_a_step
     ["50%", "100%", "50% 50%"].each do |value|
@@ -291,7 +291,7 @@ class ScaleLintTest < Minitest::Test
     assert_empty LINT.check_radius("a.scss", 1, "border-radius", "0 !important")
   end
 
-  # --- reporting ----------------------------------------------------------
+  # reporting
 
   # A finding that says only "wrong" costs the reader the arithmetic. The whole
   # value of a scale lint is that the right answer is computable.

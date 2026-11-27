@@ -100,7 +100,7 @@ module GoogleEnhancedConversions
       event
     end
 
-    # --- Hashing (Google rules) ------------------------------------------------
+    # Hashing (Google rules)
 
     def normalize_and_hash(str)
       Digest::SHA256.hexdigest(str.to_s.strip.downcase)

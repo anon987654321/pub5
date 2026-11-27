@@ -26,7 +26,7 @@ class StripeClientTest < ActiveSupport::TestCase
     stripe_restore_http!
   end
 
-  # --- Mock mode (the demo/dev contract) --------------------------------------
+  # Mock mode (the demo/dev contract)
 
   test "mock init fills session id, url and authorised without network" do
     assert StripeClient.mock_mode?
@@ -141,7 +141,7 @@ class StripeClientTest < ActiveSupport::TestCase
     assert_equal "captured", @order.reload.payment_state
   end
 
-  # --- Webhook signature --------------------------------------------------------
+  # Webhook signature
 
   test "verify_signature! accepts a correctly signed payload" do
     ENV["STRIPE_WEBHOOK_SECRET"] = "whsec_test"

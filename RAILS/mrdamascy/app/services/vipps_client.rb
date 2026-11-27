@@ -47,7 +47,7 @@ class VippsClient
     # runs on a singleton class, so its lazily-created ivar is a trap).
     TOKEN_MUTEX = Thread::Mutex.new
 
-    # --- Payment lifecycle ---------------------------------------------------
+    # Payment lifecycle
 
     # Reserve ("initiate") a payment for the order: fills vipps_order_id
     # (the ePayment reference) and vipps_url, returns true.
@@ -178,7 +178,7 @@ class VippsClient
       )
     end
 
-    # --- Mode & configuration -------------------------------------------------
+    # Mode & configuration
 
     # Vipps Login userinfo returns "4790000004"; our users live as 8-digit
     # Norwegian locals (SessionsController + OTP do the same). Normalising
@@ -196,7 +196,7 @@ class VippsClient
 
     private
 
-    # --- Real payment plumbing -----------------------------------------------
+    # Real payment plumbing
 
     def init_real_payment!(order)
       payload = {
@@ -268,7 +268,7 @@ class VippsClient
       digits.start_with?("47") ? digits : "47#{digits}"
     end
 
-    # --- Access token (cached in-process, mutex-guarded) ----------------------
+    # Access token (cached in-process, mutex-guarded)
 
     TOKEN_SLACK = 120 # seconds before real expiry we consider the token stale
 
@@ -293,7 +293,7 @@ class VippsClient
       end
     end
 
-    # --- Login plumbing --------------------------------------------------------
+    # Login plumbing
 
     def login_base
       api_base
@@ -303,7 +303,7 @@ class VippsClient
       env!(key)
     end
 
-    # --- HTTP core (the one seam tests stub) -----------------------------------
+    # HTTP core (the one seam tests stub)
 
     def api_base
       @api_base ||= (ENV["VIPPS_API_BASE"].presence || "https://api.vipps.no").delete_suffix("/")

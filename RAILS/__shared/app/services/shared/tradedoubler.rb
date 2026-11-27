@@ -72,7 +72,7 @@ module Shared
         ENV.fetch("TRADEDOUBLER_IMPORT_MODE", "search") # search | unlimited
       end
 
-      # --- Read path for views -------------------------------------------------
+      # Read path for views
 
       def deals(category: nil, limit: 8)
         stored = stored_deals(category:, limit:)
@@ -154,7 +154,7 @@ expires_in: cache_ttl_for(:search_results)) do
         end
       end
 
-      # --- Feeds ---------------------------------------------------------------
+      # Feeds
 
       def list_feeds
         return [] unless configured?

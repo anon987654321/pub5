@@ -28,7 +28,7 @@ class ForeignKeyDependencyTest < ActiveSupport::TestCase
     @item = Item.create!(user: @user, title: "Wool coat", category: "Outerwear")
   end
 
-  # --- the three that were live 500s ---------------------------------------
+  # the three that were live 500s
 
   test "an outfit that has been worn can be deleted" do
     WearLog.create!(user: @user, item: @item, outfit: @outfit, worn_on: Date.current)
@@ -65,7 +65,7 @@ class ForeignKeyDependencyTest < ActiveSupport::TestCase
     assert PackingList.exists?(list.id), "losing a garment deleted the whole trip"
   end
 
-  # --- the inventory --------------------------------------------------------
+  # the inventory
 
   # Every foreign key whose parent model declares no dependent option. An entry
   # is a statement that someone looked and left it; a gap that is not here is one

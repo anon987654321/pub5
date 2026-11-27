@@ -58,7 +58,7 @@ class WearLogTest < ActiveSupport::TestCase
     assert_equal [ later_entry, yesterday, old ], WearLog.recent.to_a
   end
 
-  # --- the two counters -----------------------------------------------------
+  # the two counters
 
   test "wearing an item writes a log and moves the counter together" do
     @item.update!(times_worn: 2)

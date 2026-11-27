@@ -38,7 +38,7 @@ module Brgen
       Fyllingsdalen Fana Årstad Åsane Arna Ytrebygda
     ].freeze
 
-    # --- TV ----------------------------------------------------------------
+    # TV
 
     TV_CHANNEL_NAMES = [
       "Vestland Nyheter", "Bergen Byliv", "Fjordkanalen", "Studio Nordnes",
@@ -58,7 +58,7 @@ module Brgen
       "Kulturnatt — høydepunkter", "Slik pusser du opp gammelt trehus"
     ].freeze
 
-    # --- Communities ---------------------------------------------------------
+    # Communities
 
     # A name and a description for each community slug the seeders write.
     # The bulk seed wrote "Kultur community for Hoppeton": English copy and a

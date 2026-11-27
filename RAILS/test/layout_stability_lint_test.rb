@@ -51,7 +51,7 @@ class LayoutStabilityLintTest < Minitest::Test
                  "invisible text for up to three seconds, then a reflow"
   end
 
-  # --- the instrument -----------------------------------------------------
+  # the instrument
 
   def test_it_is_reading_both_corpora
     assert_operator LINT.views.size, :>, 300, "the view glob has stopped matching"
@@ -98,7 +98,7 @@ class LayoutStabilityLintTest < Minitest::Test
     assert_match LINT::RESERVING, "contain-intrinsic-size: 0 300px;"
   end
 
-  # --- sizing recognition -------------------------------------------------
+  # sizing recognition
 
   def test_dimensioned_image_helpers_are_not_treated_as_raw_image_tags
     refute_match LINT::MEDIA, 'responsive_image_tag attachment, alt: ""'
@@ -132,7 +132,7 @@ class LayoutStabilityLintTest < Minitest::Test
     refute LINT.sized?('<img src="a.png" class="class-that-does-not-exist-anywhere">')
   end
 
-  # --- transitions --------------------------------------------------------
+  # transitions
 
   def test_a_compositor_only_transition_is_silent
     Dir.mktmpdir do |dir|
@@ -159,7 +159,7 @@ class LayoutStabilityLintTest < Minitest::Test
     assert_empty named, "matched a substring of a longer property name"
   end
 
-  # --- shared conventions -------------------------------------------------
+  # shared conventions
 
   def test_comments_are_not_source
     Dir.mktmpdir do |dir|

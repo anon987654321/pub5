@@ -29,7 +29,7 @@ class RenderedChecksTest < Minitest::Test
     assert_match(/390x844/, result.warnings.first)
   end
 
-  # --- token contrast cross-product ---------------------------------------
+  # token contrast cross-product
 
   def test_token_pairs_matches_light_and_dark_modes_separately
     dialect = {
@@ -69,7 +69,7 @@ class RenderedChecksTest < Minitest::Test
     assert_nil M.suggest_contrast_fix("#808080", "#808080", 21.0)
   end
 
-  # --- geometry autofix selector derivation -------------------------------
+  # geometry autofix selector derivation
 
   A = Deploy::GeometryAutofix
 
@@ -106,7 +106,7 @@ class RenderedChecksTest < Minitest::Test
     refute_includes body, "min-height"
   end
 
-  # --- the generated block ---------------------------------------------------
+  # the generated block
   #
   # The fixes live at the end of the app's one application.scss, between two
   # marker comments. The end is always a legal place for rules, where a @use
@@ -140,7 +140,7 @@ class RenderedChecksTest < Minitest::Test
     assert_empty A.existing_rows(%(.rule { color: red; }\n)), "a stylesheet without a block has no generated rows"
   end
 
-  # --- mutation catalogue --------------------------------------------------
+  # mutation catalogue
 
   GOOD = <<~HTML
     <html><body>
@@ -229,7 +229,7 @@ class RenderedChecksTest < Minitest::Test
     klass.send(:define_method, name, saved)
   end
 
-  # --- surface configuration ----------------------------------------------
+  # surface configuration
 
   def test_surfaces_without_a_host_fall_back_to_loopback
     surface = Deploy::GeometryProbe::Surface.new(

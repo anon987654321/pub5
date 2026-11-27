@@ -75,7 +75,7 @@ class RawSchemaObjectsTest < Minitest::Test
     config[/schema_format\s*=\s*:(\w+)/, 1] || "ruby"
   end
 
-  # --- the inventory ------------------------------------------------------
+  # the inventory
 
   def test_every_raw_object_is_declared_here
     undeclared = APPS.flat_map do |app|
@@ -107,7 +107,7 @@ class RawSchemaObjectsTest < Minitest::Test
     end
   end
 
-  # --- the consequence ----------------------------------------------------
+  # the consequence
 
   # The claim this whole file rests on. If an app ever moves to structure.sql,
   # this fails and the exception for it can go.

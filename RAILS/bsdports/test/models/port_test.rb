@@ -21,7 +21,7 @@ class PortTest < ActiveSupport::TestCase
                    pkgpath: "net/#{name}", version: "1.0" }.merge(overrides))
   end
 
-  # --- validations --------------------------------------------------------
+  # validations
 
   test "a port needs a name, a version and a pkgpath" do
     blank = Port.new(platform: @platform, category: @category)
@@ -67,7 +67,7 @@ class PortTest < ActiveSupport::TestCase
     refute Port.new(platform: @platform, name: "x", pkgpath: "net/x", version: "1").valid?
   end
 
-  # --- dependency edges ---------------------------------------------------
+  # dependency edges
 
   test "dependencies run forwards and backwards from one edge" do
     git = port("git")
@@ -96,7 +96,7 @@ class PortTest < ActiveSupport::TestCase
     assert_empty Dependency.where(port: git).to_a, "a dependency survived the port it pointed at"
   end
 
-  # --- scopes -------------------------------------------------------------
+  # scopes
 
   test "availability scope hides historical package rows without deleting them" do
     current = port("current")
@@ -129,7 +129,7 @@ class PortTest < ActiveSupport::TestCase
     assert_equal result.uniq, result, "a port with two updates appeared twice"
   end
 
-  # --- full-text search ---------------------------------------------------
+  # full-text search
   #
   # ports_fts and its triggers are raw SQL that schema.rb cannot carry;
   # config/application.rb builds them after every schema load, so these run
@@ -216,7 +216,7 @@ class PortTest < ActiveSupport::TestCase
     assert_equal Port.search("curl").to_sql, Port.semantic_search("curl").to_sql
   end
 
-  # --- instance methods ---------------------------------------------------
+  # instance methods
 
   test "latest_update is the newest by commit date rather than by insertion" do
     curl = port("curl")

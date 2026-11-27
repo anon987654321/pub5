@@ -144,7 +144,7 @@ class Order < ApplicationRecord
     delivery_mode == "pickup"
   end
 
-  # --- Money (integer øre everywhere) --------------------------------------
+  # Money (integer øre everywhere)
 
   # PromoApplier's result — { promo:, discount_ore:, delivery_fee_ore: } —
   # lands here; nothing else writes the discount columns.

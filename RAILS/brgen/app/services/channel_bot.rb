@@ -57,7 +57,7 @@ class ChannelBot
     },
   }.freeze
 
-  # --- seating & lifecycle ------------------------------------------------
+  # seating & lifecycle
 
   # Find-or-create the bot User for a handle. City-less, so unscoped.
   def self.bot_for(handle)
@@ -109,7 +109,7 @@ class ChannelBot
     end
   end
 
-  # --- replying -----------------------------------------------------------
+  # replying
 
   # Decide whether a bot answers `message`, and post the reply if so.
   def self.reply_to(message)

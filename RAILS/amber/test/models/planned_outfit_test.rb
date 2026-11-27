@@ -49,7 +49,7 @@ class PlannedOutfitTest < ActiveSupport::TestCase
     assert planned(planned_date: Date.current + 1).valid?
   end
 
-  # --- the two calendar scopes ---------------------------------------------
+  # the two calendar scopes
 
   test "upcoming holds today and the future, in date order" do
     planned(planned_date: Date.current - 1).save!

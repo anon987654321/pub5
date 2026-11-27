@@ -19,7 +19,7 @@ class User < ApplicationRecord
     name.presence || phone
   end
 
-  # --- Sahtein-kortet (loyalty) -------------------------------------------
+  # Sahtein-kortet (loyalty)
   # Ten stamps buy a free wrap; PromoApplier honours >= 9 unredeemed, because
   # the tenth stamp IS the reward.
 

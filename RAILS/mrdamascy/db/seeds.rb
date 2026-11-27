@@ -25,7 +25,7 @@ def ore(kr)
   (kr * 100).to_i
 end
 
-# --- Kitchen (single row) ---------------------------------------------------
+# Kitchen (single row)
 
 kitchen = Kitchen.create!(
   name: "Mr. Damascy — Danmarksplass",
@@ -69,7 +69,7 @@ kitchen = Kitchen.create!(
   )
 end
 
-# --- Menu categories ---------------------------------------------------------
+# Menu categories
 
 category_rows = [
   [ "Wraps & Ruller", "Wraps & Rolls", "wraps",     "🌯", 1 ],
@@ -162,7 +162,7 @@ item_rows.each do |slug, rows|
   end
 end
 
-# --- Item options -------------------------------------------------------------
+# Item options
 # Every wrap: four sauces (all 0 kr), the salatbar (toppings, 0 kr, some on by
 # default) and the paid extras. The İskender gets butter/yoghurt extras; the
 # Boss-boks gets a drink choice (kind extra).
@@ -226,7 +226,7 @@ add_options!(items["Damascy Boss-boks"], [
   [ "Brus i boksen",   "Soft drink in the box", 0, false ]
 ], "extra", start: 1)
 
-# --- Promo codes --------------------------------------------------------------
+# Promo codes
 
 {
   "SAHTEIN10" => [ "percent", 10,   0,      "Første bestilling" ],
@@ -244,7 +244,7 @@ add_options!(items["Damascy Boss-boks"], [
   )
 end
 
-# --- Users ----------------------------------------------------------------------
+# Users
 # OTP mock is fixed at 1234 (SessionsController, APP_SPEC §6) — nothing to seed.
 
 hassan = User.create!(phone: "90000001", name: "Hassan",     role: :admin)

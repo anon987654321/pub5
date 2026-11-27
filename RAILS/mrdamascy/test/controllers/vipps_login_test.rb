@@ -16,7 +16,7 @@ class VippsLoginTest < ActionDispatch::IntegrationTest
     vipps_restore_http!
   end
 
-  # --- Mock mode -------------------------------------------------------------
+  # Mock mode
 
   test "mock vipps_auth bounces to the mock consent page and stores state" do
     get session_vipps_path
@@ -70,7 +70,7 @@ class VippsLoginTest < ActionDispatch::IntegrationTest
     assert_nil User.find_by(phone: "12")
   end
 
-  # --- Real mode (stubbed HTTP) ------------------------------------------------
+  # Real mode (stubbed HTTP)
 
   test "real vipps_auth redirects to the Vipps authorize endpoint" do
     ENV["VIPPS_MOCK"] = "0"

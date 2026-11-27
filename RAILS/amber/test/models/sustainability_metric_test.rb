@@ -46,7 +46,7 @@ class SustainabilityMetricTest < ActiveSupport::TestCase
     assert_nil metric.resale_value, "nil and 0,00 kr are different claims about a garment"
   end
 
-  # --- what it says about the garment ---------------------------------------
+  # what it says about the garment
 
   test "a garment nobody has worn is unused" do
     assert metric.unused?

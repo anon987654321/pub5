@@ -160,7 +160,7 @@ class WoltDriveClient
         customer: { name: order.addressee, phone: order.phone } }
     end
 
-    # --- Shared real-mode plumbing -----------------------------------------
+    # Shared real-mode plumbing
 
     def auth_headers
       {

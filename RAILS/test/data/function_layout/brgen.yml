@@ -2,7 +2,7 @@
 # Target band: 50–200. Source rows always run; live rows run when :38182 is up.
 app: brgen
 checks:
-  # --- chrome / landmarks ---
+  # chrome / landmarks
   - {id: chrome.skip_link, in: brgen/app/views/layouts/application.html.erb, has: [skip-link, 'href="#main-content"']}
   - {id: chrome.main_id, in: brgen/app/views/layouts/application.html.erb, has: ['id="main-content"']}
   - {id: chrome.viewport, in: brgen/app/views/layouts/application.html.erb, has: ["viewport-fit=cover"]}
@@ -26,7 +26,7 @@ checks:
      in: brgen/app/views/shared/_mobile_chrome.html.erb,
      has: [tab-bar, nav.home, nav.explore]}
   - {id: chrome.nav_swiper, in: brgen/app/views/shared/_nav_swiper.html.erb, has: [nav_swiper, nav.primary_nav]}
-  # --- design tokens / layout standards ---
+  # design tokens / layout standards
   - {id: design.tap_min,
      in: __shared/app/assets/stylesheets/_layout_chrome.scss,
      has: ["--tap-min: 44px", "--bar-height: 44px"]}
@@ -36,7 +36,7 @@ checks:
   - {id: design.skip_clip, in: __shared/app/assets/stylesheets/_shell.scss, has: [skip-link]}
   - {id: design.compose_no_requestsubmit,
      in: brgen/app/javascript/controllers/form_submit_controller.js, lack: [".requestSubmit("]}
-  # --- feed / compose ---
+  # feed / compose
   - {id: feed.home_orientation, in: brgen/app/views/home/index.html.erb, has: [data-visitor-orientation]}
   # No city-today rows. The strip went on 2026-08-27 by operator decision --
   # "the city right now IS the feed below" -- and home/index.html.erb says so
@@ -64,7 +64,7 @@ checks:
   - {id: feed.posts_show_comments,
      in: brgen/app/views/posts/show.html.erb,
      has: [comments-section, comments/form, comments_empty]}
-  # --- comments / votes ---
+  # comments / votes
   - {id: comments.stream_empty,
      in: brgen/app/views/comments/create.turbo_stream.erb,
      has: [comments_empty, 'append "comments"']}
@@ -76,7 +76,7 @@ checks:
   - {id: comments.row_replies, in: __shared/app/views/comments/_comment.html.erb, has: [comment-replies, ":replies"]}
   - {id: comments.guest_form, in: brgen/app/views/posts/show.html.erb, has: ["authenticated? || guest?"]}
   - {id: votes.stream, in: brgen/app/views/votes/create.turbo_stream.erb, has: [shared/post_vote_rail, comments/comment]}
-  # --- communities / events / stories ---
+  # communities / events / stories
   - {id: communities.index, in: brgen/app/views/communities/index.html.erb, has: [live_search]}
   - {id: communities.show, in: brgen/app/views/communities/show.html.erb, has: [community]}
   - {id: communities.wiki, in: brgen/app/views/communities/wiki/index.html.erb, has: [wiki]}
@@ -85,7 +85,7 @@ checks:
   - {id: events.comments_target, in: brgen/app/views/events/show.html.erb, has: ['id="comments"']}
   - {id: stories.index, in: brgen/app/views/stories/index.html.erb, has: [stor]}
   - {id: stories.new_capture, in: brgen/app/views/stories/new.html.erb, has: [capture]}
-  # --- search / nearby / inbox ---
+  # search / nearby / inbox
   - {id: search.index, in: brgen/app/views/search/index.html.erb, has: [live_search]}
   - {id: nearby.index, in: brgen/app/views/nearby/index.html.erb, has: [nearby]}
   - {id: nearby.widget, in: brgen/app/views/nearby/widget.html.erb, has: [turbo_stream_from]}
@@ -95,7 +95,7 @@ checks:
      in: brgen/app/views/conversations/show.html.erb,
      has: [turbo_stream_from, messages]}
   - {id: channels.show, in: brgen/app/views/channels/show.html.erb, has: [turbo_stream_from]}
-  # --- auth ---
+  # auth
   - {id: auth.sign_in, in: brgen/app/views/sessions/new.html.erb, has: [session_path, password_visibility_field]}
   - {id: auth.sign_up_form,
      in: [brgen/app/views/users/new.html.erb, __shared/app/views/shared/_registration_fields.html.erb],
@@ -111,7 +111,7 @@ checks:
      in: __shared/app/controllers/concerns/shared/authentication.rb,
      has: ["def require_verified_email", "guest?"]}
   - {id: auth.passwords, in: __shared/app/views/passwords/new.html.erb, has: [email]}
-  # --- dating ---
+  # dating
   - {id: dating.home_deck,
      in: brgen/engines/dating/app/views/dating/home/index.html.erb,
      has: [dating-page-intro, dating-discover-panel, swipe, likes_path, dislikes_path]}
@@ -120,7 +120,7 @@ checks:
   - {id: dating.matches, in: brgen/engines/dating/app/views/dating/matches/index.html.erb, has: [match]}
   - {id: dating.likes, in: brgen/engines/dating/app/controllers/dating/likes_controller.rb, has: ["def create"]}
   - {id: dating.rewind, in: brgen/engines/dating/app/controllers/dating/rewinds_controller.rb, has: ["def create"]}
-  # --- marketplace ---
+  # marketplace
   - {id: market.listings_h1, in: brgen/engines/marketplace/app/views/marketplace/listings/index.html.erb, has: ["<h1", nav_bar]}
   - {id: market.sell, in: brgen/engines/marketplace/app/views/marketplace/listings/new.html.erb, has: [listing]}
   - {id: market.cart, in: brgen/engines/marketplace/app/views/marketplace/carts/show.html.erb, has: [cart]}
@@ -129,7 +129,7 @@ checks:
      has: ["def create"]}
   - {id: market.deals, in: brgen/engines/marketplace/app/views/marketplace/deals/index.html.erb, has: [deal]}
   - {id: market.stores, in: brgen/engines/marketplace/app/views/marketplace/stores/index.html.erb, has: [store]}
-  # --- takeaway ---
+  # takeaway
   - {id: takeaway.restaurants,
      in: brgen/engines/marketplace/engines/takeaway/app/views/takeaway/restaurants/index.html.erb,
      has: [restaurant]}
@@ -142,12 +142,12 @@ checks:
   - {id: takeaway.drivers,
      in: brgen/engines/marketplace/engines/takeaway/app/views/takeaway/delivery_drivers/index.html.erb,
      has: [driver]}
-  # --- tv ---
+  # tv
   - {id: tv.feed_snap, in: brgen/engines/radio/tv/app/views/tv/feed/index.html.erb, has: [tv-feed, tv-feed, empty]}
   - {id: tv.channels, in: brgen/engines/radio/tv/app/views/tv/channels/index.html.erb, has: [channel]}
   - {id: tv.video_show, in: brgen/engines/radio/tv/app/views/tv/videos/show.html.erb, has: [video]}
   - {id: tv.live, in: brgen/engines/radio/tv/app/views/tv/live_streams/show.html.erb, has: [turbo_stream_from]}
-  # --- playlist ---
+  # playlist
   - {id: playlist.player, in: brgen/engines/radio/playlist/app/views/playlist/playlists/show.html.erb, has: [player]}
   - {id: playlist.sets, in: brgen/engines/radio/playlist/app/views/playlist/sets/index.html.erb, has: [set]}
   - {id: playlist.hosted, in: brgen/engines/radio/playlist/app/views/playlist/hosted_tracks/index.html.erb,
@@ -155,19 +155,19 @@ checks:
   - {id: playlist.hosted_artwork_preload,
      in: brgen/engines/radio/playlist/app/controllers/playlist/hosted_tracks_controller.rb,
      has: [artwork_attachment, variant_records]}
-  # --- maps ---
+  # maps
   - {id: maps.canvas,
      in: [brgen/engines/maps/app/views/maps/home/index.html.erb, brgen/app/javascript/controllers/map_controller.js],
      has: [map-canvas, maplibre, role="region"]}
   - {id: maps.places, in: brgen/engines/maps/app/views/maps/places/index.html.erb, has: [place]}
   - {id: maps.search, in: brgen/engines/maps/app/views/maps/home/index.html.erb, has: [map-search, browse_list]}
-  # --- messenger / pwa / seo ---
+  # messenger / pwa / seo
   - {id: messenger.routes, in: brgen/config/routes.rb, has: [MESSENGER_SUBDOMAINS, conversations]}
   - {id: pwa.manifest, in: brgen/app/views/pwa/manifest.json.erb, has: [name, icons]}
   - {id: pwa.offline, in: brgen/app/views/pwa/service-worker.js, has: [offline]}
   - {id: seo.json_ld, in: brgen/app/views/posts/show.html.erb, has: [json_ld]}
   - {id: legal.privacy, in: __shared/app/views/pages/privacy.html.erb, has: [privacy]}
-  # --- live (local brgen) ---
+  # live (local brgen)
   - {id: live.home, live: {path: /, host: brgen.no, status: 200,
      has: [compose-launcher, main-content, skip-link], lack: [Routing Error, "Exception"]}}
   - {id: live.sign_in, live: {path: /session/new, host: brgen.no, status: 200, has: [session]}}

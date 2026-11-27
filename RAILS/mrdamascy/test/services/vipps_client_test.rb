@@ -25,7 +25,7 @@ class VippsClientTest < ActiveSupport::TestCase
     vipps_restore_http!
   end
 
-  # --- Mock mode (the demo/dev contract) -------------------------------------
+  # Mock mode (the demo/dev contract)
 
   test "mock init fills token, url and authorised without network" do
     assert VippsClient.mock_mode?
@@ -184,7 +184,7 @@ class VippsClientTest < ActiveSupport::TestCase
     assert_equal "captured", @order.reload.payment_state
   end
 
-  # --- Login API ----------------------------------------------------------------
+  # Login API
 
   test "login authorize URL carries client, scopes, state and redirect" do
     vipps_real_mode!

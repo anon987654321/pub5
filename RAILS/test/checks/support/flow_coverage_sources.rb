@@ -17,7 +17,7 @@ module FlowCoverageSources
 
   def writes?(flow) = flow["steps"].any? { |step| step.key?("post") }
 
-  # --- the data ---------------------------------------------------------------
+  # the data
 
   # A $name in a path, a parameter or a pattern must have been produced by an
   # earlier step (capture, capture_final_path, a mail capture), be one of the

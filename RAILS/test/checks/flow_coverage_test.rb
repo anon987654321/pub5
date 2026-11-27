@@ -124,7 +124,7 @@ class FlowCoverageTest < Minitest::Test
     end
   end
 
-  # --- coverage ---------------------------------------------------------------
+  # coverage
 
   def test_every_declared_app_has_a_flow_that_writes
     FLEET.each do |app|
@@ -174,5 +174,5 @@ class FlowCoverageTest < Minitest::Test
     assert(rules.count { |r| r["right"] == "s0" && !r.key?("delta") } >= 2, "voting the same way twice must be asserted to withdraw")
   end
 
-  # --- the skip -----------------------------------------------------------------
+  # the skip
 end

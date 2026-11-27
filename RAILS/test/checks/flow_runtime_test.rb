@@ -97,7 +97,7 @@ class FlowRuntimeTest < Minitest::Test
     assert_equal 38_182, Deploy::FlowCoverage.port_for("brgen", 38_182, { "FLOW_BRGEN_PORT" => "x" })
   end
 
-  # --- the vocabulary -----------------------------------------------------------
+  # the vocabulary
 
   def test_a_captured_string_and_number_feed_later_steps_and_assertions
     check = check_with_result

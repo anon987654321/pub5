@@ -35,7 +35,7 @@ class StripeClient
   FAIL_ON = "expired"
 
   class << self
-    # --- Payment lifecycle ---------------------------------------------------
+    # Payment lifecycle
 
     def init_payment(order:)
       if mock_mode?
@@ -94,7 +94,7 @@ class StripeClient
       true
     end
 
-    # --- Webhook signature ----------------------------------------------------
+    # Webhook signature
 
     # Stripe signs webhooks as HMAC-SHA256 over "{timestamp}.{raw_body}" with
     # the webhook signing secret; the Stripe-Signature header lists t= and
@@ -126,7 +126,7 @@ class StripeClient
       true
     end
 
-    # --- Mode & configuration -------------------------------------------------
+    # Mode & configuration
 
     def mock_mode?
       ENV["STRIPE_MOCK"] != "0"
@@ -200,7 +200,7 @@ class StripeClient
       raise NotAvailable, "Set Rails.application.routes.default_url_options[:host] for Stripe success_url"
     end
 
-    # --- HTTP core (the one seam tests stub) -----------------------------------
+    # HTTP core (the one seam tests stub)
 
     def env!(key)
       ENV[key].presence || raise(NotAvailable, "Missing ENV #{key} for real Stripe mode")

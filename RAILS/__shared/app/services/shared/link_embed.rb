@@ -219,7 +219,7 @@ module Shared
       Record.from_oembed(match, fetch.call(match.provider.oembed_uri(match.media_id)), at:)
     end
 
-    # --- First-party thumbnail cache (shared-029) ---------------------------
+    # First-party thumbnail cache (shared-029)
     #
     # A facade's image used to load straight from the provider's CDN on every
     # page view — a contact the play-button facade promises never to make. The

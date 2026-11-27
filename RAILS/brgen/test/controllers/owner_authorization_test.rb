@@ -8,7 +8,7 @@ require "test_helper"
 # production raising rather than logging. So this shape:
 #
 #   @community = Community.find(params[:id])   # set_community
-#   ...
+
 #   return if Current.user == @community.user  # authorize_owner
 #
 # raises StrictLoadingViolationError before the comparison happens. The guard

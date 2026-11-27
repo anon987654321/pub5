@@ -55,7 +55,7 @@ class PackingListTest < ActiveSupport::TestCase
     assert_equal 4, list(starts_on: Date.new(2026, 8, 30), ends_on: Date.new(2026, 9, 2)).duration_days
   end
 
-  # --- what goes in it ------------------------------------------------------
+  # what goes in it
 
   test "items reach the list through its entries" do
     record = list.tap(&:save!)

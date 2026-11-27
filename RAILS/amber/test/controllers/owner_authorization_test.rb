@@ -8,7 +8,7 @@ require "test_helper"
 # production raising rather than logging, so:
 #
 #   @wardrobe_item = WardrobeItem.find(params[:id])   # set_wardrobe_item
-#   ...
+
 #   unless @wardrobe_item.user == Current.user        # authorize!
 #
 # raises StrictLoadingViolationError before the comparison. The guard does not
