@@ -16,7 +16,7 @@ class TestKeylessRouting < Minitest::Test
       ZAI_API_KEY REPLICATE_API_TOKEN REPLICATE_API_KEY MASTER_MODEL
       MASTER_KEYLESS MASTER_WEB_CHAT MASTER_NO_WEB_CHAT MASTER_LOCAL_ONLY MASTER_NO_GROK_CLI MASTER_NO_AGY_CLI MASTER_NO_OLLAMA MASTER_OLLAMA_ENABLED
       MASTER_NO_POOL_PROBES MASTER_NO_KEYLESS MASTER_LOCAL_SERVERS MASTER_LLM_GATEWAY_URL
-      MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY
+      MASTER_LLM_GATEWAY_KEY FREELLMPOOL_PROXY_KEY MASTER_GATEWAY_MODE
     ].to_h { |key| [key, ENV[key]] }
     @saved_env.each_key { |key| ENV.delete(key) }
     # Neutralize both local subscription CLIs so these tests grade keyless and
@@ -765,6 +765,25 @@ class TestKeylessRouting < Minitest::Test
     ENV.delete("MASTER_NO_POOL_PROBES")
     thread&.kill
     server&.close
+  end
+
+  def test_oxllm_gateway_mode_is_reachable_without_url_or_key
+    ENV["MASTER_GATEWAY_MODE"] = "oxllm"
+    ENV.delete("MASTER_LLM_GATEWAY_URL")
+    assert Master::Io::LaneSelection.key_present_for?("gateway:basic")
+  end
+
+  def test_gateway_cost_classification_requires_discovered_keyless_endpoint
+    selection = Master::Io::LaneSelection
+    selection.stub(:hosted_endpoint_for, { key: nil }) do
+      assert_equal :free, selection.kind("gateway:basic")
+    end
+    selection.stub(:hosted_endpoint_for, { key: "test" }) do
+      assert_equal :remote, selection.kind("gateway:basic")
+    end
+    selection.stub(:hosted_endpoint_for, nil) do
+      assert_equal :remote, selection.kind("gateway:basic")
+    end
   end
 
   def test_gateway_refuses_plain_http_to_a_non_loopback_host
