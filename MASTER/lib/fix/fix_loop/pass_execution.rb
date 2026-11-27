@@ -37,8 +37,9 @@ module Master
               return outcome if outcome && !structural_repaired
               return cancellation_terminal if cancellation_requested?
 
-              if i == 0 && !structural_repaired && structural_target?(target)
-                if structure_checkpoint(target:, files:, run_id:)
+              if !structural_repaired && !deadline.expired? && structural_target?(target)
+                checkpoint_id = i.zero? ? run_id : "#{run_id}-pass-#{i + 1}"
+                if structure_checkpoint(target:, files:, run_id: checkpoint_id)
                   state[:consecutive_clean] = 0
                   state[:history].clear
                   state[:seen_snapshots].clear

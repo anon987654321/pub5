@@ -2731,6 +2731,43 @@ end
     saved.nil? ? ENV.delete("MASTER_FIX_STRUCTURAL") : ENV["MASTER_FIX_STRUCTURAL"] = saved
   end
 
+  def test_structure_checkpoint_runs_after_every_continuing_pass
+    target = File.join(@root, "RAILS")
+    FileUtils.mkdir_p(target)
+    order = []
+    loop = Master::Fix::FixLoop.allocate
+    loop.instance_variable_set(:@root, @root)
+    discipline = Object.new
+    discipline.define_singleton_method(:improving?) { false }
+    loop.instance_variable_set(:@convergence_discipline, discipline)
+    loop.define_singleton_method(:run_one_pass) do |index, **|
+      order << [:pass, index + 1]
+      nil
+    end
+    loop.define_singleton_method(:sweep_tree) do |_target, id, phase:|
+      order << [phase, id]
+      []
+    end
+    deadline = Object.new
+    deadline.define_singleton_method(:expired?) { false }
+
+    saved = ENV["MASTER_FIX_STRUCTURAL"]
+    ENV["MASTER_FIX_STRUCTURAL"] = "1"
+    result = loop.send(
+      :run_passes, files: [], target:, max_passes: 3, deadline:,
+      budget_seconds: 60, start_pass: 1, run_id: "r1",
+    )
+
+    assert_match(/\APLATEAU: /, result.value!)
+    assert_equal [
+      [:pass, 1], [:structure_first, "r1-structure-checkpoint"],
+      [:pass, 2], [:structure_first, "r1-pass-2-structure-checkpoint"],
+      [:pass, 3], [:structure_first, "r1-pass-3-structure-checkpoint"],
+    ], order
+  ensure
+    saved.nil? ? ENV.delete("MASTER_FIX_STRUCTURAL") : ENV["MASTER_FIX_STRUCTURAL"] = saved
+  end
+
   def test_structural_repair_does_not_trigger_a_second_first_pass_sweep
     target = File.join(@root, "RAILS")
     FileUtils.mkdir_p(target)
