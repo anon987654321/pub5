@@ -37,6 +37,12 @@ class TestWorkLane < Minitest::Test
     end
   end
 
+  def test_structural_opportunities_are_checked_on_every_code_pass_lane
+    Lane::NAMES.each do |lane|
+      assert_equal Lane.runs?(:code_passes, lane), Lane.runs?(:restructure_drive, lane), lane
+    end
+  end
+
   def test_the_default_lane_follows_the_target
     assert_equal :standard, Lane.default_lane("RAILS")
     assert_equal :standard, Lane.default_lane("RAILS/brgen")
@@ -53,7 +59,7 @@ class TestWorkLane < Minitest::Test
       assert Lane.runs?(stage, :master), "master lane must run #{stage}"
     end
     %i[research architecture layout_sweep browser_checks screenshot_sweep visual_groups
-       improve_prose improve_visual improve_music ideate restructure_drive].each do |stage|
+       improve_prose improve_visual improve_music ideate].each do |stage|
       refute Lane.runs?(stage, :master), "master lane must not start #{stage}"
     end
     refute_includes Lane.summary(:master), "rendered findings are not measured or proven"

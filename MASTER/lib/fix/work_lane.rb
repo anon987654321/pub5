@@ -28,10 +28,10 @@ module Master
         # conversation rides the code lane too (Johann 2026-11-08): the deterministic
         # conversation suite costs no model and no boot, and a /fix MASTER that never
         # asks how the replies read would claim the product while measuring only laws.
-        code: %i[conversation code_passes improve_code],
-        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_visual],
+        code: %i[conversation code_passes improve_code restructure_drive],
+        standard: %i[conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_visual restructure_drive],
         visual: %i[layout_sweep browser_checks screenshot_sweep visual_groups],
-        master: %i[conversation visual_pass code_passes improve_code],
+        master: %i[conversation visual_pass code_passes improve_code restructure_drive],
         all: %i[research architecture conversation layout_sweep browser_checks screenshot_sweep visual_pass visual_groups code_passes improve_code improve_prose improve_visual improve_music ideate restructure_drive],
         elevate: %i[improve_code improve_prose improve_visual improve_music ideate restructure_drive code_passes],
       }.freeze

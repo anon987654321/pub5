@@ -54,7 +54,7 @@ module Master
           Restructure.new(root: @root).proposals(files: Array(files))
         rescue StandardError => e
           Master::Ground::Swallow.log(e, context: "improve.engine.restructure")
-          []
+          raise
         end
       end
     end

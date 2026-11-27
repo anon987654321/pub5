@@ -264,9 +264,13 @@ class TestImproveEngine < Minitest::Test
     FileUtils.mkdir_p(File.join(lib, "tiny"))
     File.write(File.join(lib, "tiny.rb"), "# frozen_string_literal: true\nclass Tiny\n  def one\n  end\nend\n")
     File.write(File.join(lib, "tiny", "extra.rb"), "# frozen_string_literal: true\n# small helper\nX = 1\n")
+    assert system("git", "-C", @root, "init", "-q")
+    assert system("git", "-C", @root, "add", "--", "lib")
     restructure = Master::Fix::Improve::Restructure.new(root: @root)
     proposals = restructure.proposals(files: Dir[File.join(@root, "lib/**/*.rb")])
-    skip "no merge target for this layout" if proposals.empty?
+    assert_empty restructure.proposals(files: []), "an empty scope cannot propose a merge"
+    refute_empty proposals
+    assert_empty restructure.proposals(files: [File.join(lib, "tiny", "extra.rb")]).select { |item| item.kind == :merge }
     proposal = proposals.first
     assert File.file?(proposal.from)
     refute_empty proposal.to

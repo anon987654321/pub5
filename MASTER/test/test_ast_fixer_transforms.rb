@@ -462,6 +462,23 @@ class TestAstFixerTransforms < Minitest::Test
     assert_includes result[:content], "# frozen_string_literal: true"
   end
 
+  def test_yaml_comment_cleanup_preserves_values_and_document_markers
+    source = "---\n# ========\nname: demo\n# keep the reason\n# --------\nvalue: |\n  # --------\n  actual text  \n\n\n  more\n"
+    result = fix("laws.yml", source)
+
+    assert_includes result[:transforms], :comment_separators
+    refute_includes result[:content], "# ========"
+    assert_equal 1, result[:content].scan("# --------").size
+    assert_includes result[:content], "# keep the reason"
+    assert_equal Psych.parse_stream(source).yaml, Psych.parse_stream(result[:content]).yaml
+    assert_equal result[:content], fix("laws.yml", result[:content])[:content]
+  end
+
+  def test_whitespace_cleanup_preserves_ruby_literal_content
+    source = "# frozen_string_literal: true\nx = <<~TEXT\n  a  \n\n\n  b\t\nTEXT\n"
+    assert_equal source, fix("literal.rb", source)[:content]
+  end
+
   def test_collapse_blank_lines_transform
     result = fix("blank.rb", "def call\n\n\n  :ok\nend\n")
 

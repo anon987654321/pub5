@@ -94,22 +94,6 @@ module Master
             end
           end
 
-          def remove_comment_separators(src)
-            parsed = Prism.parse(src)
-            return src unless parsed.success?
-
-            lines = src.lines
-            parsed.comments.each do |comment|
-              index = comment.location.start_line - 1
-              next unless lines[index]&.match?(/\A[ \t]*#[ \t]*(?:={3,}|-{3,}|_{3,}|\*{3,}|\#{3,})[ \t]*\r?\n?\z/)
-
-              lines[index] = lines[index].end_with?("\n") ? "\n" : ""
-            end
-            out = lines.join
-            @transforms << :comment_separators if out != src
-            out
-          end
-
           def fix_bare_rescue(src)
             result = Prism.parse(src)
             return src unless result.success?

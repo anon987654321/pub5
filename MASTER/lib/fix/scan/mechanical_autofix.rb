@@ -44,7 +44,7 @@ module Master
         # The one propose, guard, write pipeline. A file the dirty predicate
         # names is left alone, so an autofix never entangles another session's
         # uncommitted edit; the caller reports what the status means.
-        def rewrite(path, source)
+        def rewrite(path, source, format_only: false)
           return Rewrite.new(status: :dirty, content: source, transforms: []) if dirty?(path)
           if (why = AutofixGuard.admit(path, root: @root))
             return Rewrite.new(status: :unchanged, content: source, transforms: [], reason: why)
@@ -52,12 +52,12 @@ module Master
 
           # The mapped suite's pre-repair verdict belongs to the original
           # bytes, so it is captured before any candidate is written.
-          AutofixGuard.note_test_baseline(path)
-
-          candidate = AstFixer.propose(path, source, event_bus: @bus)
+          candidate = AstFixer.propose(path, source, event_bus: @bus, format_only:)
           return Rewrite.new(status: :unchanged, content: source, transforms: []) unless candidate&.changed
 
-          if (why = AutofixGuard.candidate_reason(path, source, candidate.content))
+          AutofixGuard.note_test_baseline(path)
+
+          if (why = AutofixGuard.candidate_reason(path, source, candidate.content, format_only:))
             AutofixGuard.note_refused(path, why)
             return Rewrite.new(status: :refused, content: source, transforms: [], reason: why)
           end

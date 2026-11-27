@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "set"
 require_relative "../tree"
 
 module Master
@@ -25,32 +26,37 @@ module Master
         end
 
         def proposals(files:)
+          scope = files.map { |path| File.expand_path(path, @root) }.to_set
+          return [] if scope.empty?
+
           evidence = Tree.new(root: @root).sprawl
-          tiny = evidence.fetch(:tiny_files, []).select { |path| path.end_with?(".rb") }
-          singles = evidence.fetch(:single_file_dirs, [])
+          tiny = evidence.fetch(:tiny_files, []).map { |path| File.expand_path(path, @root) }
+          tiny.select! { |path| scope.include?(path) && path.end_with?(".rb") }
+          singles = evidence.fetch(:single_file_dirs, []).map { |dir| File.expand_path(dir, @root) }
           list = []
           tiny.each do |path|
             break if list.size >= MAX_PROPOSALS
             target = merge_target_for(path)
-            next unless target
+            next unless target && scope.include?(target)
 
             list << Proposal.new(
               kind: :merge, from: path, to: target,
               reason: "#{path.sub("#{@root}/", "")} is a small neighboring component of #{target.sub("#{@root}/", "")}; verify shared ownership and caller contracts before merging"
             )
           end
-          singles.first(2).each do |dir|
-            member = files.find { |path| File.dirname(path) == dir }
-            next unless member
+          singles.each do |dir|
+            break if list.size >= MAX_PROPOSALS
+            member = scope.find { |path| File.dirname(path) == dir }
+            next unless member && File.file?(member)
+            destination = File.join(File.dirname(dir), File.basename(member))
+            next if File.exist?(destination)
 
             list << Proposal.new(
-              kind: :flatten, from: member, to: File.join(File.dirname(dir), File.basename(member)),
+              kind: :flatten, from: member, to: destination,
               reason: "#{dir.sub("#{@root}/", "")} holds one file; flatten only if its namespace and path convey no useful contract"
             )
           end
           list
-        rescue StandardError
-          []
         end
 
         private

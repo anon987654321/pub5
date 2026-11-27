@@ -2553,10 +2553,16 @@ LINT_BEAUTIFY:
   statement: >
     Boy Scout Rule: touching a file obliges a full-file lint pass, not only
     the changed lines. Inspect the complete current body, fix in-scope
-    incidental defects, collapse double blanks, correct spacing and reassess
-    every comment. Remove what-comments; keep a one-line why when non-obvious,
-    and preserve directives and meaningful content. Preserve behavior; verify
-    no new smells, regressions or unaccounted complexity.
+    incidental defects, remove decorative separators, normalize spacing and
+    blank lines, and reassess every comment. Remove what-comments; keep a
+    one-line why when non-obvious. Preserve literals, directives, heredocs,
+    configuration values and rendered content. Reflow declarations and prose
+    by importance: public contracts and governing facts first, details later.
+    Reorder only after proving dependencies, evaluation order, precedence and
+    meaning unchanged. On every /fix pass run the shared deterministic formatter
+    for eligible supported sources before model review; use semantic review for
+    ambiguous comments, layout and ordering. Report unsupported or refused edits.
+    Reject cosmetic regressions; no style change may weaken functionality.
   resolution: review
   enforcement: MASTER/law/practice.rb (practice guidance)
 
@@ -4180,7 +4186,7 @@ transformation_policy:
   version: 1
   ast_fixer:
     protected_path_patterns:
-      - '/OPENBSD/(?:etc|usr|var)/'
+      - '/OPENBSD/(?:mirror/)?(?:etc|usr|var)/'
       - '/law/[^/]+\.rb\z'
     generated_line_length: 5000
     tab_significant_filename_pattern: '\A(?:makefile.*|.*\.(?:mk|conf|tsv|go))\z'

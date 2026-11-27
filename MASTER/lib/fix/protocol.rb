@@ -250,6 +250,21 @@ module Master
           immediately and the eligible corpus is refreshed. This stage may
           legitimately keep nothing.
 
+          On every /fix pass, separately check the full eligible scope for fragmented
+          owners, avoidable coupling, redundant layers, equivalent units, misplaced
+          dependencies, and collapsible or consolidatable files and modules. Use the
+          existing DEFRAG, DECOUPLE, FLATTEN, HOIST, MERGE and SPLIT transformations
+          and their evidence gates. Recheck callers, public paths, load order, tests,
+          protected boundaries and cross-tree dependencies before accepting surgery.
+          Do not merge distinct responsibilities or count fewer files as proof.
+
+          Run LINT_BEAUTIFY on the complete file, not just the changed lines.
+          Reflow public contracts, governing facts and important declarations before
+          implementation details when the language and contract permit. Preserve
+          ordering that affects execution, data, CSS cascade, precedence or meaning.
+          Deterministic formatting is distinct from structural refactoring; do not
+          rearrange executable source merely to improve its visual order.
+
           6. SCAN - FOUR INDEPENDENT ASSESSMENT STREAMS
           The assessment unit is a Law x stream x applicable surface cell.
           Run lexical_violations, lexical_opportunities, semantic_violations,

@@ -6,6 +6,7 @@ require "prism"
 require "yaml"
 require "fileutils"
 require "tmpdir"
+require_relative "../io/whitespace_normalizer"
 
 module Master
   module Fix
@@ -138,9 +139,13 @@ module Master
 
         # A candidate that must not be written, or nil: it does not parse, or it
         # only moves whitespace in a data file.
-        def candidate_reason(path, before, after)
+        def candidate_reason(path, before, after, format_only: false)
           return "no change" if before == after
-          return "whitespace-only edit to data file" if data_file?(path) && squeezed(before) == squeezed(after)
+          if data_file?(path)
+            equivalent = Master::Io::WhitespaceNormalizer.data_equivalent?(before, after, path:)
+            return "formatting changes data semantics" if format_only && !equivalent
+            return "unverified whitespace-only edit to data file" if squeezed(before) == squeezed(after) && !equivalent
+          end
 
           failure = parse_failure(path, after)
           failure && "does not parse: #{failure}"

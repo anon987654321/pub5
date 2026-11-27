@@ -27,6 +27,20 @@ class TestWhitespaceNormalizer < Minitest::Test
     assert_equal "a\n\nb\n", N.normalize("a\n\nb\n")
   end
 
+  def test_yaml_write_cleanup_preserves_scalar_values
+    source = "# ---\nname: demo\nvalue: |\n  # ---\n  a  \n\n\n  b\n"
+    out = N.normalize(source, path: "data.yml")
+
+    refute out.start_with?("# ---")
+    assert_includes out, "  # ---"
+    assert_equal Psych.parse_stream(source).yaml, Psych.parse_stream(out).yaml
+    assert_equal out, N.normalize(out, path: "data.yml")
+  end
+
+  def test_markdown_write_cleanup_preserves_hard_breaks
+    assert_equal "a  \nb\n", N.normalize("a  \nb \n", path: "README.md")
+  end
+
   def test_leading_indentation_is_not_touched
     assert_equal "  a\n    b\n", N.normalize("  a\n    b\n")
   end

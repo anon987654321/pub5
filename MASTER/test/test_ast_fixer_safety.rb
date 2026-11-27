@@ -148,8 +148,8 @@ class TestAstFixerSafety < Minitest::Test
   end
 
   def test_no_validator_means_no_verdict
-    assert_nil fixer("notes.md").send(:syntax_validator)
-    refute fixer("notes.md").send(:broke_syntax?, "before", "after")
+    assert_nil fixer("notes.txt").send(:syntax_validator)
+    refute fixer("notes.txt").send(:broke_syntax?, "before", "after")
   end
 
   def test_never_writes_unparseable_ruby

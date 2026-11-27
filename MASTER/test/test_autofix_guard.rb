@@ -97,9 +97,10 @@ class TestAutofixGuard < Minitest::Test
     assert_nil Guard.candidate_reason("a.rb", "x = 1 \n", "x = 1\n")
   end
 
-  def test_whitespace_only_edits_to_data_are_never_applied
-    assert_match(/whitespace-only/, Guard.candidate_reason("laws.yml", "a:   1\n", "a: 1\n"))
-    assert_match(/whitespace-only/, Guard.candidate_reason("t.json", "{ \"a\": 1 }", "{\"a\":1}"))
+  def test_only_equivalent_formatting_is_admitted_for_data
+    assert_nil Guard.candidate_reason("laws.yml", "a:   1\n", "a: 1\n", format_only: true)
+    assert_nil Guard.candidate_reason("t.json", "{ \"a\": 1 }", "{\"a\":1}", format_only: true)
+    assert_match(/semantics/, Guard.candidate_reason("a.yml", "a: |\n  x  \n", "a: |\n  x\n", format_only: true))
     assert_nil Guard.candidate_reason("laws.yml", "a: 1\n", "a: 2\n")
   end
 

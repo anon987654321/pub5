@@ -27,9 +27,15 @@ module Master
             rb.group_by { |f| gemfile_root(f) }.each do |root, group|
               fixed += rubocop_pass(group, root) if root
             end
-            rb.each do |path|
+            files.each do |path|
               next unless File.exist?(path)
-              fixed += analyze_ruby_file(path)
+              if path.end_with?(".rb")
+                fixed += analyze_ruby_file(path)
+              elsif Master::Io::WhitespaceNormalizer.supported?(path)
+                src = File.read(path, encoding: "UTF-8")
+                count, = apply_ast_fixes(path, src, path.delete_prefix("#{@root}/"), format_only: true)
+                fixed += count
+              end
             rescue StandardError => e
               @bus&.publish("fix_loop:fast_error", file: path, error: e.message)
               Master::Trace::Dmesg.status(FAST_STAGE_UNIT, "#{path.delete_prefix("#{@root}/")}: #{e.message}")
@@ -179,8 +185,8 @@ module Master
             fixed
           end
 
-          def apply_ast_fixes(path, src, rel)
-            outcome = ast_autofix.rewrite(path, src)
+          def apply_ast_fixes(path, src, rel, format_only: false)
+            outcome = ast_autofix.rewrite(path, src, format_only:)
             case outcome.status
             when :refused
               @bus&.publish("fix_loop:ast_refused", file: rel, reason: outcome.reason)

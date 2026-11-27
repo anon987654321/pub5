@@ -6,6 +6,7 @@ require "yaml"
 require "json"
 require_relative "../../io/exec"
 require_relative "../../io/atomic_write"
+require_relative "../../io/whitespace_normalizer"
 require "strscan"
 require_relative "ast_fixer/syntax_transforms"
 require_relative "ast_fixer/web_transforms"
@@ -39,7 +40,7 @@ module Master
         STRATEGIES = [
           Strategy.new(
             predicate: :ruby?,
-            transforms: %i[add_frozen_header remove_comment_separators fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
+            transforms: %i[add_frozen_header fix_bare_rescue freeze_mutable_constants remove_immediate_dead_code
                            add_trailing_commas],
           ),
           Strategy.new(predicate: :sql_context?, transforms: %i[normalise_null_comparison]),
@@ -58,7 +59,8 @@ module Master
         # heuristics and sit in the ruby? strategy above, not here: on other
         # source Prism.parse fails, literal_lines comes back empty and they run
         # unguarded (a CSS `}` gains a comma; a live JS branch reads as dead).
-        UNIVERSAL_TRANSFORMS = %i[strip_accidental_sub_wrapper expand_tabs collapse_blank_lines strip_trailing_whitespace ensure_final_newline].freeze
+        FORMATTING_TRANSFORMS = %i[expand_tabs remove_comment_separators strip_trailing_whitespace collapse_blank_lines ensure_final_newline].freeze
+        UNIVERSAL_TRANSFORMS = [:strip_accidental_sub_wrapper, *FORMATTING_TRANSFORMS].freeze
 
         # Runtime transform safety policy is part of the existing Law catalogue.
         # Invalid policy fails closed; Ruby does not keep a shadow default.
@@ -122,8 +124,8 @@ module Master
         # content before it becomes the file. MechanicalAutofix is the governed
         # writer on the /scan path; `fix` above stays transform-and-write for the
         # callers that have no check to run.
-        def self.propose(path, source, event_bus: nil, allow_deletions: deletions_allowed?)
-          new(path, source, event_bus:, allow_deletions:).propose
+        def self.propose(path, source, event_bus: nil, allow_deletions: deletions_allowed?, format_only: false)
+          new(path, source, event_bus:, allow_deletions:).propose(format_only:)
         end
 
         # The other half of propose, for a caller that has judged the candidate.
@@ -160,10 +162,10 @@ module Master
           content
         end
 
-        def propose
+        def propose(format_only: false)
           return unchanged if protected_path? || generated_bundle?
 
-          out = apply_strategies(@source)
+          out = format_only ? apply_transforms(@source, FORMATTING_TRANSFORMS) : apply_strategies(@source)
           Result.new(path: @path, changed: out != @source, transforms: @transforms, content: out)
         end
 
@@ -371,36 +373,29 @@ module Master
           return src unless src.include?("\t")
           return src if self.class.transformation_policy.fetch(:tab_significant_filename_pattern).match?(File.basename(@path.to_s))
 
-          out = src.gsub("\t", "  ")
-          @transforms << :expand_tabs if out != src
-          out
+          format(src, :expand_tabs, :expand_tabs)
+        end
+
+        def remove_comment_separators(src)
+          format(src, :remove_comment_separators, :comment_separators)
         end
 
         def collapse_blank_lines(src)
-          out = src.gsub(/(\n\n)\n+/, "\\1")
-          @transforms << :collapse_blank_lines if out != src
-          out
+          format(src, :collapse_blanks, :collapse_blank_lines)
         end
 
         def strip_trailing_whitespace(src)
-          out = if markdown?
-                  # Two or more trailing spaces are a Markdown hard line
-                  # break. Strip whitespace-only lines and single stray
-                  # blanks; leave the breaks standing.
-                  src.gsub(/^[ \t]+$/, "").gsub(/(?<=[^ \t\n])[ \t](?=\n|\z)/, "")
-                else
-                  src.gsub(/[ \t]+(?=\n|\z)/, "")
-                end
-
-          @transforms << :trailing_whitespace if out != src
-          out
+          format(src, :strip_trailing, :trailing_whitespace)
         end
 
         def ensure_final_newline(src)
-          return src if src.empty? || src.end_with?("\n")
+          format(src, :ensure_final_newline, :final_newline)
+        end
 
-          @transforms << :final_newline
-          src + "\n"
+        def format(src, operation, label)
+          out = Master::Io::WhitespaceNormalizer.public_send(operation, src, path: @path)
+          @transforms << label if out != src
+          out
         end
 
         def ruby? = File.extname(@path).downcase == ".rb"
