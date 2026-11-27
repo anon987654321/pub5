@@ -51,6 +51,26 @@ class TestLawsReflow < Minitest::Test
     end
   end
 
+  def test_named_heuristic_families_keep_individual_law_identities
+    data = Master.laws_document
+    named = Master::FlatLawCatalogue.entries(data).map { |row| row.fetch("id") }
+    first_node = named.index("TRUTHFUL_STATUS")
+    heuristics = %w[SYSTEM_STATUS MATCH_REAL_WORLD USER_CONTROL CONSISTENCY
+                    ERROR_PREVENTION RECOGNITION_OVER_RECALL FLEXIBILITY_EFFICIENCY
+                    AESTHETIC_MINIMALISM ERROR_RECOVERY HELP_AND_DOCUMENTATION]
+    assert_equal 10, heuristics.size
+    heuristics.each do |id|
+      assert_operator named.index(id), :<, first_node, id
+      assert data.fetch("law_catalogue").fetch("entries").key?(id), id
+    end
+    assert_operator named.index("NNGROUP"), :<, named.index("SYSTEM_STATUS")
+    assert_equal 13, named.grep(/^BAYMARD_/).size
+    named.grep(/^BAYMARD_/).each { |id| assert_operator named.index(id), :<, first_node, id }
+    assert_equal %w[DIP ISP LSP OCP SRP], named.grep(/\A(?:SRP|OCP|LSP|ISP|DIP)\z/).sort
+    assert_equal 7, named.grep(/^STRUNK_WHITE_/).size
+    assert_equal 10, named.grep(/^RAILS_DOCTRINE_/).size
+  end
+
   def test_source_does_not_declare_duplicate_top_level_law_ids
     source = File.read(File.join(Master::ROOT, "data", "laws.yml"), encoding: "UTF-8")
     ids = source.lines.filter_map do |line|

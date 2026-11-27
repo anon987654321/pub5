@@ -1518,6 +1518,14 @@ Law.define(:USER_CONTROL) do
   X
 end
 
+Law.define(:ERROR_PREVENTION) do
+  source "Nielsen Heuristic #5 - error prevention"
+  ask "Could a foreseeable input or interaction error be prevented through a safe default, constraint, validation, or pre-commit warning?"
+  fix "Prevent the mistake before submission; keep validation and recovery accessible."
+  bad "A form accepts an impossible date and discards the user's input on submit."
+  good "The form explains the valid range, keeps the input, and prevents an invalid submission."
+end
+
 Law.define(:ERROR_RECOVERY) do
   source "Nielsen Heuristic #9 - help users recover from errors"
   ask "Does an error explain what happened and what the user can do next?"
