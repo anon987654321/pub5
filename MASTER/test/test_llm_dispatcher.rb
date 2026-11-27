@@ -60,7 +60,7 @@ class TestLLMDispatcher < Minitest::Test
     assert door.record(false, "any-model", reason: "agy: quota reached"), "the last failure must report the trip"
     assert door.silent?("any-model")
 
-    refused = dispatcher.send_with_cache("any-model:x", [{ role: "user", content: "hi" }])
+    refused = dispatcher.send(:refusal_before_send, "any-model:x")
     assert_predicate refused, :err?
     assert_equal :no_api_key, refused.category
     assert_match(/no any-model answer.*last: agy: quota reached/, refused.message)
@@ -530,8 +530,8 @@ class TestLLMDispatcher < Minitest::Test
   # so the refusal belongs at the door, before the breaker, the cache or the request.
   def test_no_provider_key_refuses_at_the_door
     dispatcher = Master::Review::LLMDispatcher.allocate
-    result = Master.stub(:any_api_key_present?, false) do
-      dispatcher.send_with_cache("any-model", [{ role: "user", content: "hi" }])
+    result = Master.stub(:llm_reachable?, false) do
+      dispatcher.send(:refusal_before_send, "any-model")
     end
 
     assert_predicate result, :err?
@@ -734,6 +734,13 @@ class TestLLMDispatcher < Minitest::Test
     dispatcher, asked = recording_dispatcher
     saved = ENV["MASTER_MODEL"]
     ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
+    assert_equal "anthropic/claude-opus-5-5", dispatcher.send(:answering_model, "routed-model", nil)
+    if ENV["MASTER_LOCAL_ONLY"] == "1"
+      result = dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }])
+      assert_equal :offline, result.category
+      assert_empty asked
+      return
+    end
     result = Master.stub(:llm_reachable?, true) do
       dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }])
     end
@@ -750,6 +757,15 @@ class TestLLMDispatcher < Minitest::Test
     dispatcher, asked = recording_dispatcher
     saved = %w[MASTER_MODEL MASTER_MODEL_STRICT].to_h { |key| [key, ENV.fetch(key, nil)] }
     ENV["MASTER_MODEL"] = "anthropic/claude-opus-5-5"
+    if ENV["MASTER_LOCAL_ONLY"] == "1"
+      Master::Io::LaneState.stub(:usable?, false) do
+        assert_equal "anthropic/claude-opus-5-5", dispatcher.send(:answering_model, "routed-model", nil)
+        ENV["MASTER_MODEL_STRICT"] = "0"
+        assert_equal "routed-model", dispatcher.send(:answering_model, "routed-model", nil)
+      end
+      assert_empty asked
+      return
+    end
     ask = -> { dispatcher.send_with_cache("routed-model", [{ role: "user", content: "hi" }]) }
 
     Master.stub(:llm_reachable?, true) do
@@ -800,7 +816,7 @@ class TestLLMDispatcher < Minitest::Test
 
     result = Master.stub(:any_api_key_present?, true) do
       dispatcher.send_with_cache(
-        "routed-model", [{ role: "user", content: "hi" }], stream: true
+        "local:fixture-model", [{ role: "user", content: "hi" }], stream: true
       ) { |chunk| chunks << chunk }
     end
 
@@ -808,9 +824,9 @@ class TestLLMDispatcher < Minitest::Test
     assert_equal ["", "hello", " world"], chunks
     starts = bus.events.select { |name, _payload| name == "llm:stream_started" }
     assert_equal 1, starts.size
-    assert_equal "routed-model", starts.first.last[:model]
+    assert_equal "local:fixture-model", starts.first.last[:model]
     assert_equal 1, first_tokens.size
-    assert_equal "routed-model", first_tokens.first.first
+    assert_equal "local:fixture-model", first_tokens.first.first
     assert_operator first_tokens.first.last, :>=, 0
   end
 
@@ -847,7 +863,7 @@ class TestLLMDispatcher < Minitest::Test
 
     result = Master.stub(:any_api_key_present?, true) do
       dispatcher.send_with_cache(
-        "routed-model", [{ role: "user", content: "hi" }], stream: true
+        "local:fixture-model", [{ role: "user", content: "hi" }], stream: true
       ) { |_chunk| nil }
     end
 
