@@ -16,6 +16,7 @@ module Master
         # config["model"] alone sits at the tail of the routed chain, where no
         # turn reaches it while an earlier lane answers.
         def model
+          return routed_models.first if local_only?
           live = @runtime_model.to_s.empty? ? nil : @runtime_model
           return live if live && @model_router&.unreachable_reason(live, wait: false).nil?
 
@@ -101,6 +102,7 @@ module Master
 
         def model_for(operation:)
           Fiber[:master_operation] = operation
+          return routed_models(task_type: operation).first if local_only?
           forced = ENV["MASTER_MODEL"].to_s.strip
           if !local_only? && !forced.empty? &&
              (!@model_router.respond_to?(:unreachable_reason) ||
@@ -127,6 +129,7 @@ module Master
         def candidate_models(message = nil, task_type: nil)
           forced = ENV["MASTER_MODEL"].to_s.strip
           routed = routed_models(message, task_type:)
+          return routed if local_only?
           forced.empty? ? routed : ([forced] + routed).uniq
         end
 
