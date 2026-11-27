@@ -228,12 +228,14 @@ module Operator
 
     def persist_pre_repair_baseline(key:, selected:, status:, changed:)
       snapshot = CheckRegression.snapshot(@last_results)
-      write_baseline(key, snapshot)
+      incomplete = Array(@last_results).any? { |result| result.state == "skipped" }
+      write_baseline(key, snapshot) unless incomplete
       outcome = case status
                 when 0 then "clean baseline"
                 when 1 then "existing failures recorded"
                 else "INCONCLUSIVE, status=#{status}"
                 end
+      outcome = "#{outcome}; incomplete baseline not cached" if incomplete
       Master::Trace::Dmesg.status(
         "baseline0",
         "pre-repair proof captured, #{outcome}, stages=#{selected.size}, attributed_changes=#{changed.size}",
@@ -602,8 +604,17 @@ module Operator
         name: "ratchets",
         purpose: "every recorded ceiling, current beside it#{stale_ok ? ", pre-repair receipts may answer from cache" : ""}",
         mutates: false,
-        run: -> { capture(RUBY, File.join(MASTER, "bin", "operator"), "measure", "--deep", *scope) },
+        run: -> { measure_ratchets(scope, pre_repair: stale_ok) },
       )
+    end
+
+    def measure_ratchets(scope, pre_repair:)
+      timeout = pre_repair ? [child_timeout_s, 90].min : child_timeout_s
+      ok, body, code = capture(RUBY, File.join(MASTER, "bin", "operator"), "measure", "--deep", *scope,
+                              timeout_s: timeout)
+      return [ok, body, code] unless pre_repair && code == 124
+
+      [false, body + ["pre-repair ratchets inconclusive after #{timeout}s; final proof still required"], 3]
     end
 
     def sprawl_stage(scan_only:)
