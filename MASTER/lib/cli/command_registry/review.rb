@@ -997,8 +997,8 @@ module Master
         found.sub(/\Areview\d+:\s*cause,\s*/i, "")
       end
 
-      # Whether /fix convenes the council when no flag says: only when MASTER_FIX_COUNCIL=1.
-      def council_default = Master::Review::LLMDispatcher::PassClock.council_enabled?
+      # The repair loop owns the default council; a separate critique is opt-in.
+      def council_default = Master::Review::LLMDispatcher::PassClock.standalone_critique_requested?
 
       def execution_trace_scopes(target)
         raw = target.to_s.strip

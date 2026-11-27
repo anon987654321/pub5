@@ -2306,6 +2306,46 @@ end
     assert_match(/no local model available/, runner.gaps.fetch(:stage_failures).fetch(:improvements).first)
   end
 
+  def test_dirty_pass_applies_anchored_council_proposals_before_routine_source_fixes
+    file = File.join(@root, "dummy.yml")
+    proposal = { law: Master::Fix::FixLoop::CouncilRound::IMPROVEMENT_LAW_ID,
+                 file:, line: 1, message: "improve intent", severity: :warning }
+    council = Object.new
+    council.define_singleton_method(:run) { |**| { cherry_picks: ["anchored"], improvements: [proposal] } }
+    runner = build_loop([], council:).instance_variable_get(:@pass_runner)
+    events = []
+    runner.define_singleton_method(:run_improvement_stage) { |findings, **| events << [:improvement, findings] }
+    runner.define_singleton_method(:run_visual_stage) { |findings, **| events << [:visual, findings] }
+    runner.define_singleton_method(:run_llm_stage) { |findings, *, **| events << [:source, findings] }
+    source = { law: "TEST_RULE", file:, line: 1, severity: :warning }
+    visual = { law: Master::Fix::VisualPass::LAW_ID, file:, line: 1 }
+    routes = { source: [source], improvement: [], visual: [visual], opportunity: [], wishlist: [] }
+    runner.stub(:route_findings, routes) do
+      runner.send(:dispatch_llm_stages, [source, visual], [file], 1, Time.now + 60, nil)
+    end
+    assert_equal [[:visual, [visual]], [:improvement, [proposal]], [:source, [source]]], events
+    events.clear
+    source[:severity] = :error
+    runner.stub(:route_findings, routes) do
+      runner.send(:dispatch_llm_stages, [source, visual], [file], 1, Time.now + 60, nil)
+    end
+    assert_equal [[:source, [source]], [:visual, [visual]], [:improvement, [proposal]]], events
+  end
+
+  def test_council_run_returns_only_anchored_selected_improvements
+    file = File.join(@root, "dummy.yml")
+    round = Master::Fix::FixLoop::CouncilRound.new(agent: Object.new, root: @root, bus: @bus)
+    value = { cherry_picks: ["dummy.yml line 1: simplify the redundant declaration",
+                            "unanchored suggestion"], feedback: [] }
+    round.stub(:council_enabled?, true) do
+      round.stub(:critique, Master::Result.ok(value)) do
+        result = round.run(files: [file], pass: 1, deadline: Time.now + 60)
+        assert_equal 1, result.fetch(:improvements).size
+        assert_equal file, result.fetch(:improvements).first.fetch(:file)
+      end
+    end
+  end
+
   def test_council_improvements_require_a_file_and_line_or_symbol_anchor
     file = File.join(@root, "dummy.yml")
     round = Master::Fix::FixLoop::CouncilRound.new(agent: nil, root: @root, bus: @bus)

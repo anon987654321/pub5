@@ -3,13 +3,14 @@
 require_relative "test_helper"
 require "tmpdir"
 
-# The council is off inside /fix until it is asked for, and the run ends with an offer to convene it. A
-# council fault used to cost a whole run: every persona raised, and the repair stage ran beside the wreck.
+# Repair councils are default-on; a separate critique and deterministic mode stay explicit.
 class TestFixCouncilPause < Minitest::Test
   Clock = Master::Review::LLMDispatcher::PassClock
 
-  def test_the_council_is_off_without_a_request
-    refute Clock.council_enabled?(env: {})
+  def test_the_council_is_on_without_a_request
+    assert Clock.council_enabled?(env: {})
+    refute Clock.standalone_critique_requested?(env: {})
+    refute Clock.council_enabled?(env: { "MASTER_SCAN_DETERMINISTIC" => "1", "MASTER_FIX_COUNCIL" => "1" })
     refute Clock.council_enabled?(env: { "MASTER_FIX_COUNCIL" => "0" })
   end
 
@@ -37,9 +38,14 @@ class TestFixCouncilPause < Minitest::Test
     end
   end
 
-  def test_the_mode_line_says_the_council_waits_for_a_request
+  def test_the_mode_line_reports_default_council
     spec = { name: "strict", council: true, scan_profile: "full", max_fix_passes: 15 }
 
-    assert_includes Master::Ground::ModePosture.new(root: Master::ROOT).line(spec), "council on request"
+    Clock.stub(:council_enabled?, true) do
+      assert_includes Master::Ground::ModePosture.new(root: Master::ROOT).line(spec), "council on"
+    end
+    Clock.stub(:council_enabled?, false) do
+      assert_includes Master::Ground::ModePosture.new(root: Master::ROOT).line(spec), "council off"
+    end
   end
 end

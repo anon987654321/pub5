@@ -594,13 +594,17 @@ module Master
           routed = route_findings(found)
           source_found = routed.fetch(:source)
           council = guarded(:council, pass) { @council&.run(files: files_with_violations(source_found, files), pass:, deadline:) } if source_found.any?
-          guarded(:model_fixes, pass) { run_llm_stage(source_found, files, pass, deadline, council:) } if source_found.any?
-          guarded(:improvements_fix, pass) { run_improvement_stage(routed.fetch(:improvement), pass:, files:, deadline:) } if routed.fetch(:improvement).any?
-          guarded(:opportunities, pass) { run_opportunity_stage(routed.fetch(:opportunity), files, pass, deadline, council:) } if routed.fetch(:opportunity).any?
+          urgent = source_found.any? { |finding| %w[critical error high].include?(finding[:severity].to_s) }
+          # Preserve source-law dependency order when an urgent finding needs repair.
+          guarded(:model_fixes, pass) { run_llm_stage(source_found, files, pass, deadline, council:) } if urgent
           guarded(:visual, pass) do
             run_visual_stage(routed.fetch(:visual), pass:, image: visual&.value!&.fetch(:image, nil), files:, deadline:)
           end if routed.fetch(:visual).any?
+          improvements = (routed.fetch(:improvement) + Array(council&.fetch(:improvements, []))).uniq
+          guarded(:improvements_fix, pass) { run_improvement_stage(improvements, pass:, files:, deadline:) } if improvements.any?
+          guarded(:opportunities, pass) { run_opportunity_stage(routed.fetch(:opportunity), files, pass, deadline, council:) } if routed.fetch(:opportunity).any?
           guarded(:wishlist, pass) { run_wishlist_stage(routed.fetch(:wishlist), pass:, files:, deadline:, run_id:) } if routed.fetch(:wishlist).any?
+          guarded(:model_fixes, pass) { run_llm_stage(source_found, files, pass, deadline, council:) } if !urgent && source_found.any?
         end
 
         def route_findings(found)

@@ -69,14 +69,15 @@ module Master
             return
           end
 
-          result = critique(rotating_files(files, pass), budget:)
+          selected = rotating_files(files, pass)
+          result = critique(selected, budget:)
           return unless result&.ok?
 
           value = result.value!
           return if Array(value[:cherry_picks]).empty?
 
           publish(value, pass:, files:)
-          value
+          value.merge(improvements: selected_improvements(value, selected))
         end
 
         # A clean deterministic scan is not a proof of design quality or code quality.
@@ -101,9 +102,7 @@ module Master
           return Master::Result.err("improvement council returned no evidence", category: :inconclusive) unless result&.ok?
 
           value = result.value!
-          winners = Master::Review::Council::Critique::CherryPick.one_per_issue(value[:cherry_picks])
-          repair_value = value.merge(cherry_picks: winners)
-          findings = improvement_findings(repair_value, selected).first(MAX_IMPROVEMENT_FINDINGS)
+          findings = selected_improvements(value, selected)
           @bus&.publish(
             "fix_loop:improvement_council",
             pass:, files: selected.size, critiques: Array(value[:feedback]).size,
@@ -365,6 +364,11 @@ module Master
           Array(files).flat_map { |path| ::Operator::Runs.who_runs(repo_relative(path)) }.uniq.first(12)
         rescue StandardError
           []
+        end
+
+        def selected_improvements(value, files)
+          winners = Master::Review::Council::Critique::CherryPick.one_per_issue(value[:cherry_picks])
+          improvement_findings(value.merge(cherry_picks: winners), files).first(MAX_IMPROVEMENT_FINDINGS)
         end
 
         def improvement_findings(value, files)

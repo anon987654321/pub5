@@ -25,10 +25,9 @@ module Master
 
         # PassResult defines this pass's Result and keeps this file small.
 
-        # Whether a pass convenes the council when no flag says: only when it is asked for (PassClock), a
-        # model is in play, and the pass writes or reads for a purpose.
+        # A separate critique is opt-in; the write loop has its own council.
         def self.critique_by_default?(apply: nil)
-          apply != false && Master::Review::LLMDispatcher::PassClock.council_enabled? &&
+          apply != false && Master::Review::LLMDispatcher::PassClock.standalone_critique_requested? &&
             ENV["MASTER_SCAN_DETERMINISTIC"] != "1"
         end
 
@@ -161,7 +160,7 @@ module Master
           result
         end
 
-        COUNCIL_OFFER = "not run during /fix; /fix --dry-run --critique convenes it on this result"
+        COUNCIL_OFFER = "separate critique not run; /fix --dry-run --critique reviews this result"
         REPAIR_UNPROVEN = "skipped: the repair failed and changed nothing, so there is nothing to read again or prove"
         REPAIR_CRASHED = "skipped: the repair crashed, so nothing after it reads, proves or delivers the tree"
         NOTHING_DELIVERED = "skipped: the run committed nothing and its autofix left nothing, so the baseline stands"
@@ -813,9 +812,7 @@ module Master
 # Do not flip this fallback to true; TurnRouter and CommandRegistry own consent.
 def default_apply?(*) = false
 
-# The council is the largest model call in a pass: measured on lib/io, 46 files, the two scan phases
-# cost 32s and this deliberation cost 354.8s. It runs only when asked, by --critique or
-# MASTER_FIX_COUNCIL=1, and the report ends with an offer to convene it.
+# Avoid repeating the repair loop’s deliberation unless a separate critique is requested.
 
 def default_critique?(*, apply: nil) = self.class.critique_by_default?(apply:)
 

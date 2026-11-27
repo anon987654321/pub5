@@ -28,9 +28,15 @@ module Master
 
           def pass_budget_s = positive("MASTER_COUNCIL_PASS_BUDGET_S", PASS_BUDGET_S)
 
-          # The council is off inside /fix until MASTER_FIX_COUNCIL=1 or --critique asks for it: the run
-          # ends with an offer to convene it on the result, so a council fault cannot cost a repair.
-          def council_enabled?(env: ENV) = env["MASTER_FIX_COUNCIL"] == "1"
+          # Repair councils are on by default; deterministic checks never call them.
+          def council_enabled?(env: ENV)
+            env["MASTER_SCAN_DETERMINISTIC"] != "1" && env.fetch("MASTER_FIX_COUNCIL", "1") == "1"
+          end
+
+          # A separate pre-repair critique is optional; the repair loop owns its council.
+          def standalone_critique_requested?(env: ENV)
+            council_enabled?(env:) && env["MASTER_FIX_COUNCIL"] == "1"
+          end
 
           def within(budget = nil)
             seconds = budget || pass_budget_s

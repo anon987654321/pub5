@@ -85,11 +85,12 @@ class TestScanDeterministicMode < Minitest::Test
   # --- the council half ----------------------------------------------------
 
   def test_the_through_pipeline_leaves_the_council_to_be_asked_for
-    refute Pass.critique_by_default?, "the council is opt-in: --critique or MASTER_FIX_COUNCIL=1"
+    Clock.stub(:standalone_critique_requested?, false) { refute Pass.critique_by_default? }
+    assert Clock.council_enabled?(env: {})
   end
 
   def test_asking_for_the_council_turns_the_default_critique_on
-    Clock.stub(:council_enabled?, true) { assert Pass.critique_by_default? }
+    Clock.stub(:standalone_critique_requested?, true) { assert Pass.critique_by_default? }
   end
 
   def test_read_only_pass_suppresses_implicit_council
@@ -99,7 +100,7 @@ class TestScanDeterministicMode < Minitest::Test
   def test_deterministic_mode_suppresses_a_requested_council
     ENV[ENV_KEY] = "1"
 
-    Clock.stub(:council_enabled?, true) do
+    Clock.stub(:standalone_critique_requested?, true) do
       refute Pass.critique_by_default?, "a deterministic scan would still run a 354.8s deliberation"
     end
   end
@@ -110,7 +111,7 @@ class TestScanDeterministicMode < Minitest::Test
     ["0", "", "true", "yes"].each do |value|
       ENV[ENV_KEY] = value
 
-      Clock.stub(:council_enabled?, true) do
+      Clock.stub(:standalone_critique_requested?, true) do
         assert Pass.critique_by_default?, "#{value.inspect} switched off the council; only \"1\" may"
       end
     end
