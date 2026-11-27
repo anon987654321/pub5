@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require "open3"
 require "tmpdir"
-require "open3"
 require "rbconfig"
 
 # A provider that answers "Individual quota reached ... Resets in 165h22m49s"
@@ -104,12 +102,13 @@ end
   def test_state_survives_a_fresh_process
     Quota.note("agy:auto", AGY_REPLY)
     ruby = <<~RUBY
-      require "./lib/master"
+      require "./lib/io/lane_quota"
       Master::Io::LaneQuota.path = ARGV[0]
       print Master::Io::LaneQuota.dead?("agy:auto")
     RUBY
-    out, = Open3.capture2e(RbConfig.ruby, "-e", ruby, Quota.path, chdir: File.expand_path("..", __dir__))
-    assert_equal "true", out.lines.last.to_s.strip
+    out, status = Master::Io::Exec.capture2e(RbConfig.ruby, "-e", ruby, Quota.path, chdir: File.expand_path("..", __dir__))
+    assert status.success?, out
+    assert_equal "true", out.strip
   end
 
   def test_report_names_why_each_lane_died_and_the_file_keeps_it
