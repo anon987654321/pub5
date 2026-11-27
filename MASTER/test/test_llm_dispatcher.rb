@@ -446,7 +446,7 @@ class TestLLMDispatcher < Minitest::Test
     dispatcher.instance_variable_set(:@tools, [])
     dispatcher.define_singleton_method(:breaker_for) { |_model| breaker }
     dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
-    dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
+    dispatcher.define_singleton_method(:local_only_refusal) { |_model, required: false| nil }
     dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
     dispatcher.define_singleton_method(:estimate_cost) { |_prompt, _model| 0.0 }
     dispatcher.define_singleton_method(:send_llm_request) do |*_args, **_kwargs|
@@ -471,7 +471,7 @@ class TestLLMDispatcher < Minitest::Test
   def test_dispatcher_setup_fault_does_not_penalize_selected_provider
     dispatcher, _session, bus = build_dispatcher
     dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
-    dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
+    dispatcher.define_singleton_method(:local_only_refusal) { |_model, required: false| nil }
     dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
     dispatcher.define_singleton_method(:breaker_for) { |_model| raise IOError, "cache plumbing failed" }
 
@@ -499,7 +499,7 @@ class TestLLMDispatcher < Minitest::Test
     dispatcher.instance_variable_set(:@tools, [])
     dispatcher.define_singleton_method(:breaker_for) { |_model| breaker }
     dispatcher.define_singleton_method(:answering_model) { |model, _image| model }
-    dispatcher.define_singleton_method(:local_only_refusal) { |_model| nil }
+    dispatcher.define_singleton_method(:local_only_refusal) { |_model, required: false| nil }
     dispatcher.define_singleton_method(:refusal_before_send) { |_model| nil }
     dispatcher.define_singleton_method(:estimate_cost) { |_prompt, _model| 0.0 }
     dispatcher.define_singleton_method(:send_llm_request) { |*_args, **_kwargs| Master::Result.ok("answer") }
