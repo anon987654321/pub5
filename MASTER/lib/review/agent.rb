@@ -272,10 +272,14 @@ module Master
 
       # Every candidate dead is one condition with one line, not the last lane's error.
       def offline_when_exhausted(last, chosen)
-        models = [chosen, *single_call_fallback_models].uniq
+        models = Io::LaneHealth.candidate_ids([chosen, *single_call_fallback_models])
+        models.select! { |model| Io::LaneHealth.local_model?(model) } if local_only?
         # Down lanes only: a model parked by its own failure answers with that
         # failure, which says more than "offline".
-        down = ->(model) { !Io::LaneState.usable?(model, sources: Io::LaneState::DOWN) }
+        down = ->(model) do
+          !Io::LaneState.usable?(model, sources: Io::LaneState::DOWN) ||
+            (local_only? && !Io::LaneSelection.alive?(model))
+        end
         return last unless last.category == :offline || models.all?(&down)
 
         offline = Master::Io::LaneHealth.offline_error(models, refuses: down)

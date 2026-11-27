@@ -181,8 +181,10 @@ module Master
         nil
       end
 
+      def candidate_ids(models) = Array(models).map(&:to_s).reject { |id| id.strip.empty? }.uniq
+
       def online_via(models, refuses: ->(model) { dead?(model) })
-        Array(models).find { |model| !refuses.call(model) }
+        candidate_ids(models).find { |model| !refuses.call(model) }
       end
 
       def dead?(model)
@@ -193,7 +195,8 @@ module Master
 
       # "provider: quota spent, back in 2h3m (..); ollama: live" for each lane once.
       def states(models, refuses: ->(model) { dead?(model) })
-        lanes = Array(models).uniq { |model| LaneQuota.report_for(model) || LaneQuota.lane_of(model) }
+        lanes = candidate_ids(models).uniq { |model| LaneQuota.report_for(model) || LaneQuota.lane_of(model) }
+        return ["no candidate models configured"] if lanes.empty?
         lanes.map do |model|
           lane = LaneQuota.lane_of(model)
           LaneQuota.report_for(model) || (refuses.call(model) ? "#{lane}: silent (no answer lately)" : "#{lane}: live")

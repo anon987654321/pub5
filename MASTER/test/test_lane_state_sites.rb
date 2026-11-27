@@ -100,6 +100,25 @@ class TestLaneStateSites < Minitest::Test
     end
   end
 
+  def test_empty_candidate_set_is_not_a_live_lane
+    health = Master::Io::LaneHealth
+    refute health.online_via([nil, "", " "])
+    assert_equal ["no candidate models configured"], health.states([nil, ""])
+    assert_match(/no candidate models configured/, health.offline_error([nil]).message)
+  end
+
+  def test_local_only_offline_report_excludes_remote_fallbacks_and_unavailable_models
+    agent = Master::Review::Agent.allocate
+    agent.define_singleton_method(:single_call_fallback_models) { ["llama-cli:gguf", "grok-cli:auto"] }
+    agent.define_singleton_method(:local_only?) { true }
+    Master::Io::LaneSelection.stub(:alive?, false) do
+      result = agent.send(:offline_when_exhausted, Master::Result.err("no answer", category: :offline), nil)
+      assert_equal :offline, result.category
+      assert_match(/llama-cli: silent/, result.message)
+      refute_match(/grok-cli|: live/, result.message)
+    end
+  end
+
   def test_a_persona_on_a_refused_lane_is_not_asked
     council = Master::Review::Council::Deliberation.allocate
     council.instance_variable_set(:@persona_failures_lock, Mutex.new)
