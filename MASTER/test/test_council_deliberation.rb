@@ -51,6 +51,38 @@ class TestCouncilDeliberation < Minitest::Test
   # reach ENV through EnvLoader at boot — which neither tests nor bare
   # requires run. This test failed on any shell without exported keys and
   # passed on any with them, which is an environment reading, not a test.
+  def test_convergent_review_refuses_arbitration_without_two_peer_rounds
+    deliberation = Master::Review::Council::Deliberation.allocate
+    deliberation.instance_variable_set(:@judge_enabled, true)
+    feedback = %w[Architect Security].map do |name|
+      { persona: name, position: "independent", structured_findings: [{ "claim" => "observed" }] }
+    end
+    deliberation.stub(:review, Master::Result.ok(feedback)) do
+      deliberation.stub(:append_judge_synthesis, ->(**) { flunk "premature arbitration" }) do
+        result = deliberation.review_convergent("code", max_rounds: 1)
+        assert result.err?
+        assert_equal :inconclusive, result.category
+        assert_match(/peer deliberation incomplete/, result.message)
+      end
+    end
+  end
+
+  def test_peer_exchange_requires_two_distinct_structured_responses
+    deliberation = Master::Review::Council::Deliberation.allocate
+    prior = %w[Architect Security].map do |name|
+      { persona: name, structured_findings: [{ "claim" => "observed" }] }
+    end
+    answers = prior.map do |entry|
+      entry.merge(position: "mixed", position_reason: "counterexample",
+                  position_evidence: [{ "location" => "code", "evidence" => "counterexample" }])
+    end
+
+    assert deliberation.send(:peer_exchange?, prior, answers)
+    refute deliberation.send(:peer_exchange?, prior, [answers.first, answers.first])
+    refute deliberation.send(:peer_exchange?, prior, prior)
+    refute deliberation.send(:peer_exchange?, [], answers)
+  end
+
   def test_explicit_veto_does_not_require_a_full_panel
     personas = [
       Persona.new(name: "Security", role: "Attacker", bias: "paranoid", prompt: "be strict", veto_role: true),

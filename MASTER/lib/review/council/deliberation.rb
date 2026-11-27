@@ -111,6 +111,7 @@ module Master
           history = []
           candidates = []
           comparison_rounds = 0
+          peer_rounds = 0
           max_rounds.times do |index|
             previous = history.last || []
             round_context = feedback_summary(previous, context)
@@ -124,6 +125,7 @@ module Master
             return result if result.err?
 
             history << result.value!.map { |entry| entry.merge(round: index + 1) }
+            peer_rounds += 1 if peer_exchange?(previous, history.last)
             if @candidate_limit && open
               candidates = collect_candidates(candidates, history.last)
             end
@@ -134,13 +136,17 @@ module Master
             end
             compared = comparison_rounds >= CANDIDATE_COMPARISON_ROUNDS
             stable = candidates.empty? && converged?(previous, history.last)
-            if history.size >= 3 && (compared || stable)
+            if peer_rounds >= CANDIDATE_COMPARISON_ROUNDS && (compared || stable)
               @bus&.publish(:council_converged, round: index + 1, basis: compared ? :candidate_comparison : :stable_findings)
               break
             end
           end
           feedback = history.flatten(1)
-          if @candidate_limit && candidates.size >= @candidate_limit && comparison_rounds < CANDIDATE_COMPARISON_ROUNDS
+          if peer_rounds < CANDIDATE_COMPARISON_ROUNDS
+            @bus&.publish(:council_deliberation_incomplete, completed: peer_rounds, required: CANDIDATE_COMPARISON_ROUNDS)
+            return Result.err("council: peer deliberation incomplete (#{peer_rounds}/#{CANDIDATE_COMPARISON_ROUNDS})", category: :inconclusive)
+          end
+          if @candidate_limit && candidates.any? && comparison_rounds < CANDIDATE_COMPARISON_ROUNDS
             return Result.err("council: candidate comparison incomplete (#{comparison_rounds}/#{CANDIDATE_COMPARISON_ROUNDS})", category: :inconclusive)
           end
           judge_context = @candidate_limit ? [context, candidate_judge_brief(candidates)].compact.join("\n\n") : context
@@ -153,6 +159,7 @@ module Master
             feedback.last[:candidates] = candidates
             feedback.last[:comparison_rounds] = comparison_rounds
           end
+          feedback.last[:peer_rounds] = peer_rounds if @judge_enabled
 
           Result.ok(feedback)
         end
@@ -267,6 +274,21 @@ module Master
             "council: incomplete, deadline #{budget}s (#{feedback.size}/#{@panel_size} answered)",
             category: :timeout,
           )
+        end
+
+        def peer_exchange?(previous, current)
+          prior = previous.select { |entry| Array(entry[:structured_findings]).any? }
+                          .map { |entry| entry[:persona].to_s }.reject(&:empty?).uniq
+          return false if prior.size < 2
+
+          responders = current.select do |entry|
+            name = entry[:persona].to_s
+            !name.empty? && name != "Judge" && (prior - [name]).any? &&
+              %w[concur dissent mixed].include?(entry[:position]) &&
+              !entry[:position_reason].to_s.strip.empty? &&
+              Array(entry[:position_evidence]).any?
+          end
+          responders.map { |entry| entry[:persona] }.uniq.size >= 2
         end
 
         def review_round(code, context, round, maximum, image: nil)

@@ -112,7 +112,7 @@ module Master
             "fix0",
             "pass #{pass}, improvement council #{Master::Trace::Dmesg.counted(findings.size, "candidate")}",
           )
-          if winners.any? && findings.empty?
+          if Array(value[:cherry_picks]).any? && findings.empty?
             return Master::Result.err("selected improvements lack usable source anchors", category: :inconclusive)
           end
           findings

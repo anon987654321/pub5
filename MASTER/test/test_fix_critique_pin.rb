@@ -16,6 +16,28 @@ class TestFixCritiquePin < Minitest::Test
     Master::Fix::CritiquePin.clear
   end
 
+  def test_clean_improvement_council_does_not_report_an_undefined_winner
+    value = Master::Result.ok(cherry_picks: [], feedback: [])
+    council = round
+    council.stub(:skip_reason, nil) do
+      council.stub(:critique, value) do
+        assert_equal [], council.improve(files: [], pass: 1, deadline: Time.now + 30)
+      end
+    end
+  end
+
+  def test_selected_improvement_without_anchor_is_inconclusive
+    value = Master::Result.ok(cherry_picks: ["unanchored proposal"], feedback: [])
+    council = round
+    council.stub(:skip_reason, nil) do
+      council.stub(:critique, value) do
+        result = council.improve(files: [], pass: 1, deadline: Time.now + 30)
+        assert result.err?
+        assert_match(/usable source anchors/, result.message)
+      end
+    end
+  end
+
   def test_the_pin_is_off_by_default_and_round_trips_through_its_foci
     refute_predicate Master::Fix::CritiquePin, :focus
 
