@@ -421,6 +421,7 @@ module Master
           def quota_state(id)
             source = Master::Io::LaneState.verdict(id).source
             return QUOTA_WORD.fetch(source, source) unless source.nil? || source == :spent
+            return source || :unknown if id.to_s.start_with?("gateway:")
 
             source == :spent || paid_model?(id) ? Master::Io::QuotaCheck.state : :available
           rescue StandardError

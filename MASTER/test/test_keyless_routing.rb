@@ -752,12 +752,13 @@ class TestKeylessRouting < Minitest::Test
     keyless = build.call
     assert_equal ["gateway:pool-model"], keyless.hosted_models
     assert keyless.reachable?("gateway:pool-model")
-    assert_equal "free", keyless.lane_label("gateway:pool-model")
+    assert_equal "gateway", keyless.lane_label("gateway:pool-model")
     assert_nil seen.first.last.find { |line| line.downcase.start_with?("authorization:") }
 
     ENV["MASTER_LLM_GATEWAY_KEY"] = "gateway-test-key"
     keyed = build.call
     assert_equal ["gateway:pool-model"], keyed.hosted_models
+    assert_equal "gateway", keyed.lane_label("gateway:pool-model")
     assert_equal "gateway-test-key", keyed.hosted_endpoint_for("gateway:pool-model")[:key]
     assert_equal "Authorization: Bearer gateway-test-key", seen.last.last.find { |line| line.downcase.start_with?("authorization:") }
     assert_match(/\AGET \/v1\/models HTTP\/1\.1\z/, seen.last.first)

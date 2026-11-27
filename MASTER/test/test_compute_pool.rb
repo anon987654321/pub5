@@ -235,6 +235,20 @@ class TestComputePool < Minitest::Test
     assert_equal 1, @pool.snapshot.fetch("ollama:qwen3.5:27b")[:calls]
   end
 
+  def test_gateway_quota_is_unknown_until_a_lane_state_is_observed
+    state = Master::Io::LaneState
+    state.stub(:verdict, Struct.new(:source).new(nil)) do
+      assert_equal :unknown, @pool.send(:quota_state, "gateway:basic")
+      assert_equal :unknown, @pool.send(:quota_state, "gateway:alias:free")
+    end
+    state.stub(:verdict, Struct.new(:source).new(:daily_quota)) do
+      assert_equal :exhausted, @pool.send(:quota_state, "gateway:basic")
+    end
+    state.stub(:verdict, Struct.new(:source).new(:spent)) do
+      assert_equal :spent, @pool.send(:quota_state, "gateway:basic")
+    end
+  end
+
   def test_inventory_reports_live_models_and_telemetry
     @pool.record(model: "ollama:qwen3.5:27b", status: :success, latency_ms: 100)
 

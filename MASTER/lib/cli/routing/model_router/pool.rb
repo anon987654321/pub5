@@ -104,6 +104,8 @@ module Master
           # What kind of lane a model is, for the column beside it.
           def lane_label(model_id)
             id = model_id.to_s
+            return "gateway" if id.start_with?("gateway:")
+
             return "free" if id.end_with?(":free", ":cloud", "-cloud") || id.start_with?("web-chat:")
             return "local" if lane_of(id) == :cli_lane && cli_lane(id)["kind"] == "local"
 
