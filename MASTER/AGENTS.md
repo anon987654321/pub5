@@ -208,6 +208,27 @@ edit the block there, never a generated pointer.
 Workflow: one shared checkout; commit straight to `main` with path-scoped
 commits; never force-push.
 
+## Remote development
+
+If the local checkout or toolchain fails, use an isolated Vercel sandbox
+in the `pub5` project (team `team_7Wg8xnFigS3m3SSPYmgLpAdj`, project
+`prj_AMQoLxf3YKVTVrh5JS02d5OSyVWM`). Discover an active session with
+`get_named_sandbox`, or create one with `create_sandboxes_v4` from
+GitHub `anon987654321/pub5`, revision `main`. Run general-purpose
+commands with `run_session_command` in `/vercel/pub5`, not the desktop
+shell. Read exit status and logs before claiming success. Session IDs
+expire; do not hard-code them.
+
+Set the network allowlist when creating the sandbox: GitHub, RubyGems,
+official Ruby and LibreSSL sources, and Ubuntu package mirrors. Use
+HTTPS for package repositories. Block external model providers from
+receiving repository source. Install Zsh and the native build
+dependencies, then build Ruby 4 against LibreSSL. Verify the linked
+library; do not silently substitute OpenSSL. Use Ruby for programs,
+Zsh for shell and file operations, and concise Strunk and White English
+for prose. Run the bundle and local tests in the checkout. Publish only
+verified changes, without force-pushing or deploying production.
+
 Before planning or acting, load MASTER's canonical context:
 
 1. `MASTER/data/soul.yml` is the highest source of global authority. It owns

@@ -308,7 +308,7 @@ workstreams:
   - id: why_provenance
     state: landed
     title: Explain the source rule and reason behind a system decision
-    implementation: MASTER/lib/cli/command_registry/laws.rb
+    implementation: MASTER/lib/cli/command_registry.rb
     proof: MASTER/test
   - id: structural_craft
     state: partial
