@@ -38,6 +38,56 @@ class TestRunJournalLifecycle < Minitest::Test
     )
   end
 
+  def test_phase_exception_stays_open_until_crash_terminalizes_it
+    Dir.mktmpdir("fix-phase-crash") do |root|
+      journal = Master::Fix::RunJournal.new(root:)
+      run_id = start_journal(root, nil).fetch("id")
+      adapter = Master::Fix::FixLoop.allocate
+      adapter.instance_variable_set(:@run_journal, journal)
+
+      error = assert_raises(RuntimeError) { adapter.send(:journal_phase, "missing", "plan") { flunk } }
+      assert_match(/transition_missing/, error.message)
+      assert_equal :started, adapter.send(:journal_phase, run_id, "budget") { :started }
+      assert_raises(IOError) do
+        adapter.send(:journal_phase, run_id, "plan") { raise IOError, "plan write failed" }
+      end
+      assert_equal "active", journal.history.last.dig("phase", "state")
+
+      journal.crash(run_id, "plan write failed")
+
+      crashed = journal.history.last
+      assert_equal "crashed", crashed.fetch("state")
+      assert_equal "interrupted", crashed.dig("phase", "state")
+      assert_equal crashed.fetch("phase"), crashed.fetch("last_interrupted_phase")
+      assert_equal "budget", crashed.dig("last_completed_phase", "name")
+    end
+  end
+
+  def test_new_process_interrupts_abandoned_phase_before_replaying_it
+    Dir.mktmpdir("fix-phase-resume") do |root|
+      pid = fork do
+        journal = Master::Fix::RunJournal.new(root:)
+        run_id = start_journal(root, nil).fetch("id")
+        journal.phase_start(run_id, "budget")
+        journal.phase_finish(run_id, "budget")
+        journal.phase_start(run_id, "plan")
+        exit! 0
+      end
+
+      assert Process.wait2(pid).last.success?
+
+      journal = Master::Fix::RunJournal.new(root:)
+      active = start_journal(root, nil)
+      assert_equal [true, "interrupted", "budget"],
+                   [active.fetch("resumed"), active.dig("phase", "state"), active.dig("last_completed_phase", "name")]
+      journal.phase_start(active.fetch("id"), "plan")
+      journal.phase_finish(active.fetch("id"), "plan")
+      recovered = journal.history.last
+      assert_equal "done", recovered.dig("phase", "state")
+      assert_equal %w[interrupted plan], recovered.fetch("last_interrupted_phase").values_at("state", "name")
+    end
+  end
+
   def test_first_run_imports_the_legacy_MASTER_state_and_keeps_rollback_sources
     Dir.mktmpdir("master-fix-state-cutover") do |root|
       master_root = File.join(root, "MASTER")

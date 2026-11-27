@@ -3,30 +3,25 @@
 module Master
   module Fix
     class Kernel
-      # Durable state persistence on the run journal: the inter-process journal
-      # lock, TOCTOU-checked state reads and atomic writes with pending-marker
-      # recovery, and creation of the private state directory itself.
+      # Keep the journal and its lock under the same directory checks.
       class LifecycleJournal
         MARKER_INCOMPLETE = "fix journal lifecycle audit is incomplete; manual review required"
 
         private
 
-        # Verify the state directory exists, is a private real directory, and
-        # create any missing ancestors on the way down. Returns the root.
         def ensure_state_directory!
           root = File.expand_path(@state_root)
           missing, cursor = existing_state_ancestor(root)
-          stat = File.lstat(cursor)
-          unless stat.directory? && !stat.symlink?
-            raise IOError, "refusing non-directory or symlinked fix state parent"
+          unless missing.empty?
+            stat = File.lstat(cursor)
+            unless stat.directory? && !stat.symlink?
+              raise IOError, "refusing non-directory or symlinked fix state parent"
+            end
+
+            create_missing_state_directories!(missing)
           end
 
-          create_missing_state_directories!(missing)
-          final = File.lstat(root)
-          unless final.directory? && !final.symlink? && (final.mode & 0o022).zero?
-            raise IOError, "refusing unsafe fix state directory"
-          end
-          enforce_state_root_privacy!(root, final)
+          enforce_state_root_privacy!(root, verify_journal_directory!(root))
           root
         rescue SystemCallError => error
           raise IOError, "cannot prepare persistent fix state safely: #{error.class}: #{error.message}"
@@ -95,9 +90,11 @@ module Master
           unless directory_stat.directory? && !directory_stat.symlink?
             raise IOError, "refusing non-directory or symlinked journal state directory"
           end
-          return unless (directory_stat.mode & 0o022).positive?
+          if (directory_stat.mode & 0o022).positive?
+            raise IOError, "refusing group/world-writable journal state directory"
+          end
 
-          raise IOError, "refusing group/world-writable journal state directory"
+          directory_stat
         end
 
         def parse_journal(path)

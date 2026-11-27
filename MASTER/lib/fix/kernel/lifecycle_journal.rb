@@ -138,6 +138,7 @@ module Master
           return false if !same_process && process_alive?(run["pid"])
 
           previous = run["state"]
+          interrupt_active_phase!(run)
           run["state"] = "interrupted"
           run["message"] = same_process ? "left #{previous}; #{relative(target)} followed in the same process" : "left #{previous}; #{relative(target)} started while its process was gone"
           run["finished_at"] = Time.now.utc.iso8601
@@ -154,6 +155,7 @@ module Master
           return false if process_alive?(run["pid"]) || active_pass(run) || remaining_for(run).positive?
 
           previous = run["state"]
+          interrupt_active_phase!(run)
           run["state"] = "interrupted"
           run["message"] = "left #{previous} with its budget spent; a new run started"
           run["finished_at"] = Time.now.utc.iso8601
@@ -170,6 +172,7 @@ module Master
           return false if process_alive?(run["pid"])
 
           previous = run["state"]
+          interrupt_active_phase!(run)
           run["state"] = "interrupted"
           run["message"] = "left #{previous} when its process ended; a fresh run started"
           run["finished_at"] = Time.now.utc.iso8601
@@ -185,6 +188,7 @@ module Master
             raise "another fix process is active: #{active["id"]} pid=#{active["pid"]}"
           end
           previous_state = active["state"]
+          interrupt_active_phase!(active)
           active["state"] = "active"
           active["resumed_from"] = previous_state unless previous_state == "active"
           active["resume_count"] = active.fetch("resume_count", 0).to_i + 1

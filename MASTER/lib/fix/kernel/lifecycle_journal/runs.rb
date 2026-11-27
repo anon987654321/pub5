@@ -3,9 +3,7 @@
 module Master
   module Fix
     class Kernel
-      # Plan binding and pass-lifecycle mutations on the durable run journal:
-      # provenance invalidation, pass start/finish, convergence state, terminal
-      # and crashed states.
+      # Record phase state separately from pass outcomes and plan provenance.
       class LifecycleJournal
         # Every dimension a plan generation is bound by; a change in any of
         # them invalidates persisted convergence rather than resuming it.
@@ -51,12 +49,15 @@ module Master
           end
         end
 
-        # The journal names blocking work before it begins, so a process that
-        # dies between orchestration steps leaves a recoverable hand-off.
         def phase_start(run_id, name)
           update(run_id) do |run|
+            raise "fix run #{run_id} is #{run["state"]}" unless run["state"] == "active"
+            if run.dig("phase", "state") == "active"
+              raise "unfinished fix phase #{run.dig("phase", "name")} for #{run_id}"
+            end
+
             run["phase"] = { "name" => name.to_s, "state" => "active", "started_at" => Time.now.utc.iso8601 }
-          end
+          end || raise("transition_missing: #{name} has no run #{run_id}")
         end
 
         def phase_finish(run_id, name)
@@ -66,6 +67,7 @@ module Master
 
             phase["state"] = "done"
             phase["finished_at"] = Time.now.utc.iso8601
+            run["last_completed_phase"] = phase.dup
           end
         end
 
@@ -107,6 +109,7 @@ module Master
 
         def crash(run_id, error)
           update(run_id) do |run|
+            interrupt_active_phase!(run)
             run["state"] = "crashed"
             run["error"] = error.to_s[0, 800]
             run["finished_at"] = Time.now.utc.iso8601
@@ -121,6 +124,7 @@ module Master
 
           phase["state"] = "interrupted"
           phase["finished_at"] = Time.now.utc.iso8601
+          run["last_interrupted_phase"] = phase.dup
         end
 
         def update(run_id)

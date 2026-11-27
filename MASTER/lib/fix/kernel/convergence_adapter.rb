@@ -365,21 +365,21 @@ module Master
           paths: @file_collector.excluded_path_reasons,
           sample: @file_collector.excluded_path_reasons.keys.sort.first(FixPlan::MAX_EXCLUSION_SAMPLE),
         }
-        @fix_plan = journal_phase(run_id, "plan") do
-          FixPlan.capture(
+        journal_phase(run_id, "plan") do
+          @fix_plan = FixPlan.capture(
             root: repository_root, target:, files:, laws: @laws, excluded: exclusions,
             adapters: @pass_runner.assessment_adapters(target:),
             max_passes:, budget_seconds:, task_contract: TaskContract.current,
           )
+          TaskContract.attach_plan!(@fix_plan.digest)
+          bind_fix_plan!(journal, run_id) || raise("transition_missing: plan binding for run #{run_id}")
+          @bus&.publish("fix_loop:plan", **@fix_plan.to_h.slice(
+            "digest", "identity_digest", "source_digest", "scope_digest", "law_digest",
+            "law_source_digest", "authority_digest", "toolchain_digest", "exclusion_digest",
+            "adapter_digest", "eligible_files", "excluded", "adapters", "max_passes",
+            "budget_seconds", "deadline_at"
+          ).transform_keys(&:to_sym))
         end
-        TaskContract.attach_plan!(@fix_plan.digest)
-        @bus&.publish("fix_loop:plan", **@fix_plan.to_h.slice(
-          "digest", "identity_digest", "source_digest", "scope_digest", "law_digest",
-          "law_source_digest", "authority_digest", "toolchain_digest", "exclusion_digest",
-          "adapter_digest", "eligible_files", "excluded", "adapters", "max_passes",
-          "budget_seconds", "deadline_at"
-        ).transform_keys(&:to_sym))
-        bind_fix_plan!(journal, run_id)
         @pass_runner.begin_assessment_run(files:, plan: @fix_plan) if
           @pass_runner.respond_to?(:begin_assessment_run)
         if RunBudget.stopping || repair_seconds_left(journal) <= 0
@@ -658,9 +658,7 @@ module Master
 
       def journal_phase(run_id, name)
         @run_journal.phase_start(run_id, name)
-        yield
-      ensure
-        @run_journal.phase_finish(run_id, name)
+        yield.tap { @run_journal.phase_finish(run_id, name) }
       end
 
       # --lane visual: one sweep, grouped, mechanical fixers first, the model once per group left.

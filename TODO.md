@@ -484,4 +484,11 @@ Owner: [MASTER/data/law/ux_refinements.yml](MASTER/data/law/ux_refinements.yml).
 
 - 2026-11-27: /fix synthesized revisions require a separate explicit council selection, with time reserved for re-review. A veto or inconclusive re-review discards the revision without promoting it. Repair ranking restores findings/test evidence/diff-size priority; inconclusive visual comparisons fall back to measured gain. Focused regressions authored; full suite NOT_RUN.
 
-Acceptance remains NOT_RUN until supported runtime evidence is recorded.
+Equipped the checkout with Ruby 3.3.8 and the pinned MASTER bundle on
+2026-11-27. Budget and plan receipts survive a crash and a new process can
+distinguish an interrupted phase from the last completed phase. The plan
+phase now includes durable plan binding. Journal and restart suites passed
+37 tests and 162 assertions. The stalled-preflight supervisor and end-to-end
+transition checks remain open.
+
+Five-tree acceptance remains open.

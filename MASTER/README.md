@@ -289,6 +289,11 @@ The existing compatibility spellings rewrite to the one dispatcher: `/audit`, `/
 
 The Kernel serializes a run, records its lifecycle, and delegates convergence and Law-level repair. Runs are bounded and resumable; a stopped or interrupted run is not a successful one. Ordinary per-file repairs use `Fix::Transaction` for staged writes, rollback and delivery. Multi-file restructuring uses the explicit snapshot, proof and undo path in `Fix::Restructure`. Those are distinct recovery contracts; do not describe one as the other. The canonical execution owners are the Ruby implementations under `lib/core/`, `lib/fix/kernel/` and `lib/execution.rb`; tests pin the public ownership and recovery boundaries.
 
+The run journal records budget startup and plan binding before either begins.
+A phase completes after its work returns. Crash and restart preserve the latest
+interrupted phase and the last completed phase for diagnosis. Transaction and
+pass receipts still determine where repair resumes.
+
 The run footer includes a per-run file outcome docket for files that entered the repair adapter. The durable assessment artifact separately enumerates every eligible scanner path as scanned or unmeasured; that is scanner coverage, not a Law PASS or a census of rendered behaviour. The Law × stream × surface matrix remains the compliance record. Its quality projection reports engineering, editorial, visual, experience and operations separately. `compliance_status` must be PASS before repair can finish DONE; `overall_status` also records external evidence, which remains INCONCLUSIVE until document rendering, assistive technology, live-host, listening or qualified business/legal review is actually supplied.
 
 Run one tree at a time unless evidence establishes a cross-tree dependency. From `MASTER/`, the normal entrypoints are `bin/master /fix MASTER`, `bin/master /fix RAILS`, `bin/master /fix OPENBSD`, `bin/master /fix STUDIO` and `bin/master /fix BIZ` for document production.
