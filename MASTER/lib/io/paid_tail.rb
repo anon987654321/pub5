@@ -24,7 +24,7 @@ module Master
       def config = LaneSelection.config.fetch("paid_tail", {})
 
       def enabled?
-        return false if ENV["MASTER_PAID_TAIL"] == "0" || config["enabled"] == false || capped?
+        return false if ENV["MASTER_PAID_TAIL"] == "0" || config["enabled"] != true || capped?
 
         cap = run_cap_usd
         cap.finite? && cap.positive? && spent < cap
@@ -36,7 +36,7 @@ module Master
 
       def spent = LOCK.synchronize { @spent }
 
-      def run_cap_usd = Float(config.fetch("run_cap_usd", 5.0))
+      def run_cap_usd = Float(config.fetch("run_cap_usd", 0.0))
 
       # Catalog models under the price caps, dearest first inside the caps (price
       # tracks capability), as OpenRouter ids. Empty with no catalog or the tail off.
