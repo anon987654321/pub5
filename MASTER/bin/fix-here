@@ -179,7 +179,7 @@ puts "fix0 at fix-here: tree=#{tree} disk=#{format('%.1f', free)} GiB model=#{mo
 # cannot parse must not read "ready" and then fail the real run (F6, 2026-11-23).
 $LOAD_PATH.unshift(File.join(MASTER, "lib")) unless $LOAD_PATH.include?(File.join(MASTER, "lib"))
 require "operator/parse_sweep"
-broken = Operator::ParseSweep.failures(ROOT)
+broken = Operator::ParseSweep.failures(ROOT, Operator::ParseSweep.paths_for(ROOT, tree))
 unless broken.empty?
   warn Operator::ParseSweep.render(broken.first(10))
   abort "fix-here: #{broken.size} tracked Ruby file(s) do not parse; fix them before a run that takes hours."
