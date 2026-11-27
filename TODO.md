@@ -29,6 +29,16 @@ Paid operations and external rights decisions retain their existing gates.
 
 ## Recent /fix and product requirements
 
+### /fix transition supervision
+
+- [ ] Persist a run-scoped phase receipt before every blocking operation and terminalize incomplete phases on recovery.
+- [ ] Require and verify durable handoffs from mission link to budget, plan, pass, proof and delivery; name a missing edge as `transition_missing`.
+- [ ] Stream phase-owned child output and process exits into the existing event bus and run receipt.
+- [ ] Show only run-scoped current progress in status; reject historical logs, stale heartbeats and PID-only claims.
+- [ ] Supervise blocking phases outside the repair process; on missed liveness, capture bounded diagnostics, terminate the process group, roll back and release the lease.
+- [ ] Resume from the last completed phase, with its recorded recovery action, rather than from an opaque active run.
+- [ ] Replace competing fixed pass/time displays with evidence-driven convergence, dynamic phase deadlines and one policy-owned outer safety boundary.
+
 - [ ] Ensure 10–50 materially distinct alternatives, not just requested counts.
 - [ ] Reject superficial variants without discarding genuinely different repairs.
 - [ ] Verify council invocation, reciprocal critique and arbitration in applicable routes.
