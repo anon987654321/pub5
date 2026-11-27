@@ -56,17 +56,7 @@ end
 Law.define(:PRESERVE_FIRST) do
   source "MASTER constitution (soul.yml absolute.rules)"
   ask "Does this code edit proceed before the complete target source and relevant dependencies, callers, loaders, configuration, tests and public contracts have been read and understood?"
-  practice <<~TEXT
-    never rewrite working code from a snippet. read the complete current target
-    and its dependency/caller/test/configuration contract before writing, using
-    content hashes and a fresh reference map as evidence. A cached excerpt,
-    assumed caller list or graph that failed to read a source is not complete
-    understanding. If relevant context is missing or exceeds the safe context
-    budget, block only the affected repair rather than guessing; continue every
-    independent in-scope task. Preserve user intent, data, security, privacy and
-    public contracts, not a defective implementation. Improve or retire that
-    implementation when evidence justifies the change, and prove the result.
-  TEXT
+  practice Master.laws_document.fetch("PRESERVE_FIRST").fetch("statement")
   fix "Read the entire target and its relevant dependencies before editing; preserve behavior and prove the change."
   bad  "edits a forty-line excerpt without reading the complete source or its callers"
   good "reads the whole source, traces dependency and caller files, then changes only the justified lines"
@@ -87,17 +77,7 @@ Law.define(:BE_CONCISE) do
   ask "Does this unit contain unnecessary verbosity in words, tokens, structure, or output?"
   # One rule, both halves: the catalogue's name is "avoid unnecessary words,
   # tokens, or lines", so the reply and the source are the same subject.
-  practice <<~TEXT
-    omit needless words and code. Give the shortest complete answer. For
-    substantial work, lead with the outcome and include only decisive evidence,
-    material risks or blockers, and the next action. Hide raw provider and tool
-    messages, internal prompts, intermediate drafts, retries, and repeated
-    progress from ordinary output; retain underlying records in their existing
-    owners for explicit diagnosis. Preserve requested source, code, artifact
-    output, and Git diffs verbatim. Never omit material facts, failures,
-    uncertainty, security risks, required approvals, or evidence needed to
-    verify the result. A routine success takes one line.
-  TEXT
+  practice Master.laws_document.fetch("BE_CONCISE").fetch("statement")
   fix "Omit needless words and code. Show the shortest complete result; retain material facts and full evidence."
   bad  "a paragraph restating the question, followed by raw provider chatter and a second copy of the result"
   good "the result, decisive evidence, material blocker, and next action"
@@ -238,22 +218,7 @@ end
 
 Law.define(:OPERATOR_AUTONOMY) do
   source "MASTER constitution (soul.yml absolute.rules)"
-  practice <<~TEXT
-    when the user approves a direction, carry it through every independent,
-    reversible repository change in that scope without per-file confirmation.
-    A commit is a checkpoint, not a conversational stop: after a verified,
-    path-scoped commit and push, resume the same objective and continue the next
-    independent iteration. Never ask whether to continue merely because a
-    checkpoint landed, a test passed, a file changed or one subtask finished.
-    Sweep findings to convergence and make the hard choices the evidence
-    supports. Git-reversible source edits, refactors and deletions are included
-    when the task authorises repository cleanup. Ask only at a real boundary:
-    private or personal data, credentials, another person's agency, external
-    publication or messages, spending, irreversible shared state, destructive
-    remote-host operations, or a material unresolved either-or. Approval for
-    one outward or irreversible action does not authorise another. When one
-    step is blocked, finish the independent work and name the exact blocker.
-  TEXT
+  practice Master.laws_document.fetch("OPERATOR_AUTONOMY").fetch("statement")
   fix "when a scan finds violations, sweep to convergence rather than pausing for per-fix confirmation."
   bad  "asks after each fix"
   good "runs the backlog and reports once"
@@ -278,17 +243,7 @@ end
 
 Law.define(:DO_THE_WORK_NOW) do
   source "MASTER constitution - execute the authorised task, do not defer it"
-  practice <<~TEXT
-    treat a clear user request as authority to complete every independent,
-    in-scope step available now. Do not answer executable work with another
-    plan, recommendation, patch sketch or TODO. Implement, verify, correct
-    failures and deliver in this run. Do not create backlog entries for work
-    that current tools, credentials and authority can complete. Keep a remainder
-    only when it genuinely needs an unavailable credential, device, human
-    decision, external consent, remote authority or unmet dependency. Name the
-    exact blocker, responsible actor and evidence needed. If one step is blocked,
-    continue all independent work.
-  TEXT
+  practice Master.laws_document.fetch("DO_THE_WORK_NOW").fetch("statement")
   fix "Execute every authorised in-scope step now; retain only an exact externally blocked remainder."
   bad  "adds a TODO for a repair or test it can run with current tools and authority"
   good "implements the change, runs its proof, fixes failures and reports only the real external blocker"
@@ -296,13 +251,7 @@ end
 
 Law.define(:SCAN_SWEEP_CONVERGENCE) do
   source "MASTER constitution (soul.yml absolute.rules)"
-  practice <<~TEXT
-    "through" means deep scan the path and attempt every actionable finding,
-    then rescan and repeat until DONE or an explicit truthful terminal state.
-    No fixer, time limit, quota pause or failed pass proves everything was
-    repaired. Name every unresolved finding, exclusion, unmeasured surface and
-    human decision. Lint written paths and audit lib/ for drift after mutations.
-  TEXT
+  practice Master.laws_document.fetch("SCAN_SWEEP_CONVERGENCE").fetch("statement")
   fix "Sweep every actionable finding and prove convergence; report every blocker and unresolved item."
   bad  "one scan, then stops or reports success with unresolved findings"
   good "repairs and rechecks every actionable finding, or names the precise non-DONE terminal state"
@@ -325,16 +274,7 @@ end
 
 Law.define(:COUNCIL_WHEN_RISKY) do
   source "MASTER constitution (soul.yml absolute.rules)"
-  practice <<~TEXT
-    council is Review-stage deliberation with a Security veto. Run it on
-    dangerous patterns, material multi-file diffs, or when config enables it;
-    scan plus sweep is the default loop. Record whether the trigger applied,
-    whether review ran and completed, its outcome, and whether Security actually
-    exercised its veto. Distinguish a review that was not required from one
-    not run, unavailable, incomplete or blocked. A declared panel, requested
-    review, missing response or skipped Security pass is never a successful
-    review.
-  TEXT
+  practice Master.laws_document.fetch("COUNCIL_WHEN_RISKY").fetch("statement")
   fix "council is Review-stage deliberation with a Security veto."
   bad  "council on every turn"
   good "council on a multi-file diff"
@@ -610,11 +550,7 @@ end
 
 Law.define(:LINT_BEAUTIFY) do
   source "MASTER constitution (soul.yml absolute.rules)"
-  practice <<~TEXT
-    Boy Scout Rule - touching a file obliges a full-file lint pass, not only
-    the edited lines. Collapse double blanks, fix spacing, and reassess every
-    comment: delete what-comments, keep a one-line why only when non-obvious.
-  TEXT
+  practice Master.laws_document.fetch("LINT_BEAUTIFY").fetch("statement")
   fix "Boy Scout Rule - touching a file obliges a full-file lint pass, not only the edited lines."
   bad  "lints only the edited lines"
   good "lints the whole file it touched"

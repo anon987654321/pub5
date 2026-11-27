@@ -61,6 +61,17 @@ class TestFixProtocol < Minitest::Test
     assert_includes text, "Bob2 applies to the"
   end
 
+  def test_recovered_practice_laws_use_canonical_statements
+    require File.join(Master::ROOT, "law", "definition") unless defined?(::Law)
+    ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?
+
+    document = Master.laws_document
+    %w[PRESERVE_FIRST DO_THE_WORK_NOW BE_CONCISE OPERATOR_AUTONOMY
+       SCAN_SWEEP_CONVERGENCE COUNCIL_WHEN_RISKY LINT_BEAUTIFY].each do |id|
+      assert_equal document.fetch(id).fetch("statement"), ::Law.definitions.fetch(id.to_sym).practice, id
+    end
+  end
+
   def test_practice_laws_name_full_source_docs_and_verified_checkpoint_contracts
     require File.join(Master::ROOT, "law", "definition") unless defined?(::Law)
     ::Law.load_all(File.join(Master::ROOT, "law")) if ::Law.definitions.empty?

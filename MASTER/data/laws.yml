@@ -58,32 +58,35 @@ PRESERVE_FIRST:
   parent: STEWARDSHIP
   question: "What must survive, and how does the whole improve?"
   statement: >
-    Preserve working behavior, meaning and deliberate choices before improving.
-    Develop the whole through transformations that strengthen existing relationships.
-    Compare materially different alternatives and retain demonstrated lessons.
-    Read the complete target and relevant callers, loaders, dependencies,
-    configuration, tests and public contracts before planning or mutation.
-    Record inventory, revision, content digests and completeness; excerpts and
-    failed reads are not evidence of understanding. Repository-wide MASTER
-    rewrites require a complete MASTER source inventory and read receipt.
-    Missing required reads block affected work, not independent work. Account
-    for every capability, invariant and contract before and after; compress
-    representation without compressing behavior or weakening enforcement.
+    Preserve working behavior, meaning, user intent, data, security, privacy,
+    public contracts and deliberate choices, not a defective implementation.
+    Read the complete current target and relevant callers, loaders,
+    dependencies, configuration, tests and public contracts before planning or
+    writing. Record the inventory, revision, content hashes and a fresh
+    reference map; an excerpt, assumed caller list or failed read cannot
+    establish understanding. A repository-wide MASTER rewrite requires a
+    complete MASTER source inventory and read receipt. If required context is
+    missing or exceeds the safe budget, block the affected repair and continue
+    every independent in-scope task. Compare materially different
+    alternatives, improve or retire a defective implementation when evidence
+    justifies it, prove each capability, invariant and contract before and
+    after, and retain demonstrated lessons. Compress representation without
+    compressing behavior or weakening enforcement.
   resolution: review
 
 DO_THE_WORK_NOW:
   parent: STEWARDSHIP
   statement: >
-    Do the work now. A clearly authorised request is an instruction to
-    execute, not an invitation to produce another plan or backlog row.
-    Do not create planning TODOs, deferred checklists or parallel backlog
-    files for work that can be performed with current tools, credentials
-    and authority. Finish independent in-scope steps, record evidence, and
-    leave only a precisely named remainder that genuinely needs an
-    unavailable credential, device, human decision, external consent,
-    remote authority or unmet dependency. Completing the independent work
-    while a remainder is blocked is required; promising later work that
-    could have been done now is a stewardship failure.
+    Treat a clear authorized request as authority to execute every independent
+    in-scope step available now. Do not answer executable work with another
+    plan, recommendation, patch sketch or TODO. Implement, verify, correct
+    failures and deliver in this run. Do not create backlog entries for work
+    that current tools, credentials and authority can complete. Keep a
+    remainder only when an unavailable credential, device, human decision,
+    external consent, remote authority or unmet dependency genuinely blocks
+    it. Name the exact blocker, responsible actor and evidence needed. If one
+    step is blocked, continue independent work; never promise later work that
+    can be done now.
   severity: error
   resolution: review
   mechanical: human
@@ -2488,53 +2491,79 @@ STEWARDSHIP_venustas:
 SCAN_SWEEP_CONVERGENCE:
   parent: STEWARDSHIP
   statement: >
-    Measure the baseline, repair actionable findings, re-observe the same
-    measures and repeat within the authorized budget. A fresh complete scan with
-    no actionable findings proves convergence; a round with no verified gain
-    proves only a plateau. Try a materially different approach when evidence
-    warrants it, retain the best verified state and stop at the applicable
-    terminal condition. Record remaining findings, unmeasured surfaces, failures
-    and blockers; never relabel them DONE.
+    Through means deep-scan the path and attempt every actionable finding.
+    Measure the baseline, repair, re-observe the same measures, lint written
+    paths, audit lib/ for drift and repeat within the authorized budget until
+    DONE or an explicit truthful terminal state. A fresh complete scan with no
+    actionable findings is necessary for convergence; satisfy the declared
+    verification gate as well. A complete round with no verified gain is only
+    a plateau. Change approach when justified, retain the best verified state
+    and stop at the applicable terminal condition. No time limit, quota pause,
+    absent fixer or failed pass proves repair. Name every unresolved finding,
+    exclusion, unmeasured surface, failure, blocker and human decision; never
+    relabel them DONE.
   resolution: review
 
 COUNCIL_WHEN_RISKY:
   parent: ROBUSTNESS
   statement: >
-    Use the existing council on risky changes and material multi-file decisions.
-    Challenge proposals from security, maintenance, architecture, simplicity,
-    performance, cost, novice comprehension, user needs, skepticism and failure
-    perspectives as applicable. Let specialists exchange counterarguments before
-    synthesis. Require the actual security review and honor its veto; an absent
-    review is not approval.
+    Council is Review-stage deliberation with a Security veto. Run it on
+    dangerous patterns, material multi-file diffs or when configuration
+    enables it; scan and sweep is the default loop. Have applicable
+    specialists challenge proposals for security, maintenance, architecture,
+    simplicity, performance, cost, novice comprehension, user needs,
+    skepticism and failure. Exchange counterarguments before synthesis. Record
+    the trigger, whether review ran and completed, the outcome and whether
+    Security exercised its veto. Distinguish review not required from not run,
+    unavailable, incomplete or blocked. A declared panel, requested review,
+    missing response or skipped Security pass is not approval. Honor the
+    actual veto.
   resolution: review
 
 BE_CONCISE:
   parent: DENSITY
   statement: >
-    Give the shortest complete result. Never truncate requested code, source,
-    diffs, artifacts or required evidence; use explicit boundaries or a complete
-    artifact when the delivery medium is limited. Keep decisive evidence,
-    uncertainties, failures, risks and approvals visible.
+    Omit needless words and code. Give the shortest complete answer. For
+    substantial work, lead with the outcome, decisive evidence, material risks
+    or blockers, and the next action. Hide raw provider and tool messages,
+    internal prompts, intermediate drafts, retries and repeated progress from
+    ordinary output; retain the records at their owners for diagnosis.
+    Preserve requested source, code, artifacts and Git diffs verbatim; use
+    explicit boundaries or a complete artifact if the delivery medium is
+    limited. Never omit material facts, failures, uncertainty, security risks,
+    required approvals or evidence needed for verification. A routine success
+    takes one line.
   resolution: review
 
 LINT_BEAUTIFY:
   parent: STEWARDSHIP
   statement: >
-    On editing a file, inspect and lint its complete current body, correct
-    in-scope incidental defects and preserve behavior and meaningful comments.
-    Verify no new smells, regressions or unaccounted complexity; a clean changed
-    line does not prove a clean file.
+    Boy Scout Rule: touching a file obliges a full-file lint pass, not only
+    the changed lines. Inspect the complete current body, fix in-scope
+    incidental defects, collapse double blanks, correct spacing and reassess
+    every comment. Remove what-comments; keep a one-line why when non-obvious,
+    and preserve directives and meaningful content. Preserve behavior; verify
+    no new smells, regressions or unaccounted complexity.
   resolution: review
   enforcement: MASTER/law/practice.rb (practice guidance)
 
 OPERATOR_AUTONOMY:
   parent: STEWARDSHIP
   statement: >
-    Carry an explicitly authorized direction through independent reversible
-    changes and verified delivery checkpoints without per-file approval. Stay
-    inside admitted scope, resource budget and authority; never infer consent to
-    disclosure, spending, destructive remote operations or unrelated mutation.
-    Ask only at a real unresolved authority or material product decision.
+    Carry an explicitly authorized direction through every independent
+    reversible repository change within scope and budget without per-file
+    confirmation. A verified, path-scoped commit and push is a checkpoint, not
+    a conversational stop; resume the objective and next independent
+    iteration. Do not ask to continue merely because a test passed, a file
+    changed or a subtask finished. Sweep to convergence; make the hard choices
+    the evidence supports. Git-reversible source edits, refactors and
+    deletions are included when the task authorizes repository cleanup. Ask
+    only at a real authority boundary: private or personal data, credentials,
+    another person's agency, external publication or messages, spending,
+    irreversible shared state, destructive remote-host operations or a
+    material unresolved either-or. Approval for one outward or irreversible
+    action does not authorize another. When a step is blocked, finish
+    independent work and name the exact blocker.
   resolution: review
 
 # 6. THE TRANSFORMATIONS
@@ -5179,7 +5208,7 @@ law_map:
       "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
       "root": "stewardship", "tags": ["engineering"], "source": "master.yml@30dad7ead"}
     boy_scout_mandatory: {"meaning": "every change must improve surroundings", "detects": "quality_regression",
-      "severity": "medium", "confidence": 0.85, "operation": "improve", "law_ids": [], "status": "gap",
+      "severity": "medium", "confidence": 0.85, "operation": "improve", "law_ids": ["LINT_BEAUTIFY", "BROKEN_WINDOWS", "ENTROPY_RESISTANCE"], "status": "covered",
       "root": "stewardship", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     boy_scout_rule: {"meaning": "leave code better than you found it", "detects": "no_improvement", "severity": "high",
       "confidence": 0.9, "operation": "improve", "law_ids": ["BROKEN_WINDOWS", "ENTROPY_RESISTANCE"],
@@ -5356,7 +5385,7 @@ law_map:
       "severity": "critical", "confidence": 0.95, "operation": "add_guards", "law_ids": ["SILENT_RESCUE"],
       "status": "covered", "root": "visible_state", "tags": ["code"]}
     extend_dont_replace: {"meaning": "build on existing patterns, don't rewrite", "detects": "unnecessary_rewrite",
-      "severity": "medium", "confidence": 0.8, "operation": "extend", "law_ids": [], "status": "gap",
+      "severity": "medium", "confidence": 0.8, "operation": "extend", "law_ids": ["PRESERVE_FIRST", "OCP"], "status": "covered",
       "root": "no_surplus", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     extensibility: {"meaning": "open for extension", "detects": "modification_required", "severity": "high",
       "confidence": 0.75, "operation": "introduce_seam", "law_ids": ["OPEN_CLOSED"], "status": "covered",
@@ -5527,12 +5556,12 @@ law_map:
       "status": "covered", "root": "proportion", "tags": ["visual_design"], "source": "master.yml@30dad7ead"}
     internalize_before_writing: {"meaning": "understand existing code before modifying",
       "detects": "blind_modification", "severity": "high", "confidence": 0.85, "operation": "analyze_first",
-      "law_ids": [], "status": "gap", "root": "stewardship", "tags": ["code"]}
+      "law_ids": ["PRESERVE_FIRST"], "status": "covered", "root": "stewardship", "tags": ["code"]}
     introduce_parameter_object: {"confidence": 0.75, "detects": "unclear_intent",
       "meaning": "Group parameters into object  ", "operation": "organize", "severity": "medium", "law_ids": [],
       "status": "gap", "tags": ["refactoring"], "source": "master.yml@30dad7ead"}
     intuitive_navigation: {"meaning": "easy to understand and predict", "detects": "confusing_navigation",
-      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
+      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": ["POLA_intuitive_navigation"], "status": "covered",
       "root": "least_surprise", "tags": ["ux_laws"], "source": "master.yml@30dad7ead"}
     inversion_of_control: {"confidence": 0.75, "detects": "unclear_intent",
       "meaning": "Framework calls your code, not vice versa  ", "operation": "rename", "severity": "medium",
@@ -5614,7 +5643,7 @@ law_map:
       "confidence": 0.8, "operation": "organize", "law_ids": ["EIGHT_PX_RHYTHM", "PIXEL_EXACT"], "status": "covered",
       "root": "proportion", "tags": ["code"]}
     mental_models: {"meaning": "Match user expectations  ", "detects": "unexpected_behavior", "severity": "medium",
-      "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap", "root": "least_surprise",
+      "confidence": 0.75, "operation": "simplify", "law_ids": ["POLA_mental_models"], "status": "covered", "root": "least_surprise",
       "tags": ["ux_laws"], "source": "master.yml@30dad7ead"}
     metrics_and_alerting: {"meaning": "measure what matters, alert on anomalies", "detects": "blind_operation",
       "severity": "high", "confidence": 0.8, "operation": "add_feedback", "law_ids": [], "status": "gap",
@@ -5778,7 +5807,7 @@ law_map:
         "DOCUMENT_WIDOW_ORPHAN_CONTROL"], "status": "covered",
       "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     reduce_cognitive_load: {"meaning": "Don't make users think unnecessarily  ", "detects": "cognitive_overload",
-      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": [], "status": "gap",
+      "severity": "medium", "confidence": 0.75, "operation": "simplify", "law_ids": ["BOUNDED_LOAD", "PROGRESSIVE_DISCLOSURE"], "status": "covered",
       "root": "bounded_load", "tags": ["clean_code"], "source": "master.yml@30dad7ead"}
     rejection_of_ornament: {"meaning": "eliminate unnecessary decoration", "detects": "decorative_code",
       "severity": "low", "confidence": 0.85, "operation": "delete", "law_ids": ["NO_DECORATIVE_FX", "FLAT_PIXELS"],
@@ -5890,7 +5919,7 @@ law_map:
       "SIMULATION", "COMPLETION_THEATER"], "status": "covered", "root": "visible_state", "tags": ["code"]}
     structured_logging: {"meaning": "machine-parseable log format with consistent fields",
       "detects": "unstructured_logs", "severity": "medium", "confidence": 0.85, "operation": "standardize",
-      "law_ids": [], "status": "gap", "root": "least_surprise", "tags": ["engineering"],
+      "law_ids": ["DMESG_TRANSCRIPT"], "status": "covered", "root": "least_surprise", "tags": ["engineering"],
       "source": "master.yml@30dad7ead"}
     substitute_algorithm: {"confidence": 0.75, "detects": "unclear_intent",
       "meaning": "Replace algorithm with clearer one  ", "operation": "clarify", "severity": "medium", "law_ids": [],
