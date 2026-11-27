@@ -25,6 +25,21 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     assert_nil validated_file("models.yml")
   end
 
+  def test_paid_tail_budget_matches_enabled_state
+    path = catalogue_path("models.yml")
+    data = YAML.safe_load_file(path, aliases: true)
+    paid = data.fetch("paid_tail")
+    [[false, 0, true], [false, -1, false], [true, 0, false], [true, 1, true], [false, Float::INFINITY, false]].each do |enabled, cap, valid|
+      paid.merge!("enabled" => enabled, "run_cap_usd" => cap)
+      error = Guard.validate(path:, content: YAML.dump(data))
+      if valid
+        assert_nil error
+      else
+        assert_match(/paid_tail.run_cap_usd/, error)
+      end
+    end
+  end
+
   def test_the_declared_nsfw_tier_may_be_empty
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
