@@ -1,0 +1,124 @@
+// ============================================================ module: commerce_polish
+/* Commerce polish — recommendations read as editorial product notes, not
+   shopping-app clutter. The wardrobe remains the visual subject. */
+.item-detail--wardrobe .item-detail-layout {
+  gap: clamp(1.5rem, 4vw, 4rem);
+}
+
+.item-detail--wardrobe .item-detail-facts {
+  min-width: 0;
+}
+
+.item-detail--wardrobe .item-detail-title {
+  max-inline-size: 11ch;
+  text-wrap: balance;
+}
+
+.item-detail--wardrobe .item-detail-tags {
+  gap: 8px;
+}
+
+.item-detail--wardrobe .item-detail-fact-list {
+  row-gap: 8px;
+}
+
+.item-detail--wardrobe .item-detail-section {
+  margin-block: clamp(2rem, 4vw, 3.5rem);
+}
+
+.item-detail--wardrobe .item-detail-actions {
+  gap: 8px;
+  margin-block-start: 1.5rem;
+}
+
+.item-detail--wardrobe .item-detail-actions .button {
+  min-height: var(--tap-min);
+  padding-inline: 1rem;
+}
+
+/* The secondary actions' disclosure takes the whole row, in the flex row and
+   in the two-column grid phones get. */
+.item-detail--wardrobe .item-detail-actions > .wardrobe-more-tools {
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+}
+
+.commerce-fit-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.commerce-fit-suggestion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  padding-block: 12px;
+  border-block-start: 1px solid var(--luxury-border);
+}
+
+.commerce-fit-suggestion:first-child {
+  border-block-start: 0;
+  padding-block-start: 2px;
+}
+
+.commerce-fit-suggestion a {
+  display: inline;
+  max-inline-size: 62ch;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+}
+
+.commerce-fit-source {
+  width: fit-content;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  color: var(--luxury-muted);
+  font-size: var(--text-extra-small);
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-tight);
+  text-transform: none;
+}
+
+.commerce-fit-reasons {
+  display: block;
+  max-inline-size: 66ch;
+  color: var(--luxury-muted);
+  font-size: var(--luxury-font-meta);
+  line-height: var(--leading-snug);
+}
+
+.commerce-fit-local {
+  color: var(--text);
+}
+
+.commerce-handoff-note {
+  max-inline-size: 58ch;
+  margin-block-start: -4px;
+  color: var(--luxury-muted);
+  font-size: var(--luxury-font-meta);
+}
+
+@media (max-width: 767px) {
+  .item-detail--wardrobe .item-detail-layout {
+    gap: 1.5rem;
+  }
+
+  .item-detail--wardrobe .item-detail-title {
+    max-inline-size: none;
+    font-size: clamp(2rem, 11vw, 3rem);
+  }
+
+  .item-detail--wardrobe .item-detail-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .item-detail--wardrobe .item-detail-actions .button {
+    width: 100%;
+  }
+}
+// ============================================================ /module: commerce_polish
