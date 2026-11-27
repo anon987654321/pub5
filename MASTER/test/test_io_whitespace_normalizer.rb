@@ -69,6 +69,38 @@ class TestWhitespaceNormalizer < Minitest::Test
     assert N.data_equivalent?('{"a": "  x  "}', '{"a":"  x  "}', path: "data.json")
   end
 
+  def test_literal_whitespace_does_not_veto_cleanup_elsewhere
+    ruby = "x = <<~TEXT\n  a  \n\n\n  b\t\nTEXT\ny = 1  \n\n\nz = 2\n"
+    out = N.normalize(ruby, path: "main.rb")
+    assert_includes out, "  a  \n\n\n  b\t\nTEXT"
+    assert_includes out, "y = 1\n\nz = 2\n"
+    assert Prism.parse(ruby).value === Prism.parse(out).value
+
+    yaml = "value: |\n  a  \n\n\n  b\nname: demo  \n\n\nother: 1\n"
+    out = N.normalize(yaml, path: "config.yml")
+    assert_includes out, "  a  \n\n\n  b\n"
+    assert_includes out, "name: demo\n\nother: 1\n"
+    assert_equal Psych.parse_stream(yaml).yaml, Psych.parse_stream(out).yaml
+  end
+
+  def test_tabs_outside_multiline_literals_can_be_expanded
+    source = "def f\n\tx = <<~TEXT\n\t  literal\t\nTEXT\n\tx\nend\n"
+    out = N.expand_tabs(source, path: "main.rb")
+    assert_includes out, "  x ="
+    assert_includes out, "\t  literal\t"
+    assert Prism.parse(source).value === Prism.parse(out).value
+  end
+
+  def test_supported_ruby_and_script_variants
+    %w[Gemfile Rakefile example.rake example.gemspec].each do |path|
+      assert N.supported?(path)
+      assert_equal "name = 'x'\n", N.normalize("name  = 'x'  \n", path:)
+    end
+    %w[app.mjs app.cjs script.ksh config.toml schema.sql].each do |path|
+      assert N.supported?(path), path
+    end
+  end
+
   def test_unknown_file_content_is_not_normalized_by_guesswork
     source = "record\t  \n\n\nvalue  "
     assert_equal source, N.normalize(source, path: "data.tsv")

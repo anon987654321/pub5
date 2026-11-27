@@ -15,8 +15,10 @@ module Master
 
       DECORATION = /[-=*_~─━═+#.]{3,}/
       HEADER_COMMENT = {
-        ".sh" => "#", ".zsh" => "#", ".bash" => "#",
-        ".js" => "//", ".ts" => "//", ".jsx" => "//", ".tsx" => "//",
+        ".sh" => "#", ".zsh" => "#", ".bash" => "#", ".ksh" => "#",
+        ".toml" => "#", ".sql" => "--",
+        ".js" => "//", ".mjs" => "//", ".cjs" => "//",
+        ".ts" => "//", ".jsx" => "//", ".tsx" => "//",
         ".css" => "/*", ".scss" => "/*",
       }.freeze
       SAFE_EXTENSIONS = %w[.rb .yml .yaml .json .md].freeze
@@ -32,7 +34,12 @@ module Master
         out
       end
 
-      def extension(path) = File.extname(path.to_s).downcase
+      def extension(path)
+        return ".rb" if %w[Gemfile Rakefile].include?(File.basename(path.to_s))
+
+        ext = File.extname(path.to_s).downcase
+        %w[.rake .gemspec].include?(ext) ? ".rb" : ext
+      end
 
       def guarded(src, path:)
         candidate = yield
@@ -107,17 +114,7 @@ module Master
           return src unless parsed.success?
           indexes = parsed.comments.map { |comment| comment.location.start_line - 1 }
         when ".yml", ".yaml"
-          tree = Psych.parse_stream(src)
-          protected = Set.new
-          pending = [tree]
-          until pending.empty?
-            node = pending.pop
-            if node.is_a?(Psych::Nodes::Scalar) && node.start_line < node.end_line
-              finish = node.end_line - (node.end_column.zero? ? 1 : 0)
-              protected.merge(node.start_line..finish)
-            end
-            pending.concat(node.children || [])
-          end
+          protected = yaml_literal_lines(src)
           indexes = (0...lines.size).reject { |index| protected.include?(index) }
         else
           return src
@@ -178,7 +175,55 @@ module Master
       def collapse_internal?(path)
         return false unless path
 
-        COLLAPSE_INTERNAL_EXTS.include?(File.extname(path.to_s).downcase)
+        COLLAPSE_INTERNAL_EXTS.include?(extension(path))
+      end
+
+      # Parser-protected lines keep multiline literals and block scalars
+      # intact while cleanup continues on the rest of the file.
+      def yaml_literal_lines(src)
+        protected = Set.new
+        pending = [Psych.parse_stream(src)]
+        until pending.empty?
+          node = pending.pop
+          if node.is_a?(Psych::Nodes::Scalar) && node.start_line < node.end_line
+            finish = node.end_line - (node.end_column.zero? ? 1 : 0)
+            protected.merge(node.start_line..finish)
+          end
+          pending.concat(node.children || [])
+        end
+        protected
+      end
+
+      def ruby_literal_lines(src)
+        lexed = Prism.lex(src)
+        return Set.new unless lexed.success?
+
+        lexed.value.each_with_object(Set.new) do |(token, _state), protected|
+          next unless %i[STRING_CONTENT HEREDOC_END EMBDOC_LINE EMBDOC_BEGIN EMBDOC_END].include?(token.type)
+
+          loc = token.location
+          next if token.type == :STRING_CONTENT && loc.start_line == loc.end_line
+
+          finish = loc.end_line - (loc.end_column.zero? ? 1 : 0)
+          protected.merge((loc.start_line - 1)..(finish - 1))
+        end
+      end
+
+      def protected_lines(src, path:)
+        case extension(path)
+        when ".rb" then ruby_literal_lines(src)
+        when ".yml", ".yaml" then yaml_literal_lines(src)
+        else Set.new
+        end
+      end
+
+      def clean_lines(src, path:)
+        protected = protected_lines(src, path:)
+        src.each_line.with_index.map do |line, index|
+          yield(line, protected.include?(index))
+        end.join
+      rescue Psych::Exception
+        src
       end
 
       def strip_trailing(src, path: nil)
@@ -186,17 +231,33 @@ module Master
           if extension(path) == ".md"
             src.gsub(/^[ \t]+$/, "").gsub(/(?<=[^ \t\n])[ \t](?=\n|\z)/, "")
           else
-            src.gsub(/[ \t]+(?=\n|\z)/, "")
+            clean_lines(src, path:) do |line, protected|
+              protected ? line : line.gsub(/[ \t]+(?=\r?\n|\z)/, "")
+            end
           end
         end
       end
 
       def collapse_blanks(src, path: nil)
-        guarded(src, path:) { src.gsub(/\n{3,}/, "\n\n") }
+        return src unless src.match?(/(?:\r?\n){3,}/)
+
+        guarded(src, path:) do
+          previous_blank = false
+          clean_lines(src, path:) do |line, protected|
+            blank = line.match?(/\A\r?\n\z/)
+            omit = blank && previous_blank && !protected
+            previous_blank = blank && !protected
+            omit ? "" : line
+          end
+        end
       end
 
       def expand_tabs(src, path:)
-        guarded(src, path:) { src.gsub("\t", "  ") }
+        return src unless src.include?("\t")
+
+        guarded(src, path:) do
+          clean_lines(src, path:) { |line, protected| protected ? line : line.gsub("\t", "  ") }
+        end
       end
 
       def ensure_final_newline(src, path:)
