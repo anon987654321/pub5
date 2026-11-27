@@ -196,12 +196,15 @@ module Master
         end
 
         def measure_baseline(name, sha:, runner:)
+          @measuring_baseline = true
           ok, out = inside_proof { runner.call }
           Master::Fix::CheckFocus.note(out) unless ok
           reading = Reading.parse(ok, out)
           Proof.remember(name, sha: (sha if reading.measured?), reading:)
           Master::Trace::Dmesg.status("check0", "baseline: #{baseline_line(reading)}")
           reading
+        ensure
+          @measuring_baseline = false
         end
 
         def proof_section(abs, baseline = nil)
@@ -322,8 +325,12 @@ module Master
         public :proof_runner
 
         def rails_tree_proof(chain)
-          held, out = rails_proof(*chain.rails_checks(scan_only: true, strict_inconclusive: ENV[PROOF_ENV] == "1",
-                                                      surfaces: proof_surfaces))
+          result = chain.rails_checks(scan_only: true, strict_inconclusive: ENV[PROOF_ENV] == "1",
+                                     surfaces: proof_surfaces, pre_repair: !!@measuring_baseline)
+          if @measuring_baseline && result.last == 124
+            return [false, ["pre-repair Rails baseline timed out; final proof must be green"]]
+          end
+          held, out = rails_proof(*result)
           apps_held, apps_out = RailsApps.prove(rails_repair_paths, before: @repair_before)
           [held && apps_held, Array(out) + apps_out]
         end

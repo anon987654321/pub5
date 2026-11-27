@@ -102,7 +102,7 @@ module Master
             # This is an adapter inventory, not a receipt that a review ran.
             # The council emits separate start, completion, veto and inconclusive events.
             abstract = @council ? "configured" : "unavailable"
-            visual = @visual_pass&.applicable?(target) ? "rendered" : "not-applicable"
+            visual = @visual_pass&.applicable?(target) ? "configured-rendered" : "not-applicable"
             lexical_opportunities = @opportunity_pass&.applicable?(target) ? "bounded-tree-heuristics" : "no-universal-adapter"
             matrix_status = assessment_matrix_status
             matrix_label = case matrix_status
@@ -114,6 +114,7 @@ module Master
             @bus&.publish(
               "fix_loop:coverage",
               pass:,
+              evidence: "configuration",
               lexical: "mechanical+structural-full-eligible-corpus",
               structural: "full-eligible-corpus",
               lexical_violations: "fixture-backed deterministic detectors; universal tree coverage not measured",
@@ -130,9 +131,9 @@ module Master
             )
             Master::Trace::Dmesg.status(
               "fix0",
-              "pass #{pass}, coverage lexical-violations=mechanical+structural " \
-              "lexical-opportunities=#{lexical_opportunities} semantic-violations=#{semantic} " \
-              "semantic-opportunities=#{semantic} visual=#{visual} " \
+              "pass #{pass}, coverage-plan (not execution proof) lexical-violations=mechanical+structural " \
+              "lexical-opportunities=#{lexical_opportunities} semantic-violations=configured-#{semantic} " \
+              "semantic-opportunities=configured-#{semantic} visual=#{visual} " \
               "law-stream-surface-matrix=#{matrix_status.to_s.upcase}#{matrix_cells(matrix_summary)}",
             )
           end

@@ -521,7 +521,7 @@ module Operator
       scope = trees == TREES ? "all five governed trees" : trees.join(", ")
       [
         lexical_stage(scan_only:, trees:, scope:),
-        rails_stage(scan_only:, trees:, strict_inconclusive:),
+        rails_stage(scan_only:, trees:, strict_inconclusive:, pre_repair: stale_ok),
         openbsd_stage(trees:),
         rehearse_stage(trees:),
         suites_stage(trees:),
@@ -541,14 +541,14 @@ module Operator
       )
     end
 
-    def rails_stage(scan_only:, trees:, strict_inconclusive: false)
+    def rails_stage(scan_only:, trees:, strict_inconclusive: false, pre_repair: false)
       return unless trees.include?("RAILS")
 
       Stage.new(
         name: "source",
         purpose: "every RAILS check, source/rendered repair, then full Rails verification",
         mutates: !scan_only,
-        run: -> { rails_verification(scan_only:, strict_inconclusive:) },
+        run: -> { rails_verification(scan_only:, strict_inconclusive:, pre_repair:) },
       )
     end
 
@@ -706,7 +706,7 @@ module Operator
     # any other, so launched with this process's Ruby every check was skipped and
     # the stage reported one refusal as its whole result.
     # `surfaces` (app names) narrows the rendered sweep through runner.rb's CHECK_SURFACES.
-    def rails_checks(scan_only:, strict_inconclusive: false, surfaces: nil)
+    def rails_checks(scan_only:, strict_inconclusive: false, surfaces: nil, pre_repair: false)
       fixed = rails_checks_env(scan_only:, strict_inconclusive:, surfaces:)
       key = scan_only && rails_checks_key(fixed)
       kept = key && @rails_checks_kept&.fetch(key, nil)
@@ -717,9 +717,10 @@ module Operator
 
       reading = CheckHeartbeat.around("rails checks") do |progress|
         capture(RUBY, File.join(MASTER, "checks", "runner.rb"), "--all",
-                chdir: File.join(ROOT, "RAILS"), env: fixed.merge(progress))
+                chdir: File.join(ROOT, "RAILS"), env: fixed.merge(progress),
+                timeout_s: (pre_repair ? [child_timeout_s, 90].min : nil))
       end
-      keep_rails_checks(key, reading)
+      keep_rails_checks(key, reading) unless reading.last == 124
       reading
     end
 
@@ -754,15 +755,16 @@ module Operator
     # The repair-aware runner owns deterministic source/rendered corrections;
     # premerge is the read-only proof that every Rails test, coverage dimension
     # and PWA/runtime check survives the repaired tree.
-    def rails_verification(scan_only:, strict_inconclusive: false)
-      ok, body, status = rails_checks(scan_only:, strict_inconclusive:)
+    def rails_verification(scan_only:, strict_inconclusive: false, pre_repair: false)
+      ok, body, status = rails_checks(scan_only:, strict_inconclusive:, pre_repair:)
       return [ok, body, status] unless ok
 
       premerge = File.join(MASTER, "tools", "rails", "premerge.rb")
       return [false, body + ["rails premerge missing: #{premerge}"], 1] unless File.file?(premerge)
 
       verified, verification_body, verification_status = CheckHeartbeat.around("rails premerge") do |_progress|
-        capture(RUBY, premerge, chdir: File.join(ROOT, "RAILS"), env: strict_env.merge("MASTER_FIX_VERIFY" => "1"))
+        capture(RUBY, premerge, chdir: File.join(ROOT, "RAILS"), env: strict_env.merge("MASTER_FIX_VERIFY" => "1"),
+                timeout_s: (pre_repair ? [child_timeout_s, 90].min : nil))
       end
       [verified, body + ["rails premerge: #{verified ? "ok" : "FAIL"}"] + verification_body, verification_status]
     end

@@ -150,6 +150,7 @@ class FixHardeningTest < Minitest::Test
   def test_full_semantic_mode_does_not_claim_the_surface_matrix_was_measured
     report = coverage_report(semantic_full: true)
 
+    assert_equal "configuration", report.fetch(:evidence)
     assert_equal "full", report.fetch(:semantic)
     assert_includes report.fetch(:semantic_violations), "surface matrix not measured"
     assert_includes report.fetch(:semantic_opportunities), "surface matrix not measured"

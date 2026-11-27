@@ -633,6 +633,28 @@ class TestCheckChain < Minitest::Test
     G.instance_variable_set(:@rails_checks_kept, nil)
   end
 
+  def test_pre_repair_timeout_is_bounded_and_not_reused_as_final_proof
+    previous = ENV["MASTER_PROOF_STORE"]
+    ENV["MASTER_PROOF_STORE"] = "1"
+    G.instance_variable_set(:@rails_checks_kept, nil)
+    timeouts = []
+    capture = ->(*, **opts) do
+      timeouts << opts.fetch(:timeout_s)
+      timeouts.size == 1 ? [false, ["check child timeout"], 124] : [true, ["green"], 0]
+    end
+    G.stub(:baseline_key, "same-bytes") do
+      G.stub(:capture, capture) do
+        assert_equal 124, G.rails_checks(scan_only: true, pre_repair: true).last
+        assert_equal 0, G.rails_checks(scan_only: true).last
+      end
+    end
+    assert_operator timeouts.first, :<=, 90
+    assert_nil timeouts.last
+  ensure
+    ENV["MASTER_PROOF_STORE"] = previous
+    G.instance_variable_set(:@rails_checks_kept, nil)
+  end
+
   def test_scan_only_rails_checks_run_once_per_unchanged_tree
     runs = 0
     capture = ->(*_args, **_kwargs) { runs += 1; [false, ["red"], 1] }
