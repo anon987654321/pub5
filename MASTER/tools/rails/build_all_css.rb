@@ -181,9 +181,20 @@ def try_npx_sass(app_dir)
   end
 end
 
+# Mr Damascy has its own token source rather than the shared social stack.
+def app_token_markers(app)
+  return social_token_markers unless app == "mrdamascy"
+
+  source = File.join(RAILS_ROOT, app, "app", "assets", "stylesheets", "_tokens.scss")
+  markers = File.read(source).scan(/^\s*(--[\w-]+):\s*([^;\n]+);/).map { |name, value| "#{name}: #{value.strip}" }
+  raise "#{app}: no declared CSS tokens in #{source}" if markers.empty?
+
+  markers
+end
+
 def verify_build(app, out)
   body = File.read(out, encoding: "UTF-8")
-  missing = social_token_markers.reject { |m| body.include?(m) }
+  missing = app_token_markers(app).reject { |m| body.match?(/#{Regexp.escape(m)}\s*[;}]/) || body.include?(m) && !m.start_with?("--") }
   return [] if missing.empty?
 
   ["#{app}: build missing #{missing.join(", ")}"]

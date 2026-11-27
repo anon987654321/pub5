@@ -241,6 +241,21 @@ class TestTriangleOwnership < Minitest::Test
     assert_nil Deploy::Triangle.listener(port)
   end
   # Built CSS is git-ignored; an app that has it must not be rebuilt on every boot.
+  def test_css_builder_receives_the_app_bundle_instead_of_masters
+    Dir.mktmpdir do |dir|
+      FileUtils.mkdir_p(File.join(dir, "app", "assets", "stylesheets"))
+      File.write(File.join(dir, "app", "assets", "stylesheets", "application.scss"), "")
+      app = { name: "mrdamascy", dir:, port: 47314 }
+      capture = ->(env, *_args, **_opts) do
+        assert_equal File.join(dir, "Gemfile"), env.fetch("BUNDLE_GEMFILE")
+        assert_nil env.fetch("BUNDLE_PATH")
+        assert_nil env.fetch("RUBYOPT")
+        ["", Struct.new(:success?).new(true)]
+      end
+      Master::Io::Exec.stub(:capture2e, capture) { assert Deploy::Triangle.build_css(app) }
+    end
+  end
+
   def test_css_is_not_rebuilt_when_it_is_already_built
     Dir.mktmpdir do |dir|
       FileUtils.mkdir_p(File.join(dir, "app", "assets", "stylesheets"))

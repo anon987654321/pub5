@@ -160,10 +160,10 @@ module Deploy
       return true unless File.file?(File.join(app[:dir], "app", "assets", "stylesheets", "application.scss"))
       return true if File.file?(File.join(app[:dir], "app", "assets", "builds", "application.css"))
 
-      out, status = Master::Io::Exec.capture2e(RUBY, File.join(ROOT, "MASTER", "tools", "rails", "build_all_css.rb"), "--app", app[:name], chdir: ROOT, timeout: BOOT_TIMEOUT)
+      out, status = Master::Io::Exec.capture2e(env_for(app), RUBY, File.join(ROOT, "MASTER", "tools", "rails", "build_all_css.rb"), "--app", app[:name], chdir: ROOT, timeout: BOOT_TIMEOUT)
       return true if status.success?
 
-      warn "triangle: #{app[:name]} css build failed\n#{out.lines.last(8).join}"
+      warn "triangle: #{app[:name]} css build failed\n#{failure_excerpt(out)}"
       false
     end
 
