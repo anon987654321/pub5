@@ -32,7 +32,10 @@ function faceRenderDpr() {
     );
 }
 
+const FACE_RENDER_SCALE_MIN = 0.62;
+const FACE_RENDER_SCALE_MAX = 0.92;
 let FACE_RENDER_SCALE = 0.72;
+let faceLowBattery = false;
 // The pixel grid is absolute, not a fraction of the display. Capping the render
 // buffer is what makes one drawn pixel mean the same thing on a phone, a CRT and
 // a 4K television — the big screen simply upscales the same grid further. Left
@@ -557,25 +560,29 @@ rootBody.dataset.faceRenderer = 'webgl';
 if (_dbgEl) _dbgEl.textContent = 'webgl ok';
 
 let W = 0, H = 0, DPR = 1;
-function resize() {
+let faceBufferKey = '';
+function resize(force = false) {
   if (!renderer) return;
-  W = Math.max(1, cv.clientWidth || window.innerWidth); H = Math.max(1, cv.clientHeight || window.innerHeight);
+  const width = cv.clientWidth, height = cv.clientHeight;
+  if (width <= 0 || height <= 0) return;
+  W = width; H = height;
   DPR = faceRenderDpr();
 
   const profile = rootBody.dataset.runtimeProfile || 'full';
-  const scaleMax = typeof FACE_RENDER_SCALE_MAX !== 'undefined' ? FACE_RENDER_SCALE_MAX : 0.72;
-  const scaleMin = typeof FACE_RENDER_SCALE_MIN !== 'undefined' ? FACE_RENDER_SCALE_MIN : 0.48;
-  if (FACE_RENDER_SCALE > scaleMax || FACE_RENDER_SCALE < scaleMin) {
-    FACE_RENDER_SCALE = State.coarsePointer ? 0.55 : (faceReducedMotionActive() || profile === 'battery' ? 0.62 : scaleMax);
-  }
-  const scale = Math.min(Math.max(FACE_RENDER_SCALE, 280 / W, 200 / H),
+  FACE_RENDER_SCALE = Math.max(FACE_RENDER_SCALE_MIN, Math.min(FACE_RENDER_SCALE_MAX, FACE_RENDER_SCALE));
+  const conserving = faceLowBattery || profile === 'battery';
+  const requested = conserving ? Math.min(FACE_RENDER_SCALE, 0.48) : FACE_RENDER_SCALE;
+  const scale = Math.min(conserving ? requested : Math.max(requested, 280 / W, 200 / H),
     FACE_BUFFER_MAX_W / W, FACE_BUFFER_MAX_H / H);
   const internalW = Math.max(1, Math.round(W * scale));
   const internalH = Math.max(1, Math.round(H * scale));
+  const key = [internalW, internalH, DPR, W / H].join(':');
+  if (force !== true && key === faceBufferKey) return;
   renderer.setPixelRatio(DPR);
   renderer.setSize(internalW, internalH, false);
   camera.aspect = W / H;
   camera.updateProjectionMatrix();
+  faceBufferKey = key;
 
   // A const cv here shadowed the canvas binding for the whole function, so the
   // first line of resize() threw "Cannot access cv before initialization".

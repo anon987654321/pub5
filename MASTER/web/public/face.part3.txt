@@ -98,7 +98,7 @@ if (typeof cv !== 'undefined' && cv?.addEventListener) {
     faceContextLost = false;
     rootBody.dataset.faceGpu = 'recovering';
     if (faceMat) faceMat._phosphorPrimed = false;
-    try { resize(); } catch (err) { window.MASTER_LOG?.warn?.("face_runtime:webgl_context_restored", err); }
+    try { resize(true); } catch (err) { window.MASTER_LOG?.warn?.("face_runtime:webgl_context_restored", err); }
     ensureFrameLoop();
   }, false);
 }
@@ -150,8 +150,6 @@ window.addEventListener('master:pressure', (ev) => {
     valence: d.valence ?? 0
   };
 });
-const FACE_RENDER_SCALE_MIN = 0.62;
-const FACE_RENDER_SCALE_MAX = 0.92;
 let particleWorker = null;
 let particleWorkerSeq = 0;
 const particleWorkerPending = new Map();
@@ -329,10 +327,10 @@ function frame(t) {
     // frame() declares its reducedMotion further down; read here, before that line, it threw
     // "Cannot access 'reducedMotion' before initialization" once a second and stopped the face.
     const motionReduced = faceReducedMotionActive();
-    if (!quietFace && !motionReduced && fpsEma < target * .82 && FACE_RENDER_SCALE > FACE_RENDER_SCALE_MIN + 0.02) {
+    if (!quietFace && !motionReduced && !faceLowBattery && rootBody.dataset.runtimeProfile !== 'battery' && fpsEma < target * .82 && FACE_RENDER_SCALE > FACE_RENDER_SCALE_MIN + 0.02) {
       FACE_RENDER_SCALE = Math.max(FACE_RENDER_SCALE_MIN, FACE_RENDER_SCALE - 0.03);
       resize();
-    } else if (!quietFace && !motionReduced && fpsEma >= target * .95 && FACE_RENDER_SCALE < FACE_RENDER_SCALE_MAX - 0.02) {
+    } else if (!quietFace && !motionReduced && !faceLowBattery && rootBody.dataset.runtimeProfile !== 'battery' && fpsEma >= target * .95 && FACE_RENDER_SCALE < FACE_RENDER_SCALE_MAX - 0.02) {
       FACE_RENDER_SCALE = Math.min(FACE_RENDER_SCALE_MAX, FACE_RENDER_SCALE + 0.02);
       resize();
     }
@@ -929,7 +927,7 @@ if ('getBattery' in navigator) {
     // Battery saver drops the render buffer, not the pixel size. Shrinking a
     // 1px point is not available and never saved anything anyway — the cost is
     // fill rate, so fewer pixels to fill is the only lever that pays.
-    const check = () => { FACE_RENDER_SCALE = (!b.charging && b.level < 0.15) ? 0.48 : 0.72; resize(); };
+    const check = () => { faceLowBattery = !b.charging && b.level < 0.15; resize(); };
     check();
     b.addEventListener('levelchange', check);
     b.addEventListener('chargingchange', check);

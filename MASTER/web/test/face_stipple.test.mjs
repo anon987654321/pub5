@@ -545,7 +545,7 @@ test("primary rendering observes active, idle, battery and reduced-motion cadenc
     });
     assert.equal(target(quiet), expected);
   }
-  assert.match(source, /!quietFace && !motionReduced && fpsEma < target \* \.82/);
+  assert.match(source, /!quietFace && !motionReduced && !faceLowBattery && rootBody\.dataset\.runtimeProfile !== 'battery' && fpsEma < target \* \.82/);
   assert.match(source, /quietFace = stillModeAtEntry && morphSettled/);
   assert.match(source, /rootBody\.dataset\.faceGpu = 'lost'/);
   assert.match(source, /rootBody\.dataset\.faceGpu = 'recovering'/);

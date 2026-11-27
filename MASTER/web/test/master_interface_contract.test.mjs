@@ -399,23 +399,52 @@ test("CLI owns the browser source grammar", () => {
   assert.match(chat, /grammar\?\.grammars\?\.\[lang\]/);
 });
 
-test("face renderer preserves camera proportions even when the canvas is shallow", () => {
+test("face renderer preserves proportions and changes only the effective buffer", () => {
   const src = readFileSync(join(publicDir, "face.part1.txt"), "utf8");
-  const start = src.indexOf("const scale = Math.min(Math.max(FACE_RENDER_SCALE");
-  const end = src.indexOf("camera.updateProjectionMatrix();", start);
+  const start = src.indexOf("let W = 0, H = 0, DPR = 1;");
+  const end = src.indexOf("window.addEventListener('resize'", start);
   assert.ok(start >= 0 && end > start);
+  const camera = { updateProjectionMatrix() {} };
+  const calls = [];
+  const cv = { style: {}, clientWidth: 390, clientHeight: 360 };
+  const context = {
+    cv, window: {}, rootBody: { dataset: {} }, faceLowBattery: false,
+    FACE_RENDER_SCALE: 0.72, FACE_RENDER_SCALE_MIN: 0.62, FACE_RENDER_SCALE_MAX: 0.92,
+    FACE_BUFFER_MAX_W: 960, FACE_BUFFER_MAX_H: 640, faceRenderDpr: () => 1,
+    renderer: { domElement: cv, setPixelRatio() {}, setSize(w, h) { calls.push([w, h]); } },
+    camera
+  };
+  runInNewContext(src.slice(start, end), context);
   for (const [W, H] of [[1440, 396], [390, 360], [390, 80], [320, 600], [1920, 1080]]) {
-    const camera = {};
-    let size;
-    const renderer = { setPixelRatio() {}, setSize(w, h) { size = [w, h]; } };
-    runInNewContext(src.slice(start, end), {
-      W, H, FACE_RENDER_SCALE: 0.72, FACE_BUFFER_MAX_W: 960, FACE_BUFFER_MAX_H: 640,
-      DPR: 1, renderer, camera
-    });
+    cv.clientWidth = W;
+    cv.clientHeight = H;
+    context.resize();
+    const [w, h] = calls.at(-1);
     assert.equal(camera.aspect, W / H);
-    assert.ok(size[0] <= 960 && size[1] <= 640);
-    assert.ok(Math.abs(size[0] / W - size[1] / H) <= 1 / Math.min(W, H));
+    assert.ok(w <= 960 && h <= 640);
+    assert.ok(Math.abs(w / W - h / H) <= 1 / Math.min(W, H));
+    const count = calls.length;
+    context.resize();
+    assert.equal(calls.length, count);
   }
+  cv.clientWidth = 390;
+  cv.clientHeight = 360;
+  context.resize();
+  const normal = calls.at(-1);
+  context.faceLowBattery = true;
+  context.resize();
+  assert.ok(calls.at(-1)[0] < normal[0]);
+  assert.ok(calls.at(-1)[1] < normal[1]);
+  const count = calls.length;
+  context.resize(true);
+  assert.equal(calls.length, count + 1, "restoring WebGL forces buffer reallocation");
+  context.faceLowBattery = false;
+  context.resize();
+  assert.deepEqual(calls.at(-1), normal);
+  const visibleCount = calls.length;
+  cv.clientHeight = 0;
+  context.resize();
+  assert.equal(calls.length, visibleCount, "collapsed face does not allocate a viewport-sized buffer");
 });
 
 test("mobile keyboard cannot reserve the terminal's space for the face", () => {
