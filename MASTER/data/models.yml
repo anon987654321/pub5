@@ -858,10 +858,10 @@ free_tier:
 # lists them and counts what they cost; at run_cap_usd the tail turns itself off
 # for the rest of the run. MASTER_PAID_TAIL=0 turns it off outright.
 paid_tail:
-  enabled: true
+  enabled: false
   max_prompt_usd_per_m: 1.0
   max_completion_usd_per_m: 3.0
-  run_cap_usd: 5.0
+  run_cap_usd: 0.0
   max_models: 12
 
 # Image and video generation lanes (Io::MediaLanes). Each kind lists its lanes;
