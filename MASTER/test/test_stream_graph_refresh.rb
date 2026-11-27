@@ -18,7 +18,7 @@ class TestStreamGraphRefresh < Minitest::Test
       @builds = 0
     end
 
-    def build(refresh:)
+    def build(refresh:, summary: false)
       @builds += 1 if refresh
       @digests = @paths.to_h { |path| [path, Digest::SHA256.file(path).hexdigest] }
     end

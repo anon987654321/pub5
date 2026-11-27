@@ -608,7 +608,7 @@ class TestRestructure < Minitest::Test
                  sweep.send(:decommission_blocker, problem, plan, complete))
 
     graph = Object.new
-    graph.define_singleton_method(:build) { { analysis_failures: [] } }
+    graph.define_singleton_method(:build) { |summary:| { analysis_failures: [] } }
     graph.define_singleton_method(:includes_path?) { |_path| true }
     graph.define_singleton_method(:dynamic_for) { |_path| [] }
     graph.define_singleton_method(:unresolved_for) { |_path| [] }

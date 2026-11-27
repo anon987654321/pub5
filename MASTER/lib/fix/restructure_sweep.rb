@@ -195,7 +195,7 @@ module Master
         graph = @reference_graph
         return "destructive restructure refused: repository reference graph unavailable" unless graph
 
-        snapshot = graph.build
+        snapshot = graph.build(summary: true)
         failures = Array(snapshot[:analysis_failures])
         return "destructive restructure refused: reference graph has #{failures.size} analysis failure(s)" unless failures.empty?
 

@@ -485,7 +485,7 @@ module Master
         def reference_graph_section
           return "Reference graph: INCONCLUSIVE; no repository graph was supplied." unless @reference_graph
 
-          snapshot = @reference_graph.build
+          snapshot = @reference_graph.build(summary: true)
           targets = [@path, *@related].uniq
           failures = Array(snapshot[:analysis_failures])
           lines = [
@@ -501,7 +501,7 @@ module Master
 
         def graph_summary_line(snapshot, failures)
           metrics = snapshot.fetch(:metrics)
-          "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{snapshot[:edges].size}, " \
+          "Repository reference graph: nodes=#{snapshot[:nodes].size}, edges=#{metrics.fetch(:edge_count)}, " \
             "unresolved_imports=#{metrics[:unresolved_local_imports]}, unresolved_ruby=#{metrics[:unresolved_ruby_references]}, " \
             "dynamic_sites=#{metrics[:dynamic_sites]}, analysis_failures=#{failures.size}."
         end

@@ -447,7 +447,7 @@ module Master
             GRAPH_LOCK.synchronize do
               next if indexed_at?(graph, path, digest)
 
-              graph.build(refresh: true)
+              graph.build(refresh: true, summary: true)
               Master::Trace::Dmesg.status("understand0", GRAPH_REBUILT)
             end
           end
