@@ -103,11 +103,10 @@ require_relative "../lib/trace/dmesg"
 # dying host gets real findings in seconds, and Chrome and libvips stay
 # deferred until a rendered proof is actually requested. This branch is
 # sacred in the same way --exec-worker is: nothing above it may load.
-if ARGV.first && %w[scan laws status owns orient export receipt hooks selfcheck
-                    openbsd-tier coverage predict falsify taste reconcile prune
-                    precedent trust court scars pedagogy capability sunset kinds].include?(ARGV.first)
+if ARGV.first && (ARGV.first == "--agent-jsonl" || !ARGV.first.start_with?("-", "/"))
   require_relative "../lib/agent/agent_cli"
-  exit(Master::Agent::CLI.run(ARGV))
+  exit(Master::Agent::CLI.run_jsonl(ARGV.drop(1))) if ARGV.first == "--agent-jsonl"
+  exit(Master::Agent::CLI.run(ARGV)) if Master::Agent::CLI.accepts?(ARGV.first)
 end
 
 master_root = File.expand_path("..", __dir__)
@@ -264,6 +263,7 @@ HELP_USAGE = <<~HELP
     bin/master -p "<goal>" --output-format json [--model ID] [--permission-mode plan] [--allowedTools "Read Edit"]
     bin/master core [--root PATH] [--max-turns N] [--real [--model ID]] GOAL
     bin/master --fix-context [target] [--full|--contract-only]
+    bin/master --agent-jsonl help | laws [ID]
     bin/master --tts-local < text.txt > audio
     bin/master replay <sequence>
     bin/master --daemon

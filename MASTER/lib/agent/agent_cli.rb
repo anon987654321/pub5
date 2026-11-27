@@ -13,6 +13,7 @@
 # policy), and marks what it did not execute as NOT_RUN rather than PASS.
 
 require "json"
+require "date"
 require "yaml"
 require "optparse"
 
@@ -104,6 +105,41 @@ module Master
 
       class << self
         include Base
+
+        def accepts?(command)
+          COMMANDS.key?(command.to_s)
+        end
+
+        # The first local event interface is intentionally read-only.
+        def run_jsonl(argv, io: $stdout)
+          command, *args = argv
+          event = ->(type, payload) { io.puts(JSON.generate(schema: 1, event: type, command:, payload:)) }
+          event.call("command.started", {})
+          case command
+          when "help"
+            raise ArgumentError, "help takes no arguments" unless args.empty?
+            payload = help_payload
+          when "laws"
+            raise ArgumentError, "laws accepts at most one Law ID" if args.size > 1 || args.any? { |arg| arg.start_with?("-") }
+            require_relative "law_index"
+            index = LawIndex.current_index
+            result = args.empty? ? index : LawIndex.lookup(args.first, index:)
+            raise ArgumentError, "unknown Law ID: #{args.first}" unless result
+
+            payload = { source: "MASTER/data/laws.yml", input_fingerprint: index.fetch("input_fingerprint"), result: }
+          else
+            raise ArgumentError, "JSONL supports help and laws; other commands are not yet migrated"
+          end
+          event.call("command.result", payload)
+          event.call("command.finished", { status: "COMPLETE" })
+          0
+        rescue ArgumentError => error
+          event.call("command.failed", { status: "NOT_RUN", reason: error.message })
+          64
+        rescue LoadError, StandardError => error
+          event.call("command.failed", { status: "INCONCLUSIVE", reason: error.class.name })
+          70
+        end
 
         def run(argv)
           command = argv.first.to_s

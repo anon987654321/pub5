@@ -49,6 +49,7 @@ module Master
             File.expand_path("../../checks/data/law_fixtures.yml", __dir__),
             data_path("law_kinds.yml"),
             data_path("incidents.yml"),
+            data_path("soul.yml"),
             data_path("laws.yml"),
           ]
         end
@@ -62,9 +63,26 @@ module Master
           Digest::SHA256.hexdigest(JSON.generate(material))
         end
 
-        def one(id)
+        # Rebuild stale evidence in memory; read-only callers never rewrite the index.
+        def current_index
+          fingerprint = input_fingerprint
+          saved = index if File.file?(index_path)
+          return saved if saved && saved["input_fingerprint"] == fingerprint
+
+          @laws_yml = nil
+          current = build_index
+          raise "Law sources changed during lookup" unless current["input_fingerprint"] == fingerprint
+
+          current
+        end
+
+        def lookup(id, index: current_index)
           laws = index.fetch("laws")
-          row = laws[id] || laws.values.find { |law| law["id"].casecmp?(id) }
+          laws[id] || laws.values.find { |law| law["id"].casecmp?(id) }
+        end
+
+        def one(id)
+          row = lookup(id)
           unless row
             warn "laws: no law named #{id}; the nearest ids are listed under laws --json"
             exit(64)
@@ -74,13 +92,14 @@ module Master
         end
 
         def all_json
-          emit(index)
+          emit(current_index)
           0
         end
 
         def all_text
-          laws = index.fetch("laws")
-          puts "#{laws.size} laws, index #{index.fetch('generated_at')} at #{index.fetch('revision')}"
+          snapshot = current_index
+          laws = snapshot.fetch("laws")
+          puts "#{laws.size} laws, index #{snapshot.fetch('generated_at')} at #{snapshot.fetch('revision')}"
           laws.each_value { |row| puts format("%-44s %-8s %-10s %s", row["id"], row["severity"], row["lifecycle"], row["statement"].to_s.lines.first.to_s.strip[0, 60]) }
           0
         end
@@ -100,12 +119,14 @@ module Master
           end
         end
 
-        def write_index!
+        def build_index
           require_relative "bare_law_loader"
           require "prism"
-          inputs = law_index_inputs
-          rows = law_index_rows(inputs)
-          payload = law_index_payload(rows)
+          law_index_payload(law_index_rows(law_index_inputs))
+        end
+
+        def write_index!
+          payload = build_index
           File.write(index_path, "#{JSON.pretty_generate(payload)}\n")
           payload
         end

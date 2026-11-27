@@ -15,6 +15,7 @@
 # or a browser), autofix transforms, the reload machinery. A bare scan names
 # its corpus honestly: lexical laws only.
 
+require "date"
 require "yaml"
 require "thread"
 

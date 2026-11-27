@@ -55,6 +55,8 @@ autoload:
     - io/ruby_llm_patch.rb
     # Operator:: -- shared with RAILS and OPENBSD, its own tool, not Master::Operator.
     - operator
+    # Polish:: is a standalone namespace, not Master::Polish.
+    - polish
 
   # Loaded by hand because order matters or the entrypoint is a plain require.
   required_manually:

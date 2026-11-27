@@ -16,6 +16,7 @@
 require "json"
 require "tmpdir"
 require "time"
+require "stringio"
 require "fileutils"
 require "minitest/autorun"
 require_relative "../../lib/agent/agent_cli"
@@ -83,6 +84,44 @@ module Master
         assert_equal %w[agent_interface repl_session], row.dig("exemptions", "kinds"),
                      "the kind registry is where the exemption is owned, not the detector source"
         assert_match(/\A[0-9a-f]{64}\z/, LawIndex.input_fingerprint)
+      end
+
+      def test_read_only_jsonl_help_exposes_the_registered_commands
+        io = StringIO.new
+        assert_equal 0, CLI.run_jsonl(["help"], io:)
+        events = io.string.lines.map { |line| JSON.parse(line) }
+        assert_equal %w[command.started command.result command.finished], events.map { |event| event.fetch("event") }
+        assert_equal CLI::COMMANDS.keys, events[1].dig("payload", "commands")
+        assert events.all? { |event| event.fetch("schema") == 1 }
+      end
+
+      def test_read_only_jsonl_laws_uses_current_sources_without_mutating_index
+        Dir.mktmpdir do |dir|
+          previous_path = LawIndex.instance_variable_get(:@index_path)
+          output = File.join(dir, "laws_index.json")
+          File.write(output, '{"input_fingerprint":"stale"}')
+          LawIndex.instance_variable_set(:@index_path, output)
+          io = StringIO.new
+          assert_equal 0, CLI.run_jsonl(["laws", "NO_PUTS"], io:)
+          events = io.string.lines.map { |line| JSON.parse(line) }
+          payload = events[1].fetch("payload")
+          assert_equal "MASTER/data/laws.yml", payload.fetch("source")
+          assert_equal LawIndex.input_fingerprint, payload.fetch("input_fingerprint")
+          assert_equal "NO_PUTS", payload.dig("result", "id")
+          assert_equal '{"input_fingerprint":"stale"}', File.read(output)
+        ensure
+          LawIndex.instance_variable_set(:@index_path, previous_path)
+        end
+      end
+
+      def test_read_only_jsonl_refuses_mutating_and_unmigrated_commands
+        [%w[laws --reindex], %w[critique MASTER], %w[fix --apply MASTER]].each do |argv|
+          io = StringIO.new
+          assert_equal 64, CLI.run_jsonl(argv, io:)
+          event = JSON.parse(io.string.lines.last)
+          assert_equal "command.failed", event.fetch("event")
+          assert_equal "NOT_RUN", event.dig("payload", "status")
+        end
       end
 
       def test_law_index_projects_named_test_proofs_from_fixture_registry
