@@ -43,6 +43,15 @@ class TestParseSweep < Minitest::Test
     end
   end
 
+  def test_target_scope_keeps_runtime_and_rails_dependencies
+    paths = %w[MASTER/lib/boot.rb RAILS/brgen/app.rb RAILS/__shared/helper.rb RAILS/amber/app.rb STUDIO/music.rb]
+    Operator::ParseSweep.stub(:tracked, paths) do
+      assert_equal paths.first(4), Operator::ParseSweep.paths_for("/repo", "RAILS/brgen")
+      assert_equal paths.first(4), Operator::ParseSweep.paths_for("/repo", "RAILS")
+      assert_equal paths, Operator::ParseSweep.paths_for("/repo", ".")
+    end
+  end
+
   def test_the_repository_itself_parses
     root = File.expand_path("../..", __dir__)
     assert_empty Operator::ParseSweep.failures(root), "tracked Ruby that does not parse"
