@@ -30,6 +30,10 @@ module Master
       def check(agent:, env: ENV)
         return unless agent.class.method_defined?(:model_for)
 
+        # Local-only repair may proceed without a model. Model stages own their
+        # availability checks; deterministic repairs retain their proof gates.
+        return if env["MASTER_LOCAL_ONLY"] == "1"
+
         rows = routes(agent, env:)
         explain_skipped(env:)
         return if env["MASTER_FIX_FREE_OK"] == "1"
