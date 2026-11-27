@@ -348,7 +348,8 @@ module Master
           return finish_run(budget_error, target, run_id, mission:, requested:) if budget_error
         end
 
-        RunBudget.begin_run(root: Master::ROOT, max_passes:, bus: @bus, target:)
+        journal_phase(run_id, "budget") { RunBudget.begin_run(root: Master::ROOT, max_passes:, bus: @bus, target:) }
+
         journal["budget_clock_at"] = RunBudget.elapsed_seconds
         # Capture the immutable plan inside the run's measured budget, but before
         # any structure/repair mutation. Hashing a large corpus is real work and
@@ -364,11 +365,13 @@ module Master
           paths: @file_collector.excluded_path_reasons,
           sample: @file_collector.excluded_path_reasons.keys.sort.first(FixPlan::MAX_EXCLUSION_SAMPLE),
         }
-        @fix_plan = FixPlan.capture(
-          root: repository_root, target:, files:, laws: @laws, excluded: exclusions,
-          adapters: @pass_runner.assessment_adapters(target:),
-          max_passes:, budget_seconds:, task_contract: TaskContract.current,
-        )
+        @fix_plan = journal_phase(run_id, "plan") do
+          FixPlan.capture(
+            root: repository_root, target:, files:, laws: @laws, excluded: exclusions,
+            adapters: @pass_runner.assessment_adapters(target:),
+            max_passes:, budget_seconds:, task_contract: TaskContract.current,
+          )
+        end
         TaskContract.attach_plan!(@fix_plan.digest)
         @bus&.publish("fix_loop:plan", **@fix_plan.to_h.slice(
           "digest", "identity_digest", "source_digest", "scope_digest", "law_digest",
@@ -652,6 +655,13 @@ module Master
       end
 
       private
+
+      def journal_phase(run_id, name)
+        @run_journal.phase_start(run_id, name)
+        yield
+      ensure
+        @run_journal.phase_finish(run_id, name)
+      end
 
       # --lane visual: one sweep, grouped, mechanical fixers first, the model once per group left.
       def run_visual_lane(target)

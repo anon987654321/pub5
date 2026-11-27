@@ -51,6 +51,24 @@ module Master
           end
         end
 
+        # The journal names blocking work before it begins, so a process that
+        # dies between orchestration steps leaves a recoverable hand-off.
+        def phase_start(run_id, name)
+          update(run_id) do |run|
+            run["phase"] = { "name" => name.to_s, "state" => "active", "started_at" => Time.now.utc.iso8601 }
+          end
+        end
+
+        def phase_finish(run_id, name)
+          update(run_id) do |run|
+            phase = run["phase"]
+            next unless phase.is_a?(Hash) && phase["name"] == name.to_s && phase["state"] == "active"
+
+            phase["state"] = "done"
+            phase["finished_at"] = Time.now.utc.iso8601
+          end
+        end
+
         def save_convergence_state(run_id, checkpoint, pass_state: nil)
           raise ArgumentError, "convergence checkpoint must be a hash" unless checkpoint.is_a?(Hash)
           raise ArgumentError, "pass state must be a hash" if !pass_state.nil? && !pass_state.is_a?(Hash)
@@ -79,6 +97,7 @@ module Master
           end
 
           update(run_id) do |run|
+            interrupt_active_phase!(run)
             run["state"] = terminal_state.to_s
             run["message"] = message.to_s[0, 400] unless message.nil?
             run["evidence"] = evidence if evidence.is_a?(Hash)
@@ -95,6 +114,14 @@ module Master
         end
 
         private
+
+        def interrupt_active_phase!(run)
+          phase = run["phase"]
+          return unless phase.is_a?(Hash) && phase["state"] == "active"
+
+          phase["state"] = "interrupted"
+          phase["finished_at"] = Time.now.utc.iso8601
+        end
 
         def update(run_id)
           with_lock do
