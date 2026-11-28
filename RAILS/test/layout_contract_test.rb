@@ -155,6 +155,17 @@ class LayoutContractTest < Minitest::Test
     assert_includes nearby, "gap: var(--space-2);"
   end
 
+  def test_amber_editorial_home_uses_the_shared_reading_measure
+    amber = File.read(File.join(ROOT, "amber", "app/assets/stylesheets/application.scss"))
+
+    assert_match(/\.amber-editorial-nav\s*\{[^}]*max-width:\s*var\(--feed-max\)/, amber)
+    assert_match(
+      /\.amber-masthead--home\s+\.amber-logo-home\s*\{[^}]*width:\s*min\(100%,\s*var\(--feed-max\)\)/,
+      amber
+    )
+    assert_match(/\.amber-looks\s*\{[^}]*max-width:\s*var\(--feed-max\)/, amber)
+  end
+
   # The mark is the brand and nothing else, so it is one length on every host.
   #
   # It used to render the whole hostname on a vertical, and that string varying

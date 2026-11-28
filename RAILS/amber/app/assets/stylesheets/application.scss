@@ -33,131 +33,7 @@
 
   @include meta.load-css("affiliate_feed_unit");
 
-  // ============================================================ module: commerce_polish
-  /* Commerce polish — recommendations read as editorial product notes, not
-     shopping-app clutter. The wardrobe remains the visual subject. */
-
-  .item-detail--wardrobe .item-detail-layout {
-    gap: clamp(1.5rem, 4vw, 4rem);
-  }
-
-  .item-detail--wardrobe .item-detail-facts {
-    min-width: 0;
-  }
-
-  .item-detail--wardrobe .item-detail-title {
-    max-inline-size: 11ch;
-    text-wrap: balance;
-  }
-
-  .item-detail--wardrobe .item-detail-tags {
-    gap: 8px;
-  }
-
-  .item-detail--wardrobe .item-detail-fact-list {
-    row-gap: 8px;
-  }
-
-  .item-detail--wardrobe .item-detail-section {
-    margin-block: clamp(2rem, 4vw, 3.5rem);
-  }
-
-  .item-detail--wardrobe .item-detail-actions {
-    gap: 8px;
-    margin-block-start: 1.5rem;
-  }
-
-  .item-detail--wardrobe .item-detail-actions .button {
-    min-height: var(--tap-min);
-    padding-inline: 1rem;
-  }
-
-  /* The secondary actions' disclosure takes the whole row, in the flex row and
-     in the two-column grid phones get. */
-  .item-detail--wardrobe .item-detail-actions > .wardrobe-more-tools {
-    flex-basis: 100%;
-    grid-column: 1 / -1;
-  }
-
-  .commerce-fit-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .commerce-fit-suggestion {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    min-width: 0;
-    padding-block: 12px;
-    border-block-start: 1px solid var(--luxury-border);
-  }
-
-  .commerce-fit-suggestion:first-child {
-    border-block-start: 0;
-    padding-block-start: 2px;
-  }
-
-  .commerce-fit-suggestion a {
-    display: inline;
-    max-inline-size: 62ch;
-    font-size: var(--text-base);
-    font-weight: var(--weight-bold);
-    line-height: var(--leading-snug);
-  }
-
-  .commerce-fit-source {
-    width: fit-content;
-    margin: 0;
-    background: transparent;
-    border: 0;
-    color: var(--luxury-muted);
-    font-size: var(--text-extra-small);
-    letter-spacing: var(--tracking-normal);
-    line-height: var(--leading-tight);
-    text-transform: none;
-  }
-
-  .commerce-fit-reasons {
-    display: block;
-    max-inline-size: 66ch;
-    color: var(--luxury-muted);
-    font-size: var(--luxury-font-meta);
-    line-height: var(--leading-snug);
-  }
-
-  .commerce-fit-local {
-    color: var(--text);
-  }
-
-  .commerce-handoff-note {
-    max-inline-size: 58ch;
-    margin-block-start: -4px;
-    color: var(--luxury-muted);
-    font-size: var(--luxury-font-meta);
-  }
-
-  @media (max-width: 767px) {
-    .item-detail--wardrobe .item-detail-layout {
-      gap: 1.5rem;
-    }
-
-    .item-detail--wardrobe .item-detail-title {
-      max-inline-size: none;
-      font-size: clamp(2rem, 11vw, 3rem);
-    }
-
-    .item-detail--wardrobe .item-detail-actions {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .item-detail--wardrobe .item-detail-actions .button {
-      width: 100%;
-    }
-  }
-  // ============================================================ /module: commerce_polish
+  @include meta.load-css("commerce_polish");
 
   @include meta.load-css("surface_signal");
 
@@ -2626,12 +2502,14 @@
     color: var(--text-secondary);
   }
 
-  .amber-editorial-nav{display:flex;align-items:center;justify-content:flex-start;gap:clamp(1rem,3vw,2.75rem);max-width:1280px;margin:0 auto;padding:0 var(--page-gutter) var(--space-5);border:0;overflow-x:auto;white-space:nowrap}
+  /* Amber keeps its oversized wordmark and editorial pacing, but the mark, nav
+     and collection align to Brgen's shared reading-column measure. */
+  .amber-editorial-nav{display:flex;align-items:center;justify-content:flex-start;gap:clamp(1rem,3vw,2.75rem);max-width:var(--feed-max);margin:0 auto;padding:0 var(--page-gutter) var(--space-5);border:0;overflow-x:auto;white-space:nowrap}
   .amber-editorial-nav a{min-height:var(--tap-min);display:inline-flex;align-items:center;color:var(--text);font-size:var(--luxury-font-meta);font-weight:var(--weight-bold);letter-spacing:var(--tracking-normal);text-transform:none;text-decoration:none}
   .amber-editorial-nav a:hover,.amber-editorial-nav a:focus-visible{text-decoration:underline;text-underline-offset:.18em}
   .amber-masthead--home{min-height:72svh;align-items:center;padding-inline:var(--page-gutter);padding-block:var(--space-8) var(--space-6)}
-  .amber-masthead--home .amber-logo-home{width:min(100%,880px)}
-  .amber-looks{max-width:1280px;margin-inline:auto;padding-inline:var(--page-gutter);gap:0}
+  .amber-masthead--home .amber-logo-home{width:min(100%,var(--feed-max))}
+  .amber-looks{max-width:var(--feed-max);margin-inline:auto;padding-inline:var(--page-gutter);gap:0}
   .amber-look{display:grid;grid-template-columns:1fr;gap:var(--space-6);align-items:center;min-height:auto;padding-block:var(--space-8);border-top:0}
   .amber-look:nth-child(even){grid-template-columns:1fr}
   .amber-look:nth-child(even) .amber-look-title{order:2}

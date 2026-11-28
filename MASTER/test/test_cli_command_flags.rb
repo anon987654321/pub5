@@ -10,15 +10,47 @@ class TestCliCommandFlags < Minitest::Test
   def setup
     host = Object.new
     host.extend(Module.new { def self.status(*, **) = nil })
-    host.instance_eval("require 'optparse'; module Master; module Trace; module Dmesg; def self.status(*, **) = nil; end; end; end\n#{HELPERS}", __FILE__, 1)
+    host.instance_eval("require 'optparse'; module Master; module Trace; module Dmesg; def self.status(*, **) = nil; def self.configure_cli_verbosity(level); ENV['MASTER_CLI_TEST_VERBOSITY'] = level; end; end; end; end\n#{HELPERS}", __FILE__, 1)
     @host = host
   end
 
-  def test_runtime_extracts_the_message_once_and_reuses_it
+  def test_runtime_extracts_the_message_once_before_boot_and_reuses_it
     assert_equal 1, SOURCE.scan(/initial_message_from_argv\(ARGV/).size
     assert_includes SOURCE, "initial_message = initial_message_from_argv(ARGV.dup)"
     assert_includes SOURCE, "goal = initial_message"
     assert_equal 2, SOURCE.scan(/message = initial_message\b/).size
+    parse_at = SOURCE.index("initial_message = initial_message_from_argv(ARGV.dup)")
+    boot_at = SOURCE.index("Master::Boot::Entrypoint.prepare!(root: master_root)", parse_at)
+    refute_nil boot_at
+    assert_operator parse_at, :<, boot_at
+    refute_includes SOURCE, "def prime_cli_boot_options!"
+  end
+
+  def test_runtime_switches_are_consumed_without_becoming_the_message
+    message = nil
+    out, err = capture_io do
+      message = @host.initial_message_from_argv(["--daemon", "--status", "/status"])
+    end
+
+    assert_equal "/status", message
+    refute_match(/option error/, err + out)
+  end
+
+  def test_direct_command_detection_uses_the_normalized_first_command
+    assert @host.headless_direct_command?("/model list")
+    assert @host.headless_direct_command?(" /status details")
+    refute @host.headless_direct_command?("please show /status")
+    refute @host.headless_direct_command?("")
+  end
+
+  def test_verbosity_options_are_applied_in_argument_order
+    previous = ENV.fetch("MASTER_CLI_TEST_VERBOSITY", nil)
+    ENV.delete("MASTER_CLI_TEST_VERBOSITY")
+
+    assert_equal "/status", @host.initial_message_from_argv(%w[--verbose --detail --trace /status])
+    assert_equal "trace", ENV.fetch("MASTER_CLI_TEST_VERBOSITY")
+  ensure
+    previous.nil? ? ENV.delete("MASTER_CLI_TEST_VERBOSITY") : ENV["MASTER_CLI_TEST_VERBOSITY"] = previous
   end
 
   def test_fix_flags_survive_into_the_message

@@ -61,13 +61,6 @@ class TestDmesgDetail < Minitest::Test
     refute Dmesg.detail_enabled?
   end
 
-  def test_last_verbosity_option_wins_before_boot
-    Dmesg.prime_cli_verbosity!(%w[--verbose --trace --detail])
-
-    assert_equal "everything", Dmesg.verbosity
-    assert Dmesg.detail_enabled?
-  end
-
   def test_detail_does_not_leak_into_redirected_stdout
     enable_detail
     output = StringIO.new
