@@ -177,8 +177,10 @@ module Master
         # This is a metadata-only receipt; it never implies that source changes landed.
         def link_fix_mission(mission_id:, run_id: @current_run_id)
           value = run_id.to_s
-          raise ArgumentError, "Mission link requires the active Fix run ID" if value.empty?
-          raise "Mission link belongs to another Fix run" unless value == @current_run_id
+          raise ArgumentError, "transition_missing: Mission link requires the active Fix run ID" if value.empty?
+          raise "transition_missing: Mission link belongs to another Fix run" unless value == @current_run_id
+          raise "transition_missing: Mission link has no attempt ID" if @current_attempt_id.to_s.empty?
+          raise "transition_missing: Mission link has no mission ID" if mission_id.to_s.strip.empty?
 
           append_event("coordinator_mission_link", {
             mission_id: mission_id.to_s, attempt_id: @current_attempt_id

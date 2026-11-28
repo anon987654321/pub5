@@ -174,6 +174,29 @@ class TestFixKernelLifecycle < Minitest::Test
     end
   end
 
+  def test_mission_link_requires_run_attempt_and_mission_identity
+    with_workspace do |root|
+      kernel = K.new(root:)
+      kernel.instance_variable_set(:@current_run_id, "fixture-run")
+      error = assert_raises(RuntimeError) do
+        kernel.link_fix_mission(mission_id: "fixture-mission", run_id: "fixture-run")
+      end
+      assert_includes error.message, "transition_missing"
+
+      kernel.instance_variable_set(:@current_attempt_id, "fixture-attempt")
+      error = assert_raises(RuntimeError) do
+        kernel.link_fix_mission(mission_id: nil, run_id: "fixture-run")
+      end
+      assert_includes error.message, "transition_missing"
+      assert_empty kernel.verify_log!
+
+      row = kernel.link_fix_mission(mission_id: "fixture-mission", run_id: "fixture-run")
+      assert_equal "fixture-run", row.fetch("run_id")
+      assert_equal "fixture-attempt", row.dig("payload", "attempt_id")
+      assert_equal "fixture-mission", row.dig("payload", "mission_id")
+    end
+  end
+
   def test_kernel_serializes_and_terminalizes_a_fix_loop_adapter
     with_workspace do |root|
       kernel = K.new(root:, actor: "fix-test")

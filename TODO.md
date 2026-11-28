@@ -529,3 +529,9 @@ rewound or unrelated Git history; final proof refuses missing units and newly
 unmeasured checks even when known failures are unchanged. Four focused
 regressions authored; full runtime NOT_RUN. Persistent Vercel sandbox resume
 returned HTTP 402 (Hobby quota resets December 1 UTC); no billing changes made.
+
+2026-11-28: Mission creation/link is now covered by a durable phase receipt
+on both fresh and resumed run segments, with missing mission/attempt IDs
+rejected as transition_missing. Updated lifecycle fixtures for the existing
+phase API and added a mission-identity regression. Runtime NOT_RUN; full
+external stall supervisor and acceptance remain open.

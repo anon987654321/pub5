@@ -24,6 +24,8 @@ class TestFixLoopObservability < Minitest::Test
 
   Journal = Struct.new(:id) do
     def start_or_resume(**) = { "id" => id }
+    def phase_start(*) = true
+    def phase_finish(*) = true
   end
 
   PassRunner = Class.new do
@@ -63,8 +65,9 @@ class TestFixLoopObservability < Minitest::Test
     loop.instance_variable_set(:@transaction_root, Dir.mktmpdir("fix-observability-"))
     loop.define_singleton_method(:mission_for) { |**| Mission.new("mission-observability") }
     loop.define_singleton_method(:exhausted_budget) { |**| nil }
-    loop.define_singleton_method(:bind_fix_plan!) { |*| nil }
+    loop.define_singleton_method(:bind_fix_plan!) { |*| true }
     loop.define_singleton_method(:repair_seconds_left) { |_| 30 }
+    loop.define_singleton_method(:outcome_guidance) { |**| { incremental: false, prediction: nil } }
     loop.define_singleton_method(:finish_run) { |result, *, **| result }
 
     output, = capture_io do

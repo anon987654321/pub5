@@ -317,8 +317,11 @@ module Master
         @kernel.bind_fix_run(
           adapter: self, run_id:, target:, max_passes:, budget_seconds:, requested:,
         )
-        mission = mission_for(target:, requested:)
-        @kernel.link_fix_mission(mission_id: mission.id, run_id:)
+        current_phase = :mission_link
+        journal_phase(run_id, "mission_link") do
+          mission = mission_for(target:, requested:)
+          @kernel.link_fix_mission(mission_id: mission.id, run_id:)
+        end
         budget_error = exhausted_budget(journal:)
         if budget_error
           # A prior process can die mid-pass after spending the budget. Recover
@@ -344,8 +347,12 @@ module Master
           @kernel.bind_fix_run(
             adapter: self, run_id:, target:, max_passes:, budget_seconds:, requested:,
           )
-          mission = mission_for(target:, requested:)
-          @kernel.link_fix_mission(mission_id: mission.id, run_id:)
+          mission = nil
+          current_phase = :mission_link
+          journal_phase(run_id, "mission_link") do
+            mission = mission_for(target:, requested:)
+            @kernel.link_fix_mission(mission_id: mission.id, run_id:)
+          end
           budget_error = exhausted_budget(journal:)
           return finish_run(budget_error, target, run_id, mission:, requested:) if budget_error
         end

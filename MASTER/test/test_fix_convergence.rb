@@ -1892,6 +1892,8 @@ end
     journal = Object.new
     journal.define_singleton_method(:history) { |**| [] }
     journal.define_singleton_method(:crash) { |*| nil }
+    journal.define_singleton_method(:phase_start) { |*| true }
+    journal.define_singleton_method(:phase_finish) { |*| true }
     opened = []
     journal.define_singleton_method(:start_or_resume) do |**|
       opened << (opened.empty? ? "run-timeout" : "run-fresh")
@@ -1945,6 +1947,8 @@ end
     journal = Object.new
     journal.define_singleton_method(:history) { |**| [] }
     journal.define_singleton_method(:crash) { |*| nil }
+    journal.define_singleton_method(:phase_start) { |*| true }
+    journal.define_singleton_method(:phase_finish) { |*| true }
     journal.define_singleton_method(:start_or_resume) do |**|
       { "id" => "run-stranded", "remaining_seconds" => 0.0 }
     end
@@ -2000,6 +2004,8 @@ end
 
     def initialize = @rows = []
     def next_pass(_run) = 1
+    def phase_start(*) = true
+    def phase_finish(*) = true
     def terminal(run_id, state, message:, evidence: nil) = @rows << { run_id:, state:, message:, evidence: }
     def history(**) = []
     def crash(*) = nil
@@ -2068,6 +2074,8 @@ end
     journal.define_singleton_method(:history) { |**| [] }
     journal.define_singleton_method(:crash) { |*| nil }
     journal.define_singleton_method(:next_pass) { |_| 1 }
+    journal.define_singleton_method(:phase_start) { |*| true }
+    journal.define_singleton_method(:phase_finish) { |*| true }
     journal.define_singleton_method(:terminal) do |run_id, state, message:, evidence: nil|
       terminal_rows << { run_id:, state:, message:, evidence: }
     end
