@@ -14,6 +14,19 @@ class MicroRefinementStylesheetContractTest < Minitest::Test
     surface_micro_refinements
     surface_micro_refinements_two
   ].freeze
+  LAYOUTS = %w[
+    amber/app/views/layouts/application.html.erb
+    brgen/app/views/layouts/application.html.erb
+    bsdports/app/views/layouts/application.html.erb
+  ].freeze
+
+  def test_browser_layouts_name_the_shared_layout_contract_not_an_experiment
+    LAYOUTS.each do |relative|
+      source = File.read(File.join(ROOT, relative), encoding: "UTF-8")
+      assert_includes source, 'data-layout-contract="shared-layout"'
+      refute_includes source, 'data-layout-pass="micro-320"'
+    end
+  end
 
   def test_unvalidated_experiment_sheets_are_absent_from_the_active_asset_tree
     EXPERIMENTAL_SHEETS.each do |sheet|
