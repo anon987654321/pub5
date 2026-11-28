@@ -100,23 +100,19 @@ module Master
         # The run once its journal is open and a mission records it: resume what
         # an earlier process left, then the passes, then the terminal state.
         def run_journaled(journal, files:, target:, max_passes:, budget_seconds:, mission:, requested:, incremental:)
-          @visual_groups_pending = false
+          @visual_groups_pending = requested && !WorkLane.visual? && WorkLane.runs?(:visual_groups) && WorkLane.rendered_target?(target)
           run_id = journal["id"]
           files = StreamCursor.order(@root, target, files)
           start_pass = @run_journal.next_pass(journal)
           @bus&.publish("fix_loop:recovered", run_id:, start_pass:, target:) if journal["resumed"]
 
           InstrumentCheck.new(root: @root, bus: @bus).verify!
-          @reachability.verify!(target, files:, subset: CheckFocus.blockers?)
+          @reachability.verify!(target, files:, subset: CheckFocus.blockers?, defer_rendered: @visual_groups_pending)
 
           resumed = resume_active_transaction(journal:, run_id:, start_pass:)
           return finish_run(resumed, target, run_id, mission:, requested:) if resumed.err?
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           return finish_run(run_visual_lane(target), target, run_id, mission:, requested:) if WorkLane.visual?
-
-          # Full repair gets its first ordinary transaction before the grouped
-          # visual sweep. Explicit visual-only work still runs immediately.
-          @visual_groups_pending = requested && WorkLane.runs?(:visual_groups) && WorkLane.rendered_target?(target)
 
           remaining = repair_seconds_left(journal)
           spent = budget_spent_before_pass(journal, resumed.value!) unless remaining.positive?

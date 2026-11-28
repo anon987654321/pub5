@@ -279,6 +279,13 @@ module Master
 
             @visual_groups_pending = false
             RunBudget.current&.phase!("visual groups", target:)
+            @reachability.capture_rendered_fleet!
+            if cancellation_requested? || RunBudget.stopping || deadline.expired?
+              @run_journal.pass_finish(run_id, pass, status: result.status, message: result.message)
+              return cancellation_terminal if cancellation_requested?
+
+              return RunBudget.pass_boundary(pass) || timed_out(i, pass, budget_seconds)
+            end
             run_visual_lane(target)
             visual_ran = true
             if cancellation_requested? || RunBudget.stopping
@@ -298,7 +305,7 @@ module Master
                          else
                            false
                          end
-          @reachability.verify!(target, files:, subset: CheckFocus.blockers?) if visual_ran
+          @reachability.verify!(target, files:, subset: CheckFocus.blockers?, defer_rendered: true) if visual_ran
           if plan_changed
             state[:consecutive_clean] = 0
             state[:history].clear

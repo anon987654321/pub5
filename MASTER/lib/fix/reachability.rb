@@ -27,7 +27,7 @@ module Master
 
       # subset: the run declared a narrower scope (--blockers), so files may be fewer than the
       # collector's; never more, and never outside it.
-      def verify!(target, files:, subset: false)
+      def verify!(target, files:, subset: false, defer_rendered: false)
         target = File.expand_path(target)
         @layout_sweep = nil
         raise "target #{target} is outside MASTER repository" unless inside_repo?(target)
@@ -36,7 +36,7 @@ module Master
         check_scope!(expected, Array(files).map { |file| File.expand_path(file) }, subset:)
 
         publish_reachability(target, expected)
-        verify_fleet! if top_level_target?(target) && !@fleet_verified
+        verify_fleet!(defer_rendered:) if top_level_target?(target) && !@fleet_verified
         true
       rescue StandardError => e
         @bus&.publish("fix_loop:reachability_failed", target:, error: e.message)
@@ -49,6 +49,12 @@ module Master
       def observe_layout_suite!
         require File.join(@repo_root, "MASTER", "checks", "lib", "layout_suite.rb")
         sweep_layout_suite!
+      end
+
+      # A grouped repair must start from a fresh capture, not a pre-pass sweep.
+      def capture_rendered_fleet!
+        @layout_sweep = nil
+        observe_rendered_fleet!
       end
 
       private
@@ -67,7 +73,7 @@ module Master
         Master::Trace::Dmesg.status("reach0", "#{relative(target)}: #{expected.size} writable files reached")
       end
 
-      def verify_fleet!
+      def verify_fleet!(defer_rendered: false)
         rails = File.join(@repo_root, "RAILS")
         apps = YAML.safe_load_file(File.join(rails, "apps.yml"), aliases: false).fetch("apps")
         names = apps.keys.map(&:to_s)
@@ -111,7 +117,7 @@ module Master
         missing_apps = engine_names - auditor_apps
         raise "frontend auditor misses Rails app(s): #{missing_apps.join(", ")}" if missing_apps.any?
 
-        observe_rendered_fleet!
+        observe_rendered_fleet! unless defer_rendered
         @fleet_verified = true
       end
 

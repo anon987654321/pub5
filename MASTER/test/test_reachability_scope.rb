@@ -8,7 +8,7 @@ class TestReachabilityScope < Minitest::Test
   # A Reachability whose fleet check records that it ran instead of starting a browser.
   def reachability(sweeps)
     Master::Fix::Reachability.new(root: Master::ROOT).tap do |reach|
-      reach.define_singleton_method(:verify_fleet!) { sweeps << :fleet }
+      reach.define_singleton_method(:verify_fleet!) { |defer_rendered: false| sweeps << (defer_rendered ? :wiring_only : :fleet) }
     end
   end
 
@@ -38,6 +38,24 @@ class TestReachabilityScope < Minitest::Test
     reachability(sweeps).verify!(Master::ROOT, files: collected(Master::ROOT))
 
     assert_equal [:fleet], sweeps
+  end
+
+  def test_deferred_rendering_still_checks_fleet_wiring
+    sweeps = []
+    reach = reachability(sweeps)
+    assert reach.verify!(Master::ROOT, files: collected(Master::ROOT), defer_rendered: true)
+    assert_equal [:wiring_only], sweeps
+  end
+
+  def test_grouped_rendering_discards_the_pre_pass_capture
+    reach = reachability([])
+    reach.instance_variable_set(:@layout_sweep, :old)
+    reach.define_singleton_method(:observe_rendered_fleet!) do
+      raise "old capture survived" unless layout_sweep.nil?
+      @layout_sweep = :fresh
+    end
+    reach.capture_rendered_fleet!
+    assert_equal :fresh, reach.layout_sweep
   end
 
   # --blockers narrows the corpus to the files a red check named: fewer than the collector's, never more.
