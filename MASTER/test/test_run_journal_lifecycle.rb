@@ -85,6 +85,26 @@ class TestRunJournalLifecycle < Minitest::Test
     end
   end
 
+  def test_pass_finish_requires_a_matching_receipt_and_allows_delivery_recovery
+    Dir.mktmpdir("fix-pass-handoff") do |root|
+      journal = Master::Fix::RunJournal.new(root:)
+      run_id = start_journal(root, nil).fetch("id")
+
+      assert_raises(RuntimeError) { journal.pass_start("missing", 1, transaction_id: "tx") }
+      assert_raises(RuntimeError) { journal.pass_start(run_id, 1, transaction_id: nil) }
+      assert_raises(RuntimeError) { journal.pass_finish(run_id, 1, status: :committed) }
+      journal.pass_start(run_id, 1, transaction_id: "tx")
+      before = journal.history.last
+      assert_raises(RuntimeError) { journal.pass_finish(run_id, 2, status: :committed) }
+      assert_equal before, journal.history.last
+
+      journal.pass_finish(run_id, 1, status: :delivery_failed)
+      journal.pass_finish(run_id, 1, status: :committed)
+      assert_equal "committed", journal.history.last.fetch("passes").last.fetch("state")
+      assert_raises(RuntimeError) { journal.pass_finish(run_id, 1, status: :committed) }
+    end
+  end
+
   def test_unbound_convergence_is_invalidated_when_a_plan_is_bound
     Dir.mktmpdir("fix-plan-unbound") do |root|
       journal = Master::Fix::RunJournal.new(root:)

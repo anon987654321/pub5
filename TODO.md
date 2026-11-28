@@ -535,3 +535,9 @@ on both fresh and resumed run segments, with missing mission/attempt IDs
 rejected as transition_missing. Updated lifecycle fixtures for the existing
 phase API and added a mission-identity regression. Runtime NOT_RUN; full
 external stall supervisor and acceptance remain open.
+
+2026-11-28: Pass start/finish rejects missing runs, missing transaction IDs,
+unknown passes and duplicate completion; pending Git delivery can still
+advance to committed. Added a regression and corrected mission-link test to
+assert the persisted JSON ledger instead of its in-memory payload. Runtime
+NOT_RUN; end-to-end transition supervision remains open.

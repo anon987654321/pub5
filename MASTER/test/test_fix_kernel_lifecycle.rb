@@ -190,7 +190,8 @@ class TestFixKernelLifecycle < Minitest::Test
       assert_includes error.message, "transition_missing"
       assert_empty kernel.verify_log!
 
-      row = kernel.link_fix_mission(mission_id: "fixture-mission", run_id: "fixture-run")
+      kernel.link_fix_mission(mission_id: "fixture-mission", run_id: "fixture-run")
+      row = kernel.verify_log!.last
       assert_equal "fixture-run", row.fetch("run_id")
       assert_equal "fixture-attempt", row.dig("payload", "attempt_id")
       assert_equal "fixture-mission", row.dig("payload", "mission_id")

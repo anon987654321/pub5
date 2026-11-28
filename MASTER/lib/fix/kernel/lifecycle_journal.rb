@@ -65,13 +65,16 @@ module Master
 
         def pass_start(run_id, pass, transaction_id:)
           update(run_id) do |run|
+            raise "transition_missing: pass #{pass} cannot start in #{run["state"]} run #{run_id}" unless run["state"] == "active"
+            raise "transition_missing: pass #{pass} has no transaction ID for #{run_id}" if transaction_id.to_s.strip.empty?
+
             run["passes"] << {
               "pass" => pass.to_i,
               "state" => "active",
               "transaction_id" => transaction_id.to_s,
               "started_at" => Time.now.utc.iso8601,
             }
-          end
+          end || raise("transition_missing: pass #{pass} has no run #{run_id}")
         end
 
         def phase_start(run_id, name)
@@ -111,12 +114,14 @@ module Master
         def pass_finish(run_id, pass, status:, message: nil)
           update(run_id) do |run|
             entry = Array(run["passes"]).reverse.find { |row| row["pass"].to_i == pass.to_i }
-            next unless entry
+            unless run["state"] == "active" && entry && %w[active delivery_failed].include?(entry["state"])
+              raise "transition_missing: pass #{pass} has no active or pending-delivery receipt for #{run_id}"
+            end
 
             entry["state"] = status.to_s
             entry["message"] = message.to_s[0, 400] unless message.nil?
             entry["finished_at"] = Time.now.utc.iso8601
-          end
+          end || raise("transition_missing: pass #{pass} has no run #{run_id}")
         end
 
         def terminal(run_id, state, message: nil, evidence: nil)
