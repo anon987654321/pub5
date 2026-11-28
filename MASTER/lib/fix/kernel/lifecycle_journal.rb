@@ -76,9 +76,9 @@ module Master
 
         def phase_start(run_id, name)
           update(run_id) do |run|
-            raise "fix run #{run_id} is #{run["state"]}" unless run["state"] == "active"
+            raise "transition_missing: #{name} cannot start in #{run["state"]} run #{run_id}" unless run["state"] == "active"
             if run.dig("phase", "state") == "active"
-              raise "unfinished fix phase #{run.dig("phase", "name")} for #{run_id}"
+              raise "transition_missing: #{name} cannot start before #{run.dig("phase", "name")} finishes for #{run_id}"
             end
 
             run["phase"] = { "name" => name.to_s, "state" => "active", "started_at" => Time.now.utc.iso8601 }
@@ -88,12 +88,14 @@ module Master
         def phase_finish(run_id, name)
           update(run_id) do |run|
             phase = run["phase"]
-            next unless phase.is_a?(Hash) && phase["name"] == name.to_s && phase["state"] == "active"
+            unless run["state"] == "active" && phase.is_a?(Hash) && phase["name"] == name.to_s && phase["state"] == "active"
+              raise "transition_missing: #{name} has no active phase for #{run_id}"
+            end
 
             phase["state"] = "done"
             phase["finished_at"] = Time.now.utc.iso8601
             run["last_completed_phase"] = phase.dup
-          end
+          end || raise("transition_missing: #{name} has no run #{run_id}")
         end
 
         def save_convergence_state(run_id, checkpoint, pass_state: nil)
@@ -176,7 +178,7 @@ module Master
           run["convergence_invalidated"] = {
             "at" => Time.now.utc.iso8601,
             "dimensions" => changed,
-            "previous_source_digest" => previous["source_digest"],
+            "previous_source_digest" => previous.is_a?(Hash) ? previous["source_digest"] : nil,
             "current_source_digest" => manifest["source_digest"],
           }
         end

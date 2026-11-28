@@ -510,3 +510,10 @@ The regenerated index contains 566 entries. Five focused tests passed, and
 the fast gate reported a current index while preserving its bytes.
 
 Five-tree acceptance remains open.
+
+2026-11-28: Phase start and finish now reject missing or inconsistent run/phase
+handoffs as `transition_missing`; binding a first plan invalidates legacy
+unbound convergence without dereferencing a missing prior plan. Focused
+regressions authored; runtime NOT_RUN. The local checkout cannot resolve
+GitHub; the previous sandbox expired without a recoverable snapshot. Keep
+transition supervision and end-to-end acceptance open.

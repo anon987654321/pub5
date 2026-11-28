@@ -63,6 +63,46 @@ class TestRunJournalLifecycle < Minitest::Test
     end
   end
 
+  def test_phase_finish_requires_a_matching_active_receipt
+    Dir.mktmpdir("fix-phase-handoff") do |root|
+      journal = Master::Fix::RunJournal.new(root:)
+      run_id = start_journal(root, nil).fetch("id")
+      journal.phase_start(run_id, "budget")
+      before = journal.history.last
+
+      [["missing", "budget"], [run_id, "plan"]].each do |id, phase|
+        error = assert_raises(RuntimeError) { journal.phase_finish(id, phase) }
+        assert_match(/transition_missing/, error.message)
+      end
+      assert_equal before, journal.history.last
+
+      error = assert_raises(RuntimeError) { journal.phase_start(run_id, "plan") }
+      assert_match(/transition_missing/, error.message)
+      journal.phase_finish(run_id, "budget")
+      error = assert_raises(RuntimeError) { journal.phase_finish(run_id, "budget") }
+      assert_match(/transition_missing/, error.message)
+      assert_equal "budget", journal.history.last.dig("last_completed_phase", "name")
+    end
+  end
+
+  def test_unbound_convergence_is_invalidated_when_a_plan_is_bound
+    Dir.mktmpdir("fix-plan-unbound") do |root|
+      journal = Master::Fix::RunJournal.new(root:)
+      run_id = start_journal(root, nil).fetch("id")
+      journal.save_convergence_state(run_id, { "clean_streak" => 2 }, pass_state: { "pass" => 1 })
+
+      receipt = journal.bind_plan(run_id, { "digest" => "a" * 64, "source_digest" => "b" * 64 })
+      run = journal.history.last
+
+      assert receipt.fetch(:invalidated)
+      assert_equal ["missing_prior_plan"], receipt.fetch(:dimensions)
+      refute run.key?("convergence_state")
+      refute run.key?("pass_state")
+      assert_nil run.dig("convergence_invalidated", "previous_source_digest")
+      assert_equal "b" * 64, run.dig("convergence_invalidated", "current_source_digest")
+    end
+  end
+
   def test_new_process_interrupts_abandoned_phase_before_replaying_it
     Dir.mktmpdir("fix-phase-resume") do |root|
       pid = fork do
