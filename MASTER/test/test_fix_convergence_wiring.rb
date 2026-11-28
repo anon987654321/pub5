@@ -66,6 +66,18 @@ class FixConvergenceWiringTest < Minitest::Test
     refute_includes repair_source, 'require_relative "../review/scan/law_health"'
   end
 
+  def test_blocking_setup_stages_have_durable_phase_boundaries
+    adapter = File.read(File.expand_path("../lib/fix/kernel/convergence_adapter.rb", __dir__))
+    lifecycle = File.read(File.expand_path("../lib/fix/fix_loop/lifecycle.rb", __dir__))
+
+    %w[budget plan assessment_setup begin_run structure architecture_exploration research conversation_probe].each do |phase|
+      assert_includes adapter, %(journal_phase(run_id, "#{phase}"))
+    end
+    %w[instrument_check reachability transaction_recovery].each do |phase|
+      assert_includes lifecycle, %(journal_phase(run_id, "#{phase}"))
+    end
+  end
+
   def test_rendered_geometry_consumes_the_visual_measurement_payload
     geometry = File.read(File.expand_path("../../MASTER/checks/lib/rendered/rendered_geometry.rb", __dir__))
     walk = File.read(File.expand_path("../../MASTER/checks/support/geometry_probe/walk.js", __dir__))

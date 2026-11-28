@@ -382,8 +382,10 @@ module Master
             "budget_seconds", "deadline_at"
           ).transform_keys(&:to_sym))
         end
-        @pass_runner.begin_assessment_run(files:, plan: @fix_plan) if
-          @pass_runner.respond_to?(:begin_assessment_run)
+        current_phase = :assessment_setup
+        if @pass_runner.respond_to?(:begin_assessment_run)
+          journal_phase(run_id, "assessment_setup") { @pass_runner.begin_assessment_run(files:, plan: @fix_plan) }
+        end
         if RunBudget.stopping || repair_seconds_left(journal) <= 0
           exhausted = RunBudget.pass_boundary(0) ||
             Result.err("wall-clock timeout during fix-plan capture; no repair pass ran", category: :timeout)
@@ -392,23 +394,23 @@ module Master
         return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
 
         current_phase = :begin_run
-        @convergence_discipline.begin_run(files)
+        journal_phase(run_id, "begin_run") { @convergence_discipline.begin_run(files) }
         return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
 
         if requested
           current_phase = :structure
-          dependency_result = prepare_dependency_map!(files)
+          dependency_result = journal_phase(run_id, "structure") { prepare_dependency_map!(files) }
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           return finish_run(dependency_result, target, run_id, mission:, requested:) if dependency_result.is_a?(Master::Result)
           current_phase = :architecture_exploration
-          architecture = explore_architecture(target:, files:, run_id:)
+          architecture = journal_phase(run_id, "architecture_exploration") { explore_architecture(target:, files:, run_id:) }
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           ux_context = UXRefinementCatalog.prompt_context(target:, root: @root)
           current_phase = :research
-          research = run_research(target:, files:)
+          research = journal_phase(run_id, "research") { run_research(target:, files:) }
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           current_phase = :conversation_probe
-          conversation = run_conversation_probe(target:, files:)
+          conversation = journal_phase(run_id, "conversation_probe") { run_conversation_probe(target:, files:) }
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           @pass_runner.conversation_findings = conversation.fetch(:findings, [])
           @pass_runner.research_brief = [

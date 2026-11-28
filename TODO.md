@@ -517,3 +517,9 @@ unbound convergence without dereferencing a missing prior plan. Focused
 regressions authored; runtime NOT_RUN. The local checkout cannot resolve
 GitHub; the previous sandbox expired without a recoverable snapshot. Keep
 transition supervision and end-to-end acceptance open.
+
+2026-11-28: Assessment setup, convergence initialization, dependency analysis,
+architecture exploration, research, conversation probing, instrument check,
+reachability and transaction recovery now have run-scoped phase receipts.
+Source wiring regression authored; runtime NOT_RUN. The command baseline,
+pre-journal corpus and external stall supervisor remain open.

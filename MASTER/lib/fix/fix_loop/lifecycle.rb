@@ -106,10 +106,14 @@ module Master
           start_pass = @run_journal.next_pass(journal)
           @bus&.publish("fix_loop:recovered", run_id:, start_pass:, target:) if journal["resumed"]
 
-          InstrumentCheck.new(root: @root, bus: @bus).verify!
-          @reachability.verify!(target, files:, subset: CheckFocus.blockers?, defer_rendered: @visual_groups_pending)
+          journal_phase(run_id, "instrument_check") { InstrumentCheck.new(root: @root, bus: @bus).verify! }
+          journal_phase(run_id, "reachability") do
+            @reachability.verify!(target, files:, subset: CheckFocus.blockers?, defer_rendered: @visual_groups_pending)
+          end
 
-          resumed = resume_active_transaction(journal:, run_id:, start_pass:)
+          resumed = journal_phase(run_id, "transaction_recovery") do
+            resume_active_transaction(journal:, run_id:, start_pass:)
+          end
           return finish_run(resumed, target, run_id, mission:, requested:) if resumed.err?
           return finish_run(cancellation_terminal, target, run_id, mission:, requested:) if cancellation_requested?
           return finish_run(run_visual_lane(target), target, run_id, mission:, requested:) if WorkLane.visual?
