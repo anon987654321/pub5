@@ -96,7 +96,8 @@ class TestRuntimeCatalogueValidation < Minitest::Test
     path = catalogue_path("models.yml")
     data = YAML.safe_load_file(path, aliases: true)
     paid = data.fetch("paid_tail")
-    [[false, 0, true], [false, -1, false], [true, 0, false], [true, 1, true], [false, Float::INFINITY, false]].each do |enabled, cap, valid|
+    [[false, 0, true], [false, -1, false], [true, 0, false], [true, 1, true], [false, Float::INFINITY, false],
+     [false, Float::NAN, false]].each do |enabled, cap, valid|
       paid.merge!("enabled" => enabled, "run_cap_usd" => cap)
       error = Guard.validate(path:, content: YAML.dump(data))
       if valid
