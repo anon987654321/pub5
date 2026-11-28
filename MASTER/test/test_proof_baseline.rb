@@ -86,6 +86,25 @@ class TestProofBaseline < Minitest::Test
     assert_empty @delivered
   end
 
+  def test_new_unmeasured_checks_refuse_even_with_unchanged_failures
+    before = Reading.parse(false, RAILS_RED)
+    after = Reading.parse(false, [RAILS_RED.last.sub("10 pass", "9 pass")
+      .sub("7 inconclusive", "8 inconclusive").sub("flow_journey", "flow_journey,asset_fetch")])
+    held, line = Proof.judge(after, before)
+
+    refute held
+    assert_includes line, "new unmeasured checks: asset_fetch"
+  end
+
+  def test_missing_suite_refuses_even_if_remaining_suite_is_green
+    before = Reading.parse(true, ["proof suite first: ok", "proof suite second: ok"])
+    after = Reading.parse(true, ["proof suite first: ok"])
+    held, line = Proof.judge(after, before)
+
+    refute held
+    assert_includes line, "missing proof units: second"
+  end
+
   def test_a_new_failing_test_refuses_though_its_suite_was_already_red
     before = suite_run(false, "TestA#test_old")
     after = suite_run(false, "TestA#test_old", "TestB#test_new")
@@ -149,6 +168,9 @@ class TestProofBaseline < Minitest::Test
       Proof.remember("rails checks", sha: first, reading: :kept)
       own = commit.call(Master::Fix::CommitMessage.pass(:pass, 1))
       assert_equal :kept, Proof.recall("rails checks", sha: own, repo:)
+
+      Proof.remember("rails checks", sha: own, reading: :kept)
+      assert_nil Proof.recall("rails checks", sha: first, repo:), "a rewound branch is not a descendant"
 
       other = commit.call("feat(rails): another session")
       assert_nil Proof.recall("rails checks", sha: other, repo:)

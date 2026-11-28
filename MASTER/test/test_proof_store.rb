@@ -49,6 +49,16 @@ class TestProofStore < Minitest::Test
     assert_includes reading.failing, "TestX#test_y"
   end
 
+  def test_in_memory_baseline_is_scoped_to_the_full_target
+    ENV["MASTER_PROOF_STORE"] = "0"
+    pass = CountingPass.new
+    pass.baseline_for(File.join(Master::ROOT, "lib", "first", "same.rb"))
+    pass.baseline_for(File.join(Master::ROOT, "lib", "second", "same.rb"))
+    pass.baseline_for(File.join(Master::ROOT, "lib", "first", "same.rb"))
+
+    assert_equal 2, pass.runs
+  end
+
   def test_the_store_can_be_turned_off
     ENV["MASTER_PROOF_STORE"] = "0"
     CountingPass.new.baseline_for(Master::ROOT)

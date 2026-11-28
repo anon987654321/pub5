@@ -88,7 +88,15 @@ module Master
           def unreadable(after, baseline)
             return "a suite crashed before it named its failures" unless after.measured?
 
-            "a suite that finished at baseline did not finish" if after.finished < baseline.finished
+            return "a suite that finished at baseline did not finish" if after.finished < baseline.finished
+
+            missing = baseline.units.keys - after.units.keys
+            return "missing proof units: #{names(missing)}" if missing.any?
+
+            unmeasured = after.unmeasured - baseline.unmeasured
+            return "new unmeasured checks: #{names(unmeasured)}" if unmeasured.any?
+
+            nil
           end
 
           def verdict_line(count, already:, added:, worse:)
@@ -118,10 +126,15 @@ module Master
             # fetched object by object; unknown is a reason to measure again.
             # A baseline outlives a move of origin/main made only of /fix's own commits (CommitMessage::MARKER),
             # because a baseline taken after the pass's own commits would count their failures as old.
-            out, _err, status = Master::Io::Exec.capture3({ "GIT_NO_LAZY_FETCH" => "1" }, "git", "-C", repo, "log",
+            env = { "GIT_NO_LAZY_FETCH" => "1" }
+            _, _, ancestry = Master::Io::Exec.capture3(env, "git", "-C", repo, "merge-base",
+                                                       "--is-ancestor", kept_sha, sha, timeout: 20)
+            return unless ancestry.success?
+
+            out, _err, status = Master::Io::Exec.capture3(env, "git", "-C", repo, "log",
                                                           "--format=%B%x00", "#{kept_sha}..#{sha}", timeout: 20)
             bodies = out.to_s.split("\x00").map(&:strip).reject(&:empty?)
-            reading if status.success? && bodies.all? { |body| Master::Fix::CommitMessage.own?(body) }
+            reading if status.success? && bodies.any? && bodies.all? { |body| Master::Fix::CommitMessage.own?(body) }
           end
 
           def remember(proof, sha:, reading:)
@@ -142,11 +155,12 @@ module Master
           return unless runner
 
           sha = origin_main
-          kept = Proof.recall(name, sha:, repo: Master::REPO_ROOT) || stored_baseline(abs, name)
+          key = [name, File.expand_path(abs)]
+          kept = Proof.recall(key, sha:, repo: Master::REPO_ROOT) || stored_baseline(abs, name)
           return kept.tap { Master::Trace::Dmesg.status("check0", "baseline kept: #{baseline_line(kept)}") } if kept
           return if narrow_known(abs, nil)
 
-          log_phase("check0", "baseline", name) { measure_baseline(name, sha:, runner:) }.tap do |reading|
+          log_phase("check0", "baseline", name) { measure_baseline(key, sha:, runner:) }.tap do |reading|
             store_baseline(abs, name:, reading:)
             Affected.note_known_red("MASTER", reading) if abs == PROOF_ROOTS["MASTER"]
           end
@@ -195,7 +209,7 @@ module Master
           File.write(path, JSON.generate(stored))
         end
 
-        def measure_baseline(name, sha:, runner:)
+        def measure_baseline(key, sha:, runner:)
           @measuring_baseline = true
           ok, out = ::Operator::CheckChain.with_pre_repair_budget do
             if ::Operator::CheckChain.pre_repair_remaining <= 0
@@ -207,7 +221,7 @@ module Master
           end
           Master::Fix::CheckFocus.note(out) unless ok
           reading = Reading.parse(ok, out)
-          Proof.remember(name, sha: (sha if reading.measured?), reading:)
+          Proof.remember(key, sha: (sha if reading.measured?), reading:)
           Master::Trace::Dmesg.status("check0", "baseline: #{baseline_line(reading)}")
           reading
         ensure

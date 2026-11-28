@@ -523,3 +523,9 @@ architecture exploration, research, conversation probing, instrument check,
 reachability and transaction recovery now have run-scoped phase receipts.
 Source wiring regression authored; runtime NOT_RUN. The command baseline,
 pre-journal corpus and external stall supervisor remain open.
+
+2026-11-28: Proof baseline reuse is scoped to the full target and rejects
+rewound or unrelated Git history; final proof refuses missing units and newly
+unmeasured checks even when known failures are unchanged. Four focused
+regressions authored; full runtime NOT_RUN. Persistent Vercel sandbox resume
+returned HTTP 402 (Hobby quota resets December 1 UTC); no billing changes made.
