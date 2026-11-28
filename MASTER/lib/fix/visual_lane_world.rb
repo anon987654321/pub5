@@ -242,7 +242,9 @@ module Master
         def read(result)
           findings = Array(result.failures) + Array(result.soft_failures)
           manifest = manifest_for(result)
-          { findings:, manifest:, **cells(manifest) }
+          complete = result.checks_ran.positive? && result.conclusive? && !result.incomplete? && !result.errored?
+          complete &&= !findings.any? { |line| line.include?("rendered evidence is incomplete") && result.soft_failures.empty? }
+          { findings:, manifest:, complete:, **cells(manifest) }
         end
 
         private

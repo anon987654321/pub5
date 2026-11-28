@@ -22,11 +22,8 @@ module Master
     #   3. Bounded: at most MAX_BYTES of the most recent log lines are sent;
     #      a giant run publishes its tail with a truncation marker, never a
     #      partial middle.
-    #   4. Opt-out: PUB5_FIX_LOG_PUBLISH=0 (or off/false) disables it; the
-    #      default is on, and a missing token falls back to the keyless sink.
-    #      =1 (or on/true) forces it on. Under MASTER_IN_PROOF=1 (the test
-    #      suite) the default flips to off so a proof never egresses; the
-    #      explicit =1 still wins.
+    #   4. Explicit opt-in: PUB5_FIX_LOG_PUBLISH=1 enables sharing.
+    #      MASTER_LOCAL_ONLY=1 forbids it even with opt-in.
     #
     # Sinks, tried in order:
     #   - GitHub Gist when GITHUB_TOKEN (or GH_TOKEN) is in the environment:
@@ -60,13 +57,17 @@ module Master
       end
 
       def publish(run_id:, log_text:, env: ENV)
-        setting = env["PUB5_FIX_LOG_PUBLISH"].to_s.downcase
+        return Result.new(skipped: "MASTER_LOCAL_ONLY forbids log publication") if env["MASTER_LOCAL_ONLY"] == "1"
+
+        setting = env["PUB5_FIX_LOG_PUBLISH"].to_s.strip.downcase
         if DISABLE_VALUES.include?(setting)
           return Result.new(skipped: "PUB5_FIX_LOG_PUBLISH disables publication")
         end
         if env["MASTER_IN_PROOF"].to_s == "1" && !ENABLE_VALUES.include?(setting)
           return Result.new(skipped: "MASTER_IN_PROOF suite; set PUB5_FIX_LOG_PUBLISH=1 to force publication")
         end
+
+        return Result.new(skipped: "log publication requires PUB5_FIX_LOG_PUBLISH=1") unless ENABLE_VALUES.include?(setting)
 
         # Redact before byte-bounding: slicing the tail first can remove a
         # secret's key name and leave its value looking like ordinary text.
@@ -79,9 +80,9 @@ module Master
         end
 
         if (token = env["GITHUB_TOKEN"].to_s.empty? ? env["GH_TOKEN"].to_s : env["GITHUB_TOKEN"].to_s) && !token.empty?
-          gist(run_id:, body: redacted, token:, truncated:)
+          gist(run_id:, body:, token:, truncated:)
         else
-          ix(run_id:, body: redacted, truncated:)
+          ix(run_id:, body:, truncated:)
         end
       rescue StandardError => error
         Result.new(error: "#{error.class}: #{error.message}")
@@ -92,8 +93,11 @@ module Master
       def bounded(text)
         return [text, false] if text.bytesize <= MAX_BYTES
 
-        tail = text.byteslice(-MAX_BYTES, MAX_BYTES) || text
-        ["[log truncated to the last #{MAX_BYTES} bytes]\n#{tail}", true]
+        marker = "[log truncated to the last #{MAX_BYTES} bytes]\n"
+        # Leave room for the marker and a possible UTF-8 replacement character.
+        limit = MAX_BYTES - marker.bytesize - 3
+        tail = text.byteslice(-limit, limit).scrub
+        ["#{marker}#{tail}", true]
       end
 
       def gist(run_id:, body:, token:, truncated:)

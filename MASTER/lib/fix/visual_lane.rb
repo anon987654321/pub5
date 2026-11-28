@@ -9,7 +9,9 @@ module Master
     # fixers (ScaleSnap, TapTargetPad) before the model, the model once per group left, and a
     # resweep as the proof. Outside effects are injected (World); VisualLaneWorld wires them.
     class VisualLane
-      Outcome = Data.define(:groups, :findings, :report, :cleared, :remaining, :resweep, :simplified)
+      Outcome = Data.define(:groups, :findings, :report, :cleared, :remaining, :resweep, :simplified, :complete) do
+        def initialize(complete: false, **rest) = super(complete:, **rest)
+      end
 
       # sweep/resweep -> { findings: [text], urls: {surface id => url}, screenshots: {surface id => png} }
       # snap/pad ->(group) { nil when the fixer does not apply, else :applied or the reason it did not }
@@ -47,7 +49,7 @@ module Master
         settle_all(groups, before)
         simplified = simplify
         after = @world.resweep.call if groups.any?(&:repaired?) || simplified.include?(:applied)
-        prove(groups, after) if after
+        prove(groups, after) if after && after.fetch(:complete, true)
         finish(groups, { before:, after: }, simplified:)
       end
 
@@ -123,11 +125,12 @@ module Master
       # Cleared only past an independent review, unless a mechanical fix changed no pixel.
       def reviewed(group)
         regions = changed_regions(group)
-        return CLEARED if group.fix == :mechanical && regions&.empty?
+        return "not cleared: missing comparable screenshots" if regions.nil?
+        return CLEARED if group.fix == :mechanical && regions.empty?
         return "not cleared: no independent reviewer" unless @world.review
         return "not cleared: a repairer cannot approve its own repair" if @world.review.equal?(@world.repair)
 
-        outcome = @world.review.call(group, regions || [])
+        outcome = @world.review.call(group, regions)
         outcome == :approved ? CLEARED : "not cleared: reviewer - #{outcome}"
       end
 
@@ -147,7 +150,8 @@ module Master
 
       def write_report(groups, sweeps)
         counted = sweeps.transform_values do |sweep|
-          sweep && { "findings" => sweep.fetch(:findings).size, "manifest" => sweep[:manifest] }
+          sweep && { "findings" => sweep.fetch(:findings).size, "manifest" => sweep[:manifest],
+                     "complete" => sweep.fetch(:complete, true) }
         end
         report = VisualGroups.report(groups, lane: :visual, sweeps: counted)
         VisualGroups.write(File.join(@repo_root, REPORT), report)
@@ -158,9 +162,11 @@ module Master
         path = write_report(groups, sweeps)
 
         cleared = groups.count { |group| group.fix_detail.to_s.end_with?(CLEARED) }
-        remaining = after ? grouped(after).size : groups.size
-        Outcome.new(groups: groups.size, findings: before.fetch(:findings).size, report: path, cleared:, remaining:,
-                    resweep: !after.nil?, simplified: simplified.count(:applied))
+        open_keys = groups.reject { |group| group.fix_detail.to_s.end_with?(CLEARED) }.map(&:key)
+        open_keys |= grouped(after).map(&:key) if after
+        complete = before.fetch(:complete, true) && (after.nil? || after.fetch(:complete, true))
+        Outcome.new(groups: groups.size, findings: before.fetch(:findings).size, report: path, cleared:,
+                    remaining: open_keys.size, complete:, resweep: !after.nil?, simplified: simplified.count(:applied))
       end
     end
   end

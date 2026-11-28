@@ -706,9 +706,9 @@ module Master
         detail = "#{outcome.findings} rendered finding(s) in #{outcome.groups} group(s), " \
                  "#{outcome.cleared} cleared, #{outcome.remaining} group(s) remain#{resweep}; report #{outcome.report}"
         Master::Trace::Dmesg.status("visual0", "#{WorkLane.summary}; #{detail}")
+        return terminal(:inconclusive, "visual lane: incomplete rendered evidence; #{detail}") unless outcome.complete
         return terminal(:done, "visual lane: rendered groups cleared by the resweep") if
-          outcome.findings.zero? ||
-          (outcome.resweep && outcome.remaining.zero? && outcome.cleared == outcome.groups)
+          outcome.remaining.zero? && (outcome.findings.zero? || outcome.resweep)
 
         terminal(:plateau, "visual lane: #{detail}")
       end

@@ -12,7 +12,7 @@ class LogPublicationTest < Minitest::Test
 
   def publish(log_text:, env: {}, http: nil)
     Publication.new(http: http || ->(*) { flunk("unexpected network call") })
-               .publish(run_id: "run-1", log_text:, env:)
+               .publish(run_id: "run-1", log_text:, env: { "PUB5_FIX_LOG_PUBLISH" => "1" }.merge(env))
   end
 
   def test_gist_sink_with_token
@@ -86,12 +86,19 @@ class LogPublicationTest < Minitest::Test
 
   def test_proof_suite_gate
     # Under MASTER_IN_PROOF the default is off; an explicit =1 forces it on.
-    result = publish(log_text: "x", env: { "MASTER_IN_PROOF" => "1" })
+    result = publish(log_text: "x", env: { "MASTER_IN_PROOF" => "1", "PUB5_FIX_LOG_PUBLISH" => "" })
     assert_match(/MASTER_IN_PROOF/, result.skipped)
 
     http = ->(*) { "https://ix.io/forced" }
     result = publish(log_text: "x", env: { "MASTER_IN_PROOF" => "1", "PUB5_FIX_LOG_PUBLISH" => "1" }, http:)
     assert_equal "ix.io", result.sink
+  end
+
+  def test_default_and_local_only_never_publish
+    result = Publication.publish(run_id: "local", log_text: "source", env: {}, http: ->(*) { flunk "unexpected upload" })
+    assert_match(/requires PUB5_FIX_LOG_PUBLISH/, result.skipped)
+    result = publish(log_text: "source", env: { "MASTER_LOCAL_ONLY" => "1", "PUB5_FIX_LOG_PUBLISH" => "1" })
+    assert_match(/MASTER_LOCAL_ONLY/, result.skipped)
   end
 
   def test_network_error_is_fail_soft
@@ -139,7 +146,7 @@ class LogPublicationTest < Minitest::Test
     result = publish(log_text: big, env: { "GITHUB_TOKEN" => "tok" }, http:)
 
     assert_equal true, result.truncated
-    assert captured.bytesize <= Publication::MAX_BYTES + 100
+    assert captured.bytesize <= Publication::MAX_BYTES
     assert captured.start_with?("[log truncated")
   end
 

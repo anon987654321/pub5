@@ -218,10 +218,11 @@ class TestVisualLane < Minitest::Test
     guarded = []
     review = ->(group, regions) { (reviewed << [group.id, regions]) && :approved }
     run_lane(world(after_shot: MOVED, review:, guard: ->(group) { guarded << group.id })) do |outcome, _rows|
-      assert_equal 2, reviewed.size
+      assert_equal 1, reviewed.size
       assert_includes reviewed.map(&:last), [{ x: 0, y: 0, w: 32, h: 32 }]
-      assert_equal 2, outcome.cleared
-      assert_equal 2, guarded.size
+      assert_equal 1, outcome.cleared
+      assert_equal 1, guarded.size
+      assert_equal 4, outcome.remaining
     end
   end
 
@@ -237,6 +238,21 @@ class TestVisualLane < Minitest::Test
     same = Lane::World.new(**lane_world.to_h, review: lane_world.repair)
     run_lane(same) do |_outcome, rows|
       assert(rows.any? { |row| row.fetch("fix_detail").to_s.include?("cannot approve its own repair") })
+    end
+  end
+
+  def test_unreviewed_group_is_open_even_if_the_resweep_no_longer_reports_it
+    run_lane(world(after_shot: MOVED)) do |outcome, _rows|
+      assert_equal 5, outcome.remaining
+    end
+  end
+
+  def test_incomplete_sweep_cannot_clear_an_empty_finding_list
+    lane_world = world(mechanical: false)
+    lane_world = Lane::World.new(**lane_world.to_h, sweep: -> { { findings: [], complete: false } })
+    run_lane(lane_world) do |outcome, _rows|
+      refute outcome.complete
+      assert_equal 0, outcome.findings
     end
   end
 

@@ -11,7 +11,7 @@ publish_log() {
     return 1
   fi
 
-  "$ruby_bin" -I"$repo_root/MASTER/lib" -r"$repo_root/MASTER/lib/fix/log_publication" -e '
+  PUB5_FIX_LOG_PUBLISH="${PUB5_FIX_LOG_PUBLISH:-1}" "$ruby_bin" -I"$repo_root/MASTER/lib" -r"$repo_root/MASTER/lib/fix/log_publication" -e '
     path = ARGV.fetch(0)
     text = File.binread(path).force_encoding(Encoding::UTF_8).scrub
     result = Master::Fix::LogPublication.publish(
